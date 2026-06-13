@@ -25,4 +25,11 @@ next-env.d.ts
 .DS_Store
 .idea/
 
+# cursor agent skills (local only)
+.agents/
+skills-lock.json
 
+
+
+.vercel
+.env*

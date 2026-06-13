@@ -16,17 +16,11 @@ import {
 } from "lucide-react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import SplitText from "@/components/ui/SplitText";
-import { submitToFormspree } from "@/lib/formspree";
+import { submitContactForm } from "@/lib/contact/submit";
+import { contactFormSchema } from "@/lib/contact/validation";
 import { portfolioCopy, siteContact } from "@/lib/site-config";
 
-const schema = z.object({
-  name: z.string().min(2, "Nome obrigatório"),
-  email: z.string().email("Email inválido"),
-  projectType: z.string().min(1, "Seleccione o tipo de projecto"),
-  message: z.string().min(10, "Mensagem demasiado curta"),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<typeof contactFormSchema>;
 
 const inputClass =
   "w-full bg-transparent border-b border-grey/30 focus:border-gold/50 text-white font-sans text-sm py-3 px-0 outline-none placeholder:text-grey/40 transition-colors duration-500";
@@ -186,8 +180,8 @@ function ContactForm() {
     setValue,
     formState: { errors },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { projectType: defaultType },
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: { projectType: defaultType, gotcha: "", marketingOptIn: false },
   });
 
   useEffect(() => {
@@ -206,9 +200,9 @@ function ContactForm() {
     setStatus("loading");
 
     try {
-      await submitToFormspree(data, { packageLabel });
+      await submitContactForm(data, { packageLabel });
       setStatus("success");
-      reset({ projectType: defaultType || "" });
+      reset({ projectType: defaultType || "", gotcha: "", marketingOptIn: false });
     } catch {
       setStatus("error");
     }
@@ -231,12 +225,12 @@ function ContactForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8" noValidate>
         <input
           type="text"
-          name="_gotcha"
           tabIndex={-1}
           autoComplete="off"
           className="absolute opacity-0 h-0 w-0 pointer-events-none"
           aria-hidden="true"
           title="Spam prevention"
+          {...register("gotcha")}
         />
 
         <p className="font-sans text-sm text-grey/80 leading-relaxed">

@@ -7,11 +7,11 @@ import {
 } from "@/lib/site-config";
 
 export const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://haxrsignature.2bd.net";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://haxrsignature.vercel.app";
 
 export const googleSiteVerification =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ??
-  "Bd21S41MxbkzL3bwAJTDAqQaMNC_0-RPrL8_gVVSU0E";
+  "_GYFKaSxcMgPb8AHwDC3JVt-BD--GVdb0I_7n53yu9Y";
 
 export const siteSeo = {
   name: "HAXR Signature",
@@ -71,6 +71,15 @@ export const siteSeo = {
     "Experiências Personalizadas",
   ],
 } as const;
+
+export function getGoogleVerificationFileName(): string {
+  return `google${googleSiteVerification}.html`;
+}
+
+export function getGoogleVerificationFileContent(): string {
+  const fileName = getGoogleVerificationFileName();
+  return `google-site-verification: ${fileName}`;
+}
 
 export function buildSiteMetadata(overrides?: Partial<Metadata>): Metadata {
   const { name, title, description, ogDescription, keywords, ogImage, locale } =
@@ -135,8 +144,20 @@ export function buildSiteMetadata(overrides?: Partial<Metadata>): Metadata {
       },
     },
     icons: {
-      icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-      apple: "/favicon.svg",
+      icon: [
+        { url: "/favicon.ico", sizes: "48x48" },
+        { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+        { url: "/favicon.png", type: "image/png", sizes: "192x192" },
+        { url: "/favicon.svg", type: "image/svg+xml" },
+      ],
+      apple: [
+        {
+          url: "/apple-touch-icon.png",
+          sizes: "180x180",
+          type: "image/png",
+        },
+      ],
+      shortcut: "/favicon.ico",
     },
     manifest: "/site.webmanifest",
     verification: {

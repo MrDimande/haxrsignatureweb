@@ -184,18 +184,10 @@ export const siteContact = {
     href: "https://wa.me/258870883428",
   },
   phones: [
-    { display: "+258 82 088 3478", tel: "+258820883478" },
-    { display: "+258 87 088 3476", tel: "+258870883476" },
+    { display: "+258 87 088 3428", tel: "+258870883428" },
+    { display: "+258 82 088 3428", tel: "+258820883428" },
   ],
   facebook: null as { href: string; label: string } | null,
-} as const;
-
-/** Formspree — https://formspree.io/f/mnjygkgn */
-export const formspreeConfig = {
-  endpoint: "https://formspree.io/f/mnjygkgn",
-  formId: "mnjygkgn",
-  brandName: "HAXR Signature",
-  siteOrigin: "haxrsignature.2bd.net",
 } as const;
 
 export const projectTypeLabels: Record<string, string> = {

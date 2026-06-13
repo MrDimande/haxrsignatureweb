@@ -11,6 +11,8 @@
   --color-grey: #a3a3a3;
   --color-grey-dark: #1a1a1a;
   --color-grey-medium: #2a2a2a;
+  --color-admin-gold: #C9A227;
+  --color-admin-gold-dim: rgba(201, 162, 39, 0.15);
 
   --font-serif: var(--font-cormorant), Georgia, serif;
   --font-sans: var(--font-jost), system-ui, sans-serif;
@@ -217,4 +219,116 @@ p.text-sm {
     padding-left: 0;
     padding-right: 0;
   }
+}
+
+/* Admin area */
+.admin-card {
+  background-color: var(--color-black-soft);
+  border: 1px solid rgba(26, 26, 26, 0.9);
+  border-radius: 2px;
+}
+
+.admin-input {
+  width: 100%;
+  background-color: var(--color-black-soft);
+  border: 1px solid rgba(26, 26, 26, 0.8);
+  color: var(--color-white);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  outline: none;
+  border-radius: 2px;
+  transition: border-color 0.3s ease;
+}
+
+.admin-input:focus {
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.admin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #000000;
+  background-color: var(--color-admin-gold);
+  border: 1px solid var(--color-admin-gold);
+  border-radius: 2px;
+  transition: opacity 0.3s ease, background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.admin-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-grey);
+  background-color: transparent;
+  border: 1px solid rgba(26, 26, 26, 0.9);
+  border-radius: 2px;
+  transition: color 0.3s ease, border-color 0.3s ease;
+  cursor: pointer;
+}
+
+.admin-btn-secondary:hover {
+  color: var(--color-admin-gold);
+  border-color: rgba(201, 162, 39, 0.3);
+}
+
+.admin-stat-card {
+  background-color: var(--color-black-soft);
+  border: 1px solid rgba(26, 26, 26, 0.9);
+  border-radius: 2px;
+  padding: 1.5rem;
+}
+
+.admin-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.admin-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-tab {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.25rem;
+  color: var(--color-grey);
+  border-bottom: 1px solid transparent;
+  transition: color 0.3s ease, border-color 0.3s ease;
+  cursor: pointer;
+}
+
+.admin-tab:hover {
+  color: var(--color-white);
+}
+
+.admin-tab--active {
+  color: var(--color-admin-gold);
+  border-bottom-color: var(--color-admin-gold);
 }

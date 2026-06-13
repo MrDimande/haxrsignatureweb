@@ -1,0 +1,524 @@
+"use client";
+
+import { useMemo, useRef, useState } from "react";
+import {
+  Check,
+  Copy,
+  FileSpreadsheet,
+  MessageCircle,
+  Plus,
+  Upload,
+  UserCheck,
+} from "lucide-react";
+import {
+  bulkAssignTableAction,
+  bulkCheckInGuestsAction,
+  bulkConfirmGuestsAction,
+  checkInGuestAction,
+  confirmGuestAction,
+  deleteGuestAction,
+  importGuestsCsvAction,
+} from "@/lib/events/actions/guests.actions";
+import { GUEST_LABEL_LABELS, GUEST_LABEL_STYLES, GUEST_STATUS_LABELS, GUEST_STATUS_STYLES } from "@/lib/events/constants";
+import { GUEST_SOURCE_LABELS } from "@/lib/events/sheets/detect-mode";
+import { downloadCsvFile } from "@/lib/finance/export/csv";
+import { buildSelectedGuestsCsv } from "@/lib/events/sheets/export-csv";
+import { buildCheckinUrl, buildRsvpUrl } from "@/lib/events/tokens";
+import { buildWhatsAppLinksForGuests } from "@/lib/events/whatsapp";
+import GuestForm from "@/components/events/GuestForm";
+import type { EventGuest, EventSeat, ManagedEvent } from "@/lib/events/types";
+
+type GuestManagementProps = {
+  event: ManagedEvent;
+  guests: EventGuest[];
+  seats: EventSeat[];
+  onChanged: () => void;
+};
+
+export default function GuestManagement({
+  event,
+  guests,
+  seats,
+  onChanged,
+}: GuestManagementProps) {
+  const eventId = event.id;
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<EventGuest | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [assignTable, setAssignTable] = useState("");
+  const [importMessage, setImportMessage] = useState("");
+  const [whatsappMode, setWhatsappMode] = useState<"rsvp" | "seat" | null>(null);
+  const [listFilter, setListFilter] = useState<"all" | "pending" | "rsvp">("all");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const visibleGuests = useMemo(() => {
+    if (listFilter === "pending") {
+      return guests.filter((guest) => guest.status === "invited");
+    }
+    if (listFilter === "rsvp") {
+      return guests.filter((guest) => guest.guestSource === "sheet_rsvp");
+    }
+    return guests;
+  }, [guests, listFilter]);
+
+  const pendingCount = guests.filter((g) => g.status === "invited").length;
+  const rsvpCount = guests.filter((g) => g.guestSource === "sheet_rsvp").length;
+
+  const tables = useMemo(
+    () => [...new Set(seats.map((seat) => seat.tableName))].sort(),
+    [seats]
+  );
+
+  const selectedGuests = visibleGuests.filter((guest) => selected.has(guest.id));
+  const allSelected =
+    visibleGuests.length > 0 && visibleGuests.every((g) => selected.has(g.id));
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(visibleGuests.map((guest) => guest.id)));
+    }
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleDelete(guestId: string) {
+    if (!confirm("Eliminar este convidado?")) return;
+    await deleteGuestAction(eventId, guestId);
+    onChanged();
+  }
+
+  async function handleConfirm(guestId: string) {
+    setBusyId(guestId);
+    await confirmGuestAction(eventId, guestId);
+    setBusyId(null);
+    onChanged();
+  }
+
+  async function handleCheckIn(guestId: string) {
+    setBusyId(guestId);
+    await checkInGuestAction(eventId, guestId);
+    setBusyId(null);
+    onChanged();
+  }
+
+  async function handleBulkConfirm() {
+    setBulkBusy(true);
+    await bulkConfirmGuestsAction(eventId, [...selected]);
+    setBulkBusy(false);
+    onChanged();
+  }
+
+  async function handleBulkCheckIn() {
+    setBulkBusy(true);
+    await bulkCheckInGuestsAction(eventId, [...selected]);
+    setBulkBusy(false);
+    onChanged();
+  }
+
+  async function handleBulkAssign() {
+    if (!assignTable) return;
+    setBulkBusy(true);
+    await bulkAssignTableAction(eventId, [...selected], assignTable);
+    setBulkBusy(false);
+    onChanged();
+  }
+
+  function handleExportSelected() {
+    const csv = buildSelectedGuestsCsv(selectedGuests);
+    downloadCsvFile(csv, `haxr-convidados-seleccionados.csv`);
+  }
+
+  async function handleImport(file: File) {
+    const text = await file.text();
+    const result = await importGuestsCsvAction(eventId, text);
+    if (result.success) {
+      setImportMessage(
+        `${result.data.created} novos · ${result.data.updated} actualizados`
+      );
+      onChanged();
+    } else {
+      setImportMessage(result.error);
+    }
+  }
+
+  async function handleCopyLink(guest: EventGuest, type: "rsvp" | "checkin") {
+    const url =
+      type === "rsvp"
+        ? buildRsvpUrl(eventId, guest.qrToken)
+        : buildCheckinUrl(eventId, guest.qrToken);
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(`${guest.id}-${type}`);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      window.prompt("Copie o link:", url);
+    }
+  }
+
+  function guestMeta(guest: EventGuest): string {
+    const parts = [guest.email || guest.phone || ""];
+    if (guest.plusOnes > 0) parts.push(`+${guest.plusOnes}`);
+    if (guest.dietaryNotes) parts.push(guest.dietaryNotes);
+    return parts.filter(Boolean).join(" · ") || "—";
+  }
+
+  const whatsappLinks = whatsappMode
+    ? buildWhatsAppLinksForGuests(event, selectedGuests, whatsappMode)
+    : [];
+
+  return (
+    <div className="space-y-8">
+      <section className="admin-card p-6 space-y-4">
+        <div>
+          <p className="font-mono text-[8px] tracking-[0.4em] uppercase text-grey/45 mb-2">
+            Importação CSV
+          </p>
+          <p className="text-sm text-grey/55 leading-relaxed">
+            Alternativa ao Google Sheets — use as colunas Nome, Email, Telefone,
+            Estado, Etiqueta, Acompanhantes, Restrições e Notas.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImport(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="admin-btn-secondary"
+          >
+            <Upload className="w-4 h-4" />
+            Importar CSV
+          </button>
+          {importMessage ? (
+            <p className="text-xs text-grey/50 italic">{importMessage}</p>
+          ) : null}
+        </div>
+      </section>
+
+      {(creating || editing) && (
+        <section className="admin-card p-6">
+          <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-admin-gold mb-6">
+            {editing ? "Editar convidado" : "Novo convidado"}
+          </h2>
+          <GuestForm
+            eventId={eventId}
+            guest={editing ?? undefined}
+            seats={seats}
+            onSaved={() => {
+              setCreating(false);
+              setEditing(null);
+              onChanged();
+            }}
+            onCancel={() => {
+              setCreating(false);
+              setEditing(null);
+            }}
+          />
+        </section>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            { id: "all", label: `Todos (${guests.length})` },
+            { id: "pending", label: `Por confirmar (${pendingCount})` },
+            { id: "rsvp", label: `RSVP Sheets (${rsvpCount})` },
+          ] as const
+        ).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setListFilter(item.id)}
+            className={`px-4 py-2 font-mono text-[9px] tracking-[0.25em] uppercase border rounded-sm transition-colors ${
+              listFilter === item.id
+                ? "bg-admin-gold/10 text-admin-gold border-admin-gold/25"
+                : "text-grey/60 border-grey-dark/80 hover:text-white"
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/50">
+          {guests.length} convidado{guests.length === 1 ? "" : "s"}
+          {selected.size ? ` · ${selected.size} seleccionado${selected.size === 1 ? "" : "s"}` : ""}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setCreating(true);
+            setEditing(null);
+          }}
+          className="admin-btn-primary"
+        >
+          <Plus className="w-4 h-4" />
+          Novo convidado
+        </button>
+      </div>
+
+      {selected.size > 0 ? (
+        <section className="admin-card p-4 md:p-5 space-y-4 border-admin-gold/20">
+          <p className="font-mono text-[9px] tracking-[0.35em] uppercase text-admin-gold">
+            Acções em massa
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleBulkConfirm}
+              disabled={bulkBusy}
+              className="admin-btn-secondary text-xs"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Confirmar
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkCheckIn}
+              disabled={bulkBusy}
+              className="admin-btn-secondary text-xs"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              Check-in
+            </button>
+            <button
+              type="button"
+              onClick={handleExportSelected}
+              className="admin-btn-secondary text-xs"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Exportar CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => setWhatsappMode(whatsappMode === "rsvp" ? null : "rsvp")}
+              className="admin-btn-secondary text-xs"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              WhatsApp RSVP
+            </button>
+            <button
+              type="button"
+              onClick={() => setWhatsappMode(whatsappMode === "seat" ? null : "seat")}
+              className="admin-btn-secondary text-xs"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              WhatsApp lugar
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-3 items-end">
+            <label className="block min-w-[180px]">
+              <span className="block font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
+                Atribuir mesa em lote
+              </span>
+              <select
+                value={assignTable}
+                onChange={(e) => setAssignTable(e.target.value)}
+                className="admin-input w-full"
+              >
+                <option value="">Seleccionar mesa</option>
+                {tables.map((table) => (
+                  <option key={table} value={table}>
+                    {table}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={handleBulkAssign}
+              disabled={bulkBusy || !assignTable}
+              className="admin-btn-primary h-[46px]"
+            >
+              Atribuir lugares
+            </button>
+          </div>
+          {whatsappMode && whatsappLinks.length ? (
+            <div className="space-y-2 pt-2 border-t border-grey-dark/60">
+              <p className="text-xs text-grey/50">
+                Clique para abrir WhatsApp (convidados com telefone):
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {whatsappLinks.map((link) =>
+                  link.url ? (
+                    <a
+                      key={link.guestId}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-mono tracking-[0.12em] uppercase px-3 py-2 border border-emerald-500/25 text-emerald-300/80 hover:bg-emerald-500/10 rounded-sm"
+                    >
+                      {link.name}
+                    </a>
+                  ) : null
+                )}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <div className="admin-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px]">
+            <thead>
+              <tr className="border-b border-grey-dark/80 bg-black-soft">
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    aria-label="Seleccionar todos"
+                  />
+                </th>
+                {["Convidado", "Lugar", "Estado", "Acções"].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visibleGuests.map((guest) => (
+                <tr
+                  key={guest.id}
+                  className="border-b border-grey-dark/50 hover:bg-white/[0.02]"
+                >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(guest.id)}
+                      onChange={() => toggleOne(guest.id)}
+                      aria-label={`Seleccionar ${guest.name}`}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p>{guest.name}</p>
+                      {guest.label !== "none" ? (
+                        <span
+                          className={`text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${GUEST_LABEL_STYLES[guest.label]}`}
+                        >
+                          {GUEST_LABEL_LABELS[guest.label]}
+                        </span>
+                      ) : null}
+                      {guest.guestSource !== "manual" ? (
+                        <span
+                          className={`text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${
+                            guest.guestSource === "sheet_rsvp"
+                              ? "bg-blue-500/10 text-blue-300 border-blue-500/25"
+                              : "bg-grey/10 text-grey/60 border-grey/25"
+                          }`}
+                        >
+                          {GUEST_SOURCE_LABELS[guest.guestSource]}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-grey/50">{guestMeta(guest)}</p>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-grey">
+                    {guest.seat
+                      ? `${guest.seat.tableName} · ${guest.seat.seatNumber}`
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-block text-[9px] font-mono tracking-[0.15em] uppercase px-2 py-1 border rounded-sm ${GUEST_STATUS_STYLES[guest.status]}`}
+                    >
+                      {GUEST_STATUS_LABELS[guest.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {guest.status === "invited" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleConfirm(guest.id)}
+                          disabled={busyId === guest.id}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-blue-300/80 hover:text-blue-200 border border-blue-500/20 px-2 py-1 rounded-sm"
+                        >
+                          <Check className="w-3 h-3" />
+                          Confirmar
+                        </button>
+                      ) : null}
+                      {guest.status !== "checked_in" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCheckIn(guest.id)}
+                          disabled={busyId === guest.id}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-emerald-300/80 hover:text-emerald-200 border border-emerald-500/20 px-2 py-1 rounded-sm"
+                        >
+                          <UserCheck className="w-3 h-3" />
+                          Check-in
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(guest, "rsvp")}
+                        className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-grey/55 hover:text-admin-gold"
+                      >
+                        <Copy className="w-3 h-3" />
+                        {copiedId === `${guest.id}-rsvp` ? "Copiado" : "RSVP"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(guest, "checkin")}
+                        className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-grey/55 hover:text-admin-gold"
+                      >
+                        <Copy className="w-3 h-3" />
+                        {copiedId === `${guest.id}-checkin` ? "Copiado" : "QR"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditing(guest);
+                          setCreating(false);
+                        }}
+                        className="text-xs text-grey hover:text-admin-gold"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(guest.id)}
+                        className="text-xs text-grey hover:text-red-400"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
