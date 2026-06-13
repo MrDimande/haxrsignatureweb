@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+@theme {
+  --color-black: #000000;
+  --color-black-soft: #0a0a0a;
+  --color-white: #f5f5f0;
+  --color-white-pure: #ffffff;
+  --color-gold: #c9a96e;
+  --color-gold-dim: rgba(201, 169, 110, 0.15);
+  --color-gold-glow: rgba(201, 169, 110, 0.08);
+  --color-grey: #a3a3a3;
+  --color-grey-dark: #1a1a1a;
+  --color-grey-medium: #2a2a2a;
+
+  --font-serif: var(--font-cormorant), Georgia, serif;
+  --font-sans: var(--font-jost), system-ui, sans-serif;
+  --font-signature: var(--font-signature), "Brush Script MT", cursive;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --ease-luxury: cubic-bezier(0.25, 0, 0.1, 1);
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+body {
+  background-color: #000000;
+  color: #f5f5f0;
+  font-family: var(--font-sans);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+p {
+  font-weight: 400; /* Garante peso normal 400 para leitura confortável */
+}
+
+p.text-sm {
+  font-size: 0.9375rem; /* Ajusta de 14px para 15px para melhorar legibilidade */
+}
+
+::selection {
+  background-color: rgba(201, 169, 110, 0.25);
+  color: #f5f5f0;
+}
+
+.line-gold {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 169, 110, 0.3),
+    transparent
+  );
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: #3a3a3a;
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.art-deco-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: rgba(201, 169, 110, 0.2);
+  pointer-events: none;
+}
+
+.art-deco-corner--tl {
+  top: -16px;
+  left: -16px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.art-deco-corner--br {
+  bottom: -16px;
+  right: -16px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+.split-line {
+  overflow: hidden;
+}
+
+.split-line .word {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 169, 110, 0.2);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 169, 110, 0.4);
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Largura editorial — alinhada ao navbar (max-w-7xl) */
+.site-container {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .site-container {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* Colunas de leitura */
+.site-prose-intimate {
+  max-width: 36rem;
+}
+
+.site-prose {
+  max-width: 42rem;
+}
+
+.site-prose-wide {
+  max-width: 48rem;
+}
+
+.site-prose-medium {
+  max-width: 64rem;
+}
+
+/* Scroll horizontal em mobile — sangra até à margem do ecrã */
+.site-bleed-x {
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .site-bleed-x {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}

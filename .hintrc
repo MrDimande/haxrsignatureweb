@@ -1,0 +1,9 @@
+{
+  "extends": ["recommended"],
+
+  "rules": {
+    "no-missing-prompt": "off",
+    "missing-aria-label": "off",
+    "no-missing-alt": "off"
+  }
+}

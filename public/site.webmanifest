@@ -1,0 +1,20 @@
+{
+  "name": "HAXR Signature — Curadoria de Eventos Exclusivos",
+  "short_name": "HAXR Signature",
+  "description": "Convites digitais, identidade visual, assessoria e coordenação de eventos exclusivos em Maputo, Moçambique.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "pt-MZ",
+  "orientation": "portrait-primary",
+  "categories": ["business", "lifestyle"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
