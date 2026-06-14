@@ -11,7 +11,7 @@ export const portfolioCopy = {
     location: "Maputo · Moçambique",
     tagline: "Curadoria de Eventos Exclusivos",
     subtitle:
-      "Elegância visual e curadoria para eventos com assinatura própria.",
+      "Convites digitais, assessoria de eventos e curadoria com assinatura própria.",
   },
   quemSomos: {
     label: "Quem Somos",
@@ -523,6 +523,22 @@ export const invitationComparison = [
 ] as const;
 
 export const invitationFaqs = [
+  {
+    q: "A HAXR Signature faz assessoria de eventos em Maputo?",
+    a: "Sim. Oferecemos assessoria completa de eventos em Maputo e em Moçambique — planeamento, fornecedores, orçamento, cronograma e coordenação no dia, para casamentos, lobolos, eventos corporativos e celebrações exclusivas.",
+  },
+  {
+    q: "Criam convites digitais para casamentos e lobolos?",
+    a: "Sim. Desenvolvemos convites digitais premium para casamentos, lobolos, noivados e outros eventos, com design personalizado, RSVP, save the date, localização no Google Maps, galeria, música e contagem regressiva.",
+  },
+  {
+    q: "Trabalham com convites digitais em Moçambique?",
+    a: "Sim. A HAXR Signature é especializada em convites digitais e experiências digitais para eventos em Maputo e em todo Moçambique, optimizados para telemóvel com identidade visual de assinatura.",
+  },
+  {
+    q: "Que tipos de eventos acompanham?",
+    a: "Casamentos, lobolos, noivados, aniversários, baptizados, graduações, eventos corporativos, galas e experiências personalizadas — com convites digitais, assessoria de eventos ou coordenação no dia.",
+  },
   {
     q: "Com quanta antecedência devo solicitar?",
     a: "Recomendamos o primeiro contacto com 6 a 8 semanas de antecedência. Projectos urgentes são avaliados caso a caso — podem estar sujeitos a acréscimo.",

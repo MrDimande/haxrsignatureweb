@@ -6,6 +6,12 @@ import {
   isAdminConfigured,
   validateCredentials,
 } from "@/lib/admin/auth";
+import {
+  getRequestIp,
+  rateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +20,19 @@ export async function POST(request: Request) {
         { error: "Área de administração não configurada." },
         { status: 503 }
       );
+    }
+
+    const ip = getRequestIp(request);
+    const limitKey = `admin-login:${ip}`;
+    const blocked = rateLimit(limitKey, RATE_LIMITS.adminLogin, {
+      increment: false,
+    });
+
+    if (!blocked.allowed) {
+      return rateLimitResponse(blocked, {
+        error: "too_many_login_attempts",
+        message: "Demasiadas tentativas de login. Aguarde e tente novamente.",
+      });
     }
 
     const body = (await request.json()) as {
@@ -25,6 +44,7 @@ export async function POST(request: Request) {
     const password = body.password ?? "";
 
     if (!validateCredentials(email, password)) {
+      rateLimit(limitKey, RATE_LIMITS.adminLogin);
       return NextResponse.json(
         { error: "Credenciais inválidas." },
         { status: 401 }

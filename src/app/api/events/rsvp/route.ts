@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { rsvpFormSchema } from "@/lib/events/rsvp-validation";
 import { performRsvp } from "@/lib/events/services/rsvp.service";
+import {
+  getRequestIp,
+  rateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const ip = getRequestIp(request);
+    const limited = rateLimit(`event-rsvp:${ip}`, RATE_LIMITS.eventAction);
+    if (!limited.allowed) {
+      return rateLimitResponse(limited, { ok: false });
+    }
+
     const raw = await request.json();
     const parsed = rsvpFormSchema.safeParse(raw);
 

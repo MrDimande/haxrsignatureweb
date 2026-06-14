@@ -5,7 +5,6 @@ import {
   FileText,
   Inbox,
   Receipt,
-  Sparkles,
 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import ActiveEventsOverviewPanel from "@/components/admin/dashboard/ActiveEventsOverviewPanel";
@@ -118,7 +117,7 @@ export default async function DashboardPage() {
             Novo recibo
           </Link>
           <Link href="/admin/events" className="admin-btn-primary">
-            <Sparkles className="w-4 h-4" />
+            <Calendar className="w-4 h-4" strokeWidth={1.25} />
             Ver eventos
           </Link>
         </div>

@@ -55,7 +55,8 @@ export default function Hero() {
           style={{ fontSize: "clamp(2.5rem, 8vw, 7rem)" }}
         >
           <span className="sr-only">
-            HAXR Signature — {hero.tagline} em {hero.location}
+            HAXR Signature — assessoria de eventos, convites digitais e
+            curadoria de eventos exclusivos em {hero.location}
           </span>
           HAXR
         </h1>

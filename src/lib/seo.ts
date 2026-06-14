@@ -22,53 +22,121 @@ export const siteSeo = {
   country: "MZ",
   city: "Maputo",
   title:
-    "HAXR Signature | Convites Digitais e Curadoria de Eventos em Maputo, Moçambique",
+    "HAXR Signature | Assessoria de Eventos e Convites Digitais em Maputo",
   titleTemplate: "%s | HAXR Signature",
-  shortTitle: "HAXR Signature — Experiência Definida",
+  shortTitle: "HAXR Signature — Curadoria & Convites Digitais",
   description:
-    "HAXR Signature — curadoria de eventos exclusivos em Maputo, Moçambique. Convites digitais, save the date, identidade visual, assessoria de eventos e coordenação no dia, com elegância e assinatura própria.",
+    "Assessoria de eventos e convites digitais premium em Maputo, Moçambique. Casamentos, lobolos, noivados e corporativos — curadoria, save the date, RSVP e coordenação com assinatura HAXR.",
   ogDescription:
-    "Convites digitais premium, identidade visual e assessoria de eventos exclusivos em Maputo, Moçambique. Elegância, precisão e assinatura HAXR em cada experiência.",
+    "Assessoria de eventos, convites digitais para casamentos e curadoria exclusiva em Maputo. Save the date, RSVP, identidade visual e coordenação — elegância HAXR.",
   keywords: [
     "HAXR Signature",
+    // Convites digitais
     "convites digitais",
-    "convite digital",
-    "save the date",
-    "convite digital casamento",
-    "convite digital lobolo",
     "convites digitais Maputo",
     "convites digitais Moçambique",
-    "curadoria de eventos",
+    "convite digital",
+    "convite digital casamento",
+    "convite digital lobolo",
+    "convite digital noivado",
+    "criação de convites digitais",
+    "convites digitais para casamento",
+    "convite interativo casamento",
+    "save the date",
+    "save the date digital",
+    "RSVP digital",
+    "confirmação de presença digital",
+    // Assessoria e planeamento
     "assessoria de eventos",
+    "assessoria de eventos Maputo",
+    "assessoria de eventos Moçambique",
+    "assessoria de casamentos",
+    "assessoria de casamentos Maputo",
     "planeamento de eventos",
     "planeamento de eventos Maputo",
-    "coordenação de eventos",
-    "coordenação no dia",
-    "eventos exclusivos Maputo",
-    "eventos exclusivos Moçambique",
-    "identidade visual eventos",
-    "design de convites",
+    "organização de casamentos Maputo",
+    "empresa de eventos Maputo",
+    "wedding planner Maputo",
+    "wedding planner Moçambique",
+    "event planner Maputo",
+    // Curadoria
+    "curadoria de eventos",
+    "curadoria de eventos exclusivos",
+    "curadoria de casamentos",
+    // Tipos de evento
     "casamento Maputo",
+    "casamentos Maputo",
     "lobolo Maputo",
+    "lobolo convite digital",
     "noivado convite digital",
     "eventos corporativos Maputo",
-    "RSVP digital",
-    "wedding planner Maputo",
+    "eventos exclusivos Maputo",
+    "eventos exclusivos Moçambique",
+    // Serviços complementares
+    "coordenação de eventos",
+    "coordenação no dia",
+    "coordenação de casamentos",
+    "identidade visual eventos",
+    "design de convites",
+    "design de convites casamento",
   ],
   ogImage: {
     url: "/opengraph-image",
     width: 1200,
     height: 630,
-    alt: "HAXR Signature — Convites digitais e curadoria de eventos em Maputo, Moçambique",
+    alt: "HAXR Signature — Convites digitais, assessoria e curadoria de eventos em Maputo, Moçambique",
   },
   twitterHandle: "@haxrsignature",
-  category: "Planeamento de Eventos",
+  category: "Curadoria de Eventos",
   services: [
     "Convites Digitais",
     "Identidade Visual",
     "Assessoria de Eventos",
     "Coordenação no Dia",
     "Experiências Personalizadas",
+  ],
+  /** Descrições SEO para JSON-LD e motores de busca */
+  serviceDetails: [
+    {
+      name: "Convites Digitais",
+      description:
+        "Criação de convites digitais premium para casamentos, lobolos, noivados e eventos em Maputo — com RSVP, save the date, localização, galeria e design personalizado.",
+      url: "/#convites",
+    },
+    {
+      name: "Identidade Visual",
+      description:
+        "Identidade visual para eventos exclusivos — convites, sinalização, materiais de mesa e linguagem estética coerente em Maputo e Moçambique.",
+      url: "/#universo",
+    },
+    {
+      name: "Assessoria de Eventos",
+      description:
+        "Assessoria de eventos em Maputo — planeamento, fornecedores, orçamento e cronograma para casamentos, lobolos, corporativos e celebrações exclusivas.",
+      url: "/#gestao",
+    },
+    {
+      name: "Coordenação no Dia",
+      description:
+        "Coordenação profissional no dia do evento em Maputo — montagem, fornecedores, cronograma e gestão discreta de imprevistos.",
+      url: "/#gestao",
+    },
+    {
+      name: "Experiências Personalizadas",
+      description:
+        "Experiências de evento totalmente personalizadas — conceito, estética e curadoria para celebrações únicas em Moçambique.",
+      url: "/#experiencias",
+    },
+  ],
+  eventTypes: [
+    "Casamentos",
+    "Lobolos",
+    "Noivados",
+    "Aniversários",
+    "Baptizados",
+    "Graduações",
+    "Eventos corporativos",
+    "Galas",
   ],
 } as const;
 
@@ -183,7 +251,7 @@ export function buildStructuredData(): JsonLd[] {
 
   const organization: JsonLd = {
     "@context": "https://schema.org",
-    "@type": ["Organization", "ProfessionalService"],
+    "@type": ["Organization", "ProfessionalService", "EventPlanner"],
     "@id": organizationId,
     name: siteSeo.name,
     legalName: siteSeo.legalName,
@@ -200,6 +268,16 @@ export function buildStructuredData(): JsonLd[] {
       { "@type": "Country", name: "Moçambique" },
     ],
     knowsLanguage: ["pt-MZ"],
+    knowsAbout: [
+      "Assessoria de eventos",
+      "Convites digitais",
+      "Casamentos",
+      "Lobolos",
+      "Save the date",
+      "RSVP digital",
+      "Coordenação de eventos",
+      "Curadoria de eventos",
+    ],
     priceRange: "$$$",
     address: {
       "@type": "PostalAddress",
@@ -224,14 +302,20 @@ export function buildStructuredData(): JsonLd[] {
         areaServed: "MZ",
       },
     ],
-    makesOffer: siteSeo.services.map((service) => ({
+    makesOffer: siteSeo.serviceDetails.map((service) => ({
       "@type": "Offer",
       itemOffered: {
         "@type": "Service",
-        name: service,
+        name: service.name,
+        description: service.description,
+        url: `${siteUrl}${service.url}`,
         provider: { "@id": organizationId },
-        areaServed: "Maputo, Moçambique",
+        areaServed: [
+          { "@type": "City", name: "Maputo" },
+          { "@type": "Country", name: "Moçambique" },
+        ],
         availableLanguage: "pt-MZ",
+        serviceType: service.name,
       },
     })),
   };
@@ -269,13 +353,18 @@ export function buildStructuredData(): JsonLd[] {
     name: "Serviços HAXR Signature em Maputo",
     description: portfolioCopy.universo.areas,
     inLanguage: siteSeo.language,
-    itemListElement: universePillars.map((pillar, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      name: pillar.title,
-      description: pillar.desc,
-      url: `${siteUrl}/#universo`,
-    })),
+    itemListElement: universePillars.map((pillar, index) => {
+      const serviceDetail = siteSeo.serviceDetails.find(
+        (service) => service.name === pillar.title
+      );
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        name: pillar.title,
+        description: serviceDetail?.description ?? pillar.desc,
+        url: `${siteUrl}${serviceDetail?.url ?? "/#universo"}`,
+      };
+    }),
   };
 
   const faqPage: JsonLd = {
@@ -293,4 +382,16 @@ export function buildStructuredData(): JsonLd[] {
   };
 
   return [organization, website, webpage, serviceList, faqPage];
+}
+
+/** Metadados optimizados para a homepage (pesquisa local + serviços) */
+export function buildHomeMetadata(): Metadata {
+  return {
+    title: siteSeo.title,
+    description: siteSeo.description,
+    alternates: {
+      canonical: "/",
+      languages: { "pt-MZ": "/" },
+    },
+  };
 }

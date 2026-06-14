@@ -115,7 +115,7 @@ export default function OpenGraphImage() {
             lineHeight: 1.5,
           }}
         >
-          Convites digitais · Identidade visual · Assessoria e coordenação de eventos
+          Convites digitais · Assessoria de eventos · Curadoria exclusiva
         </p>
 
         <div

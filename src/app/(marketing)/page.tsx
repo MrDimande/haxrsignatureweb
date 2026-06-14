@@ -9,15 +9,9 @@ import Management from "@/components/sections/Management";
 import Archive from "@/components/sections/Archive";
 import Contact from "@/components/sections/Contact";
 import StructuredData from "@/components/seo/StructuredData";
-import { siteSeo } from "@/lib/seo";
+import { buildHomeMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: siteSeo.title,
-  description: siteSeo.description,
-  alternates: {
-    canonical: "/",
-  },
-};
+export const metadata: Metadata = buildHomeMetadata();
 
 export default function Home() {
   return (

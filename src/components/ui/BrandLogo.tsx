@@ -33,7 +33,7 @@ export default function BrandLogo({
   return (
     <Image
       src={logo.src}
-      alt="HAXR Signature — curadoria de eventos exclusivos em Maputo, Moçambique"
+      alt="HAXR Signature — convites digitais, assessoria e curadoria de eventos em Maputo, Moçambique"
       width={logo.width}
       height={logo.height}
       priority={priority}
