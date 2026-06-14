@@ -1,25 +1,32 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { rsvpFormSchema } from "@/lib/events/rsvp-validation";
 import { performRsvp } from "@/lib/events/services/rsvp.service";
-
-const schema = z.object({
-  eventId: z.string().uuid("Evento inválido"),
-  token: z.string().min(16).max(128),
-});
 
 export async function POST(request: Request) {
   try {
     const raw = await request.json();
-    const parsed = schema.safeParse(raw);
+    const parsed = rsvpFormSchema.safeParse(raw);
 
     if (!parsed.success) {
+      const message =
+        parsed.error.issues[0]?.message ?? "Dados inválidos.";
       return NextResponse.json(
-        { ok: false, error: "invalid_request" },
+        { ok: false, error: "invalid_request", message },
         { status: 400 }
       );
     }
 
-    const result = await performRsvp(parsed.data.eventId, parsed.data.token);
+    const result = await performRsvp({
+      eventId: parsed.data.eventId,
+      token: parsed.data.token,
+      name: parsed.data.name,
+      phone: parsed.data.phone || undefined,
+      email: parsed.data.email || undefined,
+      attendance: parsed.data.attendance,
+      plusOnes: parsed.data.plusOnes,
+      dietaryNotes: parsed.data.dietaryNotes || undefined,
+      guestNotes: parsed.data.guestNotes || undefined,
+    });
 
     if (!result.ok) {
       const status = result.error === "not_found" ? 404 : 400;

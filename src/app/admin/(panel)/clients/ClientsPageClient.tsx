@@ -142,6 +142,7 @@ export default function ClientsPageClient({
         columns={columns}
         data={clients}
         keyExtractor={(row) => row.id}
+        rowHref={(row) => `/admin/clients/${row.id}`}
         emptyMessage="Nenhum cliente registado. Adicione o primeiro."
       />
     </AdminShell>

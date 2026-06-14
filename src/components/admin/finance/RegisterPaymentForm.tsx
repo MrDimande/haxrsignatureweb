@@ -50,6 +50,13 @@ export default function RegisterPaymentForm({
     [openDocuments, sourceDocumentId]
   );
 
+  const availableEvents = useMemo(() => {
+    if (!clientId) return events;
+    return events.filter(
+      (event) => !event.clientId || event.clientId === clientId
+    );
+  }, [events, clientId]);
+
   function handleDocumentChange(id: string) {
     setSourceDocumentId(id);
     const doc = openDocuments.find((item) => item.id === id);
@@ -58,17 +65,21 @@ export default function RegisterPaymentForm({
     setCurrency(doc.totals.currency);
     setAmount(String(doc.totals.grandTotal));
     if (doc.clientId) setClientId(doc.clientId);
+    if (doc.event.eventId) setEventId(doc.event.eventId);
   }
 
   function handleClientChange(id: string) {
     setClientId(id);
     const client = clients.find((item) => item.id === id);
     if (!client) return;
-    setCurrency(
-      businesses.find((b) => b.id === businessId)
-        ? "MZN"
-        : "MZN"
-    );
+    setEventId("");
+  }
+
+  function handleEventChange(id: string) {
+    setEventId(id);
+    const event = events.find((item) => item.id === id);
+    if (!event) return;
+    if (event.clientId) setClientId(event.clientId);
   }
 
   function handleSubmit() {
@@ -182,12 +193,13 @@ export default function RegisterPaymentForm({
         <AdminSelect
           label="Evento (opcional)"
           value={eventId}
-          onChange={(e) => setEventId(e.target.value)}
+          onChange={(e) => handleEventChange(e.target.value)}
         >
           <option value="">Sem evento associado</option>
-          {events.map((event) => (
+          {availableEvents.map((event) => (
             <option key={event.id} value={event.id}>
               {event.name}
+              {event.clientName ? ` · ${event.clientName}` : ""}
             </option>
           ))}
         </AdminSelect>

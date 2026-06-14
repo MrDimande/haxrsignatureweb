@@ -5,6 +5,7 @@ import * as clientsRepo from "@/lib/admin/repositories/clients.repository";
 import * as signaturesRepo from "@/lib/admin/repositories/signatures.repository";
 import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 import * as paymentsRepo from "@/lib/finance/repositories/payments.repository";
+import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import DocumentDetailClient from "./DocumentDetailClient";
 
 type PageProps = {
@@ -38,11 +39,12 @@ export default async function DocumentDetailPage({ params }: PageProps) {
     );
   }
 
-  const [businesses, catalog, clients, signatures, paymentsEnabled] =
+  const [businesses, catalog, clients, events, signatures, paymentsEnabled] =
     await Promise.all([
       businessesRepo.listBusinesses(),
       catalogRepo.listCatalog(),
       clientsRepo.listClients(),
+      eventsRepo.listAllEvents(),
       signaturesRepo.listSignatures(),
       isPaymentsEnabled(),
     ]);
@@ -53,6 +55,7 @@ export default async function DocumentDetailPage({ params }: PageProps) {
       businesses={businesses}
       catalog={catalog}
       clients={clients}
+      events={events}
       signatures={signatures}
       paymentsEnabled={paymentsEnabled}
     />

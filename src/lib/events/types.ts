@@ -1,6 +1,6 @@
 import type { BusinessId, ClientType, EventType } from "@/lib/admin/types";
 
-export type GuestStatus = "invited" | "confirmed" | "checked_in";
+export type GuestStatus = "invited" | "confirmed" | "checked_in" | "declined";
 
 export type GuestLabel =
   | "none"
@@ -17,6 +17,8 @@ export type GuestSource = "manual" | "sheet_master" | "sheet_rsvp";
 export interface ManagedEvent {
   id: string;
   businessId: BusinessId;
+  clientId: string | null;
+  clientName: string | null;
   name: string;
   type: EventType;
   date: string | null;
@@ -34,6 +36,7 @@ export interface ManagedEvent {
 
 export interface EventFormData {
   businessId: BusinessId;
+  clientId: string | null;
   name: string;
   type: EventType;
   date: string;
@@ -111,7 +114,12 @@ export interface CheckinLookup {
   error?: string;
   guest?: {
     name: string;
+    email?: string;
+    phone?: string;
     status: GuestStatus;
+    plusOnes?: number;
+    dietaryNotes?: string;
+    guestNotes?: string;
   };
   event?: {
     name: string;
@@ -128,6 +136,20 @@ export interface CheckinLookup {
   alreadyCheckedIn?: boolean;
   confirmedRsvp?: boolean;
   alreadyConfirmed?: boolean;
+  declinedRsvp?: boolean;
+  alreadyDeclined?: boolean;
+}
+
+export interface RsvpSubmitInput {
+  eventId: string;
+  token: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  attendance: "confirm" | "decline";
+  plusOnes: number;
+  dietaryNotes?: string;
+  guestNotes?: string;
 }
 
 export interface EventListGuestStats {
@@ -142,8 +164,13 @@ export interface EventStats {
   invited: number;
   confirmed: number;
   checkedIn: number;
+  declined: number;
   assignedSeats: number;
   totalSeats: number;
+  uniqueTables: number;
+  confirmationRate: number;
+  capacityUsed: number;
+  capacityAvailable: number;
 }
 
 export interface EventPublicInfo {

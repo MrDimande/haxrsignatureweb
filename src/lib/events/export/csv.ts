@@ -32,6 +32,8 @@ export function buildGuestReportCsv(report: GuestEventReport): string {
     row(["Convidados", stats.invited]),
     row(["Confirmados", stats.confirmed]),
     row(["Check-in", stats.checkedIn]),
+    row(["Recusados", stats.declined]),
+    row(["Taxa de confirmação", `${stats.confirmationRate}%`]),
     row(["Com lugar", stats.assignedSeats]),
     row(["Sem lugar", stats.totalGuests - stats.assignedSeats]),
     row(["Lugares disponíveis", stats.totalSeats]),

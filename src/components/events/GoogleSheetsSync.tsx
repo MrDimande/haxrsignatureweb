@@ -287,6 +287,34 @@ export default function GoogleSheetsSync({
         </p>
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        {[
+          {
+            label: "Última sincronização",
+            value: formatSyncDate(event.sheetsLastSyncedAt),
+          },
+          {
+            label: "Registos importados",
+            value: lastResult?.totalRows ?? previewCount ?? "—",
+          },
+          {
+            label: "Novos convidados",
+            value: lastResult?.created ?? "—",
+          },
+          {
+            label: "Actualizados",
+            value: lastResult?.updated ?? "—",
+          },
+        ].map((item) => (
+          <div key={item.label} className="admin-stat-card">
+            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
+              {item.label}
+            </p>
+            <p className="font-serif text-xl font-light text-white">{item.value}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <span
           className={`inline-flex items-center gap-2 px-3 py-1.5 border font-mono text-[9px] tracking-[0.2em] uppercase ${

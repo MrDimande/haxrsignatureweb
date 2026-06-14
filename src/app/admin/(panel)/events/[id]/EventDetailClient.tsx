@@ -13,8 +13,9 @@ import CheckInDashboard from "@/components/events/CheckInDashboard";
 import GuestReportPanel from "@/components/events/GuestReportPanel";
 import EventQrPanel from "@/components/events/EventQrPanel";
 import GoogleSheetsSync from "@/components/events/GoogleSheetsSync";
+import EventKpiPanel from "@/components/events/EventKpiPanel";
 import { EVENT_TYPE_LABELS } from "@/lib/admin/constants";
-import type { BusinessId } from "@/lib/admin/types";
+import type { BusinessId, Client } from "@/lib/admin/types";
 import type {
   EventGuest,
   EventSeat,
@@ -32,6 +33,7 @@ type EventDetailClientProps = {
   stats: EventStats;
   auditEntries: GuestAuditEntry[];
   businesses: { id: BusinessId; name: string }[];
+  clients: Client[];
 };
 
 function formatDate(date: string | null): string {
@@ -52,6 +54,7 @@ export default function EventDetailClient({
   stats: initialStats,
   auditEntries,
   businesses,
+  clients,
 }: EventDetailClientProps) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
@@ -83,6 +86,8 @@ export default function EventDetailClient({
         </Link>
       }
     >
+      <EventKpiPanel event={event} stats={initialStats} />
+
       <div className="flex flex-wrap gap-2 mb-8 border-b border-grey-dark/80 pb-4">
         {tabs.map((item) => (
           <button
@@ -154,6 +159,7 @@ export default function EventDetailClient({
           </h2>
           <EventForm
             businesses={businesses}
+            clients={clients}
             event={event}
             onSaved={(updated) => {
               setEvent(updated);

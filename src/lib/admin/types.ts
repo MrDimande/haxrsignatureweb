@@ -10,10 +10,25 @@ export type ClientType = "individual" | "company";
 
 export type ServiceCategory =
   | "invitations"
+  | "websites"
+  | "assessoria"
+  | "branding"
+  | "experiences"
   | "event_packages"
   | "addons"
   | "coordination"
   | "media";
+
+export interface CatalogFormData {
+  id?: string;
+  businessId: BusinessId | null;
+  name: string;
+  description: string;
+  price: number;
+  category: ServiceCategory;
+  sortOrder: number;
+  isActive: boolean;
+}
 
 export type EventType =
   | "wedding"
@@ -103,6 +118,7 @@ export interface DocumentTotals {
 }
 
 export interface EventContext {
+  eventId: string | null;
   eventType: EventType | null;
   eventName: string;
   eventDate: string | null;
@@ -166,6 +182,7 @@ export type InvoiceFormData = {
   clientEmail: string;
   clientPhone: string;
   clientAddress: string;
+  eventId: string | null;
   eventType: EventType | null;
   eventName: string;
   eventDate: string | null;
@@ -188,6 +205,14 @@ export type UploadSignatureInput = {
   imageDataUrl: string;
   setAsDefault?: boolean;
 };
+
+export interface ClientCommercialStats {
+  eventCount: number;
+  invoicedTotal: number;
+  receivedTotal: number;
+  pendingBalance: number;
+  currency: Currency;
+}
 
 export interface DashboardStats {
   totalProformas: number;

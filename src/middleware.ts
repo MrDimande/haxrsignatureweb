@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import {
-  ADMIN_SESSION_COOKIE,
-  isAdminConfigured,
-  isValidSession,
+    ADMIN_SESSION_COOKIE,
+    isAdminConfigured,
+    isValidSession,
 } from "@/lib/admin/auth";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 const PUBLIC_ADMIN_PATHS = new Set(["/admin"]);
 

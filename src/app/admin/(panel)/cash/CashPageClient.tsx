@@ -223,6 +223,11 @@ export default function CashPageClient({
       render: (row: PaymentRecord) => row.clientName || "—",
     },
     {
+      key: "event",
+      header: "Evento",
+      render: (row: PaymentRecord) => row.eventName || "—",
+    },
+    {
       key: "method",
       header: "Método",
       render: (row: PaymentRecord) => PAYMENT_METHOD_LABELS[row.paymentMethod],

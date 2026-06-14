@@ -13,14 +13,18 @@ import type {
   InvoiceDocument,
   ServiceCatalogItem,
 } from "@/lib/admin/types";
+import type { ManagedEvent } from "@/lib/events/types";
 
 type NewDocumentPageClientProps = {
   documentType: DocumentType;
   businesses: Business[];
   catalog: ServiceCatalogItem[];
   clients: Client[];
+  events: ManagedEvent[];
   signatures: BusinessSignature[];
   initialDocumentNumber: string;
+  defaultClientId?: string | null;
+  defaultEventId?: string | null;
 };
 
 export default function NewDocumentPageClient({
@@ -28,8 +32,11 @@ export default function NewDocumentPageClient({
   businesses,
   catalog,
   clients,
+  events,
   signatures,
   initialDocumentNumber,
+  defaultClientId,
+  defaultEventId,
 }: NewDocumentPageClientProps) {
   const router = useRouter();
   const [activeType, setActiveType] = useState(documentType);
@@ -44,8 +51,11 @@ export default function NewDocumentPageClient({
         businesses={businesses}
         catalog={catalog}
         clients={clients}
+        events={events}
         signatures={signatures}
         initialDocumentNumber={initialDocumentNumber}
+        defaultClientId={defaultClientId}
+        defaultEventId={defaultEventId}
         onDocumentTypeChange={setActiveType}
         onSaved={(doc: InvoiceDocument) => {
           router.push(`/admin/documents/${doc.id}`);

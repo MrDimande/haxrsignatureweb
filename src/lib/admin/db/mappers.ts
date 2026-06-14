@@ -113,6 +113,7 @@ export function mapDocument(
     clientPhone: row.client_phone,
     clientAddress: row.client_address,
     event: {
+      eventId: row.event_id ?? null,
       eventType: (row.event_type as EventType | null) ?? null,
       eventName: row.event_name,
       eventDate: row.event_date,

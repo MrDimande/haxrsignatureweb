@@ -29,6 +29,8 @@ export async function listDocuments(filters?: {
   documentType?: DocumentType;
   businessId?: BusinessId;
   status?: InvoiceDocument["status"];
+  clientId?: string;
+  eventId?: string;
   limit?: number;
 }): Promise<InvoiceDocument[]> {
   const supabase = createAdminClient();
@@ -45,6 +47,12 @@ export async function listDocuments(filters?: {
   }
   if (filters?.status) {
     query = query.eq("status", filters.status);
+  }
+  if (filters?.clientId) {
+    query = query.eq("client_id", filters.clientId);
+  }
+  if (filters?.eventId) {
+    query = query.eq("event_id", filters.eventId);
   }
   if (filters?.limit) {
     query = query.limit(filters.limit);
@@ -138,6 +146,7 @@ export async function saveDocument(
     client_phone: form.clientPhone.trim(),
     client_address: form.clientAddress.trim(),
     event_type: form.eventType,
+    event_id: form.eventId,
     event_name: form.eventName.trim(),
     event_date: form.eventDate,
     event_location: form.eventLocation.trim(),

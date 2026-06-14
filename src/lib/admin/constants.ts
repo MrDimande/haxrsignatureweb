@@ -37,6 +37,10 @@ export const CLIENT_TYPE_LABELS: Record<ClientType, string> = {
 
 export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   invitations: "Convites",
+  websites: "Websites",
+  assessoria: "Assessoria",
+  branding: "Branding",
+  experiences: "Experiências",
   event_packages: "Pacotes",
   addons: "Extras",
   coordination: "Coordenação",
@@ -45,10 +49,10 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
 
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
   "invitations",
-  "event_packages",
-  "addons",
-  "coordination",
-  "media",
+  "websites",
+  "assessoria",
+  "branding",
+  "experiences",
 ];
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {

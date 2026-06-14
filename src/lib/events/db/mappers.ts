@@ -11,10 +11,15 @@ import type {
 } from "@/lib/events/types";
 import type { BusinessId, ClientType, EventType } from "@/lib/admin/types";
 
-export function mapEvent(row: Tables<"events">): ManagedEvent {
+export function mapEvent(
+  row: Tables<"events">,
+  clientName?: string | null
+): ManagedEvent {
   return {
     id: row.id,
     businessId: row.business_id as BusinessId,
+    clientId: row.client_id ?? null,
+    clientName: clientName ?? null,
     name: row.name,
     type: row.type as EventType,
     date: row.date,
@@ -35,6 +40,7 @@ export function eventToDbInsert(data: EventFormData, id?: string) {
   return {
     ...(id ? { id } : {}),
     business_id: data.businessId,
+    client_id: data.clientId || null,
     name: data.name.trim(),
     type: data.type,
     date: data.date || null,

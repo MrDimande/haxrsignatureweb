@@ -1,12 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import ClientSearchSelect from "@/components/admin/ClientSearchSelect";
 import { AdminInput, AdminSelect, AdminTextarea } from "@/components/admin/AdminField";
 import { EVENT_TYPE_LABELS, EVENT_TYPES } from "@/lib/admin/constants";
 import { saveEventAction } from "@/lib/events/actions/events.actions";
-import type { BusinessId, EventType } from "@/lib/admin/types";
+import type { BusinessId, Client, EventType } from "@/lib/admin/types";
 import type { EventFormData, ManagedEvent } from "@/lib/events/types";
 
 const schema = z.object({
@@ -29,17 +31,25 @@ type FormValues = z.infer<typeof schema>;
 
 type EventFormProps = {
   businesses: { id: BusinessId; name: string }[];
+  clients: Client[];
   event?: ManagedEvent;
+  defaultClientId?: string | null;
   onSaved: (event: ManagedEvent) => void;
   onCancel?: () => void;
 };
 
 export default function EventForm({
   businesses,
+  clients,
   event,
+  defaultClientId,
   onSaved,
   onCancel,
 }: EventFormProps) {
+  const [clientId, setClientId] = useState(
+    event?.clientId ?? defaultClientId ?? ""
+  );
+
   const {
     register,
     handleSubmit,
@@ -59,6 +69,7 @@ export default function EventForm({
   async function onSubmit(values: FormValues) {
     const data: EventFormData = {
       businessId: values.businessId,
+      clientId: clientId || null,
       name: values.name,
       type: values.type,
       date: values.date ?? "",
@@ -72,6 +83,13 @@ export default function EventForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <ClientSearchSelect
+        clients={clients}
+        value={clientId}
+        onChange={setClientId}
+        label="Cliente"
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <AdminSelect label="Negócio" {...register("businessId")}>
           {businesses.map((b) => (

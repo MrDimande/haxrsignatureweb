@@ -13,12 +13,14 @@ import type {
   InvoiceDocument,
   ServiceCatalogItem,
 } from "@/lib/admin/types";
+import type { ManagedEvent } from "@/lib/events/types";
 
 type DocumentDetailClientProps = {
   document: InvoiceDocument;
   businesses: Business[];
   catalog: ServiceCatalogItem[];
   clients: Client[];
+  events: ManagedEvent[];
   signatures: BusinessSignature[];
   paymentsEnabled?: boolean;
 };
@@ -28,6 +30,7 @@ export default function DocumentDetailClient({
   businesses,
   catalog,
   clients,
+  events,
   signatures,
   paymentsEnabled = false,
 }: DocumentDetailClientProps) {
@@ -57,6 +60,7 @@ export default function DocumentDetailClient({
         businesses={businesses}
         catalog={catalog}
         clients={clients}
+        events={events}
         signatures={signatures}
         initialDocument={document}
         onSaved={() => router.refresh()}

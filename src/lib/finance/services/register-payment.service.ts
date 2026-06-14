@@ -74,6 +74,7 @@ export async function registerPayment(
       clientEmail: sourceDocument?.clientEmail ?? "",
       clientPhone: sourceDocument?.clientPhone ?? "",
       clientAddress: sourceDocument?.clientAddress ?? "",
+      eventId: sourceDocument?.event.eventId ?? input.eventId ?? null,
       eventType: sourceDocument?.event.eventType ?? null,
       eventName: sourceDocument?.event.eventName ?? "",
       eventDate: sourceDocument?.event.eventDate ?? null,

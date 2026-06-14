@@ -12,13 +12,16 @@ import {
   groupEventsByPipeline,
   type EventPipelineStatus,
 } from "@/lib/events/pipeline";
-import type { BusinessId } from "@/lib/admin/types";
+import type { BusinessId, Client } from "@/lib/admin/types";
 import type { EventListGuestStats, ManagedEvent } from "@/lib/events/types";
 
 type EventsPageClientProps = {
   initialEvents: ManagedEvent[];
   guestStats: Record<string, EventListGuestStats>;
   businesses: { id: BusinessId; name: string }[];
+  clients: Client[];
+  defaultClientId?: string | null;
+  openCreate?: boolean;
 };
 
 type TabFilter = EventPipelineStatus | "all";
@@ -44,10 +47,13 @@ export default function EventsPageClient({
   initialEvents,
   guestStats,
   businesses,
+  clients,
+  defaultClientId = null,
+  openCreate = false,
 }: EventsPageClientProps) {
   const router = useRouter();
   const [events, setEvents] = useState(initialEvents);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(openCreate);
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
 
   const groups = useMemo(() => groupEventsByPipeline(events), [events]);
@@ -80,6 +86,15 @@ export default function EventsPageClient({
       header: "Data",
       render: (row: ManagedEvent) => (
         <span className="text-sm text-grey font-mono">{formatDate(row.date)}</span>
+      ),
+    },
+    {
+      key: "client",
+      header: "Cliente",
+      render: (row: ManagedEvent) => (
+        <span className="text-sm text-grey/70">
+          {row.clientName || "—"}
+        </span>
       ),
     },
     {
@@ -150,6 +165,8 @@ export default function EventsPageClient({
           </h2>
           <EventForm
             businesses={businesses}
+            clients={clients}
+            defaultClientId={defaultClientId}
             onSaved={(event) => {
               setEvents((prev) => [event, ...prev]);
               setCreating(false);

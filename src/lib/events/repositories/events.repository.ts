@@ -3,6 +3,35 @@ import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import { eventToDbInsert, mapEvent } from "@/lib/events/db/mappers";
 import type { EventFormData, EventPublicInfo, ManagedEvent, SheetsSyncMode } from "@/lib/events/types";
 import type { EventType } from "@/lib/admin/types";
+import type { Tables } from "@/lib/supabase/database.types";
+
+async function enrichEventsWithClientNames(
+  rows: Tables<"events">[]
+): Promise<ManagedEvent[]> {
+  if (!rows.length) return [];
+
+  const clientIds = [
+    ...new Set(rows.map((row) => row.client_id).filter((id): id is string => Boolean(id))),
+  ];
+
+  const clientNames = new Map<string, string>();
+  if (clientIds.length) {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id, client_name")
+      .in("id", clientIds);
+
+    if (error) throw new Error(error.message);
+    for (const client of asTableRows<"clients">(data)) {
+      clientNames.set(client.id, client.client_name);
+    }
+  }
+
+  return rows.map((row) =>
+    mapEvent(row, row.client_id ? clientNames.get(row.client_id) ?? null : null)
+  );
+}
 
 export async function listEvents(): Promise<ManagedEvent[]> {
   const supabase = createAdminClient();
@@ -13,7 +42,7 @@ export async function listEvents(): Promise<ManagedEvent[]> {
     .order("date", { ascending: false, nullsFirst: false });
 
   if (error) throw new Error(error.message);
-  return asTableRows<"events">(data).map(mapEvent);
+  return enrichEventsWithClientNames(asTableRows<"events">(data));
 }
 
 /** Inclui eventos arquivados — usado no dashboard e agrupamento por pipeline. */
@@ -25,7 +54,21 @@ export async function listAllEvents(): Promise<ManagedEvent[]> {
     .order("date", { ascending: false, nullsFirst: false });
 
   if (error) throw new Error(error.message);
-  return asTableRows<"events">(data).map(mapEvent);
+  return enrichEventsWithClientNames(asTableRows<"events">(data));
+}
+
+export async function listEventsByClientId(
+  clientId: string
+): Promise<ManagedEvent[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("date", { ascending: false, nullsFirst: false });
+
+  if (error) throw new Error(error.message);
+  return enrichEventsWithClientNames(asTableRows<"events">(data));
 }
 
 export async function getEventById(id: string): Promise<ManagedEvent | null> {
@@ -38,7 +81,9 @@ export async function getEventById(id: string): Promise<ManagedEvent | null> {
 
   if (error) throw new Error(error.message);
   const row = asTableRow<"events">(data);
-  return row ? mapEvent(row) : null;
+  if (!row) return null;
+  const [event] = await enrichEventsWithClientNames([row]);
+  return event ?? null;
 }
 
 export async function createEvent(data: EventFormData): Promise<ManagedEvent> {
@@ -52,7 +97,9 @@ export async function createEvent(data: EventFormData): Promise<ManagedEvent> {
   if (error) throw new Error(error.message);
   const row = asTableRow<"events">(saved);
   if (!row) throw new Error("Falha ao criar evento.");
-  return mapEvent(row);
+  const [event] = await enrichEventsWithClientNames([row]);
+  if (!event) throw new Error("Falha ao criar evento.");
+  return event;
 }
 
 export async function updateEvent(
@@ -70,7 +117,9 @@ export async function updateEvent(
   if (error) throw new Error(error.message);
   const row = asTableRow<"events">(saved);
   if (!row) throw new Error("Evento não encontrado.");
-  return mapEvent(row);
+  const [event] = await enrichEventsWithClientNames([row]);
+  if (!event) throw new Error("Evento não encontrado.");
+  return event;
 }
 
 export async function getEventPublicInfo(
@@ -133,7 +182,9 @@ export async function updateEventSheetConnection(
   if (error) throw new Error(error.message);
   const row = asTableRow<"events">(data);
   if (!row) throw new Error("Evento não encontrado.");
-  return mapEvent(row);
+  const [event] = await enrichEventsWithClientNames([row]);
+  if (!event) throw new Error("Evento não encontrado.");
+  return event;
 }
 
 export async function recordSheetSync(

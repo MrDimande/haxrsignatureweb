@@ -90,6 +90,7 @@ export function createDefaultInvoiceForm(
     clientEmail: "",
     clientPhone: "",
     clientAddress: "",
+    eventId: null,
     eventType: null,
     eventName: "",
     eventDate: null,
@@ -164,6 +165,7 @@ export function buildInvoiceDocument(
     clientPhone: form.clientPhone.trim(),
     clientAddress: form.clientAddress.trim(),
     event: {
+      eventId: form.eventId,
       eventType: form.eventType,
       eventName: form.eventName.trim(),
       eventDate: form.eventDate,
@@ -199,6 +201,7 @@ export function documentToForm(document: InvoiceDocument): InvoiceFormData {
     clientEmail: document.clientEmail,
     clientPhone: document.clientPhone,
     clientAddress: document.clientAddress,
+    eventId: document.event.eventId,
     eventType: document.event.eventType,
     eventName: document.event.eventName,
     eventDate: document.event.eventDate,
@@ -237,6 +240,46 @@ export function clientToInvoiceFields(client: Client): Pick<
     clientEmail: client.email,
     clientPhone: client.phone,
     clientAddress: client.address,
+  };
+}
+
+export function managedEventToInvoiceFields(
+  event: import("@/lib/events/types").ManagedEvent,
+  client?: Client | null
+): Pick<
+  InvoiceFormData,
+  | "eventId"
+  | "eventType"
+  | "eventName"
+  | "eventDate"
+  | "eventLocation"
+  | "clientId"
+  | "clientType"
+  | "clientName"
+  | "companyName"
+  | "clientNuit"
+  | "clientEmail"
+  | "clientPhone"
+  | "clientAddress"
+> {
+  const clientFields = client ? clientToInvoiceFields(client) : {
+    clientId: event.clientId,
+    clientType: "individual" as const,
+    clientName: event.clientName ?? "",
+    companyName: "",
+    clientNuit: "",
+    clientEmail: "",
+    clientPhone: "",
+    clientAddress: "",
+  };
+
+  return {
+    eventId: event.id,
+    eventType: event.type,
+    eventName: event.name,
+    eventDate: event.date,
+    eventLocation: event.location,
+    ...clientFields,
   };
 }
 

@@ -370,23 +370,45 @@ export async function searchGuestsByName(
 }
 
 export async function getEventStats(eventId: string): Promise<EventStats> {
-  const [guests, seats] = await Promise.all([
+  const supabase = createAdminClient();
+  const [guests, seatsResult, seatRows] = await Promise.all([
     listGuestsByEvent(eventId),
-    createAdminClient()
+    supabase
       .from("seats")
       .select("*", { count: "exact", head: true })
       .eq("event_id", eventId),
+    supabase.from("seats").select("table_name").eq("event_id", eventId),
   ]);
 
-  if (seats.error) throw new Error(seats.error.message);
+  if (seatsResult.error) throw new Error(seatsResult.error.message);
+  if (seatRows.error) throw new Error(seatRows.error.message);
+
+  const totalSeats = seatsResult.count ?? 0;
+  const assignedSeats = guests.filter((g) => g.seatId).length;
+  const confirmed = guests.filter((g) => g.status === "confirmed").length;
+  const checkedIn = guests.filter((g) => g.status === "checked_in").length;
+  const declined = guests.filter((g) => g.status === "declined").length;
+  const invited = guests.filter((g) => g.status === "invited").length;
+  const totalGuests = guests.length;
+  const uniqueTables = new Set(
+    asTableRows<"seats">(seatRows.data).map((s) => s.table_name)
+  ).size;
+  const responded = confirmed + checkedIn + declined;
+  const confirmationRate =
+    totalGuests > 0 ? Math.round((responded / totalGuests) * 100) : 0;
 
   return {
-    totalGuests: guests.length,
-    invited: guests.filter((g) => g.status === "invited").length,
-    confirmed: guests.filter((g) => g.status === "confirmed").length,
-    checkedIn: guests.filter((g) => g.status === "checked_in").length,
-    assignedSeats: guests.filter((g) => g.seatId).length,
-    totalSeats: seats.count ?? 0,
+    totalGuests,
+    invited,
+    confirmed,
+    checkedIn,
+    declined,
+    assignedSeats,
+    totalSeats,
+    uniqueTables,
+    confirmationRate,
+    capacityUsed: assignedSeats,
+    capacityAvailable: Math.max(0, totalSeats - assignedSeats),
   };
 }
 

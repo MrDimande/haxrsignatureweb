@@ -133,6 +133,10 @@ export interface Database {
           price: number;
           category:
             | "invitations"
+            | "websites"
+            | "assessoria"
+            | "branding"
+            | "experiences"
             | "event_packages"
             | "addons"
             | "coordination"
@@ -151,6 +155,10 @@ export interface Database {
           price: number;
           category?:
             | "invitations"
+            | "websites"
+            | "assessoria"
+            | "branding"
+            | "experiences"
             | "event_packages"
             | "addons"
             | "coordination"
@@ -206,6 +214,7 @@ export interface Database {
           client_email: string;
           client_phone: string;
           client_address: string;
+          event_id: string | null;
           event_type:
             | "wedding"
             | "birthday"
@@ -248,6 +257,7 @@ export interface Database {
           client_email?: string;
           client_phone?: string;
           client_address?: string;
+          event_id?: string | null;
           event_type?:
             | "wedding"
             | "birthday"
@@ -477,6 +487,7 @@ export interface Database {
         Row: {
           id: string;
           business_id: string;
+          client_id: string | null;
           name: string;
           type:
             | "wedding"
@@ -500,6 +511,7 @@ export interface Database {
         Insert: {
           id?: string;
           business_id: string;
+          client_id?: string | null;
           name: string;
           type?:
             | "wedding"
@@ -683,7 +695,17 @@ export interface Database {
         Returns: Json;
       };
       perform_event_rsvp: {
-        Args: { p_event_id: string; p_token: string };
+        Args: {
+          p_event_id: string;
+          p_token: string;
+          p_attendance?: string;
+          p_name?: string;
+          p_email?: string;
+          p_phone?: string;
+          p_plus_ones?: number;
+          p_dietary_notes?: string;
+          p_guest_notes?: string;
+        };
         Returns: Json;
       };
     };
@@ -701,7 +723,7 @@ export interface Database {
         | "other";
       item_source: "catalog" | "manual";
       inquiry_status: "new" | "contacted" | "converted" | "archived";
-      guest_status: "invited" | "confirmed" | "checked_in";
+      guest_status: "invited" | "confirmed" | "checked_in" | "declined";
       guest_label: "none" | "vip" | "family" | "wedding_party" | "corporate" | "other";
       guest_source: "manual" | "sheet_master" | "sheet_rsvp";
       sheets_sync_mode: "master" | "rsvp";
@@ -721,6 +743,10 @@ export interface Database {
         | "other";
       service_category:
         | "invitations"
+        | "websites"
+        | "assessoria"
+        | "branding"
+        | "experiences"
         | "event_packages"
         | "addons"
         | "coordination"

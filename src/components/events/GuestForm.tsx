@@ -15,7 +15,7 @@ const schema = z.object({
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   phone: z.string().optional(),
   clientType: z.enum(["individual", "company"]),
-  status: z.enum(["invited", "confirmed", "checked_in"]),
+  status: z.enum(["invited", "confirmed", "checked_in", "declined"]),
   seatId: z.string().optional(),
   plusOnes: z.coerce.number().int().min(0).max(10),
   dietaryNotes: z.string().max(500).optional(),

@@ -1,22 +1,21 @@
 "use client";
 
 import {
-  Document,
-  Page,
-  Text,
-  View,
-  Image,
-  StyleSheet,
-} from "@react-pdf/renderer";
-import { formatCurrency, formatDateShort } from "@/lib/calculations";
-import type { Business } from "@/lib/admin/types";
-import type { InvoiceDocument } from "@/lib/admin/types";
-import {
-  DOCUMENT_TYPE_LABELS,
-  DOCUMENT_STATUS_LABELS,
-  EVENT_TYPE_LABELS,
-  VAT_RATE,
+    DOCUMENT_STATUS_LABELS,
+    DOCUMENT_TYPE_LABELS,
+    EVENT_TYPE_LABELS,
+    VAT_RATE,
 } from "@/lib/admin/constants";
+import type { Business, InvoiceDocument } from "@/lib/admin/types";
+import { formatCurrency, formatDateShort } from "@/lib/calculations";
+import {
+    Document,
+    Image,
+    Page,
+    StyleSheet,
+    Text,
+    View,
+} from "@react-pdf/renderer";
 
 const styles = StyleSheet.create({
   page: {

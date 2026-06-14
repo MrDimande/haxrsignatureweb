@@ -31,6 +31,7 @@ import {
   createId,
   documentToForm,
   getDefaultSignatureForBusiness,
+  managedEventToInvoiceFields,
   signatureToFormFields,
 } from "@/lib/invoice-generator";
 import { downloadInvoicePDF } from "@/lib/pdf";
@@ -45,15 +46,19 @@ import type {
   InvoiceFormData,
   ServiceCatalogItem,
 } from "@/lib/admin/types";
+import type { ManagedEvent } from "@/lib/events/types";
 
 type InvoiceFormProps = {
   documentType: DocumentType;
   businesses: Business[];
   catalog: ServiceCatalogItem[];
   clients: Client[];
+  events?: ManagedEvent[];
   signatures: BusinessSignature[];
   initialDocument?: InvoiceDocument;
   initialDocumentNumber?: string;
+  defaultClientId?: string | null;
+  defaultEventId?: string | null;
   onSaved: (document: InvoiceDocument) => void;
   onDocumentTypeChange?: (documentType: DocumentType) => void;
 };
@@ -63,13 +68,16 @@ export default function InvoiceForm({
   businesses,
   catalog,
   clients,
+  events = [],
   signatures,
   initialDocument,
   initialDocumentNumber,
+  defaultClientId,
+  defaultEventId,
   onSaved,
   onDocumentTypeChange,
 }: InvoiceFormProps) {
-  const [form, setForm] = useState<InvoiceFormData>(() => {
+  const initialForm = (() => {
     if (initialDocument) return documentToForm(initialDocument);
     const base = createDefaultInvoiceForm(documentType, [], "haxr-signature");
     if (initialDocumentNumber) base.documentNumber = initialDocumentNumber;
@@ -80,11 +88,25 @@ export default function InvoiceForm({
     if (defaultSignature) {
       Object.assign(base, signatureToFormFields(defaultSignature));
     }
+    if (defaultEventId) {
+      const event = events.find((item) => item.id === defaultEventId);
+      if (event) {
+        const client = clients.find(
+          (item) => item.id === (event.clientId ?? defaultClientId ?? "")
+        );
+        Object.assign(base, managedEventToInvoiceFields(event, client));
+      }
+    } else if (defaultClientId) {
+      const client = clients.find((item) => item.id === defaultClientId);
+      if (client) Object.assign(base, clientToInvoiceFields(client));
+    }
     return base;
-  });
+  })();
+
+  const [form, setForm] = useState<InvoiceFormData>(initialForm);
   const [showCatalog, setShowCatalog] = useState(false);
   const [showSignPad, setShowSignPad] = useState(false);
-  const [isNewClient, setIsNewClient] = useState(!form.clientId);
+  const [isNewClient, setIsNewClient] = useState(!initialForm.clientId);
   const [error, setError] = useState("");
   const [numberError, setNumberError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -107,6 +129,13 @@ export default function InvoiceForm({
       ),
     [catalog, form.businessId]
   );
+
+  const availableEvents = useMemo(() => {
+    if (!form.clientId) return events;
+    return events.filter(
+      (event) => !event.clientId || event.clientId === form.clientId
+    );
+  }, [events, form.clientId]);
 
   const previewDocument = useMemo(
     () => buildInvoiceDocument(form, initialDocument),
@@ -228,6 +257,7 @@ export default function InvoiceForm({
       setIsNewClient(true);
       updateForm({
         clientId: null,
+        eventId: null,
         clientType: "individual",
         clientName: "",
         companyName: "",
@@ -241,7 +271,28 @@ export default function InvoiceForm({
     const client = clients.find((c) => c.id === clientId);
     if (!client) return;
     setIsNewClient(false);
-    updateForm(clientToInvoiceFields(client));
+    updateForm({
+      ...clientToInvoiceFields(client),
+      eventId: null,
+      eventType: null,
+      eventName: "",
+      eventDate: null,
+      eventLocation: "",
+    });
+  }
+
+  function handleEventSelect(eventId: string) {
+    if (!eventId) {
+      updateForm({ eventId: null });
+      return;
+    }
+    const event = events.find((item) => item.id === eventId);
+    if (!event) return;
+    const client = event.clientId
+      ? clients.find((item) => item.id === event.clientId)
+      : undefined;
+    if (client) setIsNewClient(false);
+    updateForm(managedEventToInvoiceFields(event, client));
   }
 
   function updateLineItem(id: string, patch: Partial<(typeof form.lineItems)[0]>) {
@@ -265,10 +316,13 @@ export default function InvoiceForm({
   function addFromCatalog(serviceId: string) {
     const service = businessCatalog.find((s) => s.id === serviceId);
     if (!service) return;
+    const description = service.description
+      ? `${service.name} — ${service.description}`
+      : service.name;
     const emptyIndex = form.lineItems.findIndex((i) => !i.description.trim());
     const newItem = {
       id: createId(),
-      description: service.name,
+      description,
       quantity: 1,
       unitPrice: service.basePrice,
       total: service.basePrice,
@@ -501,6 +555,20 @@ export default function InvoiceForm({
           <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-admin-gold">
             Evento
           </h2>
+          <AdminSelect
+            label="Seleccionar evento existente"
+            value={form.eventId ?? ""}
+            onChange={(e) => handleEventSelect(e.target.value)}
+          >
+            <option value="">Preencher manualmente</option>
+            {availableEvents.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.name}
+                {event.date ? ` · ${event.date}` : ""}
+                {event.clientName ? ` · ${event.clientName}` : ""}
+              </option>
+            ))}
+          </AdminSelect>
           <AdminSelect
             label="Tipo de Evento"
             value={form.eventType ?? ""}
