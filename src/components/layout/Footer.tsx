@@ -19,6 +19,7 @@ const footerNav = [
   { href: "#filosofia", label: "Filosofia" },
   { href: "#universo", label: "Universo" },
   { href: "#convites", label: "Convites" },
+  { href: "#arquivo", label: "Arquivo" },
   { href: "#contacto", label: "Contacto" },
 ] as const;
 

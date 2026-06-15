@@ -12,6 +12,7 @@ const links = [
   { href: "#metodo", label: "Método" },
   { href: "#gestao", label: "Gestão" },
   { href: "#arquivo", label: "Arquivo" },
+  { href: "#testemunhos", label: "Clientes" },
   { href: "#contacto", label: "Contacto", accent: true },
 ];
 

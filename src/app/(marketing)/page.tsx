@@ -8,6 +8,7 @@ import Method from "@/components/sections/Method";
 import Management from "@/components/sections/Management";
 import Archive from "@/components/sections/Archive";
 import Contact from "@/components/sections/Contact";
+import Testimonials from "@/components/sections/Testimonials";
 import StructuredData from "@/components/seo/StructuredData";
 import { buildHomeMetadata } from "@/lib/seo";
 
@@ -25,6 +26,7 @@ export default function Home() {
       <Method />
       <Management />
       <Archive />
+      <Testimonials />
       <Contact />
     </>
   );

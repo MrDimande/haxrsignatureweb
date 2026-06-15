@@ -84,16 +84,26 @@ export default function Hero() {
           {hero.subtitle}
         </p>
 
-        <a
+        <div
           data-hero-item
-          href="#contacto"
-          className="group inline-flex items-center gap-3 border border-gold-dim text-gold text-[11px] tracking-[0.3em] uppercase px-8 py-3.5 hover:border-gold hover:bg-gold/5 transition-all duration-700"
+          className="flex flex-col sm:flex-row items-center gap-4"
         >
-          <span>Solicitar acesso</span>
-          <span className="inline-block transition-transform duration-500 group-hover:translate-x-1">
-            →
-          </span>
-        </a>
+          <a
+            href="#contacto"
+            className="group inline-flex items-center gap-3 border border-gold-dim text-gold text-[11px] tracking-[0.3em] uppercase px-8 py-3.5 hover:border-gold hover:bg-gold/5 transition-all duration-700"
+          >
+            <span>{hero.ctaPrimary}</span>
+            <span className="inline-block transition-transform duration-500 group-hover:translate-x-1">
+              →
+            </span>
+          </a>
+          <a
+            href="#convites"
+            className="group inline-flex items-center gap-3 border border-grey-dark text-grey text-[11px] tracking-[0.3em] uppercase px-8 py-3.5 hover:border-gold/40 hover:text-gold transition-all duration-700"
+          >
+            <span>{hero.ctaSecondary}</span>
+          </a>
+        </div>
       </div>
 
       <div

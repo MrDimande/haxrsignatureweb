@@ -1,6 +1,7 @@
 import Nav from "@/components/layout/Nav";
 import Footer from "@/components/layout/Footer";
 import SmoothScroll from "@/components/providers/SmoothScroll";
+import WhatsAppFloat from "@/components/ui/WhatsAppFloat";
 
 export default function MarketingLayout({
   children,
@@ -12,6 +13,7 @@ export default function MarketingLayout({
       <Nav />
       <main>{children}</main>
       <Footer />
+      <WhatsAppFloat />
     </SmoothScroll>
   );
 }

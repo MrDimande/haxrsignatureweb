@@ -12,6 +12,8 @@ export const portfolioCopy = {
     tagline: "Curadoria de Eventos Exclusivos",
     subtitle:
       "Convites digitais, assessoria de eventos e curadoria com assinatura própria.",
+    ctaPrimary: "Solicitar proposta",
+    ctaSecondary: "Ver convites digitais",
   },
   quemSomos: {
     label: "Quem Somos",
@@ -101,6 +103,10 @@ export const portfolioCopy = {
       "Recebemos o seu contacto. Entraremos em conversa assim que avaliarmos o seu projecto com a discrição e o cuidado que cada experiência merece.",
     errorMessage:
       "Não foi possível enviar neste momento. Escreva-nos directamente por WhatsApp ou email.",
+  },
+  testemunhos: {
+    label: "O Que Dizem os Nossos Clientes",
+    intro: "Palavras de quem viveu a experiência HAXR — depois do convite, do evento e de tudo o que ficou na memória.",
   },
   footer: {
     commitment:
@@ -293,10 +299,105 @@ export const siteConfig = {
   invitationFullscreenMaxWidth: 1023,
   contact: {
     conviteProposalHash: "/?tipo=convite-digital#contacto",
+    assessoriaProposalHash: "/?tipo=assessoria#contacto",
     convitePackageHash: (packageId: string) =>
       `/?tipo=convite-digital&pacote=${packageId}#contacto`,
+    whatsappProposalUrl: `https://wa.me/258870883428?text=${encodeURIComponent(
+      "Olá HAXR Signature, gostaria de solicitar uma proposta para o meu evento."
+    )}`,
   },
 } as const;
+
+export type PortfolioArchiveItem = {
+  id: string;
+  title: string;
+  category: string;
+  service: string;
+  image: string;
+  span?: boolean;
+  href?: string;
+  external?: boolean;
+  ctaLabel?: string;
+};
+
+/** Portfólio editorial — projectos reais e categorias de serviço */
+export const portfolioArchive: PortfolioArchiveItem[] = [
+  {
+    id: "casamento-signature",
+    title: "Convite de Casamento Signature",
+    category: "Casamento",
+    service: "Convite Digital · Pacote Royal",
+    image: "/images/convite-mockup-vania-fabiao.png",
+    span: true,
+    href: "https://casamento-vania-fabiao.vercel.app/",
+    external: true,
+    ctaLabel: "Ver convite ao vivo",
+  },
+  {
+    id: "save-the-date",
+    title: "Save the Date Editorial",
+    category: "Noivado",
+    service: "Save the Date · Pacote Royal",
+    image: "/images/save-the-date-jessica-samuel-preview.png",
+    href: "https://jessica-samuel-save-the-date.vercel.app/",
+    external: true,
+    ctaLabel: "Ver experiência",
+  },
+  {
+    id: "corporativo",
+    title: "Evento Corporativo",
+    category: "Corporativo",
+    service: "Identidade Visual & Convite",
+    image: "/images/archive-03.webp",
+    href: "/?tipo=corporativo#contacto",
+    ctaLabel: "Solicitar proposta",
+  },
+  {
+    id: "assessoria-privada",
+    title: "Celebração Privada",
+    category: "Privado",
+    service: "Assessoria & Curadoria",
+    image: "/images/archive-01.webp",
+    href: "/?tipo=assessoria#contacto",
+    ctaLabel: "Solicitar proposta",
+  },
+];
+
+export type Testimonial = {
+  id: string;
+  quote: string;
+  role: string;
+  service: string;
+  author?: string;
+  href?: string;
+  external?: boolean;
+  linkLabel?: string;
+};
+
+/** Depoimentos reais — com autorização dos clientes */
+export const testimonials: Testimonial[] = [
+  {
+    id: "vania-fabiao",
+    quote:
+      "Os nossos convidados falaram do convite durante semanas a experiência digital definiu o tom de todo o casamento. O evento correu com uma fluidez que ainda hoje nos comove. Não encontramos palavras para agradecer o cuidado em cada detalhe.",
+    author: "Vânia Luky & Fabiao Dimande",
+    role: "Casamento · Maputo",
+    service: "Convite Digital · Pacote Royal",
+    href: invitationShowcase[0].href,
+    external: true,
+    linkLabel: "Ver convite ao vivo",
+  },
+  {
+    id: "helena-arson",
+    quote:
+      "Os convites são absolutamente top elegantes, impecáveis e com uma presença que impressiona antes mesmo do grande dia. Foi o primeiro gesto certo para o nosso evento, e os convidados adoraram.",
+    author: "Helena & Arson",
+    role: "Casamento",
+    service: "Convite Digital · HAXR Signature",
+    href: "/#convites",
+    linkLabel: "Ver coleção de convites",
+  },
+];
 
 export const invitationOccasions = [
   { id: "casamento", label: "Casamento & Lobolo" },

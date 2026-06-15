@@ -11,6 +11,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  const extraSections = ["#arquivo", "#testemunhos", "#contacto"].map(
+    (hash) => ({
+      url: `${siteUrl}/${hash}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })
+  );
+
   return [
     {
       url: siteUrl,
@@ -19,11 +28,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     ...sections,
-    {
-      url: `${siteUrl}/#contacto`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
+    ...extraSections,
   ];
 }
