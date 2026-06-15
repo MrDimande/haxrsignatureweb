@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { Archive, ArrowLeft } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import EventForm from "@/components/events/EventForm";
 import SeatAssignment from "@/components/events/SeatAssignment";
@@ -15,6 +15,7 @@ import EventQrPanel from "@/components/events/EventQrPanel";
 import GoogleSheetsSync from "@/components/events/GoogleSheetsSync";
 import EventKpiPanel from "@/components/events/EventKpiPanel";
 import { EVENT_TYPE_LABELS } from "@/lib/admin/constants";
+import { archiveEventAction } from "@/lib/events/actions/events.actions";
 import type { BusinessId, Client } from "@/lib/admin/types";
 import type {
   EventGuest,
@@ -59,6 +60,8 @@ export default function EventDetailClient({
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
   const [tab, setTab] = useState<Tab>("guests");
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "guests", label: "Convidados" },
@@ -72,6 +75,26 @@ export default function EventDetailClient({
   ];
 
   function handleRefresh() {
+    router.refresh();
+  }
+
+  async function handleArchive() {
+    const confirmed = window.confirm(
+      `Arquivar «${event.name}»?\n\nO evento deixa de aparecer na lista activa, mas os dados permanecem consultáveis.`
+    );
+    if (!confirmed) return;
+
+    setArchiving(true);
+    setArchiveError(null);
+
+    const result = await archiveEventAction(event.id);
+    if (!result.success) {
+      setArchiveError(result.error ?? "Não foi possível arquivar o evento.");
+      setArchiving(false);
+      return;
+    }
+
+    router.push("/admin/events");
     router.refresh();
   }
 
@@ -174,6 +197,34 @@ export default function EventDetailClient({
               {event.location}
             </p>
           ) : null}
+
+          {event.isActive ? (
+            <div className="mt-10 pt-8 border-t border-grey-dark/60">
+              <h3 className="font-mono text-[9px] tracking-[0.35em] uppercase text-grey/45 mb-3">
+                Zona de risco
+              </h3>
+              <p className="text-sm text-grey/55 mb-4 max-w-lg">
+                Arquivar remove o evento da operação activa. Convidados, lugares e
+                histórico mantêm-se intactos.
+              </p>
+              <button
+                type="button"
+                onClick={handleArchive}
+                disabled={archiving}
+                className="inline-flex items-center gap-2 border border-red-500/30 text-red-300/90 text-[10px] tracking-[0.25em] uppercase px-4 py-2.5 hover:border-red-400/50 hover:bg-red-500/5 transition-colors disabled:opacity-50"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                {archiving ? "A arquivar..." : "Arquivar evento"}
+              </button>
+              {archiveError ? (
+                <p className="text-sm text-red-400/80 mt-3">{archiveError}</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-10 pt-8 border-t border-grey-dark/60 text-sm text-grey/50">
+              Este evento está arquivado e já não aparece na lista activa.
+            </p>
+          )}
         </section>
       ) : null}
     </AdminShell>

@@ -9,11 +9,13 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import ActiveEventsOverviewPanel from "@/components/admin/dashboard/ActiveEventsOverviewPanel";
 import CashSummaryPanel from "@/components/admin/dashboard/CashSummaryPanel";
+import DocumentAnalyticsPanel from "@/components/admin/dashboard/DocumentAnalyticsPanel";
 import EventPipelinePanel from "@/components/admin/dashboard/EventPipelinePanel";
 import DataTable from "@/components/admin/DataTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { formatCurrency } from "@/lib/calculations";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/admin/constants";
+import * as analyticsRepo from "@/lib/admin/repositories/analytics.repository";
 import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
 import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 import * as inquiriesRepo from "@/lib/contact/inquiries.repository";
@@ -24,12 +26,17 @@ import * as financeRepo from "@/lib/finance/repositories/overview.repository";
 import type { InvoiceDocument } from "@/lib/admin/types";
 
 export default async function DashboardPage() {
-  const [stats, businesses, events, finance, newLeads] = await Promise.all([
+  const fiscalYear = new Date().getFullYear();
+
+  const [stats, businesses, events, finance, newLeads, revenueByBusiness, revenueByMonth] =
+    await Promise.all([
     documentsRepo.getDashboardStats(),
     businessesRepo.listBusinesses(),
     eventsRepo.listAllEvents(),
     financeRepo.getFinanceOverview(),
     inquiriesRepo.countNewInquiries(),
+    analyticsRepo.getRevenueByBusiness(fiscalYear),
+    analyticsRepo.getRevenueByMonth(fiscalYear),
   ]);
 
   const businessMap = new Map(businesses.map((b) => [b.id, b.name]));
@@ -153,6 +160,12 @@ export default async function DashboardPage() {
         <EventPipelinePanel groups={eventGroups} businessMap={businessMap} />
 
         <CashSummaryPanel finance={finance} />
+
+        <DocumentAnalyticsPanel
+          fiscalYear={fiscalYear}
+          revenueByBusiness={revenueByBusiness}
+          revenueByMonth={revenueByMonth}
+        />
 
         <section>
           <div className="flex items-center justify-between mb-4">

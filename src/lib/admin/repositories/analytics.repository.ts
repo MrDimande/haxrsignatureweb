@@ -64,7 +64,11 @@ export async function getRevenueByMonth(
   fiscalYear: number,
   businessId?: BusinessId
 ): Promise<{ month: number; total: number; count: number }[]> {
-  const rows = await queryDocumentAnalytics({ fiscalYear, businessId });
+  const rows = await queryDocumentAnalytics({
+    fiscalYear,
+    businessId,
+    status: "paid",
+  });
   const map = new Map<number, { month: number; total: number; count: number }>();
 
   for (const row of rows) {

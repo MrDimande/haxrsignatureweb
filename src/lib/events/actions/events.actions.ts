@@ -26,6 +26,8 @@ export async function archiveEventAction(id: string) {
   const result = await runAction(() => eventsRepo.archiveEvent(id));
   if (result.success) {
     revalidatePath("/admin/events");
+    revalidatePath(`/admin/events/${id}`);
+    revalidatePath("/admin/dashboard");
   }
   return result;
 }
