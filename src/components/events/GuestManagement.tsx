@@ -357,7 +357,7 @@ export default function GuestManagement({
                 setPage(1);
               }}
               placeholder="Pesquisar nome, email ou telefone"
-              className="admin-input w-full !pl-11"
+              className="admin-input admin-input-icon w-full"
             />
           </div>
         </label>

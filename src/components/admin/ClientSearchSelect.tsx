@@ -64,14 +64,14 @@ export default function ClientSearchSelect({
       ) : (
         <>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey/40" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-grey/40 pointer-events-none" aria-hidden />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Pesquisar cliente…"
               disabled={disabled}
-              className="admin-input w-full pl-10"
+              className="admin-input admin-input-icon w-full"
             />
           </div>
           <div className="max-h-40 overflow-y-auto border border-grey-dark/80 divide-y divide-grey-dark/60">

@@ -245,6 +245,10 @@ p.text-sm {
   border-color: rgba(201, 162, 39, 0.5);
 }
 
+.admin-input-icon {
+  padding-left: 2.75rem;
+}
+
 .admin-btn-primary {
   display: inline-flex;
   align-items: center;

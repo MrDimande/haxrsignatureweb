@@ -48,13 +48,13 @@ export default function ServiceCatalogPanel({
   return (
     <div className="p-4 bg-black-soft border border-grey-dark/80 rounded-sm space-y-4">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey/40" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-grey/40 pointer-events-none" aria-hidden />
         <input
           type="search"
           placeholder="Pesquisar serviço…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="admin-input w-full pl-10"
+          className="admin-input admin-input-icon w-full"
         />
       </div>
 
