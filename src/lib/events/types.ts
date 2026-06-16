@@ -124,7 +124,7 @@ export interface GuestFormData {
 
 export interface GuestAuditEntry {
   id: string;
-  guestId: string;
+  guestId: string | null;
   eventId: string;
   guestName: string;
   action: string;

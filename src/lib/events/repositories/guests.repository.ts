@@ -240,12 +240,25 @@ export async function updateGuest(
 
 export async function deleteGuest(id: string): Promise<void> {
   const guest = await getGuestById(id);
+  if (!guest) return;
+
+  await logGuestAudit(
+    guest.id,
+    guest.eventId,
+    guest.name,
+    "Convidado eliminado"
+  );
+
   const supabase = createAdminClient();
   const { error } = await supabase.from("guests").delete().eq("id", id);
   if (error) throw new Error(error.message);
-  if (guest) {
-    await logGuestAudit(guest.id, guest.eventId, guest.name, "Convidado eliminado");
-  }
+}
+
+async function removeGuestSilently(id: string): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase.from("checkins").delete().eq("guest_id", id);
+  const { error } = await supabase.from("guests").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 export async function assignSeatToGuest(
@@ -857,8 +870,7 @@ export async function mergeGuests(
         .update({ seat_id: null } as never)
         .eq("id", secondary.id);
     }
-    await supabase.from("checkins").delete().eq("guest_id", secondary.id);
-    await deleteGuest(secondary.id);
+    await removeGuestSilently(secondary.id);
   }
 
   const finalGuest = await getGuestById(primaryId);

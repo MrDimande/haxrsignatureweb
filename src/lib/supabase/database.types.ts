@@ -618,7 +618,7 @@ export interface Database {
       guest_audit_log: {
         Row: {
           id: string;
-          guest_id: string;
+          guest_id: string | null;
           event_id: string;
           guest_name: string;
           action: string;
@@ -627,7 +627,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          guest_id: string;
+          guest_id?: string | null;
           event_id: string;
           guest_name?: string;
           action: string;
