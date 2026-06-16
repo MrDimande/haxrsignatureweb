@@ -26,6 +26,7 @@ import {
 import { isPossibleDuplicate } from "@/lib/events/deduplication";
 import { normalizeSearchQuery, rankNameMatch } from "@/lib/events/normalize";
 import GuestGroupPanel from "@/components/events/GuestGroupPanel";
+import GuestMergePanel from "@/components/events/GuestMergePanel";
 import { GUEST_LABEL_LABELS, GUEST_LABEL_STYLES, GUEST_STATUS_LABELS, GUEST_STATUS_STYLES } from "@/lib/events/constants";
 import { GUEST_SOURCE_LABELS } from "@/lib/events/sheets/detect-mode";
 import { downloadCsvFile } from "@/lib/finance/export/csv";
@@ -237,6 +238,14 @@ export default function GuestManagement({
         onChanged={onChanged}
       />
 
+      {duplicateCount > 0 ? (
+        <GuestMergePanel
+          eventId={eventId}
+          guests={guests}
+          onMerged={onChanged}
+        />
+      ) : null}
+
       <section className="admin-card p-6 space-y-4">
         <div>
           <p className="font-mono text-[8px] tracking-[0.4em] uppercase text-grey/45 mb-2">
@@ -337,7 +346,10 @@ export default function GuestManagement({
         <label className="block w-full lg:max-w-xs">
           <span className="sr-only">Pesquisar convidados</span>
           <div className="relative">
-            <Search className="w-4 h-4 text-grey/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search
+              className="w-4 h-4 text-grey/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              aria-hidden
+            />
             <input
               value={search}
               onChange={(e) => {
@@ -345,7 +357,7 @@ export default function GuestManagement({
                 setPage(1);
               }}
               placeholder="Pesquisar nome, email ou telefone"
-              className="admin-input w-full pl-10"
+              className="admin-input w-full !pl-11"
             />
           </div>
         </label>

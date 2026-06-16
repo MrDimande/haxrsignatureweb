@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Jost, Pinyon_Script } from "next/font/google";
+import {
+  Allura,
+  Cormorant_Garamond,
+  Great_Vibes,
+  Jost,
+  Pinyon_Script,
+  Playfair_Display,
+} from "next/font/google";
 import { buildSiteMetadata } from "@/lib/seo";
 import "./globals.css";
 
@@ -25,6 +32,28 @@ const pinyonScript = Pinyon_Script({
   display: "swap",
 });
 
+const greatVibes = Great_Vibes({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-great-vibes",
+  display: "swap",
+});
+
+const allura = Allura({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-allura",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-playfair",
+  display: "swap",
+});
+
 export const metadata: Metadata = buildSiteMetadata();
 
 export const viewport: Viewport = {
@@ -42,7 +71,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-MZ"
-      className={`${cormorant.variable} ${jost.variable} ${pinyonScript.variable}`}
+      className={`${cormorant.variable} ${jost.variable} ${pinyonScript.variable} ${greatVibes.variable} ${allura.variable} ${playfair.variable}`}
     >
       <body className="bg-black text-white font-sans font-light min-h-screen antialiased">
         {children}

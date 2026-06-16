@@ -750,6 +750,131 @@ export async function bulkAssignTable(
   return { assigned, errors };
 }
 
+const STATUS_RANK: Record<GuestStatus, number> = {
+  checked_in: 4,
+  confirmed: 3,
+  invited: 2,
+  declined: 1,
+};
+
+function pickStrongerStatus(a: GuestStatus, b: GuestStatus): GuestStatus {
+  return STATUS_RANK[b] > STATUS_RANK[a] ? b : a;
+}
+
+function joinNotes(primary: string, secondary: string): string {
+  const parts = [primary, secondary].map((v) => v.trim()).filter(Boolean);
+  return [...new Set(parts)].join(" · ");
+}
+
+export async function mergeGuests(
+  eventId: string,
+  primaryId: string,
+  secondaryIds: string[]
+): Promise<EventGuest> {
+  const primary = await getGuestById(primaryId);
+  if (!primary || primary.eventId !== eventId) {
+    throw new Error("Convidado principal não encontrado.");
+  }
+
+  const uniqueSecondaryIds = [
+    ...new Set(secondaryIds.filter((id) => id && id !== primaryId)),
+  ];
+  if (!uniqueSecondaryIds.length) {
+    throw new Error("Seleccione pelo menos um duplicado para fundir.");
+  }
+
+  const secondaries: EventGuest[] = [];
+  for (const id of uniqueSecondaryIds) {
+    const guest = await getGuestById(id);
+    if (!guest || guest.eventId !== eventId) continue;
+    secondaries.push(guest);
+  }
+
+  if (!secondaries.length) {
+    throw new Error("Nenhum duplicado válido para fundir.");
+  }
+
+  let mergedStatus = primary.status;
+  let mergedSeatId = primary.seatId;
+  let mergedEmail = primary.email;
+  let mergedPhone = primary.phone;
+  let mergedGroupId = primary.groupId;
+  let mergedPlusOnes = primary.plusOnes;
+  let mergedDietary = primary.dietaryNotes;
+  let mergedNotes = primary.guestNotes;
+  let mergedLabel = primary.label;
+  let mergedCheckedInAt = primary.checkedInAt;
+
+  const supabase = createAdminClient();
+
+  for (const secondary of secondaries) {
+    mergedStatus = pickStrongerStatus(mergedStatus, secondary.status);
+    if (!mergedEmail && secondary.email) mergedEmail = secondary.email;
+    if (!mergedPhone && secondary.phone) mergedPhone = secondary.phone;
+    if (!mergedGroupId && secondary.groupId) mergedGroupId = secondary.groupId;
+    mergedPlusOnes = Math.max(mergedPlusOnes, secondary.plusOnes);
+    mergedDietary = joinNotes(mergedDietary, secondary.dietaryNotes);
+    mergedNotes = joinNotes(mergedNotes, secondary.guestNotes);
+    if (mergedLabel === "none" && secondary.label !== "none") {
+      mergedLabel = secondary.label;
+    }
+    if (!mergedSeatId && secondary.seatId) {
+      mergedSeatId = secondary.seatId;
+    }
+    if (!mergedCheckedInAt && secondary.checkedInAt) {
+      mergedCheckedInAt = secondary.checkedInAt;
+    }
+  }
+
+  if (mergedSeatId && mergedSeatId !== primary.seatId) {
+    await clearSeatAssignment(mergedSeatId, primaryId);
+  }
+
+  const mergedForm: GuestFormData = {
+    name: primary.name,
+    email: mergedEmail,
+    phone: mergedPhone,
+    clientType: primary.clientType,
+    status: mergedStatus,
+    seatId: mergedSeatId,
+    groupId: mergedGroupId,
+    plusOnes: mergedPlusOnes,
+    dietaryNotes: mergedDietary,
+    guestNotes: mergedNotes,
+    label: mergedLabel,
+  };
+
+  const updated = await updateGuest(primaryId, mergedForm);
+
+  if (mergedStatus === "checked_in" && !updated.checkedInAt) {
+    await checkInGuest(primaryId);
+  }
+
+  for (const secondary of secondaries) {
+    if (secondary.seatId && secondary.seatId !== mergedSeatId) {
+      await supabase
+        .from("guests")
+        .update({ seat_id: null } as never)
+        .eq("id", secondary.id);
+    }
+    await supabase.from("checkins").delete().eq("guest_id", secondary.id);
+    await deleteGuest(secondary.id);
+  }
+
+  const finalGuest = await getGuestById(primaryId);
+  if (!finalGuest) throw new Error("Falha ao fundir convidados.");
+
+  await logGuestAudit(
+    primaryId,
+    eventId,
+    finalGuest.name,
+    "Duplicados fundidos",
+    `${secondaries.length} registo(s) unificado(s)`
+  );
+
+  return finalGuest;
+}
+
 async function clearSeatAssignment(
   seatId: string,
   exceptGuestId?: string

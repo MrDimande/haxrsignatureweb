@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, ArrowLeft } from "lucide-react";
+import { Archive, ArrowLeft, Trash2 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import EventForm from "@/components/events/EventForm";
 import SeatAssignment from "@/components/events/SeatAssignment";
@@ -15,7 +15,7 @@ import EventQrPanel from "@/components/events/EventQrPanel";
 import GoogleSheetsSync from "@/components/events/GoogleSheetsSync";
 import EventKpiPanel from "@/components/events/EventKpiPanel";
 import { EVENT_TYPE_LABELS } from "@/lib/admin/constants";
-import { archiveEventAction } from "@/lib/events/actions/events.actions";
+import { archiveEventAction, deleteEventAction } from "@/lib/events/actions/events.actions";
 import type { BusinessId, Client } from "@/lib/admin/types";
 import type {
   EventGuest,
@@ -65,6 +65,9 @@ export default function EventDetailClient({
   const [tab, setTab] = useState<Tab>("guests");
   const [archiving, setArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "guests", label: "Convidados" },
@@ -94,6 +97,31 @@ export default function EventDetailClient({
     if (!result.success) {
       setArchiveError(result.error ?? "Não foi possível arquivar o evento.");
       setArchiving(false);
+      return;
+    }
+
+    router.push("/admin/events");
+    router.refresh();
+  }
+
+  async function handleDelete() {
+    if (deleteConfirm.trim() !== event.name.trim()) {
+      setDeleteError("Escreva o nome exacto do evento para confirmar.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Eliminar permanentemente «${event.name}»?\n\nConvidados, lugares e histórico serão apagados. Esta acção não pode ser desfeita.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    const result = await deleteEventAction(event.id);
+    if (!result.success) {
+      setDeleteError(result.error ?? "Não foi possível eliminar o evento.");
+      setDeleting(false);
       return;
     }
 
@@ -181,9 +209,13 @@ export default function EventDetailClient({
 
       {tab === "settings" ? (
         <section className="admin-card p-6 max-w-3xl">
-          <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-admin-gold mb-6">
+          <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-admin-gold mb-2">
             Definições do evento
           </h2>
+          <p className="text-sm text-grey/55 mb-6">
+            Edite o nome, data e local — o Atelier QR actualiza automaticamente
+            com o nome do evento.
+          </p>
           <EventForm
             businesses={businesses}
             clients={clients}
@@ -223,6 +255,44 @@ export default function EventDetailClient({
               {archiveError ? (
                 <p className="text-sm text-red-400/80 mt-3">{archiveError}</p>
               ) : null}
+
+              <div className="mt-8 pt-8 border-t border-red-500/20">
+                <h3 className="font-mono text-[9px] tracking-[0.35em] uppercase text-red-300/70 mb-3">
+                  Eliminar permanentemente
+                </h3>
+                <p className="text-sm text-grey/55 mb-4 max-w-lg">
+                  Use apenas se o evento foi criado por engano. Remove convidados,
+                  lugares, QR e histórico — irreversível.
+                </p>
+                <label className="block max-w-md mb-4">
+                  <span className="block font-mono text-[8px] tracking-[0.3em] uppercase text-grey/45 mb-2">
+                    Escreva o nome do evento para confirmar
+                  </span>
+                  <input
+                    value={deleteConfirm}
+                    onChange={(e) => {
+                      setDeleteConfirm(e.target.value);
+                      setDeleteError(null);
+                    }}
+                    placeholder={event.name}
+                    className="admin-input w-full"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={
+                    deleting || deleteConfirm.trim() !== event.name.trim()
+                  }
+                  className="inline-flex items-center gap-2 border border-red-600/40 text-red-400 text-[10px] tracking-[0.25em] uppercase px-4 py-2.5 hover:border-red-500/60 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {deleting ? "A eliminar..." : "Eliminar evento"}
+                </button>
+                {deleteError ? (
+                  <p className="text-sm text-red-400/80 mt-3">{deleteError}</p>
+                ) : null}
+              </div>
             </div>
           ) : (
             <p className="mt-10 pt-8 border-t border-grey-dark/60 text-sm text-grey/50">

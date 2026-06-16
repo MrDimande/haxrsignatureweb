@@ -156,6 +156,12 @@ export async function archiveEvent(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function deleteEvent(id: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("events").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateEventSheetConnection(
   eventId: string,
   googleSheetUrl: string,

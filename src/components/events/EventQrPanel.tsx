@@ -9,11 +9,15 @@ import {
   DEFAULT_QR_STYLE,
   QR_FRAME_LABELS,
   QR_LOGO_OPTIONS,
+  QR_MODULE_LABELS,
   QR_STYLE_PRESETS,
+  QR_TITLE_FONTS,
   type QrCenterMark,
   type QrExportSize,
   type QrFrameStyle,
+  type QrModuleStyle,
   type QrStyleOptions,
+  type QrTitleFont,
 } from "@/lib/events/qr-styles";
 
 type EventQrPanelProps = {
@@ -68,6 +72,10 @@ export default function EventQrPanel({ eventId, eventName }: EventQrPanelProps) 
       background: preset.background,
       accent: preset.accent,
       centerMark: preset.centerMark ?? prev.centerMark,
+      titleFont: preset.titleFont ?? prev.titleFont,
+      captionFont: preset.titleFont ?? prev.captionFont,
+      frameStyle: preset.frameStyle ?? prev.frameStyle,
+      moduleStyle: preset.moduleStyle ?? prev.moduleStyle,
     }));
   }
 
@@ -171,6 +179,78 @@ export default function EventQrPanel({ eventId, eventName }: EventQrPanelProps) 
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="font-mono text-[9px] tracking-[0.35em] uppercase text-grey/60">
+                Forma do QR
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.entries(QR_MODULE_LABELS) as [QrModuleStyle, string][]).map(
+                  ([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        setStyle((prev) => ({ ...prev, moduleStyle: key }))
+                      }
+                      className={`px-3 py-3 border text-center transition-colors ${
+                        style.moduleStyle === key
+                          ? "border-admin-gold/40 bg-admin-gold/8"
+                          : "border-grey-dark/80 hover:border-grey/40"
+                      }`}
+                    >
+                      <p className="font-serif text-sm text-white/85">{label}</p>
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <AdminSelect
+                label="Fonte do título"
+                value={style.titleFont}
+                onChange={(e) =>
+                  setStyle((p) => ({
+                    ...p,
+                    titleFont: e.target.value as QrTitleFont,
+                  }))
+                }
+              >
+                {(
+                  Object.entries(QR_TITLE_FONTS) as [
+                    QrTitleFont,
+                    { label: string },
+                  ][]
+                ).map(([key, font]) => (
+                  <option key={key} value={key}>
+                    {font.label}
+                  </option>
+                ))}
+              </AdminSelect>
+
+              <AdminSelect
+                label="Fonte da legenda"
+                value={style.captionFont}
+                onChange={(e) =>
+                  setStyle((p) => ({
+                    ...p,
+                    captionFont: e.target.value as QrTitleFont,
+                  }))
+                }
+              >
+                {(
+                  Object.entries(QR_TITLE_FONTS) as [
+                    QrTitleFont,
+                    { label: string },
+                  ][]
+                ).map(([key, font]) => (
+                  <option key={key} value={key}>
+                    {font.label}
+                  </option>
+                ))}
+              </AdminSelect>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

@@ -32,6 +32,15 @@ export async function archiveEventAction(id: string) {
   return result;
 }
 
+export async function deleteEventAction(id: string) {
+  const result = await runAction(() => eventsRepo.deleteEvent(id));
+  if (result.success) {
+    revalidatePath("/admin/events");
+    revalidatePath("/admin/dashboard");
+  }
+  return result;
+}
+
 export async function getEventFindSeatQrAction(eventId: string) {
   return runAction(async () => {
     const event = await eventsRepo.getEventById(eventId);

@@ -118,4 +118,16 @@ export async function listGuestAuditAction(eventId: string) {
   return runAction(() => listGuestAuditByEvent(eventId));
 }
 
+export async function mergeGuestsAction(
+  eventId: string,
+  primaryId: string,
+  secondaryIds: string[]
+) {
+  const result = await runAction(() =>
+    guestsRepo.mergeGuests(eventId, primaryId, secondaryIds)
+  );
+  if (result.success) revalidateEvent(eventId);
+  return result;
+}
+
 export type { EventGuest };
