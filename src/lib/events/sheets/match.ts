@@ -1,17 +1,13 @@
+import {
+  normalizeEmail,
+  normalizeGuestName,
+  normalizePhone,
+} from "@/lib/events/normalize";
 import type { EventGuest } from "@/lib/events/types";
 import type { SheetGuestRow } from "@/lib/events/sheets/types";
 
-export function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-export function normalizePhone(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
-export function normalizeName(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
+export { normalizeEmail, normalizePhone };
+export const normalizeName = normalizeGuestName;
 
 export function findGuestMatch(
   guests: EventGuest[],

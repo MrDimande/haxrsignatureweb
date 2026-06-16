@@ -4,9 +4,15 @@ import {
   guestToDbInsert,
   mapGuest,
 } from "@/lib/events/db/mappers";
+import { normalizeGuestName, normalizeSearchQuery, rankNameMatch } from "@/lib/events/normalize";
 import { generateQrToken } from "@/lib/events/tokens";
 import { GUEST_LABEL_LABELS, GUEST_STATUS_LABELS } from "@/lib/events/constants";
 import { logGuestAudit } from "@/lib/events/repositories/guest-audit.repository";
+import * as seatsRepo from "@/lib/events/repositories/seats.repository";
+import {
+  formatValidationErrors,
+  validateGuestForm,
+} from "@/lib/events/services/guest-validation.service";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
   EventGuest,
@@ -14,12 +20,14 @@ import type {
   EventStats,
   FindSeatResult,
   GuestFormData,
+  GuestListPage,
+  GuestListQuery,
   GuestStatus,
   SheetsSyncMode,
 } from "@/lib/events/types";
 import type { SheetGuestRow } from "@/lib/events/sheets/types";
 
-const guestSelect = "*, seats(*), checkins(checkin_time)";
+const guestSelect = "*, seats(*), checkins(checkin_time), guest_groups(name)";
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -35,7 +43,70 @@ export async function listGuestsByEvent(eventId: string): Promise<EventGuest[]> 
     .order("name");
 
   if (error) throw new Error(error.message);
-  return asTableRows<"guests">(data).map(mapGuest);
+  const guests = asTableRows<"guests">(data).map(mapGuest);
+  await backfillNameNormalized(eventId, guests);
+  return guests;
+}
+
+export async function listGuestsPage(
+  eventId: string,
+  query: GuestListQuery = {}
+): Promise<GuestListPage> {
+  const page = Math.max(1, query.page ?? 1);
+  const pageSize = Math.min(100, Math.max(10, query.pageSize ?? 50));
+  const search = query.search?.trim() ?? "";
+  const filter = query.filter ?? "all";
+
+  const allGuests = await listGuestsByEvent(eventId);
+  const duplicateIds = new Set(
+    allGuests
+      .filter((guest) =>
+        allGuests.some(
+          (other) =>
+            other.id !== guest.id &&
+            guest.nameNormalized &&
+            other.nameNormalized === guest.nameNormalized
+        )
+      )
+      .map((guest) => guest.id)
+  );
+
+  let filtered = allGuests;
+
+  if (filter === "pending") {
+    filtered = filtered.filter((guest) => guest.status === "invited");
+  } else if (filter === "rsvp") {
+    filtered = filtered.filter((guest) => guest.guestSource === "sheet_rsvp");
+  } else if (filter === "duplicates") {
+    filtered = filtered.filter((guest) => duplicateIds.has(guest.id));
+  } else if (filter === "unassigned") {
+    filtered = filtered.filter((guest) => !guest.seatId);
+  }
+
+  if (query.groupId) {
+    filtered = filtered.filter((guest) => guest.groupId === query.groupId);
+  }
+
+  if (search) {
+    const normalizedSearch = normalizeSearchQuery(search);
+    filtered = filtered.filter((guest) => {
+      const rank = rankNameMatch(guest.name, search);
+      return rank !== null || guest.email.toLowerCase().includes(normalizedSearch);
+    });
+  }
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * pageSize;
+
+  return {
+    guests: filtered.slice(start, start + pageSize),
+    total,
+    page: safePage,
+    pageSize,
+    totalPages,
+  };
 }
 
 export async function getGuestById(id: string): Promise<EventGuest | null> {
@@ -55,6 +126,18 @@ export async function createGuest(
   eventId: string,
   data: GuestFormData
 ): Promise<EventGuest> {
+  const existingGuests = await listGuestsByEvent(eventId);
+  const seats = await seatsRepo.listSeatsByEvent(eventId);
+  const validationIssues = validateGuestForm(data.name, data.seatId, {
+    eventId,
+    existingGuests,
+    seats,
+  });
+
+  if (validationIssues.some((issue) => issue.code !== "possible_duplicate")) {
+    throw new Error(formatValidationErrors(validationIssues));
+  }
+
   const supabase = createAdminClient();
 
   if (data.seatId) {
@@ -85,6 +168,19 @@ export async function updateGuest(
   const existing = await getGuestById(id);
   if (!existing) throw new Error("Convidado não encontrado.");
 
+  const seats = await seatsRepo.listSeatsByEvent(existing.eventId);
+  const existingGuests = await listGuestsByEvent(existing.eventId);
+  const validationIssues = validateGuestForm(data.name, data.seatId, {
+    eventId: existing.eventId,
+    existingGuests,
+    seats,
+    excludeGuestId: id,
+  });
+
+  if (validationIssues.some((issue) => issue.code !== "possible_duplicate")) {
+    throw new Error(formatValidationErrors(validationIssues));
+  }
+
   if (data.seatId && data.seatId !== existing.seatId) {
     await clearSeatAssignment(data.seatId, id);
   }
@@ -93,10 +189,12 @@ export async function updateGuest(
     .from("guests")
     .update({
       name: data.name.trim(),
+      name_normalized: normalizeGuestName(data.name),
       email: data.email.trim(),
       phone: data.phone.trim(),
       client_type: data.clientType,
       seat_id: data.seatId || null,
+      group_id: data.groupId || null,
       status: data.status,
       plus_ones: data.plusOnes,
       dietary_notes: data.dietaryNotes.trim(),
@@ -168,6 +266,7 @@ export async function assignSeatToGuest(
     clientType: guest.clientType,
     status: guest.status,
     seatId,
+    groupId: guest.groupId,
     plusOnes: guest.plusOnes,
     dietaryNotes: guest.dietaryNotes,
     guestNotes: guest.guestNotes,
@@ -189,6 +288,7 @@ export async function updateGuestStatus(
     clientType: guest.clientType,
     status,
     seatId: guest.seatId,
+    groupId: guest.groupId,
     plusOnes: guest.plusOnes,
     dietaryNotes: guest.dietaryNotes,
     guestNotes: guest.guestNotes,
@@ -250,6 +350,7 @@ export async function createGuestFromSheet(
     .insert({
       event_id: eventId,
       name: row.name.trim(),
+      name_normalized: normalizeGuestName(row.name),
       email: row.email.trim(),
       phone: row.phone.trim(),
       client_type: row.clientType,
@@ -260,6 +361,7 @@ export async function createGuestFromSheet(
       guest_notes: row.guestNotes?.trim() ?? "",
       label: row.label ?? "none",
       guest_source: guestSource,
+      group_id: row.groupId ?? null,
     } as never)
     .select(guestSelect)
     .single();
@@ -282,11 +384,14 @@ export async function updateGuestFromSheet(
   const supabase = createAdminClient();
   const payload: Record<string, unknown> = {
     name: row.name.trim(),
+    name_normalized: normalizeGuestName(row.name),
     email: row.email.trim(),
     phone: row.phone.trim(),
     client_type: row.clientType,
     guest_source: syncMode === "rsvp" ? "sheet_rsvp" : "sheet_master",
   };
+
+  if (row.groupId !== undefined) payload.group_id = row.groupId;
 
   if (row.plusOnes !== undefined) payload.plus_ones = row.plusOnes;
   if (row.dietaryNotes !== undefined) payload.dietary_notes = row.dietaryNotes;
@@ -333,63 +438,185 @@ function escapeIlike(value: string): string {
   return value.replace(/[%_\\]/g, "\\$&");
 }
 
-export async function searchGuestsByName(
+async function backfillNameNormalized(
   eventId: string,
-  query: string,
-  limit = 8
-): Promise<FindSeatResult[]> {
-  const normalized = query.trim();
-  if (normalized.length < 2) return [];
+  guests: EventGuest[]
+): Promise<void> {
+  const needsBackfill = guests.filter(
+    (guest) => !guest.nameNormalized || guest.nameNormalized !== normalizeGuestName(guest.name)
+  );
+  if (!needsBackfill.length) return;
+
+  const supabase = createAdminClient();
+  await Promise.all(
+    needsBackfill.map((guest) =>
+      supabase
+        .from("guests")
+        .update({
+          name_normalized: normalizeGuestName(guest.name),
+        } as never)
+        .eq("id", guest.id)
+        .eq("event_id", eventId)
+    )
+  );
+}
+
+async function loadGroupMemberNames(
+  eventId: string,
+  groupId: string | null,
+  excludeGuestId?: string
+): Promise<string[]> {
+  if (!groupId) return [];
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("guests")
-    .select("name, seats(table_name, seat_number, label)")
+    .select("id, name")
     .eq("event_id", eventId)
-    .ilike("name", `%${escapeIlike(normalized)}%`)
-    .order("name")
-    .limit(limit);
+    .eq("group_id", groupId)
+    .order("name");
 
   if (error) throw new Error(error.message);
 
-  return asTableRows<"guests">(data).map((row) => {
-    const seatRow = firstRelation(
-      (row as { seats?: Tables<"seats"> | Tables<"seats">[] | null }).seats
-    );
-    return {
-      name: row.name,
-      seat: seatRow
-        ? {
-            tableName: seatRow.table_name,
-            seatNumber: seatRow.seat_number,
-            label: seatRow.label,
-          }
-        : null,
-    };
-  });
+  return asTableRows<"guests">(data)
+    .filter((row) => row.id !== excludeGuestId)
+    .map((row) => row.name);
+}
+
+export async function searchGuestsByName(
+  eventId: string,
+  query: string,
+  limit = 12
+): Promise<FindSeatResult[]> {
+  const normalizedQuery = normalizeSearchQuery(query);
+  if (normalizedQuery.length < 2) return [];
+
+  const supabase = createAdminClient();
+  const escaped = escapeIlike(query.trim());
+  const escapedNormalized = escapeIlike(normalizedQuery);
+
+  const { data, error } = await supabase
+    .from("guests")
+    .select("id, name, name_normalized, group_id, seats(table_name, seat_number, label)")
+    .eq("event_id", eventId)
+    .or(
+      `name.ilike.%${escaped}%,name_normalized.ilike.%${escapedNormalized}%`
+    )
+    .limit(120);
+
+  if (error) throw new Error(error.message);
+
+  const ranked = asTableRows<"guests">(data)
+    .map((row) => {
+      const rank = rankNameMatch(row.name, query);
+      if (!rank) return null;
+      const seatRow = firstRelation(
+        (row as { seats?: Tables<"seats"> | Tables<"seats">[] | null }).seats
+      );
+      return {
+        guestId: row.id,
+        name: row.name,
+        groupId: row.group_id,
+        seat: seatRow
+          ? {
+              tableName: seatRow.table_name,
+              seatNumber: seatRow.seat_number,
+              label: seatRow.label,
+            }
+          : null,
+        score: rank.score,
+        matchKind: rank.kind,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "pt"))
+    .slice(0, limit);
+
+  const groupCache = new Map<string, string[]>();
+  const results: FindSeatResult[] = [];
+
+  for (const item of ranked) {
+    let groupMembers: string[] | undefined;
+    if (item.groupId) {
+      const cached = groupCache.get(item.groupId);
+      if (cached) {
+        groupMembers = cached;
+      } else {
+        const members = await loadGroupMemberNames(
+          eventId,
+          item.groupId,
+          item.guestId
+        );
+        const allMembers = [item.name, ...members].sort((a, b) =>
+          a.localeCompare(b, "pt")
+        );
+        groupCache.set(item.groupId, allMembers);
+        groupMembers = allMembers;
+      }
+    }
+
+    results.push({
+      guestId: item.guestId,
+      name: item.name,
+      seat: item.seat,
+      groupMembers,
+      matchKind: item.matchKind,
+    });
+  }
+
+  return results;
 }
 
 export async function getEventStats(eventId: string): Promise<EventStats> {
   const supabase = createAdminClient();
-  const [guests, seatsResult, seatRows] = await Promise.all([
-    listGuestsByEvent(eventId),
+  const [guestResult, seatsResult, seatRows, groupCountResult] = await Promise.all([
+    supabase
+      .from("guests")
+      .select("status, seat_id, plus_ones, name_normalized")
+      .eq("event_id", eventId),
     supabase
       .from("seats")
       .select("*", { count: "exact", head: true })
       .eq("event_id", eventId),
     supabase.from("seats").select("table_name").eq("event_id", eventId),
+    supabase
+      .from("guest_groups")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", eventId),
   ]);
 
+  if (guestResult.error) throw new Error(guestResult.error.message);
   if (seatsResult.error) throw new Error(seatsResult.error.message);
   if (seatRows.error) throw new Error(seatRows.error.message);
+  if (groupCountResult.error) throw new Error(groupCountResult.error.message);
 
+  const guestRows = asTableRows<"guests">(guestResult.data);
   const totalSeats = seatsResult.count ?? 0;
-  const assignedSeats = guests.filter((g) => g.seatId).length;
-  const confirmed = guests.filter((g) => g.status === "confirmed").length;
-  const checkedIn = guests.filter((g) => g.status === "checked_in").length;
-  const declined = guests.filter((g) => g.status === "declined").length;
-  const invited = guests.filter((g) => g.status === "invited").length;
-  const totalGuests = guests.length;
+  const assignedSeats = guestRows.filter((g) => g.seat_id).length;
+  const confirmed = guestRows.filter((g) => g.status === "confirmed").length;
+  const checkedIn = guestRows.filter((g) => g.status === "checked_in").length;
+  const declined = guestRows.filter((g) => g.status === "declined").length;
+  const invited = guestRows.filter((g) => g.status === "invited").length;
+  const totalGuests = guestRows.length;
+  const plusOnesTotal = guestRows.reduce((sum, g) => sum + (g.plus_ones ?? 0), 0);
+  const attendingStatuses = new Set(["confirmed", "checked_in"]);
+  const expectedAttendance =
+    guestRows.filter((g) => attendingStatuses.has(g.status)).length +
+    guestRows
+      .filter((g) => attendingStatuses.has(g.status))
+      .reduce((sum, g) => sum + (g.plus_ones ?? 0), 0);
+  const unassignedGuests = guestRows.filter((g) => !g.seat_id).length;
+
+  const nameBuckets = new Map<string, number>();
+  for (const row of guestRows) {
+    const key = row.name_normalized || normalizeGuestName(row.name ?? "");
+    if (!key) continue;
+    nameBuckets.set(key, (nameBuckets.get(key) ?? 0) + 1);
+  }
+  const duplicateGuests = [...nameBuckets.values()]
+    .filter((count) => count > 1)
+    .reduce((sum, count) => sum + count, 0);
+
   const uniqueTables = new Set(
     asTableRows<"seats">(seatRows.data).map((s) => s.table_name)
   ).size;
@@ -403,12 +630,17 @@ export async function getEventStats(eventId: string): Promise<EventStats> {
     confirmed,
     checkedIn,
     declined,
+    plusOnesTotal,
+    expectedAttendance,
+    unassignedGuests,
+    duplicateGuests,
     assignedSeats,
     totalSeats,
     uniqueTables,
     confirmationRate,
     capacityUsed: assignedSeats,
     capacityAvailable: Math.max(0, totalSeats - assignedSeats),
+    groupCount: groupCountResult.count ?? 0,
   };
 }
 

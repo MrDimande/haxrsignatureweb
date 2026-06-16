@@ -1,3 +1,4 @@
+import { normalizeGuestName } from "@/lib/events/normalize";
 import type { Tables } from "@/lib/supabase/database.types";
 import type {
   EventFormData,
@@ -68,6 +69,7 @@ export function mapSeat(
 type GuestRow = Tables<"guests"> & {
   seats?: Tables<"seats"> | Tables<"seats">[] | null;
   checkins?: Tables<"checkins"> | Tables<"checkins">[] | null;
+  guest_groups?: { name: string } | { name: string }[] | null;
 };
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -78,15 +80,19 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 export function mapGuest(row: GuestRow): EventGuest {
   const seatRow = firstRelation(row.seats);
   const checkinRow = firstRelation(row.checkins);
+  const groupRow = firstRelation(row.guest_groups);
 
   return {
     id: row.id,
     eventId: row.event_id,
     name: row.name,
+    nameNormalized: row.name_normalized || normalizeGuestName(row.name),
     email: row.email,
     phone: row.phone,
     clientType: row.client_type as ClientType,
     seatId: row.seat_id,
+    groupId: row.group_id ?? null,
+    groupName: groupRow?.name ?? null,
     qrToken: row.qr_token,
     status: row.status,
     plusOnes: row.plus_ones ?? 0,
@@ -113,14 +119,17 @@ export function guestToDbInsert(
   qrToken: string,
   id?: string
 ) {
+  const name = data.name.trim();
   return {
     ...(id ? { id } : {}),
     event_id: eventId,
-    name: data.name.trim(),
+    name,
+    name_normalized: normalizeGuestName(name),
     email: data.email.trim(),
     phone: data.phone.trim(),
     client_type: data.clientType,
     seat_id: data.seatId || null,
+    group_id: data.groupId || null,
     qr_token: qrToken,
     status: data.status,
     plus_ones: data.plusOnes,

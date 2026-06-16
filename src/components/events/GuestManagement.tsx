@@ -2,11 +2,15 @@
 
 import { useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   FileSpreadsheet,
   MessageCircle,
   Plus,
+  Search,
   Upload,
   UserCheck,
 } from "lucide-react";
@@ -19,6 +23,9 @@ import {
   deleteGuestAction,
   importGuestsCsvAction,
 } from "@/lib/events/actions/guests.actions";
+import { isPossibleDuplicate } from "@/lib/events/deduplication";
+import { normalizeSearchQuery, rankNameMatch } from "@/lib/events/normalize";
+import GuestGroupPanel from "@/components/events/GuestGroupPanel";
 import { GUEST_LABEL_LABELS, GUEST_LABEL_STYLES, GUEST_STATUS_LABELS, GUEST_STATUS_STYLES } from "@/lib/events/constants";
 import { GUEST_SOURCE_LABELS } from "@/lib/events/sheets/detect-mode";
 import { downloadCsvFile } from "@/lib/finance/export/csv";
@@ -26,11 +33,14 @@ import { buildSelectedGuestsCsv } from "@/lib/events/sheets/export-csv";
 import { buildCheckinUrl, buildRsvpUrl } from "@/lib/events/tokens";
 import { buildWhatsAppLinksForGuests } from "@/lib/events/whatsapp";
 import GuestForm from "@/components/events/GuestForm";
-import type { EventGuest, EventSeat, ManagedEvent } from "@/lib/events/types";
+import type { EventGuest, EventSeat, GuestGroup, ManagedEvent } from "@/lib/events/types";
+
+const PAGE_SIZE = 50;
 
 type GuestManagementProps = {
   event: ManagedEvent;
   guests: EventGuest[];
+  groups: GuestGroup[];
   seats: EventSeat[];
   onChanged: () => void;
 };
@@ -38,6 +48,7 @@ type GuestManagementProps = {
 export default function GuestManagement({
   event,
   guests,
+  groups,
   seats,
   onChanged,
 }: GuestManagementProps) {
@@ -51,18 +62,52 @@ export default function GuestManagement({
   const [assignTable, setAssignTable] = useState("");
   const [importMessage, setImportMessage] = useState("");
   const [whatsappMode, setWhatsappMode] = useState<"rsvp" | "seat" | null>(null);
-  const [listFilter, setListFilter] = useState<"all" | "pending" | "rsvp">("all");
+  const [listFilter, setListFilter] = useState<
+    "all" | "pending" | "rsvp" | "duplicates" | "unassigned"
+  >("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const visibleGuests = useMemo(() => {
+  const duplicateCount = useMemo(
+    () => guests.filter((guest) => isPossibleDuplicate(guest, guests)).length,
+    [guests]
+  );
+
+  const filteredGuests = useMemo(() => {
+    let rows = guests;
+
     if (listFilter === "pending") {
-      return guests.filter((guest) => guest.status === "invited");
+      rows = rows.filter((guest) => guest.status === "invited");
+    } else if (listFilter === "rsvp") {
+      rows = rows.filter((guest) => guest.guestSource === "sheet_rsvp");
+    } else if (listFilter === "duplicates") {
+      rows = rows.filter((guest) => isPossibleDuplicate(guest, guests));
+    } else if (listFilter === "unassigned") {
+      rows = rows.filter((guest) => !guest.seatId);
     }
-    if (listFilter === "rsvp") {
-      return guests.filter((guest) => guest.guestSource === "sheet_rsvp");
+
+    const trimmed = search.trim();
+    if (trimmed) {
+      rows = rows.filter((guest) => {
+        const rank = rankNameMatch(guest.name, trimmed);
+        return (
+          rank !== null ||
+          guest.email.toLowerCase().includes(normalizeSearchQuery(trimmed)) ||
+          guest.phone.includes(trimmed)
+        );
+      });
     }
-    return guests;
-  }, [guests, listFilter]);
+
+    return rows;
+  }, [guests, listFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredGuests.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const visibleGuests = filteredGuests.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
 
   const pendingCount = guests.filter((g) => g.status === "invited").length;
   const rsvpCount = guests.filter((g) => g.guestSource === "sheet_rsvp").length;
@@ -144,8 +189,12 @@ export default function GuestManagement({
     const text = await file.text();
     const result = await importGuestsCsvAction(eventId, text);
     if (result.success) {
+      const base = `${result.data.created} novos · ${result.data.updated} actualizados`;
+      const errorLines = result.data.errors.slice(0, 5).join("\n");
       setImportMessage(
-        `${result.data.created} novos · ${result.data.updated} actualizados`
+        result.data.errors.length
+          ? `${base}\n${errorLines}${result.data.errors.length > 5 ? "\n…" : ""}`
+          : base
       );
       onChanged();
     } else {
@@ -181,14 +230,21 @@ export default function GuestManagement({
 
   return (
     <div className="space-y-8">
+      <GuestGroupPanel
+        eventId={eventId}
+        groups={groups}
+        guests={guests}
+        onChanged={onChanged}
+      />
+
       <section className="admin-card p-6 space-y-4">
         <div>
           <p className="font-mono text-[8px] tracking-[0.4em] uppercase text-grey/45 mb-2">
             Importação CSV
           </p>
           <p className="text-sm text-grey/55 leading-relaxed">
-            Alternativa ao Google Sheets — use as colunas Nome, Email, Telefone,
-            Estado, Etiqueta, Acompanhantes, Restrições e Notas.
+            Alternativa ao Google Sheets — colunas: Nome, Email, Telefone,
+            Estado, Etiqueta, Grupo, Acompanhantes, Restrições e Notas.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
@@ -212,7 +268,9 @@ export default function GuestManagement({
             Importar CSV
           </button>
           {importMessage ? (
-            <p className="text-xs text-grey/50 italic">{importMessage}</p>
+            <p className="text-xs text-grey/50 italic whitespace-pre-line max-w-2xl">
+              {importMessage}
+            </p>
           ) : null}
         </div>
       </section>
@@ -225,6 +283,8 @@ export default function GuestManagement({
           <GuestForm
             eventId={eventId}
             guest={editing ?? undefined}
+            guests={guests}
+            groups={groups}
             seats={seats}
             onSaved={() => {
               setCreating(false);
@@ -239,18 +299,30 @@ export default function GuestManagement({
         </section>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
         {(
           [
             { id: "all", label: `Todos (${guests.length})` },
             { id: "pending", label: `Por confirmar (${pendingCount})` },
             { id: "rsvp", label: `RSVP Sheets (${rsvpCount})` },
+            {
+              id: "duplicates",
+              label: `Possíveis duplicados (${duplicateCount})`,
+            },
+            {
+              id: "unassigned",
+              label: `Sem mesa (${guests.filter((g) => !g.seatId).length})`,
+            },
           ] as const
         ).map((item) => (
           <button
             key={item.id}
             type="button"
-            onClick={() => setListFilter(item.id)}
+            onClick={() => {
+              setListFilter(item.id);
+              setPage(1);
+            }}
             className={`px-4 py-2 font-mono text-[9px] tracking-[0.25em] uppercase border rounded-sm transition-colors ${
               listFilter === item.id
                 ? "bg-admin-gold/10 text-admin-gold border-admin-gold/25"
@@ -260,11 +332,29 @@ export default function GuestManagement({
             {item.label}
           </button>
         ))}
+        </div>
+
+        <label className="block w-full lg:max-w-xs">
+          <span className="sr-only">Pesquisar convidados</span>
+          <div className="relative">
+            <Search className="w-4 h-4 text-grey/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Pesquisar nome, email ou telefone"
+              className="admin-input w-full pl-10"
+            />
+          </div>
+        </label>
       </div>
 
       <div className="flex flex-wrap justify-between items-center gap-4">
         <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/50">
-          {guests.length} convidado{guests.length === 1 ? "" : "s"}
+          {filteredGuests.length} de {guests.length} convidado
+          {guests.length === 1 ? "" : "s"}
           {selected.size ? ` · ${selected.size} seleccionado${selected.size === 1 ? "" : "s"}` : ""}
         </p>
         <button
@@ -421,6 +511,15 @@ export default function GuestManagement({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p>{guest.name}</p>
+                      {isPossibleDuplicate(guest, guests) ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm bg-amber-500/10 text-amber-300 border-amber-500/25"
+                          title="Possível duplicado detectado"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          Duplicado?
+                        </span>
+                      ) : null}
                       {guest.label !== "none" ? (
                         <span
                           className={`text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${GUEST_LABEL_STYLES[guest.label]}`}
@@ -440,7 +539,10 @@ export default function GuestManagement({
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-xs text-grey/50">{guestMeta(guest)}</p>
+                    <p className="text-xs text-grey/50">
+                      {guestMeta(guest)}
+                      {guest.groupName ? ` · Grupo: ${guest.groupName}` : ""}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-sm text-grey">
                     {guest.seat
@@ -518,6 +620,32 @@ export default function GuestManagement({
             </tbody>
           </table>
         </div>
+
+        {filteredGuests.length > PAGE_SIZE ? (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-grey-dark/60">
+            <p className="text-xs text-grey/50 font-mono tracking-[0.15em] uppercase">
+              Página {safePage} de {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={safePage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="admin-btn-secondary text-xs px-3 py-2 disabled:opacity-40"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                disabled={safePage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="admin-btn-secondary text-xs px-3 py-2 disabled:opacity-40"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

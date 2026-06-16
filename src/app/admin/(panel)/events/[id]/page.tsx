@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
+import * as groupsRepo from "@/lib/events/repositories/guest-groups.repository";
 import * as guestsRepo from "@/lib/events/repositories/guests.repository";
 import * as seatsRepo from "@/lib/events/repositories/seats.repository";
 import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
@@ -20,13 +21,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     const event = await eventsRepo.getEventById(id);
     if (!event) notFound();
 
-    const [guests, seats, stats, businesses, clients, auditEntries] = await Promise.all([
+    const [guests, seats, stats, businesses, clients, auditEntries, groups] =
+      await Promise.all([
       guestsRepo.listGuestsByEvent(id),
       seatsRepo.listSeatsByEvent(id),
       guestsRepo.getEventStats(id),
       businessesRepo.listBusinesses(),
       clientsRepo.listClients(),
       listGuestAuditByEvent(id).catch(() => []),
+      groupsRepo.listGroupsByEvent(id).catch(() => []),
     ]);
 
     return (
@@ -34,6 +37,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         event={event}
         initialGuests={guests}
         initialSeats={seats}
+        groups={groups}
         stats={stats}
         auditEntries={auditEntries}
         businesses={businesses.map((b) => ({ id: b.id, name: b.name }))}

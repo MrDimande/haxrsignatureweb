@@ -553,17 +553,38 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["seats"]["Insert"]>;
       };
+      guest_groups: {
+        Row: {
+          id: string;
+          event_id: string;
+          name: string;
+          notes: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          name?: string;
+          notes?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["guest_groups"]["Insert"]>;
+      };
       guests: {
         Row: {
           id: string;
           event_id: string;
           name: string;
+          name_normalized: string;
           email: string;
           phone: string;
           client_type: "individual" | "company";
           seat_id: string | null;
+          group_id: string | null;
           qr_token: string;
-          status: "invited" | "confirmed" | "checked_in";
+          status: "invited" | "confirmed" | "checked_in" | "declined";
           plus_ones: number;
           dietary_notes: string;
           guest_notes: string;
@@ -576,12 +597,14 @@ export interface Database {
           id?: string;
           event_id: string;
           name: string;
+          name_normalized?: string;
           email?: string;
           phone?: string;
           client_type?: "individual" | "company";
           seat_id?: string | null;
+          group_id?: string | null;
           qr_token: string;
-          status?: "invited" | "confirmed" | "checked_in";
+          status?: "invited" | "confirmed" | "checked_in" | "declined";
           plus_ones?: number;
           dietary_notes?: string;
           guest_notes?: string;

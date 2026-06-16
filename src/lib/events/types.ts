@@ -65,10 +65,13 @@ export interface EventGuest {
   id: string;
   eventId: string;
   name: string;
+  nameNormalized: string;
   email: string;
   phone: string;
   clientType: ClientType;
   seatId: string | null;
+  groupId: string | null;
+  groupName: string | null;
   qrToken: string;
   status: GuestStatus;
   plusOnes: number;
@@ -86,6 +89,25 @@ export interface EventGuest {
   checkedInAt: string | null;
 }
 
+export interface GuestGroup {
+  id: string;
+  eventId: string;
+  name: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GuestGroupFormData {
+  name: string;
+  notes: string;
+}
+
+export interface GuestGroupWithMembers extends GuestGroup {
+  members: Pick<EventGuest, "id" | "name" | "seatId" | "seat">[];
+  memberCount: number;
+}
+
 export interface GuestFormData {
   name: string;
   email: string;
@@ -93,6 +115,7 @@ export interface GuestFormData {
   clientType: ClientType;
   status: GuestStatus;
   seatId: string | null;
+  groupId: string | null;
   plusOnes: number;
   dietaryNotes: string;
   guestNotes: string;
@@ -165,12 +188,17 @@ export interface EventStats {
   confirmed: number;
   checkedIn: number;
   declined: number;
+  plusOnesTotal: number;
+  expectedAttendance: number;
+  unassignedGuests: number;
+  duplicateGuests: number;
   assignedSeats: number;
   totalSeats: number;
   uniqueTables: number;
   confirmationRate: number;
   capacityUsed: number;
   capacityAvailable: number;
+  groupCount: number;
 }
 
 export interface EventPublicInfo {
@@ -182,12 +210,38 @@ export interface EventPublicInfo {
 }
 
 export interface FindSeatResult {
+  guestId?: string;
   name: string;
   seat: {
     tableName: string;
     seatNumber: number;
     label: string;
   } | null;
+  groupMembers?: string[];
+  matchKind?: "exact" | "starts_with" | "contains" | "fuzzy";
+}
+
+export type GuestListFilter =
+  | "all"
+  | "pending"
+  | "rsvp"
+  | "duplicates"
+  | "unassigned";
+
+export interface GuestListQuery {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  filter?: GuestListFilter;
+  groupId?: string | null;
+}
+
+export interface GuestListPage {
+  guests: EventGuest[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface SheetConnectionInput {

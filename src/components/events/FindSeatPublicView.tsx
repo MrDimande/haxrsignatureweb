@@ -45,6 +45,26 @@ function SeatResultCard({ result }: { result: FindSeatResult }) {
         </div>
       )}
 
+      {result.groupMembers && result.groupMembers.length > 1 ? (
+        <div className="text-left border border-grey-dark/60 px-4 py-4">
+          <p className="font-mono text-[8px] tracking-[0.35em] uppercase text-grey/45 mb-3">
+            Grupo
+          </p>
+          <ul className="space-y-1.5">
+            {result.groupMembers.map((member) => (
+              <li
+                key={member}
+                className={`text-sm ${
+                  member === result.name ? "text-gold/90" : "text-white/70"
+                }`}
+              >
+                {member}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <p className="font-serif text-base text-white/55 italic leading-relaxed">
         Desejamos-lhe uma excelente celebração.
       </p>
@@ -172,6 +192,7 @@ export default function FindSeatPublicView({ event }: FindSeatPublicViewProps) {
                   key={`${result.name}-${result.seat?.tableName ?? "none"}`}
                   type="button"
                   role="option"
+                  aria-selected={false}
                   onClick={() => setSelected(result)}
                   className="w-full text-left px-4 py-3 border border-grey-dark/80 hover:border-gold-dim/40 transition-colors"
                 >

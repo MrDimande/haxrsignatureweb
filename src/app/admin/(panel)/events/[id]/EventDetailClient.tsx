@@ -22,6 +22,7 @@ import type {
   EventSeat,
   EventStats,
   GuestAuditEntry,
+  GuestGroup,
   ManagedEvent,
 } from "@/lib/events/types";
 
@@ -31,6 +32,7 @@ type EventDetailClientProps = {
   event: ManagedEvent;
   initialGuests: EventGuest[];
   initialSeats: EventSeat[];
+  groups: GuestGroup[];
   stats: EventStats;
   auditEntries: GuestAuditEntry[];
   businesses: { id: BusinessId; name: string }[];
@@ -52,6 +54,7 @@ export default function EventDetailClient({
   event: initialEvent,
   initialGuests,
   initialSeats,
+  groups,
   stats: initialStats,
   auditEntries,
   businesses,
@@ -132,6 +135,7 @@ export default function EventDetailClient({
         <GuestManagement
           event={event}
           guests={initialGuests}
+          groups={groups}
           seats={initialSeats}
           onChanged={handleRefresh}
         />

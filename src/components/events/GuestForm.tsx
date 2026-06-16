@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AdminInput, AdminSelect } from "@/components/admin/AdminField";
 import { CLIENT_TYPE_LABELS } from "@/lib/admin/constants";
 import { GUEST_LABEL_LABELS, GUEST_STATUS_LABELS, GUEST_STATUSES, GUEST_LABELS } from "@/lib/events/constants";
+import { isPossibleDuplicate } from "@/lib/events/deduplication";
 import { saveGuestAction } from "@/lib/events/actions/guests.actions";
 import type { ClientType } from "@/lib/admin/types";
-import type { EventGuest, EventSeat, GuestFormData, GuestLabel, GuestStatus } from "@/lib/events/types";
+import type { EventGuest, EventSeat, GuestFormData, GuestGroup, GuestLabel, GuestStatus } from "@/lib/events/types";
 
 const schema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
@@ -17,6 +19,7 @@ const schema = z.object({
   clientType: z.enum(["individual", "company"]),
   status: z.enum(["invited", "confirmed", "checked_in", "declined"]),
   seatId: z.string().optional(),
+  groupId: z.string().optional(),
   plusOnes: z.coerce.number().int().min(0).max(10),
   dietaryNotes: z.string().max(500).optional(),
   guestNotes: z.string().max(1000).optional(),
@@ -28,6 +31,8 @@ type FormValues = z.infer<typeof schema>;
 type GuestFormProps = {
   eventId: string;
   guest?: EventGuest;
+  guests: EventGuest[];
+  groups: GuestGroup[];
   seats: EventSeat[];
   onSaved: (guest: EventGuest) => void;
   onCancel?: () => void;
@@ -36,10 +41,14 @@ type GuestFormProps = {
 export default function GuestForm({
   eventId,
   guest,
+  guests,
+  groups,
   seats,
   onSaved,
   onCancel,
 }: GuestFormProps) {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -53,6 +62,7 @@ export default function GuestForm({
       clientType: guest?.clientType ?? "individual",
       status: guest?.status ?? "invited",
       seatId: guest?.seatId ?? "",
+      groupId: guest?.groupId ?? "",
       plusOnes: guest?.plusOnes ?? 0,
       dietaryNotes: guest?.dietaryNotes ?? "",
       guestNotes: guest?.guestNotes ?? "",
@@ -61,6 +71,7 @@ export default function GuestForm({
   });
 
   async function onSubmit(values: FormValues) {
+    setSubmitError(null);
     const data: GuestFormData = {
       name: values.name,
       email: values.email ?? "",
@@ -68,13 +79,50 @@ export default function GuestForm({
       clientType: values.clientType,
       status: values.status,
       seatId: values.seatId || null,
+      groupId: values.groupId || null,
       plusOnes: values.plusOnes,
       dietaryNotes: values.dietaryNotes ?? "",
       guestNotes: values.guestNotes ?? "",
       label: values.label,
     };
+
+    const draftGuest: EventGuest = {
+      id: guest?.id ?? "draft",
+      eventId,
+      name: data.name,
+      nameNormalized: "",
+      email: data.email,
+      phone: data.phone,
+      clientType: data.clientType,
+      seatId: data.seatId,
+      groupId: data.groupId,
+      groupName: null,
+      qrToken: "",
+      status: data.status,
+      plusOnes: data.plusOnes,
+      dietaryNotes: data.dietaryNotes,
+      guestNotes: data.guestNotes,
+      label: data.label,
+      guestSource: "manual",
+      createdAt: "",
+      updatedAt: "",
+      seat: null,
+      checkedInAt: null,
+    };
+
+    if (isPossibleDuplicate(draftGuest, guests)) {
+      setDuplicateWarning(
+        "Possível duplicado detectado. Verifique antes de guardar."
+      );
+    } else {
+      setDuplicateWarning(null);
+    }
+
     const result = await saveGuestAction(eventId, data, guest?.id);
-    if (!result.success) return;
+    if (!result.success) {
+      setSubmitError(result.error);
+      return;
+    }
     onSaved(result.data);
   }
 
@@ -108,6 +156,14 @@ export default function GuestForm({
           {GUEST_LABELS.map((label) => (
             <option key={label} value={label}>
               {GUEST_LABEL_LABELS[label as GuestLabel]}
+            </option>
+          ))}
+        </AdminSelect>
+        <AdminSelect label="Grupo (opcional)" {...register("groupId")}>
+          <option value="">Sem grupo</option>
+          {groups.map((group) => (
+            <option key={group.id} value={group.id}>
+              {group.name}
             </option>
           ))}
         </AdminSelect>
@@ -149,6 +205,14 @@ export default function GuestForm({
         />
       </label>
 
+      {duplicateWarning ? (
+        <p className="text-amber-300/90 text-xs border border-amber-500/20 bg-amber-500/5 px-3 py-2 rounded-sm">
+          {duplicateWarning}
+        </p>
+      ) : null}
+      {submitError ? (
+        <p className="text-red-400 text-xs">{submitError}</p>
+      ) : null}
       {errors.name ? (
         <p className="text-red-400 text-xs">{errors.name.message}</p>
       ) : null}

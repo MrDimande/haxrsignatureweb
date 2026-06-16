@@ -2,8 +2,10 @@ import { fetchSheetCsv } from "@/lib/events/sheets/fetch";
 import { analyzeSheetCsv, mapCsvToGuestRows } from "@/lib/events/sheets/parse-csv";
 import { resolveRsvpRowStatus } from "@/lib/events/sheets/detect-mode";
 import { findGuestMatch } from "@/lib/events/sheets/match";
+import * as groupsRepo from "@/lib/events/repositories/guest-groups.repository";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import * as guestsRepo from "@/lib/events/repositories/guests.repository";
+import { validateSheetRow } from "@/lib/events/services/guest-validation.service";
 import type { SheetSyncResult, SheetsSyncMode } from "@/lib/events/types";
 import type { SheetGuestRow } from "@/lib/events/sheets/types";
 
@@ -58,7 +60,32 @@ export async function syncEventGuestsFromSheet(
   const existingGuests = await guestsRepo.listGuestsByEvent(eventId);
 
   const usedIds = new Set<string>();
+  const groupCache = new Map<string, string>();
   const result = emptyResult(syncMode, rows.length);
+
+  async function resolveGroupId(groupName?: string): Promise<string | null> {
+    const trimmed = groupName?.trim();
+    if (!trimmed) return null;
+    const key = trimmed.toLowerCase();
+    const cached = groupCache.get(key);
+    if (cached) return cached;
+
+    const groups = await groupsRepo.listGroupsByEvent(eventId);
+    const existing = groups.find(
+      (group) => group.name.trim().toLowerCase() === key
+    );
+    if (existing) {
+      groupCache.set(key, existing.id);
+      return existing.id;
+    }
+
+    const created = await groupsRepo.createGroup(eventId, {
+      name: trimmed,
+      notes: "",
+    });
+    groupCache.set(key, created.id);
+    return created.id;
+  }
 
   for (const rawRow of rows) {
     let row: SheetGuestRow = rawRow;
@@ -73,19 +100,41 @@ export async function syncEventGuestsFromSheet(
     }
 
     try {
-      const match = findGuestMatch(existingGuests, row, usedIds);
+      const validationIssues = validateSheetRow(row, {
+        eventId,
+        existingGuests,
+      });
+      const blockingIssues = validationIssues.filter(
+        (issue) => issue.code !== "possible_duplicate"
+      );
+      if (blockingIssues.length) {
+        result.skipped++;
+        result.errors.push(
+          `Linha ${row.rowNumber}: ${blockingIssues.map((issue) => issue.message).join(" ")}`
+        );
+        continue;
+      }
+      if (validationIssues.some((issue) => issue.code === "possible_duplicate")) {
+        result.errors.push(
+          `Linha ${row.rowNumber}: Possível duplicado detectado — «${row.name}».`
+        );
+      }
+
+      const groupId = await resolveGroupId(row.groupName);
+      const enrichedRow = { ...row, groupId };
+      const match = findGuestMatch(existingGuests, enrichedRow, usedIds);
 
       if (match) {
         usedIds.add(match.id);
-        await guestsRepo.updateGuestFromSheet(match.id, row, syncMode);
+        await guestsRepo.updateGuestFromSheet(match.id, enrichedRow, syncMode);
         result.updated++;
-        if (syncMode === "rsvp" && row.status === "confirmed") {
+        if (syncMode === "rsvp" && enrichedRow.status === "confirmed") {
           result.confirmedFromSheet++;
         }
       } else {
         const created = await guestsRepo.createGuestFromSheet(
           eventId,
-          row,
+          enrichedRow,
           syncMode
         );
         existingGuests.push(created);

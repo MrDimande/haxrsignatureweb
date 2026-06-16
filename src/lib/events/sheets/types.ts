@@ -12,6 +12,8 @@ export interface SheetGuestRow {
   dietaryNotes?: string;
   guestNotes?: string;
   label?: GuestLabel;
+  groupId?: string | null;
+  groupName?: string;
   rowNumber: number;
 }
 

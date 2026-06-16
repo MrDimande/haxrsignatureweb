@@ -20,11 +20,13 @@ function KpiCard({
   value,
   hint,
   accent,
+  warning,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   accent?: boolean;
+  warning?: boolean;
 }) {
   return (
     <div className="admin-stat-card">
@@ -33,7 +35,11 @@ function KpiCard({
       </p>
       <p
         className={`font-serif text-2xl font-light ${
-          accent ? "text-admin-gold" : "text-white"
+          warning
+            ? "text-amber-300"
+            : accent
+              ? "text-admin-gold"
+              : "text-white"
         }`}
       >
         {value}
@@ -44,28 +50,51 @@ function KpiCard({
 }
 
 export default function EventKpiPanel({ event, stats }: EventKpiPanelProps) {
-  const pending = stats.invited;
-
   return (
     <section className="space-y-6 mb-8">
       <div>
         <p className="font-mono text-[9px] tracking-[0.45em] uppercase text-admin-gold mb-2">
-          Panorama do evento
+          Panorama operacional
         </p>
         <p className="text-sm text-grey/55">
-          Indicadores em tempo real de convidados, lugares e sincronização.
+          Métricas de convidados, capacidade, grupos e sincronização em tempo
+          real.
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-        <KpiCard label="Convidados totais" value={stats.totalGuests} />
-        <KpiCard label="Confirmados" value={stats.confirmed + stats.checkedIn} accent />
-        <KpiCard label="Pendentes" value={pending} />
+        <KpiCard label="Total convidados" value={stats.totalGuests} />
+        <KpiCard
+          label="Confirmados"
+          value={stats.confirmed + stats.checkedIn}
+          accent
+        />
+        <KpiCard label="Pendentes" value={stats.invited} />
         <KpiCard label="Recusados" value={stats.declined} />
+        <KpiCard label="Acompanhantes" value={stats.plusOnesTotal} />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+        <KpiCard
+          label="Total esperado"
+          value={stats.expectedAttendance}
+          hint="Confirmados + check-in + acompanhantes"
+          accent
+        />
+        <KpiCard
+          label="Sem mesa"
+          value={stats.unassignedGuests}
+          warning={stats.unassignedGuests > 0}
+        />
+        <KpiCard
+          label="Possíveis duplicados"
+          value={stats.duplicateGuests}
+          warning={stats.duplicateGuests > 0}
+        />
+        <KpiCard label="Grupos" value={stats.groupCount} />
         <KpiCard
           label="Taxa de confirmação"
           value={`${stats.confirmationRate}%`}
-          accent
         />
       </div>
 

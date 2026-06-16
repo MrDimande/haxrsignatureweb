@@ -23,6 +23,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   ],
   label: ["etiqueta", "label", "tag", "categoria"],
   guestNotes: ["notas", "notes", "guest_notes", "observacoes", "observações"],
+  groupName: ["grupo", "group", "familia", "família", "reserva", "household"],
 };
 
 function normalizeHeader(value: string): string {
@@ -134,6 +135,7 @@ export function mapCsvToGuestRows(csvText: string): SheetGuestRow[] {
   const dietaryIdx = findColumnIndex(headers, "dietaryNotes");
   const notesIdx = findColumnIndex(headers, "guestNotes");
   const labelIdx = findColumnIndex(headers, "label");
+  const groupIdx = findColumnIndex(headers, "groupName");
 
   const guests: SheetGuestRow[] = [];
 
@@ -155,6 +157,7 @@ export function mapCsvToGuestRows(csvText: string): SheetGuestRow[] {
     const guestNotes = notesIdx >= 0 ? (cells[notesIdx] ?? "").trim() : undefined;
     const labelRaw = labelIdx >= 0 ? (cells[labelIdx] ?? "").trim() : "";
     const label = labelRaw ? parseGuestLabel(labelRaw) : undefined;
+    const groupName = groupIdx >= 0 ? (cells[groupIdx] ?? "").trim() : "";
 
     guests.push({
       name,
@@ -167,6 +170,7 @@ export function mapCsvToGuestRows(csvText: string): SheetGuestRow[] {
       dietaryNotes,
       guestNotes,
       label,
+      groupName: groupName || undefined,
       rowNumber: i + 1,
     });
   }
