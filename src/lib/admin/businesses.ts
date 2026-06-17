@@ -11,7 +11,7 @@ export const businesses: Business[] = [
     logo: "/images/brand/logo-horizontal-gold.png",
     nuit: "150725161",
     phone: "+258 87 088 3428 · +258 82 088 3428",
-    email: "haxrsignature@gmail.com",
+    email: siteContact.email,
     whatsapp: "258870883428",
     address: siteContact.location,
     invoicePrefix: "",

@@ -10,6 +10,8 @@ const ENVIRONMENTS = ["production", "preview", "development"];
 const FORCE_SYNC_KEYS = new Set([
   "NEXT_PUBLIC_SITE_URL",
   "NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION",
+  "CONTACT_NOTIFY_EMAIL",
+  "RESEND_BRAND_DOMAIN",
 ]);
 
 const REQUIRED_KEYS = [
@@ -20,6 +22,13 @@ const REQUIRED_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
+  "RESEND_API_KEY",
+  "CONTACT_NOTIFY_EMAIL",
+];
+
+const OPTIONAL_KEYS = [
+  "RESEND_FROM_EMAIL",
+  "RESEND_BRAND_DOMAIN",
 ];
 
 function parseEnvFile(path) {
@@ -34,7 +43,13 @@ function parseEnvFile(path) {
     const index = trimmed.indexOf("=");
     if (index === -1) continue;
     const key = trimmed.slice(0, index).trim();
-    const value = trimmed.slice(index + 1).trim();
+    let value = trimmed.slice(index + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
     values[key] = value;
   }
   return values;
@@ -104,6 +119,9 @@ async function main() {
 
   const payload = {
     ...Object.fromEntries(REQUIRED_KEYS.map((key) => [key, localEnv[key]])),
+    ...Object.fromEntries(
+      OPTIONAL_KEYS.filter((key) => localEnv[key]).map((key) => [key, localEnv[key]])
+    ),
     ADMIN_SESSION_SECRET: sessionSecret,
   };
 

@@ -291,8 +291,9 @@ SUPABASE_SERVICE_ROLE_KEY=...
 
 # Email (Resend)
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=HAXR Signature <noreply@seudominio.co.mz>
-CONTACT_NOTIFY_EMAIL=haxrsignature@gmail.com
+CONTACT_NOTIFY_EMAIL=hello@haxrsignature.com
+RESEND_FROM_EMAIL=HAXR Signature <onboarding@resend.dev>
+RESEND_BRAND_DOMAIN=false
 ```
 
 Em produção, definir as mesmas variáveis no painel Vercel. Nunca commitar `.env.local`.
@@ -346,6 +347,59 @@ Páginas operacionais de evento (RSVP, check-in, find-seat) têm `noindex` — n
 
 ---
 
+## Email e Resend
+
+### Estrutura recomendada
+
+| Tipo | Endereço | Função |
+|------|----------|--------|
+| **Mailbox real** | `hello@haxrsignature.com` | Recebe formulários, orçamentos, respostas e mensagens importantes |
+| **Envio Resend** | `eventos@`, `convites@`, `financeiro@`, `rsvp@`, `noreply@`, `info@` | Remetentes por contexto — sem mailbox paga para cada um |
+
+O cliente pode receber de `rsvp@haxrsignature.com`, outro de `financeiro@haxrsignature.com`, etc. Na Spaceship, configurar **aliases** que encaminham tudo para `hello@`.
+
+### Passo a passo — Spaceship (mailbox real)
+
+1. **Email** → criar mailbox `hello@haxrsignature.com` (caixa principal)
+2. **Aliases / Forwarding** → encaminhar para `hello@`:
+   - `info@`, `eventos@`, `convites@`, `financeiro@`, `rsvp@`, `noreply@`
+3. Configurar cliente de email (Outlook, Apple Mail ou webmail Spaceship) em `hello@`
+
+### Configuração no Resend
+
+1. [resend.com/domains](https://resend.com/domains) → adicionar `haxrsignature.com`
+2. Copiar registos DNS (SPF, DKIM, DMARC recomendado) para a Spaceship → **DNS**
+3. Aguardar verificação verde no Resend
+4. Verificar estado localmente: `npm run email:check-domain`
+5. Na Vercel: `RESEND_BRAND_DOMAIN=true` e remover `RESEND_FROM_EMAIL`
+6. Sincronizar env: `npm run vercel:env`
+
+Enquanto `RESEND_BRAND_DOMAIN` não for `true`, o sistema envia via sandbox `onboarding@resend.dev` (funcional para testes).
+
+### Formulário de contacto (comportamento actual)
+
+| Email | De | Para | Notas |
+|-------|-----|------|-------|
+| Notificação interna | `noreply@haxrsignature.com` | `hello@` (ou `CONTACT_NOTIFY_EMAIL`) | `replyTo` = email do cliente |
+| Auto-resposta | `hello@haxrsignature.com` | Cliente | `replyTo` = `hello@` — o cliente responde à caixa principal |
+
+Enquanto o domínio não estiver verificado, manter `RESEND_FROM_EMAIL` com o sandbox e `RESEND_BRAND_DOMAIN=false`.
+
+### Canais futuros (já preparados no código)
+
+```ts
+import { sendHaxrEmail } from "@/lib/email/resend";
+
+await sendHaxrEmail({
+  channel: "rsvp",
+  to: guest.email,
+  subject: "Confirme a sua presença",
+  html: "...",
+});
+```
+
+---
+
 ## Desenvolvimento local
 
 ```bash
@@ -359,6 +413,8 @@ npm run dev
 | `npm run build` | Build de produção |
 | `npm run start` | Servidor de produção local |
 | `npm run lint` | ESLint |
+| `npm run email:check-domain` | Estado do domínio no Resend |
+| `npm run vercel:env` | Sincronizar `.env.local` → Vercel |
 
 - Site → [http://localhost:3000](http://localhost:3000)
 - Admin → [http://localhost:3000/admin](http://localhost:3000/admin)

@@ -17,6 +17,7 @@ yarn-error.log*
 # env
 .env
 .env*.local
+!.env.example
 
 # typescript
 next-env.d.ts
@@ -30,7 +31,5 @@ next-env.d.ts
 .agents/
 skills-lock.json
 
-
-
+# vercel
 .vercel
-.env*

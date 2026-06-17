@@ -180,7 +180,7 @@ export const siteContact = {
   shortLocation: "Maputo · Moçambique",
   mapsHref:
     "https://www.google.com/maps/search/?api=1&query=Av.+Julius+Nyerere+119+Polana+Canico+Maputo+Mo%C3%A7ambique",
-  email: "haxrsignature@gmail.com",
+  email: "hello@haxrsignature.com",
   instagram: {
     handle: "@haxrsignature",
     href: "https://www.instagram.com/haxrsignature/",

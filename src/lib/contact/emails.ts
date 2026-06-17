@@ -1,27 +1,9 @@
-import { Resend } from "resend";
+import { getNotifyInbox } from "@/lib/email/addresses";
+import { isResendConfigured, resolveFrom, sendHaxrEmail } from "@/lib/email/resend";
 import { projectTypeLabels, siteContact } from "@/lib/site-config";
 import type { ContactInquiry } from "@/lib/contact/types";
 
 const BRAND = "HAXR Signature";
-
-function getResendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return null;
-  return new Resend(apiKey);
-}
-
-function getFromEmail(): string {
-  return (
-    process.env.RESEND_FROM_EMAIL?.trim() ||
-    `${BRAND} <onboarding@resend.dev>`
-  );
-}
-
-function getNotifyEmail(): string {
-  return (
-    process.env.CONTACT_NOTIFY_EMAIL?.trim() || siteContact.email
-  );
-}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("pt-MZ", {
@@ -111,55 +93,44 @@ function buildAutoReplyHtml(inquiry: ContactInquiry): string {
 export async function sendContactEmails(
   inquiry: ContactInquiry
 ): Promise<{ teamSent: boolean; autoReplySent: boolean }> {
-  const resend = getResendClient();
-  if (!resend) {
+  if (!isResendConfigured()) {
     console.warn("[contact] RESEND_API_KEY não configurada — emails não enviados.");
     return { teamSent: false, autoReplySent: false };
   }
 
-  const from = getFromEmail();
-  const notifyEmail = getNotifyEmail();
+  const notifyEmail = getNotifyInbox();
   const tipo = projectLabel(inquiry.projectType);
   const subjectParts = [`[${BRAND}]`, "Novo contacto", tipo];
   if (inquiry.packageLabel) subjectParts.push(inquiry.packageLabel);
 
-  let teamSent = false;
-  let autoReplySent = false;
+  const teamResult = await sendHaxrEmail({
+    channel: "noreply",
+    to: notifyEmail,
+    replyTo: inquiry.email,
+    subject: subjectParts.join(" · "),
+    html: buildTeamNotificationHtml(inquiry),
+  });
 
-  try {
-    const teamResult = await resend.emails.send({
-      from,
-      to: [notifyEmail],
-      replyTo: inquiry.email,
-      subject: subjectParts.join(" · "),
-      html: buildTeamNotificationHtml(inquiry),
-    });
-    teamSent = !teamResult.error;
-    if (teamResult.error) {
-      console.error("[contact] Falha email equipa:", teamResult.error);
-    }
-  } catch (err) {
-    console.error("[contact] Erro email equipa:", err);
+  if (!teamResult.ok) {
+    console.error("[contact] Falha email equipa:", teamResult.error);
   }
 
-  try {
-    const replyResult = await resend.emails.send({
-      from,
-      to: [inquiry.email],
-      subject: `${BRAND} · Recebemos o seu pedido`,
-      html: buildAutoReplyHtml(inquiry),
-    });
-    autoReplySent = !replyResult.error;
-    if (replyResult.error) {
-      console.error("[contact] Falha auto-reply:", replyResult.error);
-    }
-  } catch (err) {
-    console.error("[contact] Erro auto-reply:", err);
+  const replyResult = await sendHaxrEmail({
+    channel: "hello",
+    to: inquiry.email,
+    replyTo: notifyEmail,
+    subject: `${BRAND} · Recebemos o seu pedido`,
+    html: buildAutoReplyHtml(inquiry),
+  });
+
+  if (!replyResult.ok) {
+    console.error("[contact] Falha auto-reply:", replyResult.error);
   }
 
-  return { teamSent, autoReplySent };
+  return {
+    teamSent: teamResult.ok,
+    autoReplySent: replyResult.ok,
+  };
 }
 
-export function isResendConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim());
-}
+export { isResendConfigured } from "@/lib/email/resend";
