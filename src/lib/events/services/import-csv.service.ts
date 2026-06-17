@@ -78,8 +78,16 @@ export async function importGuestsFromCsv(
     }
 
     if (validationIssues.some((issue) => issue.code === "possible_duplicate")) {
+      const preemptiveMatch = findGuestMatch(existingGuests, row, usedIds);
+      if (!preemptiveMatch) {
+        result.skipped++;
+        result.errors.push(
+          `Linha ${row.rowNumber}: Duplicado detectado — «${row.name}» já existe. Use fundir duplicados no painel.`
+        );
+        continue;
+      }
       result.errors.push(
-        `Linha ${row.rowNumber}: Possível duplicado detectado — «${row.name}».`
+        `Linha ${row.rowNumber}: Duplicado detectado — actualizado «${preemptiveMatch.name}».`
       );
     }
 

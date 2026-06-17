@@ -2,6 +2,8 @@
  * Normalização partilhada para deduplicação, pesquisa e importação.
  */
 
+const PLUS_SUFFIX_PATTERN = /\s*(\(\s*\+?\s*(\d+)\s*\)|\+\s*(\d+))\s*$/i;
+
 const ACCENT_MAP: Record<string, string> = {
   à: "a",
   á: "a",
@@ -40,8 +42,54 @@ function stripAccents(value: string): string {
     .join("");
 }
 
+/** Remove sufixos «+1», «(+2)» etc. do nome para deduplicação e matching. */
+export function stripPlusSuffix(value: string): string {
+  return value.replace(PLUS_SUFFIX_PATTERN, "").trim();
+}
+
+export type ParsedGuestName = {
+  name: string;
+  plusOnes: number;
+  inferredGroupName: string | null;
+};
+
+/**
+ * Interpreta entradas como «Carlos Dimande +1» ou «João e Maria» (unidade familiar).
+ */
+export function parseGuestNameInput(raw: string): ParsedGuestName {
+  const trimmed = raw.trim();
+  let plusOnes = 0;
+  let name = trimmed;
+
+  const plusMatch = trimmed.match(PLUS_SUFFIX_PATTERN);
+  if (plusMatch) {
+    plusOnes = Number.parseInt(plusMatch[2] ?? plusMatch[3] ?? "1", 10) || 1;
+    name = stripPlusSuffix(trimmed);
+  }
+
+  const inferredGroupName = inferFamilyGroupName(name);
+
+  return {
+    name: name.trim(),
+    plusOnes,
+    inferredGroupName,
+  };
+}
+
+/** Detecta padrão «João e Maria» como grupo familiar (duas partes, sem «&»). */
+export function inferFamilyGroupName(value: string): string | null {
+  const cleaned = value.trim();
+  if (!/\s+e\s+/i.test(cleaned)) return null;
+
+  const parts = cleaned.split(/\s+e\s+/i).map((part) => part.trim()).filter(Boolean);
+  if (parts.length !== 2) return null;
+  if (parts.some((part) => part.length < 2)) return null;
+
+  return cleaned;
+}
+
 export function normalizeGuestName(value: string): string {
-  return stripAccents(value)
+  return stripAccents(stripPlusSuffix(value))
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");

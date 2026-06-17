@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  inferFamilyGroupName,
   namesAreEquivalent,
   normalizeGuestName,
+  parseGuestNameInput,
   rankNameMatch,
+  stripPlusSuffix,
 } from "./normalize";
 
 describe("normalizeGuestName", () => {
@@ -12,6 +15,30 @@ describe("normalizeGuestName", () => {
     assert.equal(normalizeGuestName("JOÃO DIMANDE"), "joao dimande");
     assert.equal(normalizeGuestName("Joao Dimande"), "joao dimande");
     assert.equal(normalizeGuestName("Maria José Tembe"), "maria jose tembe");
+  });
+
+  it("ignora sufixo +1 na deduplicação", () => {
+    assert.equal(
+      normalizeGuestName("Carlos Dimande +1"),
+      normalizeGuestName("Carlos Dimande")
+    );
+  });
+});
+
+describe("parseGuestNameInput", () => {
+  it("extrai acompanhantes do nome", () => {
+    const parsed = parseGuestNameInput("Carlos Dimande +1");
+    assert.equal(parsed.name, "Carlos Dimande");
+    assert.equal(parsed.plusOnes, 1);
+  });
+
+  it("detecta unidade familiar", () => {
+    assert.equal(inferFamilyGroupName("João e Maria"), "João e Maria");
+    assert.equal(inferFamilyGroupName("João Dimande"), null);
+  });
+
+  it("limpa sufixo entre parênteses", () => {
+    assert.equal(stripPlusSuffix("Ana (+2)"), "Ana");
   });
 });
 

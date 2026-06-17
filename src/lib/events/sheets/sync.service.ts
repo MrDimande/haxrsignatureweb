@@ -94,6 +94,17 @@ export async function syncEventGuestsFromSheet(
       const applied = applyRsvpStatus(rawRow);
       if (applied === "declined") {
         result.declined++;
+        const match = findGuestMatch(existingGuests, rawRow, usedIds);
+        if (match) {
+          usedIds.add(match.id);
+          await guestsRepo.updateGuestStatus(match.id, "declined");
+          result.updated++;
+        } else {
+          result.skipped++;
+          result.errors.push(
+            `Linha ${rawRow.rowNumber}: Recusa sem convidado correspondente — «${rawRow.name}».`
+          );
+        }
         continue;
       }
       row = applied;
@@ -115,8 +126,16 @@ export async function syncEventGuestsFromSheet(
         continue;
       }
       if (validationIssues.some((issue) => issue.code === "possible_duplicate")) {
+        const preemptiveMatch = findGuestMatch(existingGuests, row, usedIds);
+        if (!preemptiveMatch) {
+          result.skipped++;
+          result.errors.push(
+            `Linha ${row.rowNumber}: Duplicado detectado — «${row.name}» já existe.`
+          );
+          continue;
+        }
         result.errors.push(
-          `Linha ${row.rowNumber}: Possível duplicado detectado — «${row.name}».`
+          `Linha ${row.rowNumber}: Duplicado detectado — actualizado «${preemptiveMatch.name}».`
         );
       }
 

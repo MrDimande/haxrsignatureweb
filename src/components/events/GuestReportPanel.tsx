@@ -103,12 +103,19 @@ export default function GuestReportPanel({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "Total", value: stats.totalGuests },
+            { label: "Pendentes", value: stats.invited },
             { label: "Confirmados", value: stats.confirmed },
+            { label: "Recusados", value: stats.declined },
             { label: "Check-in", value: stats.checkedIn },
+            {
+              label: "Presença prevista",
+              value: stats.expectedAttendance,
+            },
             {
               label: "Sem lugar",
               value: stats.totalGuests - stats.assignedSeats,
             },
+            { label: "Duplicados", value: stats.duplicateGuests },
           ].map((item) => (
             <div key={item.label} className="admin-stat-card">
               <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">

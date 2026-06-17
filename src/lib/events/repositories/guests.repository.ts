@@ -4,7 +4,7 @@ import {
   guestToDbInsert,
   mapGuest,
 } from "@/lib/events/db/mappers";
-import { normalizeGuestName, normalizeSearchQuery, rankNameMatch } from "@/lib/events/normalize";
+import { normalizeGuestName, normalizeSearchQuery, rankNameMatch, parseGuestNameInput } from "@/lib/events/normalize";
 import { generateQrToken } from "@/lib/events/tokens";
 import { GUEST_LABEL_LABELS, GUEST_STATUS_LABELS } from "@/lib/events/constants";
 import { logGuestAudit } from "@/lib/events/repositories/guest-audit.repository";
@@ -122,13 +122,23 @@ export async function getGuestById(id: string): Promise<EventGuest | null> {
   return row ? mapGuest(row) : null;
 }
 
+function applyParsedGuestName(data: GuestFormData): GuestFormData {
+  const parsed = parseGuestNameInput(data.name);
+  return {
+    ...data,
+    name: parsed.name,
+    plusOnes: Math.max(data.plusOnes, parsed.plusOnes),
+  };
+}
+
 export async function createGuest(
   eventId: string,
   data: GuestFormData
 ): Promise<EventGuest> {
+  const normalizedData = applyParsedGuestName(data);
   const existingGuests = await listGuestsByEvent(eventId);
   const seats = await seatsRepo.listSeatsByEvent(eventId);
-  const validationIssues = validateGuestForm(data.name, data.seatId, {
+  const validationIssues = validateGuestForm(normalizedData.name, normalizedData.seatId, {
     eventId,
     existingGuests,
     seats,
@@ -140,14 +150,14 @@ export async function createGuest(
 
   const supabase = createAdminClient();
 
-  if (data.seatId) {
-    await clearSeatAssignment(data.seatId);
+  if (normalizedData.seatId) {
+    await clearSeatAssignment(normalizedData.seatId);
   }
 
   const { data: saved, error } = await supabase
     .from("guests")
     .insert(
-      guestToDbInsert(eventId, data, generateQrToken()) as never
+      guestToDbInsert(eventId, normalizedData, generateQrToken()) as never
     )
     .select(guestSelect)
     .single();
@@ -168,9 +178,10 @@ export async function updateGuest(
   const existing = await getGuestById(id);
   if (!existing) throw new Error("Convidado não encontrado.");
 
+  const normalizedData = applyParsedGuestName(data);
   const seats = await seatsRepo.listSeatsByEvent(existing.eventId);
   const existingGuests = await listGuestsByEvent(existing.eventId);
-  const validationIssues = validateGuestForm(data.name, data.seatId, {
+  const validationIssues = validateGuestForm(normalizedData.name, normalizedData.seatId, {
     eventId: existing.eventId,
     existingGuests,
     seats,
@@ -181,25 +192,25 @@ export async function updateGuest(
     throw new Error(formatValidationErrors(validationIssues));
   }
 
-  if (data.seatId && data.seatId !== existing.seatId) {
-    await clearSeatAssignment(data.seatId, id);
+  if (normalizedData.seatId && normalizedData.seatId !== existing.seatId) {
+    await clearSeatAssignment(normalizedData.seatId, id);
   }
 
   const { data: saved, error } = await supabase
     .from("guests")
     .update({
-      name: data.name.trim(),
-      name_normalized: normalizeGuestName(data.name),
-      email: data.email.trim(),
-      phone: data.phone.trim(),
-      client_type: data.clientType,
-      seat_id: data.seatId || null,
-      group_id: data.groupId || null,
-      status: data.status,
-      plus_ones: data.plusOnes,
-      dietary_notes: data.dietaryNotes.trim(),
-      guest_notes: data.guestNotes.trim(),
-      label: data.label,
+      name: normalizedData.name.trim(),
+      name_normalized: normalizeGuestName(normalizedData.name),
+      email: normalizedData.email.trim(),
+      phone: normalizedData.phone.trim(),
+      client_type: normalizedData.clientType,
+      seat_id: normalizedData.seatId || null,
+      group_id: normalizedData.groupId || null,
+      status: normalizedData.status,
+      plus_ones: normalizedData.plusOnes,
+      dietary_notes: normalizedData.dietaryNotes.trim(),
+      guest_notes: normalizedData.guestNotes.trim(),
+      label: normalizedData.label,
     } as never)
     .eq("id", id)
     .select(guestSelect)
