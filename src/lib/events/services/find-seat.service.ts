@@ -1,30 +1,47 @@
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import * as guestsRepo from "@/lib/events/repositories/guests.repository";
+import {
+  FIND_SEAT_MIN_NAME_LENGTH,
+  isValidFindSeatCode,
+  normalizeFindSeatCode,
+} from "@/lib/events/find-seat-code";
 import type { FindSeatSearchResponse } from "@/lib/events/types";
 
-const MIN_QUERY_LENGTH = 2;
 const MAX_QUERY_LENGTH = 80;
 
 export async function searchFindSeat(
   eventId: string,
-  query: string
+  query: string,
+  accessCode: string
 ): Promise<FindSeatSearchResponse> {
-  const normalized = query.trim();
+  const normalizedQuery = query.trim();
+  const normalizedCode = normalizeFindSeatCode(accessCode);
 
-  if (normalized.length < MIN_QUERY_LENGTH) {
+  if (!isValidFindSeatCode(normalizedCode)) {
+    return { ok: false, error: "invalid_access" };
+  }
+
+  if (normalizedQuery.length < FIND_SEAT_MIN_NAME_LENGTH) {
     return { ok: false, error: "query_too_short" };
   }
 
-  if (normalized.length > MAX_QUERY_LENGTH) {
+  if (normalizedQuery.length > MAX_QUERY_LENGTH) {
     return { ok: false, error: "query_too_long" };
   }
 
-  const event = await eventsRepo.getEventPublicInfo(eventId);
+  const event = await eventsRepo.verifyFindSeatAccess(eventId, normalizedCode);
   if (!event) {
-    return { ok: false, error: "event_not_found" };
+    return { ok: false, error: "invalid_access" };
   }
 
-  const results = await guestsRepo.searchGuestsByName(eventId, normalized);
+  const results = await guestsRepo.searchGuestsForFindSeat(
+    eventId,
+    normalizedQuery
+  );
+
+  if (!results.length) {
+    return { ok: false, error: "not_found" };
+  }
 
   return {
     ok: true,

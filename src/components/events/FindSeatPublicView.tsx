@@ -3,11 +3,19 @@
 import { useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import EventPublicShell from "@/components/events/EventPublicShell";
+import {
+  FIND_SEAT_MIN_NAME_LENGTH,
+  normalizeFindSeatCode,
+} from "@/lib/events/find-seat-code";
 import type { EventPublicInfo, FindSeatResult } from "@/lib/events/types";
 
 type FindSeatPublicViewProps = {
   event: EventPublicInfo;
+  initialAccessCode?: string;
 };
+
+const GENERIC_ERROR =
+  "Código ou nome incorrectos. Verifique os dados ou dirija-se à recepção.";
 
 function SeatResultCard({ result }: { result: FindSeatResult }) {
   const seatLabel = result.seat?.label || result.seat?.seatNumber;
@@ -72,7 +80,11 @@ function SeatResultCard({ result }: { result: FindSeatResult }) {
   );
 }
 
-export default function FindSeatPublicView({ event }: FindSeatPublicViewProps) {
+export default function FindSeatPublicView({
+  event,
+  initialAccessCode = "",
+}: FindSeatPublicViewProps) {
+  const [accessCode, setAccessCode] = useState(initialAccessCode);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<FindSeatResult[] | null>(null);
@@ -81,9 +93,16 @@ export default function FindSeatPublicView({ event }: FindSeatPublicViewProps) {
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setError("Escreva pelo menos 2 letras do seu nome.");
+    const trimmedName = query.trim();
+    const trimmedCode = normalizeFindSeatCode(accessCode);
+
+    if (trimmedCode.length < 4) {
+      setError("Introduza o código do evento (ex.: HAXR300).");
+      return;
+    }
+
+    if (trimmedName.length < FIND_SEAT_MIN_NAME_LENGTH) {
+      setError(`Escreva pelo menos ${FIND_SEAT_MIN_NAME_LENGTH} letras do seu nome.`);
       return;
     }
 
@@ -96,24 +115,21 @@ export default function FindSeatPublicView({ event }: FindSeatPublicViewProps) {
       const res = await fetch("/api/events/find-seat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: event.id, query: trimmed }),
+        body: JSON.stringify({
+          eventId: event.id,
+          query: trimmedName,
+          accessCode: trimmedCode,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        setError(
-          "Não encontrámos esse nome. Verifique a ortografia ou dirija-se à recepção."
-        );
+        setError(GENERIC_ERROR);
         return;
       }
 
       const matches = (data.results ?? []) as FindSeatResult[];
-
-      if (!matches.length) {
-        setError("Nenhum convidado encontrado com esse nome.");
-        return;
-      }
 
       if (matches.length === 1) {
         setSelected(matches[0]);
@@ -137,7 +153,7 @@ export default function FindSeatPublicView({ event }: FindSeatPublicViewProps) {
   return (
     <EventPublicShell
       title="Find Your Seat"
-      subtitle="Encontre rapidamente o seu lugar para o evento."
+      subtitle="Introduza o código do evento e o seu nome completo."
       eventName={event.name}
       eventType={event.type}
       eventDate={event.date}
@@ -148,15 +164,38 @@ export default function FindSeatPublicView({ event }: FindSeatPublicViewProps) {
         <div className="space-y-6">
           <form onSubmit={handleSearch} className="space-y-5">
             <div>
-              <label htmlFor="guest-search" className="sr-only">
-                Pesquisar pelo seu nome
+              <label
+                htmlFor="event-code"
+                className="block font-mono text-[8px] tracking-[0.35em] uppercase text-grey/45 mb-2"
+              >
+                Código do evento
+              </label>
+              <input
+                id="event-code"
+                type="text"
+                inputMode="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                placeholder="Ex.: HAXR300"
+                disabled={loading}
+                className="w-full bg-transparent border-b border-grey/30 focus:border-gold/50 text-white font-mono text-sm tracking-[0.2em] uppercase py-3 outline-none placeholder:text-grey/40 transition-colors disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="guest-search"
+                className="block font-mono text-[8px] tracking-[0.35em] uppercase text-grey/45 mb-2"
+              >
+                O seu nome
               </label>
               <input
                 id="guest-search"
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Escreva o seu nome"
+                placeholder="Nome como aparece no convite"
                 autoComplete="name"
                 disabled={loading}
                 className="w-full bg-transparent border-b border-grey/30 focus:border-gold/50 text-white font-sans text-base py-3 outline-none placeholder:text-grey/40 transition-colors disabled:opacity-50"
@@ -172,7 +211,7 @@ export default function FindSeatPublicView({ event }: FindSeatPublicViewProps) {
               ) : (
                 <Search className="w-4 h-4" aria-hidden />
               )}
-              {loading ? "A pesquisar…" : "Pesquisar"}
+              {loading ? "A pesquisar…" : "Localizar lugar"}
             </button>
           </form>
 

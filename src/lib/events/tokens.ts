@@ -10,8 +10,11 @@ export function buildFindSeatPath(eventId: string): string {
   return `/event/${eventId}/find-seat`;
 }
 
-export function buildFindSeatUrl(eventId: string): string {
-  return `${siteUrl}${buildFindSeatPath(eventId)}`;
+export function buildFindSeatUrl(eventId: string, accessCode?: string): string {
+  const base = `${siteUrl}${buildFindSeatPath(eventId)}`;
+  const code = accessCode?.trim();
+  if (!code) return base;
+  return `${base}?code=${encodeURIComponent(code)}`;
 }
 
 export function buildCheckinPath(eventId: string, token: string): string {

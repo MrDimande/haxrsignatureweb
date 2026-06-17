@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import { eventToDbInsert, mapEvent } from "@/lib/events/db/mappers";
+import { normalizeFindSeatCode } from "@/lib/events/find-seat-code";
 import type { EventFormData, EventPublicInfo, ManagedEvent, SheetsSyncMode } from "@/lib/events/types";
 import type { EventType } from "@/lib/admin/types";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -120,6 +121,37 @@ export async function updateEvent(
   const [event] = await enrichEventsWithClientNames([row]);
   if (!event) throw new Error("Evento não encontrado.");
   return event;
+}
+
+export async function verifyFindSeatAccess(
+  eventId: string,
+  accessCode: string
+): Promise<EventPublicInfo | null> {
+  const normalizedCode = normalizeFindSeatCode(accessCode);
+  if (normalizedCode.length < 4) return null;
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, name, type, date, location, find_seat_code")
+    .eq("id", eventId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  const row = asTableRow<"events">(data);
+  if (!row) return null;
+
+  const storedCode = normalizeFindSeatCode(row.find_seat_code ?? "");
+  if (!storedCode || storedCode !== normalizedCode) return null;
+
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type as EventType,
+    date: row.date,
+    location: row.location,
+  };
 }
 
 export async function getEventPublicInfo(

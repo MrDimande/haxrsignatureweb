@@ -179,7 +179,11 @@ export default function EventDetailClient({
       ) : null}
 
       {tab === "qr" ? (
-        <EventQrPanel eventId={event.id} eventName={event.name} />
+        <EventQrPanel
+          eventId={event.id}
+          eventName={event.name}
+          findSeatCode={event.findSeatCode}
+        />
       ) : null}
 
       {tab === "sheets" ? (

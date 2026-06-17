@@ -32,12 +32,22 @@ export function mapEvent(
     sheetsLastSyncedAt: row.sheets_last_synced_at ?? null,
     sheetsSyncSummary: row.sheets_sync_summary ?? "",
     sheetsSyncMode: (row.sheets_sync_mode ?? "master") as SheetsSyncMode,
+    findSeatCode: row.find_seat_code ?? "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
+import { generateFindSeatCode, normalizeFindSeatCode } from "@/lib/events/find-seat-code";
+
 export function eventToDbInsert(data: EventFormData, id?: string) {
+  const trimmedCode = data.findSeatCode?.trim();
+  const findSeatCode = trimmedCode
+    ? normalizeFindSeatCode(trimmedCode)
+    : id
+      ? undefined
+      : generateFindSeatCode(data.name);
+
   return {
     ...(id ? { id } : {}),
     business_id: data.businessId,
@@ -47,6 +57,7 @@ export function eventToDbInsert(data: EventFormData, id?: string) {
     date: data.date || null,
     location: data.location.trim(),
     notes: data.notes.trim(),
+    ...(findSeatCode ? { find_seat_code: findSeatCode } : {}),
   };
 }
 

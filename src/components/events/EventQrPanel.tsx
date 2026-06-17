@@ -23,6 +23,7 @@ import {
 type EventQrPanelProps = {
   eventId: string;
   eventName: string;
+  findSeatCode: string;
 };
 
 const CENTER_MARKS: { id: QrCenterMark; label: string; hint: string }[] = [
@@ -31,8 +32,12 @@ const CENTER_MARKS: { id: QrCenterMark; label: string; hint: string }[] = [
   { id: "logo", label: "Logo", hint: "Marca HAXR" },
 ];
 
-export default function EventQrPanel({ eventId, eventName }: EventQrPanelProps) {
-  const findSeatUrl = buildFindSeatUrl(eventId);
+export default function EventQrPanel({
+  eventId,
+  eventName,
+  findSeatCode,
+}: EventQrPanelProps) {
+  const findSeatUrl = buildFindSeatUrl(eventId, findSeatCode);
   const [style, setStyle] = useState<QrStyleOptions>(DEFAULT_QR_STYLE);
   const [activePreset, setActivePreset] = useState("signature-noir");
   const [dataUrl, setDataUrl] = useState<string | null>(null);
@@ -373,6 +378,19 @@ export default function EventQrPanel({ eventId, eventName }: EventQrPanelProps) 
                 PNG alta resolução · pronto para convite físico ou digital
               </p>
             </div>
+          </div>
+
+          <div className="admin-card p-4 space-y-2">
+            <p className="font-mono text-[8px] tracking-[0.35em] uppercase text-grey/45">
+              Código do evento
+            </p>
+            <p className="font-mono text-lg tracking-[0.25em] text-admin-gold">
+              {findSeatCode || "—"}
+            </p>
+            <p className="text-[10px] text-grey/45 leading-relaxed">
+              Os convidados precisam deste código + o nome no convite para
+              localizar o lugar.
+            </p>
           </div>
 
           <p className="text-[10px] text-grey/40 font-mono break-all px-1 leading-relaxed">

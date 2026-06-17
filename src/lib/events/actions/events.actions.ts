@@ -46,7 +46,11 @@ export async function getEventFindSeatQrAction(eventId: string) {
     const event = await eventsRepo.getEventById(eventId);
     if (!event) throw new Error("Evento não encontrado.");
     const dataUrl = await generateEventFindSeatQrDataUrl(eventId);
-    return { dataUrl, url: buildFindSeatUrl(eventId) };
+    return {
+      dataUrl,
+      url: buildFindSeatUrl(eventId, event.findSeatCode),
+      code: event.findSeatCode,
+    };
   });
 }
 

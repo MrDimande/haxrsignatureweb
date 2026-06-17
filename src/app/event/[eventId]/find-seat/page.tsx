@@ -6,6 +6,7 @@ import { buildPrivateEventMetadata } from "@/lib/seo";
 
 type FindSeatPageProps = {
   params: Promise<{ eventId: string }>;
+  searchParams: Promise<{ code?: string }>;
 };
 
 export async function generateMetadata({
@@ -18,10 +19,16 @@ export async function generateMetadata({
   );
 }
 
-export default async function FindSeatPage({ params }: FindSeatPageProps) {
+export default async function FindSeatPage({
+  params,
+  searchParams,
+}: FindSeatPageProps) {
   const { eventId } = await params;
+  const { code } = await searchParams;
   const event = await eventsRepo.getEventPublicInfo(eventId);
   if (!event) notFound();
 
-  return <FindSeatPublicView event={event} />;
+  return (
+    <FindSeatPublicView event={event} initialAccessCode={code?.trim() ?? ""} />
+  );
 }

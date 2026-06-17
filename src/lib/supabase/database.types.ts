@@ -505,6 +505,7 @@ export interface Database {
           sheets_last_synced_at: string | null;
           sheets_sync_summary: string;
           sheets_sync_mode: "master" | "rsvp";
+          find_seat_code: string;
           created_at: string;
           updated_at: string;
         };
@@ -529,6 +530,7 @@ export interface Database {
           sheets_last_synced_at?: string | null;
           sheets_sync_summary?: string;
           sheets_sync_mode?: "master" | "rsvp";
+          find_seat_code?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -728,6 +730,14 @@ export interface Database {
           p_plus_ones?: number;
           p_dietary_notes?: string;
           p_guest_notes?: string;
+        };
+        Returns: Json;
+      };
+      check_api_rate_limit: {
+        Args: {
+          p_bucket_key: string;
+          p_max_requests: number;
+          p_window_seconds: number;
         };
         Returns: Json;
       };

@@ -30,6 +30,7 @@ export interface ManagedEvent {
   sheetsLastSyncedAt: string | null;
   sheetsSyncSummary: string;
   sheetsSyncMode: SheetsSyncMode;
+  findSeatCode: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +43,7 @@ export interface EventFormData {
   date: string;
   location: string;
   notes: string;
+  findSeatCode?: string;
 }
 
 export interface EventSeat {

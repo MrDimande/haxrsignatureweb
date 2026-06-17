@@ -4,7 +4,16 @@ import {
   guestToDbInsert,
   mapGuest,
 } from "@/lib/events/db/mappers";
-import { normalizeGuestName, normalizeSearchQuery, rankNameMatch, parseGuestNameInput } from "@/lib/events/normalize";
+import {
+  normalizeGuestName,
+  normalizeSearchQuery,
+  rankNameMatch,
+  parseGuestNameInput,
+} from "@/lib/events/normalize";
+import {
+  FIND_SEAT_MAX_RESULTS,
+  FIND_SEAT_MIN_NAME_LENGTH,
+} from "@/lib/events/find-seat-code";
 import { generateQrToken } from "@/lib/events/tokens";
 import { GUEST_LABEL_LABELS, GUEST_STATUS_LABELS } from "@/lib/events/constants";
 import { logGuestAudit } from "@/lib/events/repositories/guest-audit.repository";
@@ -581,6 +590,89 @@ export async function searchGuestsByName(
 
     results.push({
       guestId: item.guestId,
+      name: item.name,
+      seat: item.seat,
+      groupMembers,
+      matchKind: item.matchKind,
+    });
+  }
+
+  return results;
+}
+
+/** Pesquisa restrita para Find Your Seat — anti-enumeração. */
+export async function searchGuestsForFindSeat(
+  eventId: string,
+  query: string
+): Promise<FindSeatResult[]> {
+  const normalizedQuery = normalizeSearchQuery(query);
+  if (normalizedQuery.length < FIND_SEAT_MIN_NAME_LENGTH) return [];
+
+  const supabase = createAdminClient();
+  const escaped = escapeIlike(query.trim());
+  const escapedNormalized = escapeIlike(normalizedQuery);
+
+  const { data, error } = await supabase
+    .from("guests")
+    .select("id, name, name_normalized, group_id, seats(table_name, seat_number, label)")
+    .eq("event_id", eventId)
+    .or(
+      `name.ilike.%${escaped}%,name_normalized.ilike.%${escapedNormalized}%`
+    )
+    .limit(40);
+
+  if (error) throw new Error(error.message);
+
+  const ranked = asTableRows<"guests">(data)
+    .map((row) => {
+      const rank = rankNameMatch(row.name, query);
+      if (!rank || rank.score < 80) return null;
+      const seatRow = firstRelation(
+        (row as { seats?: Tables<"seats"> | Tables<"seats">[] | null }).seats
+      );
+      return {
+        guestId: row.id,
+        name: row.name,
+        groupId: row.group_id,
+        seat: seatRow
+          ? {
+              tableName: seatRow.table_name,
+              seatNumber: seatRow.seat_number,
+              label: seatRow.label,
+            }
+          : null,
+        score: rank.score,
+        matchKind: rank.kind,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "pt"))
+    .slice(0, FIND_SEAT_MAX_RESULTS);
+
+  const groupCache = new Map<string, string[]>();
+  const results: FindSeatResult[] = [];
+
+  for (const item of ranked) {
+    let groupMembers: string[] | undefined;
+    if (item.groupId && item.matchKind === "exact") {
+      const cached = groupCache.get(item.groupId);
+      if (cached) {
+        groupMembers = cached;
+      } else {
+        const members = await loadGroupMemberNames(
+          eventId,
+          item.groupId,
+          item.guestId
+        );
+        const allMembers = [item.name, ...members].sort((a, b) =>
+          a.localeCompare(b, "pt")
+        );
+        groupCache.set(item.groupId, allMembers);
+        groupMembers = allMembers;
+      }
+    }
+
+    results.push({
       name: item.name,
       seat: item.seat,
       groupMembers,

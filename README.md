@@ -190,7 +190,7 @@ O modo é detectado automaticamente pelos cabeçalhos. Convidados importados fic
 
 | Rota | Função |
 |------|--------|
-| `/event/[eventId]/find-seat` | Consulta de lugar por nome |
+| `/event/[eventId]/find-seat` | Consulta de lugar — código do evento + nome (mín. 4 caracteres) |
 | `/event/[eventId]/rsvp/[token]` | Confirmação ou recusa de presença |
 | `/event/[eventId]/checkin/[token]` | Check-in no dia do evento |
 
@@ -235,7 +235,7 @@ Módulo `/admin/cash` com visão editorial de receitas e despesas.
 | Server actions | `requireAdmin()` em todas as mutações |
 | Service role | `SUPABASE_SERVICE_ROLE_KEY` apenas no servidor — nunca no cliente |
 | RLS eventos | Tabelas `events`, `guests`, `seats` com RLS sem policies para `anon` |
-| Rate limiting | Login (5 falhas / 15 min), find-seat (20/min), RSVP/check-in (30/min) |
+| Rate limiting | Login (5 falhas / 15 min), find-seat (10/min IP + 15/min por evento, Supabase), RSVP/check-in (30/min) |
 | Contacto | Honeypot + limite de 3 pedidos/hora por email |
 | Headers | `X-Frame-Options: DENY` · `X-Content-Type-Options: nosniff` no admin |
 
