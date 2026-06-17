@@ -4,7 +4,7 @@
 
 Convites digitais, save the date, gestão de eventos e fluxo comercial integrado — num único sistema desenhado para a HAXR Signature operar em Moçambique com rigor, elegância e escala.
 
-**Produção** → [haxrsignature.com](https://haxrsignature.com) · [haxrsignature.vercel.app](https://haxrsignature.vercel.app)  
+**Produção** → [www.haxrsignature.com](https://www.haxrsignature.com) · [haxrsignature.com](https://haxrsignature.com) (redirecciona para www)  
 **Repositório** → [github.com/MrDimande/haxrsignatureweb](https://github.com/MrDimande/haxrsignatureweb)
 
 ---
@@ -275,8 +275,8 @@ Executar as migrations **por ordem** no SQL Editor do Supabase:
 Copiar `.env.example` para `.env.local`:
 
 ```env
-# Site
-NEXT_PUBLIC_SITE_URL=https://haxrsignature.com
+# Site (canónico: www — o apex redirecciona na Vercel)
+NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com
 NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=...
 
 # Admin
@@ -296,6 +296,53 @@ CONTACT_NOTIFY_EMAIL=haxrsignature@gmail.com
 ```
 
 Em produção, definir as mesmas variáveis no painel Vercel. Nunca commitar `.env.local`.
+
+Para sincronizar variáveis locais com a Vercel (requer `npx vercel login`):
+
+```bash
+node scripts/set-vercel-env.mjs
+```
+
+---
+
+## SEO e indexação
+
+### URL canónica
+
+| Ambiente | URL |
+|----------|-----|
+| **Produção (canónico)** | `https://www.haxrsignature.com` |
+| Apex | `haxrsignature.com` → redirecciona 308 para `www` |
+| Preview Vercel | URL automática do deploy |
+
+O código normaliza `NEXT_PUBLIC_SITE_URL` em `src/lib/seo.ts`: valores legacy (`vercel.app`, apex sem `www`) são convertidos para `https://www.haxrsignature.com`, garantindo sitemap, `robots.txt`, Open Graph e JSON-LD coerentes mesmo se a env na Vercel estiver desactualizada.
+
+### O que o site expõe aos motores de busca
+
+| Recurso | Ficheiro | Notas |
+|---------|----------|-------|
+| Sitemap | `src/app/sitemap.ts` | 10 páginas institucionais |
+| Robots | `src/app/robots.ts` | Bloqueia `/admin`, `/api/`, `/event/` |
+| Metadata por rota | `src/lib/marketing/seo.ts` | Título, descrição e keywords |
+| JSON-LD | `src/lib/seo.ts` | Organização, serviços, FAQ, pilares |
+| Verificação Google | meta tag + ficheiros em `public/` | Token via `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` |
+
+Páginas operacionais de evento (RSVP, check-in, find-seat) têm `noindex` — não devem aparecer nos resultados de pesquisa.
+
+### Google Search Console (após cada deploy relevante)
+
+1. **Sitemaps** → submeter `https://www.haxrsignature.com/sitemap.xml`
+2. **Inspeção de URLs** → pedir indexação das páginas novas ou alteradas
+3. **Desempenho** → monitorizar impressões e cliques (resultados demoram 1–4 semanas)
+
+### Checklist SEO pós-deploy
+
+- [ ] `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com` na Vercel (Production)
+- [ ] `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` definido na Vercel
+- [ ] `https://www.haxrsignature.com/sitemap.xml` lista URLs com domínio `www`
+- [ ] `https://www.haxrsignature.com/robots.txt` aponta sitemap e host `www`
+- [ ] Sitemap submetido no Google Search Console
+- [ ] Páginas pilares indexadas (`/assessoria-eventos`, `/convites-identidade-visual`, etc.)
 
 ---
 
@@ -335,12 +382,15 @@ npx vercel --prod
 ### Checklist pós-deploy
 
 - [ ] Variáveis de ambiente configuradas na Vercel
+- [ ] `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com` (Production)
 - [ ] `ADMIN_SESSION_SECRET` definido (independente da password)
 - [ ] Migrations 001–016 executadas no Supabase de produção
 - [ ] Login admin funcional em `/admin`
 - [ ] Formulário de contacto envia email e grava lead
 - [ ] Fluxo comercial: cliente → evento → documento → pagamento
 - [ ] Páginas públicas de evento (RSVP, check-in, find-seat) acessíveis
+- [ ] Sitemap e robots com domínio `www` (ver secção SEO)
+- [ ] Sitemap submetido no Google Search Console
 
 ---
 

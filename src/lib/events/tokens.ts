@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { siteUrl } from "@/lib/seo";
 
 /** Reservado para convites digitais / QR individual (futuro). */
 export function generateQrToken(): string {
@@ -10,8 +11,7 @@ export function buildFindSeatPath(eventId: string): string {
 }
 
 export function buildFindSeatUrl(eventId: string): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-  return `${base}${buildFindSeatPath(eventId)}`;
+  return `${siteUrl}${buildFindSeatPath(eventId)}`;
 }
 
 export function buildCheckinPath(eventId: string, token: string): string {
@@ -19,8 +19,7 @@ export function buildCheckinPath(eventId: string, token: string): string {
 }
 
 export function buildCheckinUrl(eventId: string, token: string): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-  return `${base}${buildCheckinPath(eventId, token)}`;
+  return `${siteUrl}${buildCheckinPath(eventId, token)}`;
 }
 
 export function buildRsvpPath(eventId: string, token: string): string {
@@ -28,6 +27,5 @@ export function buildRsvpPath(eventId: string, token: string): string {
 }
 
 export function buildRsvpUrl(eventId: string, token: string): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-  return `${base}${buildRsvpPath(eventId, token)}`;
+  return `${siteUrl}${buildRsvpPath(eventId, token)}`;
 }

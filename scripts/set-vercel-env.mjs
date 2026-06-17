@@ -7,6 +7,11 @@ const ROOT = resolve(import.meta.dirname, "..");
 const ENV_FILE = resolve(ROOT, ".env.local");
 const ENVIRONMENTS = ["production", "preview", "development"];
 
+const FORCE_SYNC_KEYS = new Set([
+  "NEXT_PUBLIC_SITE_URL",
+  "NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION",
+]);
+
 const REQUIRED_KEYS = [
   "NEXT_PUBLIC_SITE_URL",
   "NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION",
@@ -105,9 +110,13 @@ async function main() {
   for (const environment of ENVIRONMENTS) {
     const existing = await listEnvNames(environment);
     for (const [name, value] of Object.entries(payload)) {
-      if (existing.has(name) && name !== "ADMIN_SESSION_SECRET") {
+      const shouldForce = FORCE_SYNC_KEYS.has(name);
+      if (existing.has(name) && name !== "ADMIN_SESSION_SECRET" && !shouldForce) {
         console.log(`• ${name} (${environment}) já existe`);
         continue;
+      }
+      if (shouldForce && existing.has(name)) {
+        console.log(`↻ ${name} (${environment}) actualizado`);
       }
       await addEnv(name, value, environment);
     }

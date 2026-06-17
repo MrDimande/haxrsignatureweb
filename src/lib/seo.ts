@@ -6,8 +6,28 @@ import {
 } from "@/lib/site-config";
 import { marketingPillars } from "@/lib/marketing/pages";
 
-export const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://haxrsignature.com";
+/** URL canónica de produção (www — o apex redirecciona 308 para aqui na Vercel). */
+export const DEFAULT_SITE_URL = "https://www.haxrsignature.com";
+
+const LEGACY_SITE_HOSTS = new Set([
+  "haxrsignature.vercel.app",
+  "haxrsignature.com",
+]);
+
+function resolveSiteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!raw) return DEFAULT_SITE_URL;
+
+  try {
+    const { origin, hostname } = new URL(raw.replace(/\/$/, ""));
+    if (LEGACY_SITE_HOSTS.has(hostname)) return DEFAULT_SITE_URL;
+    return origin;
+  } catch {
+    return DEFAULT_SITE_URL;
+  }
+}
+
+export const siteUrl = resolveSiteUrl();
 
 export const googleSiteVerification =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ??
@@ -449,6 +469,18 @@ export function buildPageMetadata(config: PageSeoInput): Metadata {
     robots: {
       index: true,
       follow: true,
+    },
+  };
+}
+
+/** Metadados para páginas operacionais de evento (RSVP, check-in, seating). */
+export function buildPrivateEventMetadata(title: string): Metadata {
+  return {
+    title,
+    robots: {
+      index: false,
+      follow: false,
+      googleBot: { index: false, follow: false },
     },
   };
 }
