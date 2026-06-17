@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "node --import tsx --test src/lib/events/*.test.ts",
     "email:check-domain": "node scripts/check-resend-domain.mjs",
+    "email:verify-domain": "node scripts/verify-resend-domain.mjs",
     "vercel:env": "node scripts/set-vercel-env.mjs"
   },
   "dependencies": {
