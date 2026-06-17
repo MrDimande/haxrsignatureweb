@@ -191,7 +191,7 @@ function ContactForm() {
   }, [defaultType, setValue]);
 
   useEffect(() => {
-    if ((defaultType || packageLabel) && window.location.hash === "#contacto") {
+    if (defaultType || packageLabel) {
       document.getElementById("contacto")?.scrollIntoView({ behavior: "smooth" });
     }
   }, [defaultType, packageLabel]);
@@ -220,7 +220,7 @@ function ContactForm() {
   return (
     <div>
       <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-grey mb-8">
-        Solicitar proposta
+        Partilhar a sua história
       </p>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8" noValidate>
         <input

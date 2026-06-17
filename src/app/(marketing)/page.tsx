@@ -1,33 +1,38 @@
 import type { Metadata } from "next";
 import Hero from "@/components/sections/Hero";
-import Philosophy from "@/components/sections/Philosophy";
-import Universe from "@/components/sections/Universe";
-import DigitalInvitations from "@/components/sections/DigitalInvitations";
-import Experiences from "@/components/sections/Experiences";
-import Method from "@/components/sections/Method";
-import Management from "@/components/sections/Management";
-import Archive from "@/components/sections/Archive";
-import Contact from "@/components/sections/Contact";
-import Testimonials from "@/components/sections/Testimonials";
+import PillarCards from "@/components/marketing/PillarCards";
+import HomeHowWeWork from "@/components/marketing/home/HomeHowWeWork";
+import HomePortfolioTeaser from "@/components/marketing/home/HomePortfolioTeaser";
+import HomeTechnology from "@/components/marketing/home/HomeTechnology";
+import HomeTestimonialsTeaser from "@/components/marketing/home/HomeTestimonialsTeaser";
+import { CTABand } from "@/components/marketing/PageHero";
 import StructuredData from "@/components/seo/StructuredData";
-import { buildHomeMetadata } from "@/lib/seo";
+import { brandEssence } from "@/lib/marketing/editorial";
+import {
+  homeHowWeWork,
+  homeTechnology,
+  marketingPillars,
+} from "@/lib/marketing/pages";
+import { marketingMetadata } from "@/lib/marketing/seo";
+import { portfolioArchive, testimonials } from "@/lib/site-config";
 
-export const metadata: Metadata = buildHomeMetadata();
+export const metadata: Metadata = marketingMetadata("home");
 
-export default function Home() {
+export default function HomePage() {
   return (
     <>
       <StructuredData />
       <Hero />
-      <Philosophy />
-      <Universe />
-      <DigitalInvitations />
-      <Experiences />
-      <Method />
-      <Management />
-      <Archive />
-      <Testimonials />
-      <Contact />
+      <PillarCards
+        pillars={marketingPillars}
+        headline={brandEssence.pillarsHeadline}
+        intro={brandEssence.pillarsIntro}
+      />
+      <HomeHowWeWork phases={homeHowWeWork} />
+      <HomePortfolioTeaser items={portfolioArchive} />
+      <HomeTechnology items={homeTechnology} />
+      <HomeTestimonialsTeaser testimonials={testimonials} />
+      <CTABand />
     </>
   );
 }

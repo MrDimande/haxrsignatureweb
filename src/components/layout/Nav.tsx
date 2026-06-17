@@ -1,28 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import BrandLogo from "@/components/ui/BrandLogo";
-
-const links = [
-  { href: "#filosofia", label: "Filosofia" },
-  { href: "#universo", label: "Universo" },
-  { href: "#convites", label: "Convites" },
-  { href: "#experiencias", label: "Experiências" },
-  { href: "#metodo", label: "Método" },
-  { href: "#gestao", label: "Gestão" },
-  { href: "#arquivo", label: "Arquivo" },
-  { href: "#testemunhos", label: "Clientes" },
-  { href: "#contacto", label: "Contacto", accent: true },
-];
+import { primaryNav } from "@/lib/marketing/navigation";
 
 export default function Nav() {
-  const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const [visible, setVisible] = useState(!isHome);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    if (!isHome) {
+      setVisible(true);
+      return;
+    }
+
     const hero = document.getElementById("hero");
-    if (!hero) return;
+    if (!hero) {
+      setVisible(true);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => setVisible(!entry.isIntersecting),
@@ -31,7 +32,7 @@ export default function Nav() {
 
     observer.observe(hero);
     return () => observer.disconnect();
-  }, []);
+  }, [isHome, pathname]);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -39,6 +40,10 @@ export default function Nav() {
       document.body.style.overflow = "";
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
     <>
@@ -55,34 +60,38 @@ export default function Nav() {
           className={`bg-black/95 backdrop-blur-sm border-b border-gold-dim transition-opacity duration-700 ${visible ? "pointer-events-auto" : ""}`}
         >
           <div className="site-container flex items-center justify-between h-16">
-            <a
-              href="#hero"
+            <Link
+              href="/"
               className="opacity-90 hover:opacity-100 transition-opacity duration-500 shrink-0"
               aria-label="HAXR Signature — início"
             >
               <BrandLogo variant="navbar" priority />
-            </a>
+            </Link>
 
-            <div className="hidden lg:flex items-center gap-8">
-              {links.map((link) => (
-                <a
+            <div className="hidden xl:flex items-center gap-6">
+              {primaryNav.map((link) => (
+                <Link
                   key={link.href}
                   href={link.href}
                   className={
                     link.accent
-                      ? "font-sans text-[11px] tracking-[0.3em] uppercase text-gold/60 hover:text-gold transition-colors duration-500 border border-gold-dim px-4 py-1.5"
-                      : "font-sans text-[11px] tracking-[0.3em] uppercase text-grey hover:text-white transition-colors duration-500"
+                      ? "font-sans text-[10px] tracking-[0.28em] uppercase text-gold/60 hover:text-gold transition-colors duration-500 border border-gold-dim px-3 py-1.5"
+                      : `font-sans text-[10px] tracking-[0.28em] uppercase transition-colors duration-500 ${
+                          pathname === link.href
+                            ? "text-white"
+                            : "text-grey hover:text-white"
+                        }`
                   }
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </div>
 
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="lg:hidden flex flex-col gap-1.5 p-2 pointer-events-auto"
+              className="xl:hidden flex flex-col gap-1.5 p-2 pointer-events-auto"
               aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
               aria-expanded={menuOpen}
             >
@@ -107,24 +116,27 @@ export default function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-40 bg-black/98 flex flex-col items-center justify-center gap-10 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/98 flex flex-col items-center justify-center gap-8 xl:hidden overflow-y-auto py-24"
           >
-            {links.map((link, i) => (
-              <motion.a
+            {primaryNav.map((link, i) => (
+              <motion.div
                 key={link.href}
-                href={link.href}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06, duration: 0.5 }}
-                onClick={() => setMenuOpen(false)}
-                className={
-                  link.accent
-                    ? "font-sans text-sm tracking-[0.4em] uppercase text-gold/60 hover:text-gold transition-colors duration-500"
-                    : "font-sans text-sm tracking-[0.4em] uppercase text-grey hover:text-white transition-colors duration-500"
-                }
+                transition={{ delay: i * 0.04, duration: 0.5 }}
               >
-                {link.label}
-              </motion.a>
+                <Link
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={
+                    link.accent
+                      ? "font-sans text-sm tracking-[0.35em] uppercase text-gold/60 hover:text-gold transition-colors duration-500"
+                      : "font-sans text-sm tracking-[0.35em] uppercase text-grey hover:text-white transition-colors duration-500"
+                  }
+                >
+                  {link.label}
+                </Link>
+              </motion.div>
             ))}
           </motion.div>
         )}

@@ -9,11 +9,11 @@ export const IPHONE_17_VIEWPORT = {
 export const portfolioCopy = {
   hero: {
     location: "Maputo · Moçambique",
-    tagline: "Curadoria de Eventos Exclusivos",
+    tagline: "Assessoria, Design e Tecnologia para Eventos",
     subtitle:
-      "Convites digitais, assessoria de eventos e curadoria com assinatura própria.",
-    ctaPrimary: "Solicitar proposta",
-    ctaSecondary: "Ver convites digitais",
+      "Tranquilidade, elegância e precisão — para eventos que merecem ser lembrados.",
+    ctaPrimary: "Iniciar conversa",
+    ctaSecondary: "Descobrir o universo HAXR",
   },
   quemSomos: {
     label: "Quem Somos",
@@ -88,16 +88,16 @@ export const portfolioCopy = {
     body: "Desde o primeiro contacto, procuramos compreender o tipo de evento, o perfil do cliente, o estilo pretendido e o nível de acompanhamento necessário. O nosso processo permite que cada decisão seja tomada com intenção, garantindo uma experiência mais fluida, personalizada e segura.",
   },
   contacto: {
-    headline: "Vamos assinar a sua experiência?",
+    headline: "Estamos prontos para ouvir a sua história.",
     paragraphs: [
       "Eventos memoráveis começam com intenção, detalhe e assinatura própria.",
-      "Cada evento merece uma assinatura.",
+      "Cada história merece ser ouvida com a discrição e o cuidado que merece.",
     ],
     formIntro:
-      "Partilhe a data, o tipo de evento e o que imagina para a experiência. Cada pedido é lido com atenção — respondemos em 2 a 5 dias úteis.",
+      "Partilhe a data, a visão e o que imagina para a experiência. Cada pedido é lido com atenção — respondemos em 2 a 5 dias úteis.",
     messagePlaceholder:
       "Fale-nos do evento: data, local, número de convidados e o que procura da HAXR.",
-    submitLabel: "Solicitar proposta",
+    submitLabel: "Iniciar conversa",
     submitLoading: "A enviar...",
     successMessage:
       "Recebemos o seu contacto. Entraremos em conversa assim que avaliarmos o seu projecto com a discrição e o cuidado que cada experiência merece.",
@@ -298,10 +298,10 @@ export const siteConfig = {
   featuredInvitation: invitationShowcase[0],
   invitationFullscreenMaxWidth: 1023,
   contact: {
-    conviteProposalHash: "/?tipo=convite-digital#contacto",
-    assessoriaProposalHash: "/?tipo=assessoria#contacto",
+    conviteProposalHash: "/contacto?tipo=convite-digital",
+    assessoriaProposalHash: "/contacto?tipo=assessoria",
     convitePackageHash: (packageId: string) =>
-      `/?tipo=convite-digital&pacote=${packageId}#contacto`,
+      `/contacto?tipo=convite-digital&pacote=${packageId}`,
     whatsappProposalUrl: `https://wa.me/258870883428?text=${encodeURIComponent(
       "Olá HAXR Signature, gostaria de solicitar uma proposta para o meu evento."
     )}`,
@@ -349,7 +349,7 @@ export const portfolioArchive: PortfolioArchiveItem[] = [
     category: "Corporativo",
     service: "Identidade Visual & Convite",
     image: "/images/archive-03.webp",
-    href: "/?tipo=corporativo#contacto",
+    href: "/contacto?tipo=corporativo",
     ctaLabel: "Solicitar proposta",
   },
   {
@@ -358,7 +358,7 @@ export const portfolioArchive: PortfolioArchiveItem[] = [
     category: "Privado",
     service: "Assessoria & Curadoria",
     image: "/images/archive-01.webp",
-    href: "/?tipo=assessoria#contacto",
+    href: "/contacto?tipo=assessoria",
     ctaLabel: "Solicitar proposta",
   },
 ];
@@ -394,7 +394,7 @@ export const testimonials: Testimonial[] = [
     author: "Helena & Arson",
     role: "Casamento",
     service: "Convite Digital · HAXR Signature",
-    href: "/#convites",
+    href: "/convites-identidade-visual",
     linkLabel: "Ver coleção de convites",
   },
 ];

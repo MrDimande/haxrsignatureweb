@@ -55,8 +55,8 @@ export default function Hero() {
           style={{ fontSize: "clamp(2.5rem, 8vw, 7rem)" }}
         >
           <span className="sr-only">
-            HAXR Signature — assessoria de eventos, convites digitais e
-            curadoria de eventos exclusivos em {hero.location}
+            HAXR Signature — assessoria, design e tecnologia para eventos
+            exclusivos em {hero.location}
           </span>
           HAXR
         </h1>
@@ -89,7 +89,7 @@ export default function Hero() {
           className="flex flex-col sm:flex-row items-center gap-4"
         >
           <a
-            href="#contacto"
+            href="/contacto"
             className="group inline-flex items-center gap-3 border border-gold-dim text-gold text-[11px] tracking-[0.3em] uppercase px-8 py-3.5 hover:border-gold hover:bg-gold/5 transition-all duration-700"
           >
             <span>{hero.ctaPrimary}</span>
@@ -98,7 +98,7 @@ export default function Hero() {
             </span>
           </a>
           <a
-            href="#convites"
+            href="#pilares"
             className="group inline-flex items-center gap-3 border border-grey-dark text-grey text-[11px] tracking-[0.3em] uppercase px-8 py-3.5 hover:border-gold/40 hover:text-gold transition-all duration-700"
           >
             <span>{hero.ctaSecondary}</span>

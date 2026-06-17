@@ -4,7 +4,7 @@
 
 Convites digitais, save the date, gestão de eventos e fluxo comercial integrado — num único sistema desenhado para a HAXR Signature operar em Moçambique com rigor, elegância e escala.
 
-**Produção** → [haxrsignature.vercel.app](https://haxrsignature.vercel.app)  
+**Produção** → [haxrsignature.com](https://haxrsignature.com) · [haxrsignature.vercel.app](https://haxrsignature.vercel.app)  
 **Repositório** → [github.com/MrDimande/haxrsignatureweb](https://github.com/MrDimande/haxrsignatureweb)
 
 ---
@@ -276,7 +276,7 @@ Copiar `.env.example` para `.env.local`:
 
 ```env
 # Site
-NEXT_PUBLIC_SITE_URL=https://haxrsignature.vercel.app
+NEXT_PUBLIC_SITE_URL=https://haxrsignature.com
 NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=...
 
 # Admin

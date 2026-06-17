@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AtSign,
@@ -13,15 +14,8 @@ import {
 } from "lucide-react";
 import BrandRubric from "@/components/ui/BrandRubric";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
+import { footerLegalNav, footerNav } from "@/lib/marketing/navigation";
 import { portfolioCopy, siteContact } from "@/lib/site-config";
-
-const footerNav = [
-  { href: "#filosofia", label: "Filosofia" },
-  { href: "#universo", label: "Universo" },
-  { href: "#convites", label: "Convites" },
-  { href: "#arquivo", label: "Arquivo" },
-  { href: "#contacto", label: "Contacto" },
-] as const;
 
 const legalTabs = ["condicoes", "termos", "privacidade"] as const;
 type LegalTab = (typeof legalTabs)[number];
@@ -110,9 +104,9 @@ export default function Footer() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-14 md:gap-10 lg:gap-16">
             <div className="md:col-span-5 lg:col-span-5 flex flex-col justify-between gap-10">
               <div>
-                <a href="#hero" aria-label="HAXR Signature — início">
+                <Link href="/" aria-label="HAXR Signature — início">
                   <BrandRubric align="left" className="mb-8" />
-                </a>
+                </Link>
                 <p className="font-mono text-[9px] tracking-[0.45em] uppercase text-grey/50 mb-8">
                   {siteContact.shortLocation}
                 </p>
@@ -143,13 +137,22 @@ export default function Footer() {
                 </p>
                 <nav aria-label="Secções do site" className="flex flex-col gap-3">
                   {footerNav.map((link) => (
-                    <a
+                    <Link
                       key={link.href}
                       href={link.href}
                       className="font-sans text-[10px] tracking-[0.28em] uppercase text-grey/55 hover:text-gold/80 transition-colors duration-500 w-fit"
                     >
                       {link.label}
-                    </a>
+                    </Link>
+                  ))}
+                  {footerLegalNav.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="font-sans text-[10px] tracking-[0.28em] uppercase text-grey/45 hover:text-gold/80 transition-colors duration-500 w-fit"
+                    >
+                      {link.label}
+                    </Link>
                   ))}
                 </nav>
               </div>

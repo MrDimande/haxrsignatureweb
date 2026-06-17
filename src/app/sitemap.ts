@@ -1,24 +1,13 @@
 import type { MetadataRoute } from "next";
-import { siteSeo, siteUrl } from "@/lib/seo";
+import { marketingPagesSeo } from "@/lib/marketing/seo";
+import { siteUrl } from "@/lib/seo";
+
+const marketingRoutes = Object.values(marketingPagesSeo).filter(
+  (page) => page.path !== "/"
+);
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
-
-  const sections = siteSeo.serviceDetails.map((service) => ({
-    url: `${siteUrl}${service.url}`,
-    lastModified,
-    changeFrequency: "monthly" as const,
-    priority: 0.8,
-  }));
-
-  const extraSections = ["#arquivo", "#testemunhos", "#contacto"].map(
-    (hash) => ({
-      url: `${siteUrl}/${hash}`,
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    })
-  );
 
   return [
     {
@@ -27,7 +16,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1,
     },
-    ...sections,
-    ...extraSections,
+    ...marketingRoutes.map((page) => ({
+      url: `${siteUrl}${page.path}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: page.path === "/contacto" ? 0.9 : 0.8,
+    })),
   ];
 }

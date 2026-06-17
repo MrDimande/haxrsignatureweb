@@ -3,11 +3,11 @@ import {
   invitationFaqs,
   portfolioCopy,
   siteContact,
-  universePillars,
 } from "@/lib/site-config";
+import { marketingPillars } from "@/lib/marketing/pages";
 
 export const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://haxrsignature.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://haxrsignature.com";
 
 export const googleSiteVerification =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ??
@@ -16,19 +16,19 @@ export const googleSiteVerification =
 export const siteSeo = {
   name: "HAXR Signature",
   legalName: "HAXR Signature",
-  tagline: "Curadoria de Eventos Exclusivos",
+  tagline: "Assessoria, Design e Tecnologia para Eventos Exclusivos",
   locale: "pt_MZ",
   language: "pt-MZ",
   country: "MZ",
   city: "Maputo",
   title:
-    "HAXR Signature | Assessoria de Eventos e Convites Digitais em Maputo",
+    "HAXR Signature | Assessoria, Design e Tecnologia para Eventos em Maputo",
   titleTemplate: "%s | HAXR Signature",
-  shortTitle: "HAXR Signature — Curadoria & Convites Digitais",
+  shortTitle: "HAXR Signature — Assessoria, Design & Tecnologia",
   description:
-    "Assessoria de eventos e convites digitais premium em Maputo, Moçambique. Casamentos, lobolos, noivados e corporativos — curadoria, save the date, RSVP e coordenação com assinatura HAXR.",
+    "Assessoria de eventos, convites digitais, gestão de convidados e plataforma operacional premium em Maputo, Moçambique. Curadoria com assinatura HAXR para casamentos, corporativos e celebrações exclusivas.",
   ogDescription:
-    "Assessoria de eventos, convites digitais para casamentos e curadoria exclusiva em Maputo. Save the date, RSVP, identidade visual e coordenação — elegância HAXR.",
+    "Assessoria, identidade visual, RSVP, seating e gestão de eventos em Maputo. Tecnologia e curadoria com assinatura HAXR.",
   keywords: [
     "HAXR Signature",
     // Convites digitais
@@ -98,34 +98,40 @@ export const siteSeo = {
   /** Descrições SEO para JSON-LD e motores de busca */
   serviceDetails: [
     {
+      name: "Assessoria de Eventos",
+      description:
+        "Assessoria de eventos em Maputo — planeamento, fornecedores, orçamento e cronograma para casamentos, lobolos, corporativos e celebrações exclusivas.",
+      url: "/assessoria-eventos",
+    },
+    {
       name: "Convites Digitais",
       description:
         "Criação de convites digitais premium para casamentos, lobolos, noivados e eventos em Maputo — com RSVP, save the date, localização, galeria e design personalizado.",
-      url: "/#convites",
+      url: "/convites-identidade-visual",
+    },
+    {
+      name: "Gestão de Convidados",
+      description:
+        "RSVP digital, seating plan, Find Your Seat, check-in e QR codes — gestão completa de convidados para eventos em Moçambique.",
+      url: "/gestao-convidados",
+    },
+    {
+      name: "Plataforma de Eventos",
+      description:
+        "Dashboard operacional HAXR — eventos, clientes, documentos, finanças e relatórios para equipas de eventos premium.",
+      url: "/plataforma-eventos",
     },
     {
       name: "Identidade Visual",
       description:
         "Identidade visual para eventos exclusivos — convites, sinalização, materiais de mesa e linguagem estética coerente em Maputo e Moçambique.",
-      url: "/#universo",
-    },
-    {
-      name: "Assessoria de Eventos",
-      description:
-        "Assessoria de eventos em Maputo — planeamento, fornecedores, orçamento e cronograma para casamentos, lobolos, corporativos e celebrações exclusivas.",
-      url: "/#gestao",
+      url: "/convites-identidade-visual",
     },
     {
       name: "Coordenação no Dia",
       description:
         "Coordenação profissional no dia do evento em Maputo — montagem, fornecedores, cronograma e gestão discreta de imprevistos.",
-      url: "/#gestao",
-    },
-    {
-      name: "Experiências Personalizadas",
-      description:
-        "Experiências de evento totalmente personalizadas — conceito, estética e curadoria para celebrações únicas em Moçambique.",
-      url: "/#experiencias",
+      url: "/assessoria-eventos",
     },
   ],
   eventTypes: [
@@ -353,16 +359,18 @@ export function buildStructuredData(): JsonLd[] {
     name: "Serviços HAXR Signature em Maputo",
     description: portfolioCopy.universo.areas,
     inLanguage: siteSeo.language,
-    itemListElement: universePillars.map((pillar, index) => {
+    itemListElement: marketingPillars.map((pillar, index) => {
       const serviceDetail = siteSeo.serviceDetails.find(
-        (service) => service.name === pillar.title
+        (service) =>
+          service.name === pillar.title ||
+          pillar.title.includes(service.name.split(" ")[0] ?? "")
       );
       return {
         "@type": "ListItem",
         position: index + 1,
         name: pillar.title,
         description: serviceDetail?.description ?? pillar.desc,
-        url: `${siteUrl}${serviceDetail?.url ?? "/#universo"}`,
+        url: `${siteUrl}${pillar.href}`,
       };
     }),
   };
@@ -392,6 +400,55 @@ export function buildHomeMetadata(): Metadata {
     alternates: {
       canonical: "/",
       languages: { "pt-MZ": "/" },
+    },
+  };
+}
+
+export type PageSeoInput = {
+  path: string;
+  title: string;
+  description: string;
+  keywords?: readonly string[];
+};
+
+/** Metadados por página do site institucional */
+export function buildPageMetadata(config: PageSeoInput): Metadata {
+  const { path, title, description, keywords } = config;
+
+  return {
+    title,
+    description,
+    keywords: keywords ? [...keywords] : undefined,
+    alternates: {
+      canonical: path,
+      languages: { "pt-MZ": path },
+    },
+    openGraph: {
+      type: "website",
+      locale: siteSeo.locale,
+      url: `${siteUrl}${path}`,
+      siteName: siteSeo.name,
+      title,
+      description,
+      images: [
+        {
+          url: siteSeo.ogImage.url,
+          width: siteSeo.ogImage.width,
+          height: siteSeo.ogImage.height,
+          alt: siteSeo.ogImage.alt,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      creator: siteSeo.twitterHandle,
+      images: [siteSeo.ogImage.url],
+    },
+    robots: {
+      index: true,
+      follow: true,
     },
   };
 }
