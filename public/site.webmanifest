@@ -1,7 +1,7 @@
 {
   "name": "HAXR Signature — Curadoria de Eventos Exclusivos",
   "short_name": "HAXR Signature",
-  "description": "Assessoria de eventos, convites digitais para casamentos e curadoria exclusiva em Maputo, Moçambique.",
+  "description": "HAXR Signature — assessoria de eventos, convites digitais, RSVP, Find Your Seat e gestão de convidados para casamentos em Maputo, Moçambique.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
@@ -11,9 +11,9 @@
   "categories": ["business", "lifestyle"],
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "48x48",
-      "type": "image/x-icon",
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     },
     {

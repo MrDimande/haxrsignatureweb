@@ -9,6 +9,7 @@ import {
   Copy,
   FileSpreadsheet,
   MessageCircle,
+  Mail,
   Plus,
   Search,
   Upload,
@@ -18,10 +19,12 @@ import {
   bulkAssignTableAction,
   bulkCheckInGuestsAction,
   bulkConfirmGuestsAction,
+  bulkSendGuestInviteEmailsAction,
   checkInGuestAction,
   confirmGuestAction,
   deleteGuestAction,
   importGuestsCsvAction,
+  sendGuestInviteEmailAction,
 } from "@/lib/events/actions/guests.actions";
 import { isPossibleDuplicate } from "@/lib/events/deduplication";
 import { normalizeSearchQuery, rankNameMatch } from "@/lib/events/normalize";
@@ -62,9 +65,10 @@ export default function GuestManagement({
   const [bulkBusy, setBulkBusy] = useState(false);
   const [assignTable, setAssignTable] = useState("");
   const [importMessage, setImportMessage] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
   const [whatsappMode, setWhatsappMode] = useState<"rsvp" | "seat" | null>(null);
   const [listFilter, setListFilter] = useState<
-    "all" | "pending" | "rsvp" | "duplicates" | "unassigned"
+    "all" | "pending" | "confirmed" | "with_contact" | "rsvp" | "duplicates" | "unassigned"
   >("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -80,6 +84,12 @@ export default function GuestManagement({
 
     if (listFilter === "pending") {
       rows = rows.filter((guest) => guest.status === "invited");
+    } else if (listFilter === "confirmed") {
+      rows = rows.filter((guest) => guest.status === "confirmed");
+    } else if (listFilter === "with_contact") {
+      rows = rows.filter(
+        (guest) => Boolean(guest.email.trim() || guest.phone.trim())
+      );
     } else if (listFilter === "rsvp") {
       rows = rows.filter((guest) => guest.guestSource === "sheet_rsvp");
     } else if (listFilter === "duplicates") {
@@ -111,6 +121,11 @@ export default function GuestManagement({
   );
 
   const pendingCount = guests.filter((g) => g.status === "invited").length;
+  const confirmedCount = guests.filter((g) => g.status === "confirmed").length;
+  const withContactCount = guests.filter(
+    (g) => g.email.trim() || g.phone.trim()
+  ).length;
+  const withEmailCount = guests.filter((g) => g.email.trim()).length;
   const rsvpCount = guests.filter((g) => g.guestSource === "sheet_rsvp").length;
 
   const tables = useMemo(
@@ -218,6 +233,37 @@ export default function GuestManagement({
     }
   }
 
+  async function handleBulkSendInviteEmails() {
+    setBulkBusy(true);
+    setEmailMessage("");
+    const result = await bulkSendGuestInviteEmailsAction(eventId, [...selected]);
+    setBulkBusy(false);
+    if (result.success) {
+      const { sent, skipped, failed, errors } = result.data;
+      setEmailMessage(
+        `${sent} enviado${sent === 1 ? "" : "s"} · ${skipped} sem email · ${failed} falha${failed === 1 ? "" : "s"}${
+          errors.length ? `\n${errors.join("\n")}` : ""
+        }`
+      );
+      onChanged();
+    } else {
+      setEmailMessage(result.error);
+    }
+  }
+
+  async function handleSendInviteEmail(guestId: string) {
+    setBusyId(guestId);
+    setEmailMessage("");
+    const result = await sendGuestInviteEmailAction(eventId, guestId);
+    setBusyId(null);
+    if (result.success) {
+      setEmailMessage("Convite enviado por email.");
+      onChanged();
+    } else {
+      setEmailMessage(result.error);
+    }
+  }
+
   function guestMeta(guest: EventGuest): string {
     const parts = [guest.email || guest.phone || ""];
     if (guest.plusOnes > 0) parts.push(`+${guest.plusOnes}`);
@@ -252,8 +298,9 @@ export default function GuestManagement({
             Importação CSV
           </p>
           <p className="text-sm text-grey/55 leading-relaxed">
-            Alternativa ao Google Sheets — colunas: Nome, Email, Telefone,
-            Estado, Etiqueta, Grupo, Acompanhantes, Restrições e Notas.
+            Importe listas Excel/CSV com colunas Nome, Email, Telefone, Estado,
+            Etiqueta, Grupo, Acompanhantes, Restrições e Notas. Os contactos
+            ficam guardados para reenvio de convites por email ou WhatsApp.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
@@ -314,6 +361,8 @@ export default function GuestManagement({
           [
             { id: "all", label: `Todos (${guests.length})` },
             { id: "pending", label: `Por confirmar (${pendingCount})` },
+            { id: "confirmed", label: `Confirmados (${confirmedCount})` },
+            { id: "with_contact", label: `Com contacto (${withContactCount})` },
             { id: "rsvp", label: `RSVP Sheets (${rsvpCount})` },
             {
               id: "duplicates",
@@ -416,6 +465,20 @@ export default function GuestManagement({
             </button>
             <button
               type="button"
+              onClick={handleBulkSendInviteEmails}
+              disabled={bulkBusy || !withEmailCount}
+              className="admin-btn-secondary text-xs"
+              title={
+                withEmailCount
+                  ? "Enviar convite por email aos seleccionados com email"
+                  : "Nenhum convidado com email registado"
+              }
+            >
+              <Mail className="w-3.5 h-3.5" />
+              Email convite
+            </button>
+            <button
+              type="button"
               onClick={() => setWhatsappMode(whatsappMode === "rsvp" ? null : "rsvp")}
               className="admin-btn-secondary text-xs"
             >
@@ -479,6 +542,11 @@ export default function GuestManagement({
                 )}
               </div>
             </div>
+          ) : null}
+          {emailMessage ? (
+            <p className="text-xs text-grey/55 italic whitespace-pre-line max-w-2xl border-t border-grey-dark/60 pt-3">
+              {emailMessage}
+            </p>
           ) : null}
         </section>
       ) : null}
@@ -555,6 +623,9 @@ export default function GuestManagement({
                       {guestMeta(guest)}
                       {guest.groupName ? ` · Grupo: ${guest.groupName}` : ""}
                     </p>
+                    {guest.email ? (
+                      <p className="text-[10px] text-grey/40 mt-0.5">{guest.email}</p>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-sm text-grey">
                     {guest.seat
@@ -598,8 +669,19 @@ export default function GuestManagement({
                         className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-grey/55 hover:text-admin-gold"
                       >
                         <Copy className="w-3 h-3" />
-                        {copiedId === `${guest.id}-rsvp` ? "Copiado" : "RSVP"}
+                        {copiedId === `${guest.id}-rsvp` ? "Copiado" : "Link"}
                       </button>
+                      {guest.email ? (
+                        <button
+                          type="button"
+                          onClick={() => handleSendInviteEmail(guest.id)}
+                          disabled={busyId === guest.id}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-gold/70 hover:text-admin-gold border border-gold/20 px-2 py-1 rounded-sm"
+                        >
+                          <Mail className="w-3 h-3" />
+                          Email
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => handleCopyLink(guest, "checkin")}

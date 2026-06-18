@@ -2,10 +2,62 @@
 
 **Plataforma institucional e operacional para experiências digitais premium.**
 
-Convites digitais, save the date, gestão de eventos e fluxo comercial integrado — num único sistema desenhado para a HAXR Signature operar em Moçambique com rigor, elegância e escala.
+Assessoria de eventos, convites digitais, gestão de convidados (RSVP, Find Your Seat, check-in) e fluxo comercial integrado — num único sistema desenhado para a HAXR Signature operar em Moçambique com rigor, elegância e escala.
 
-**Produção** → [www.haxrsignature.com](https://www.haxrsignature.com) · [haxrsignature.com](https://haxrsignature.com) (redirecciona para www)  
-**Repositório** → [github.com/MrDimande/haxrsignatureweb](https://github.com/MrDimande/haxrsignatureweb)
+| Recurso | URL |
+|---------|-----|
+| **Website (canónico)** | [www.haxrsignature.com](https://www.haxrsignature.com) |
+| **Repositório** | [github.com/MrDimande/haxrsignatureweb](https://github.com/MrDimande/haxrsignatureweb) |
+
+O domínio `haxrsignature.com` redirecciona para `www`. URLs `*.vercel.app` não devem ser indexadas — o middleware e o Google Search Console apontam sempre para o domínio oficial.
+
+---
+
+## Ecossistema de canais (tudo ligado)
+
+Os canais da HAXR Signature **devem comunicar entre si** — o mesmo tom, os mesmos contactos e o mesmo funil. A fonte única de verdade para links públicos é `src/lib/site-config.ts` → `siteContact`. Alterar aí propaga para site, footer, formulários, emails e SEO.
+
+| Canal | Identidade oficial | Onde aparece no sistema | Liga a |
+|-------|-------------------|-------------------------|--------|
+| **Website** | [www.haxrsignature.com](https://www.haxrsignature.com) | Páginas marketing, admin, convites por evento | Formulário → Supabase · Resend · Brevo |
+| **Email** | [hello@haxrsignature.com](mailto:hello@haxrsignature.com) | Footer, contacto, `replyTo` em todos os emails | Caixa principal · aliases Resend (`rsvp@`, `eventos@`, …) |
+| **WhatsApp** | [+258 87 088 3428](https://wa.me/258870883428) | Botão flutuante, footer, contacto, admin (convidados, documentos) | Propostas · RSVP em massa · follow-up comercial |
+| **Instagram** | [@haxrsignature](https://www.instagram.com/haxrsignature/) | Footer, página contacto, JSON-LD (`sameAs`) | Marca · portfólio · tráfego para o site |
+| **Facebook** | *A configurar* | `siteContact.facebook` (actualmente `null`) | Quando activo: mesmo padrão que Instagram no footer e SEO |
+
+### Fluxo omnicanal
+
+```
+Instagram / Facebook / WhatsApp
+         │
+         ▼
+   Website (SEO + páginas de serviço)
+         │
+         ├── Formulário /contacto ──► Supabase (leads)
+         │         ├──► Resend → hello@ (notificação + auto-resposta)
+         │         └──► Brevo → listas Leads / Newsletter + funil dias 0–21
+         │
+         ├── Convite digital do evento ──► RSVP público ──► email/telefone na BD
+         │
+         └── Admin ──► reenvio convite email · WhatsApp em massa · facturação
+```
+
+### Regras de consistência
+
+1. **Um só número WhatsApp** em site, emails e redes — o definido em `siteContact.whatsapp`.
+2. **Um só email de resposta** — `hello@haxrsignature.com` (ou `CONTACT_NOTIFY_EMAIL` para notificações internas).
+3. **Instagram e Facebook** devem apontar para o mesmo site e usar a mesma linguagem de marca.
+4. **Emails transaccionais** (Resend) e **marketing** (Brevo) partilham remetente de marca: `HAXR Signature <hello@haxrsignature.com>`.
+5. Ao activar **Facebook**, preencher em `site-config.ts`:
+
+```ts
+facebook: {
+  href: "https://www.facebook.com/haxrsignature",
+  label: "HAXR Signature",
+},
+```
+
+O footer e o JSON-LD passam a incluir automaticamente o link em `sameAs`.
 
 ---
 
@@ -13,13 +65,14 @@ Convites digitais, save the date, gestão de eventos e fluxo comercial integrado
 
 A HAXR Signature não é apenas um site. É um **ecossistema operacional**:
 
-- **Frente pública** — presença institucional premium, SEO optimizado, formulário de contacto e páginas públicas por evento.
-- **Painel administrativo** — clientes, documentos comerciais, eventos com convidados, caixa financeira e vista 360° do cliente.
-- **Fluxo comercial contínuo** — sem silos, sem duplicação manual de dados entre módulos.
+- **Frente pública** — site editorial multi-página, SEO optimizado, experiências ao vivo e formulário de contacto.
+- **Painel administrativo** — clientes, documentos, eventos com convidados, caixa financeira e vista 360° do cliente.
+- **Fluxo comercial contínuo** — sem silos entre website, email, WhatsApp e CRM.
 
 ```
-Cliente → Evento → RSVP → Convidados → Seating → Find Your Seat
+Cliente → Evento → RSVP → Convidados → Seating → Find Your Seat → Check-in
        → Proforma → Factura → Recibo → Pagamento
+       → Lead (site) → Brevo funil → Reunião comercial
 ```
 
 ---
@@ -33,10 +86,11 @@ Cliente → Evento → RSVP → Convidados → Seating → Find Your Seat
 | Base de dados | Supabase · PostgreSQL |
 | Validação | Zod · React Hook Form |
 | PDF | `@react-pdf/renderer` |
-| Email | Resend |
+| Email transaccional | Resend (`hello@`, `rsvp@`, canais por contexto) |
+| Email marketing | Brevo (leads, newsletter, funil automático) |
 | Animação | GSAP · Framer Motion · Lenis |
 | Auth admin | Sessão HMAC em cookie `httpOnly` |
-| Deploy | Vercel |
+| Deploy | Vercel → domínio `www.haxrsignature.com` |
 
 ---
 
@@ -45,421 +99,233 @@ Cliente → Evento → RSVP → Convidados → Seating → Find Your Seat
 ```
 src/
 ├── app/
-│   ├── (marketing)/              # Site institucional (single-page)
+│   ├── (marketing)/              # Site institucional (páginas editoriais)
+│   │   ├── assessoria-eventos/
+│   │   ├── convites-identidade-visual/
+│   │   ├── gestao-convidados/
+│   │   ├── plataforma-eventos/
+│   │   ├── portfolio/ · insights/ · contacto/ · sobre/
+│   │   └── experiencias/[slug]/  # Casos reais (convites ao vivo)
 │   ├── admin/                    # Painel administrativo
-│   │   ├── page.tsx              # Login (/admin)
-│   │   └── (panel)/
-│   │       ├── dashboard/
-│   │       ├── clients/[id]/     # Vista 360° do cliente
-│   │       ├── documents/
-│   │       ├── events/[id]/
-│   │       ├── leads/
-│   │       ├── cash/
-│   │       └── settings/         # Empresas e catálogo
-│   ├── event/[eventId]/          # Páginas públicas por evento
-│   │   ├── find-seat/
-│   │   ├── rsvp/[token]/
-│   │   └── checkin/[token]/
-│   └── api/
-│       ├── contact/
-│       ├── events/                 # find-seat · rsvp · checkin
-│       └── admin/                  # login · logout
+│   ├── event/[eventId]/          # RSVP · find-seat · check-in (noindex)
+│   ├── sitemap.ts · robots.ts
+│   └── api/                      # contact · events · cron/brevo-funnel
 ├── components/
-│   ├── sections/                 # Secções do site institucional
-│   ├── admin/                    # UI do painel
-│   └── events/                   # Convidados, lugares, relatórios
+│   ├── marketing/ · sections/ · layout/
+│   ├── admin/ · events/ · seo/
 └── lib/
-    ├── admin/                    # Auth, repositórios, facturação
-    ├── events/                   # Eventos, Sheets, RSVP, export
-    ├── finance/                  # Pagamentos, despesas, metas
-    ├── contact/                  # Formulário e leads
-    └── security/                 # Rate limiting
+    ├── site-config.ts            # ★ Contactos oficiais (WhatsApp, IG, email)
+    ├── marketing/seo.ts          # Metadata por página
+    ├── seo/                      # JSON-LD, sitemap, redirects, canonical
+    ├── contact/ · email/         # Formulário + templates Resend
+    ├── events/                   # Convidados, RSVP, convites email, Sheets
+    ├── admin/ · finance/
+    └── security/
 
-supabase/migrations/              # SQL — executar por ordem
+supabase/migrations/              # 001–024 — executar por ordem
+docs/                             # ELEVATION_REPORT, BREVO_CAMPAIGNS, RESEND_DNS_AUDIT
 ```
 
 ---
 
 ## Site institucional
 
-Landing page editorial com secções modulares:
+Páginas editoriais com SEO e JSON-LD por serviço:
 
-| Secção | Conteúdo |
-|--------|----------|
-| Hero | Entrada visual forte com animação |
-| Philosophy | Posicionamento da marca |
-| Universe | Universo HAXR |
-| Digital Invitations | Convites digitais |
-| Experiences | Experiências e serviços |
-| Method | Metodologia de trabalho |
-| Management | Gestão de eventos |
-| Archive | Portfólio / arquivo |
-| Contact | Formulário validado |
+| Página | Rota | Foco de pesquisa |
+|--------|------|------------------|
+| Home | `/` | Marca + visão geral |
+| Assessoria | `/assessoria-eventos` | Casamentos, wedding planner Maputo |
+| Convites | `/convites-identidade-visual` | Convites digitais, save the date |
+| Convidados | `/gestao-convidados` | RSVP, Find Your Seat, seating plan |
+| Plataforma | `/plataforma-eventos` | Operação e tecnologia HAXR |
+| Portfólio | `/portfolio` | Casos reais |
+| Contacto | `/contacto` | Propostas · WhatsApp · email |
+| Experiências | `/experiencias/[slug]` | Demos de convites ao vivo |
 
-**Incluído:** SEO completo (metadata, sitemap, robots, JSON-LD), scroll suave, design responsivo mobile-first, botão WhatsApp, formulário com honeypot e rate limit.
+**Incluído:** metadata por rota, sitemap XML, robots.txt, JSON-LD (Organização, Serviços, FAQ), redirects SEO (`/find-your-seat`, `/wedding-planner`, …), botão WhatsApp fixo, formulário com honeypot e rate limit.
 
 ---
 
 ## Painel administrativo
 
-Acesso em `/admin`, protegido por credenciais (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) e sessão assinada com HMAC (`ADMIN_SESSION_SECRET`).
+Acesso em `/admin`, protegido por credenciais e sessão HMAC.
 
 | Módulo | Rota | Função |
 |--------|------|--------|
-| Dashboard | `/admin/dashboard` | KPIs globais, pipeline de eventos, resumo financeiro |
-| Clientes | `/admin/clients` | CRUD e perfil comercial 360° |
-| Documentos | `/admin/documents` | Proformas, facturas e recibos com PDF |
-| Eventos | `/admin/events` | Convidados, lugares, Sheets, check-in, relatórios |
-| Caixa | `/admin/cash` | Pagamentos, despesas, metas, analytics, export |
-| Leads | `/admin/leads` | Pedidos do formulário de contacto |
-| Definições | `/admin/settings` | Empresas (multi-negócio) e catálogo de serviços |
-
-Todas as server actions passam por `requireAdmin()`. O middleware protege rotas `/admin/*` e `/api/admin/*`.
+| Dashboard | `/admin/dashboard` | KPIs, pipeline, resumo financeiro |
+| Clientes | `/admin/clients` | CRUD e perfil 360° |
+| Documentos | `/admin/documents` | Proformas, facturas, recibos PDF |
+| Eventos | `/admin/events` | Convidados, lugares, Sheets, check-in, **reenvio convite email** |
+| Caixa | `/admin/cash` | Pagamentos, despesas, metas, analytics |
+| Leads | `/admin/leads` | Pedidos do formulário (sync Brevo) |
+| Definições | `/admin/settings` | Empresas e catálogo |
 
 ---
 
-## Fluxo comercial integrado
+## Módulo Eventos (destaques)
 
-O sistema liga os módulos existentes numa cadeia operacional contínua.
+| Capacidade | Descrição |
+|------------|-----------|
+| Convidados | Import CSV (Nome, Email, Telefone), filtros, WhatsApp em massa |
+| Email convite | Reenvio individual ou em lote via Resend (link RSVP personalizado) |
+| RSVP público | Recolhe email/telefone → grava na BD → email de confirmação |
+| Find Your Seat | `/event/[id]/find-seat` — consulta de lugar por nome |
+| Check-in | QR Code e registo de presença |
+| Google Sheets | Sync `master` ou `rsvp` |
 
-### Cliente → Evento
-
-- Campo `client_id` em `events` (FK para `clients`)
-- Selector de cliente com pesquisa rápida na criação/edição de eventos
-- Criação de evento directa a partir do perfil do cliente
-
-### Evento → Facturação
-
-- Campo `event_id` em `documents` (FK para `events`)
-- Ao seleccionar um evento numa proforma, factura ou recibo, preenche automaticamente:
-  - cliente
-  - nome do evento
-  - local
-  - data
-- Campos editáveis manualmente quando necessário
-
-### Evento → Pagamentos
-
-- Pagamentos associados a cliente, evento e documento
-- Registo rápido a partir de documentos enviados
-- Geração automática de recibo ao registar pagamento
-
-### Vista 360° do cliente
-
-Em `/admin/clients/[id]`:
-
-- **KPIs** — eventos, valor facturado, valor recebido, saldo pendente
-- **Eventos** — lista com link directo
-- **Documentos** — proformas, facturas e recibos
-- **Pagamentos** — histórico financeiro
-- **Acções rápidas** — novo evento, nova proforma, registar pagamento
-
----
-
-## Módulo Eventos
-
-Cada evento no admin tem **8 separadores**:
-
-| Separador | Capacidades |
-|-----------|-------------|
-| Convidados | Lista, filtros, KPIs, etiquetas, acções em massa, import CSV, WhatsApp |
-| Lugares | Mesas e atribuição de lugares |
-| Atelier QR | Geração de QR para check-in e RSVP |
-| Sheets | Sync bidireccional com Google Sheets |
-| Check-in | Presença manual e via QR |
-| Relatório | Export CSV/PDF, mapa A4 para impressão |
-| Histórico | Audit log de alterações a convidados |
-| Definições | Dados do evento, cliente associado, modo Sheets |
-
-### RSVP Premium
-
-- Estados: pendente, confirmado, recusado, presente
-- Campos: acompanhantes, restrições alimentares, notas
-- Página pública com validação Zod e design premium
-
-### Google Sheets — modos de sync
-
-| Modo | Comportamento |
-|------|---------------|
-| `master` | A sheet é a fonte de verdade — importa todos os convidados |
-| `rsvp` | A sheet tem coluna de confirmação — sync de confirmados vs pendentes |
-
-O modo é detectado automaticamente pelos cabeçalhos. Convidados importados ficam com `guest_source`: `manual`, `sheet_master` ou `sheet_rsvp`.
-
-### Páginas públicas por evento
-
-| Rota | Função |
-|------|--------|
-| `/event/[eventId]/find-seat` | Consulta de lugar — código do evento + nome (mín. 4 caracteres) |
-| `/event/[eventId]/rsvp/[token]` | Confirmação ou recusa de presença |
-| `/event/[eventId]/checkin/[token]` | Check-in no dia do evento |
-
-Tokens QR gerados com `randomBytes(24)` — entropia de ~192 bits.
-
----
-
-## Facturação
-
-Documentos comerciais com numeração atómica, multi-negócio e export PDF.
-
-| Tipo | Prefixo | Uso |
-|------|---------|-----|
-| Proforma | PRO | Orçamento prévio |
-| Factura | FAT | Cobrança formal |
-| Recibo | REC | Comprovativo de pagamento |
-
-- Catálogo de serviços integrado no formulário
-- Assinaturas digitais por negócio
-- Suporte a MZN, USD e ZAR
-- Linhas de serviço com cálculo automático de totais e IVA
-
----
-
-## Caixa financeira
-
-Módulo `/admin/cash` com visão editorial de receitas e despesas.
-
-- **Pagamentos** — método, valor, data, cliente, evento, documento
-- **Despesas** — custos operacionais por evento
-- **Metas mensais** — objectivos de receita
-- **Analytics** — gráficos, margens, alertas de saldo em atraso
-- **Export** — CSV e PDF para relatórios
-
----
-
-## Segurança
-
-| Medida | Implementação |
-|--------|---------------|
-| Auth admin | Cookie `httpOnly` · `secure` · `sameSite: strict` · HMAC-SHA256 |
-| Server actions | `requireAdmin()` em todas as mutações |
-| Service role | `SUPABASE_SERVICE_ROLE_KEY` apenas no servidor — nunca no cliente |
-| RLS eventos | Tabelas `events`, `guests`, `seats` com RLS sem policies para `anon` |
-| Rate limiting | Login (5 falhas / 15 min), find-seat (10/min IP + 15/min por evento, Supabase), RSVP/check-in (30/min) |
-| Contacto | Honeypot + limite de 3 pedidos/hora por email |
-| Headers | `X-Frame-Options: DENY` · `X-Content-Type-Options: nosniff` no admin |
-
-**Recomendação de produção:** definir `ADMIN_SESSION_SECRET` independente da password admin.
-
----
-
-## Base de dados
-
-Executar as migrations **por ordem** no SQL Editor do Supabase:
-
-| # | Ficheiro | Conteúdo |
-|---|----------|----------|
-| 001 | `001_admin_schema.sql` | Schema base: negócios, clientes, documentos, catálogo |
-| 002 | `002_business_v2.sql` | Evolução multi-negócio |
-| 003 | `003_sync_site_catalog.sql` | Sincronização catálogo site |
-| 004 | `004_business_signatures.sql` | Assinaturas por negócio |
-| 005 | `005_contact_inquiries.sql` | Leads do formulário de contacto |
-| 006 | `006_events_seating.sql` | Eventos, convidados, mesas, check-in, RLS |
-| 007 | `007_events_google_sheets.sql` | Integração Google Sheets |
-| 008 | `008_payments.sql` | Pagamentos |
-| 009 | `009_finance_extras.sql` | Despesas e metas mensais |
-| 010 | `010_guest_extras.sql` | Plus ones, notas, RPC RSVP |
-| 011 | `011_guest_advanced.sql` | Etiquetas e audit log |
-| 012 | `012_sheets_rsvp_mode.sql` | Modo RSVP Sheets e `guest_source` |
-| 013 | `013_rsvp_premium.sql` | RSVP premium, estado `declined`, lookup enriquecido |
-| 014 | `014_service_category_enums.sql` | Enums de categorias de serviço |
-| 015 | `015_catalog_commercial_seed.sql` | Seed do catálogo comercial |
-| 016 | `016_commercial_flow.sql` | `client_id` em eventos · `event_id` em documentos |
-
-> **Nota PostgreSQL:** os ficheiros 014 e 015 estão separados porque o PostgreSQL não permite usar novos valores enum na mesma transacção do `ALTER TYPE`.
-
----
-
-## Variáveis de ambiente
-
-Copiar `.env.example` para `.env.local`:
-
-```env
-# Site (canónico: www — o apex redirecciona na Vercel)
-NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com
-NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=...
-
-# Admin
-ADMIN_EMAIL=admin@haxrsignature.co.mz
-ADMIN_PASSWORD=password-segura
-ADMIN_SESSION_SECRET=string-aleatoria-longa
-
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-
-# Email (Resend)
-RESEND_API_KEY=re_...
-CONTACT_NOTIFY_EMAIL=hello@haxrsignature.com
-RESEND_FROM_EMAIL=HAXR Signature <onboarding@resend.dev>
-RESEND_BRAND_DOMAIN=false
-```
-
-Em produção, definir as mesmas variáveis no painel Vercel. Nunca commitar `.env.local`.
-
-Para sincronizar variáveis locais com a Vercel (requer `npx vercel login`):
-
-```bash
-node scripts/set-vercel-env.mjs
-```
+Páginas de evento têm `noindex` — não aparecem no Google; o site institucional sim.
 
 ---
 
 ## SEO e indexação
 
-### URL canónica
+| Recurso | Ficheiro |
+|---------|----------|
+| URL canónica | `src/lib/seo/canonical-host.ts` |
+| Metadata global | `src/lib/seo/site-meta.ts` |
+| Metadata por página | `src/lib/marketing/seo.ts` |
+| Sitemap | `src/app/sitemap.ts` + `src/lib/seo/sitemap-config.ts` |
+| Redirects SEO | `src/lib/seo/redirects.ts` |
+| JSON-LD | `src/lib/seo/jsonld.ts` |
+| Robots | `src/app/robots.ts` |
 
-| Ambiente | URL |
-|----------|-----|
-| **Produção (canónico)** | `https://www.haxrsignature.com` |
-| Apex | `haxrsignature.com` → redirecciona 308 para `www` |
-| Preview Vercel | URL automática do deploy |
+**Produção:** `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com`
 
-O código normaliza `NEXT_PUBLIC_SITE_URL` em `src/lib/seo.ts`: valores legacy (`vercel.app`, apex sem `www`) são convertidos para `https://www.haxrsignature.com`, garantindo sitemap, `robots.txt`, Open Graph e JSON-LD coerentes mesmo se a env na Vercel estiver desactualizada.
-
-### O que o site expõe aos motores de busca
-
-| Recurso | Ficheiro | Notas |
-|---------|----------|-------|
-| Sitemap | `src/app/sitemap.ts` | 10 páginas institucionais |
-| Robots | `src/app/robots.ts` | Bloqueia `/admin`, `/api/`, `/event/` |
-| Metadata por rota | `src/lib/marketing/seo.ts` | Título, descrição e keywords |
-| JSON-LD | `src/lib/seo.ts` | Organização, serviços, FAQ, pilares |
-| Verificação Google | meta tag + ficheiros em `public/` | Token via `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` |
-
-Páginas operacionais de evento (RSVP, check-in, find-seat) têm `noindex` — não devem aparecer nos resultados de pesquisa.
-
-### Google Search Console (após cada deploy relevante)
-
-1. **Sitemaps** → submeter `https://www.haxrsignature.com/sitemap.xml`
-2. **Inspeção de URLs** → pedir indexação das páginas novas ou alteradas
-3. **Desempenho** → monitorizar impressões e cliques (resultados demoram 1–4 semanas)
-
-### Checklist SEO pós-deploy
-
-- [ ] `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com` na Vercel (Production)
-- [ ] `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` definido na Vercel
-- [ ] `https://www.haxrsignature.com/sitemap.xml` lista URLs com domínio `www`
-- [ ] `https://www.haxrsignature.com/robots.txt` aponta sitemap e host `www`
-- [ ] Sitemap submetido no Google Search Console
-- [ ] Páginas pilares indexadas (`/assessoria-eventos`, `/convites-identidade-visual`, etc.)
+**Google Search Console:** sitemap `https://www.haxrsignature.com/sitemap.xml` · remoção de URLs `vercel.app` se ainda indexadas.
 
 ---
 
-## Email e Resend
+## Email (Resend) e marketing (Brevo)
 
-### Estrutura recomendada
+| Serviço | Papel | Liga ao canal |
+|---------|-------|---------------|
+| **Resend** | Transaccional — contacto, convites, RSVP, confirmações | `hello@` · `replyTo` para conversa contínua |
+| **Brevo** | CRM — leads, newsletter, funil dias 0 / 3 / 7 / 14 / 21 | Mesmo email do lead · atributos `PROJECT_TYPE`, etc. |
 
-| Tipo | Endereço | Função |
-|------|----------|--------|
-| **Mailbox real** | `hello@haxrsignature.com` | Recebe formulários, orçamentos, respostas e mensagens importantes |
-| **Envio Resend** | `eventos@`, `convites@`, `financeiro@`, `rsvp@`, `noreply@`, `info@` | Remetentes por contexto — sem mailbox paga para cada um |
+### Formulário de contacto
 
-O cliente pode receber de `rsvp@haxrsignature.com`, outro de `financeiro@haxrsignature.com`, etc. Na Spaceship, configurar **aliases** que encaminham tudo para `hello@`.
+1. Grava lead no Supabase (`contact_inquiries`).
+2. **Resend** → notificação para `hello@` + auto-resposta ao cliente (com link WhatsApp e email no corpo).
+3. **Brevo** → upsert contacto + listas (falha no Brevo não bloqueia o envio).
 
-### Passo a passo — Spaceship (mailbox real)
+### Funil Brevo (cron)
 
-1. **Email** → criar mailbox `hello@haxrsignature.com` (caixa principal)
-2. **Aliases / Forwarding** → encaminhar para `hello@`:
-   - `info@`, `eventos@`, `convites@`, `financeiro@`, `rsvp@`, `noreply@`
-3. Configurar cliente de email (Outlook, Apple Mail ou webmail Spaceship) em `hello@`
+`GET /api/cron/brevo-funnel` com header `Authorization: Bearer $CRON_SECRET` — configurar no Vercel Cron.
 
-### Configuração no Resend
+Ver: `docs/BREVO_CAMPAIGNS.md` · `npm run verify:brevo`
 
-1. [resend.com/domains](https://resend.com/domains) → adicionar `haxrsignature.com`
-2. Copiar registos DNS (SPF, DKIM, DMARC recomendado) para a Spaceship → **DNS**
-3. Aguardar verificação verde no Resend
-4. Verificar estado localmente: `npm run email:check-domain`
-5. Na Vercel: `RESEND_BRAND_DOMAIN=true` e remover `RESEND_FROM_EMAIL`
-6. Sincronizar env: `npm run vercel:env`
+---
 
-Enquanto `RESEND_BRAND_DOMAIN` não for `true`, o sistema envia via sandbox `onboarding@resend.dev` (funcional para testes).
+## Variáveis de ambiente
 
-### Formulário de contacto (comportamento actual)
+Copiar `.env.example` → `.env.local`:
 
-| Email | De | Para | Notas |
-|-------|-----|------|-------|
-| Notificação interna | `noreply@haxrsignature.com` | `hello@` (ou `CONTACT_NOTIFY_EMAIL`) | `replyTo` = email do cliente |
-| Auto-resposta | `hello@haxrsignature.com` | Cliente | `replyTo` = `hello@` — o cliente responde à caixa principal |
+```env
+# Site (canónico)
+NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com
+NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
 
-Enquanto o domínio não estiver verificado, manter `RESEND_FROM_EMAIL` com o sandbox e `RESEND_BRAND_DOMAIN=false`.
+# Admin
+ADMIN_EMAIL=admin@haxrsignature.com
+ADMIN_PASSWORD=
+ADMIN_SESSION_SECRET=
 
-### Canais futuros (já preparados no código)
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
-```ts
-import { sendHaxrEmail } from "@/lib/email/resend";
+# Resend
+RESEND_API_KEY=
+CONTACT_NOTIFY_EMAIL=hello@haxrsignature.com
+RESEND_BRAND_DOMAIN=true
 
-await sendHaxrEmail({
-  channel: "rsvp",
-  to: guest.email,
-  subject: "Confirme a sua presença",
-  html: "...",
-});
+# Brevo
+BREVO_API_KEY=
+BREVO_LIST_LEADS=
+BREVO_LIST_NEWSLETTER=
+BREVO_SENDER_EMAIL=hello@haxrsignature.com
+BREVO_SENDER_NAME=HAXR Signature
+BREVO_FUNNEL_ENABLED=true
+
+# Cron (funil Brevo na Vercel)
+CRON_SECRET=
 ```
 
+Sincronizar com Vercel: `npm run vercel:env`
+
+**Nunca commitar** `.env.local` nem secrets.
+
 ---
 
-## Desenvolvimento local
+## Base de dados
+
+Executar migrations **por ordem** no Supabase (001–024). Destaques recentes:
+
+| # | Conteúdo |
+|---|----------|
+| 019 | Segurança Find Your Seat |
+| 022–024 | Tracking funil Brevo (dias 7, 14, 21) |
+| 023 | Intenção no formulário de contacto |
+
+---
+
+## Comandos úteis
 
 ```bash
 npm install
-npm run dev
+npm run dev              # http://localhost:3000
+npm run build
+npm run verify:qa        # auditoria rápida
+npm run verify:qa -- --full
+npm run verify:jsonld    # validar schemas SEO
+npm run verify:brevo
+npm run verify:resend    # auditoria DNS Resend
+npm run sync:brevo       # leads Supabase → Brevo
 ```
 
-| Comando | Função |
-|---------|--------|
-| `npm run dev` | Servidor de desenvolvimento em `localhost:3000` |
-| `npm run build` | Build de produção |
-| `npm run start` | Servidor de produção local |
-| `npm run lint` | ESLint |
-| `npm run email:check-domain` | Estado do domínio no Resend |
-| `npm run vercel:env` | Sincronizar `.env.local` → Vercel |
-
-- Site → [http://localhost:3000](http://localhost:3000)
-- Admin → [http://localhost:3000/admin](http://localhost:3000/admin)
+| URL local | Destino |
+|-----------|---------|
+| Site | http://localhost:3000 |
+| Admin | http://localhost:3000/admin |
 
 ---
 
-## Deploy
+## Deploy e push para GitHub
 
-Push para `main` no GitHub dispara deploy automático na Vercel.
+O push para `main` dispara deploy automático na Vercel.
 
 ```bash
+git add README.md
+git status
+git commit -m "docs: README actualizado — canais integrados e estado do projecto"
 git push origin main
 ```
 
-Deploy manual:
-
-```bash
-npx vercel --prod
-```
+Deploy manual: `npx vercel --prod`
 
 ### Checklist pós-deploy
 
-- [ ] Variáveis de ambiente configuradas na Vercel
-- [ ] `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com` (Production)
-- [ ] `ADMIN_SESSION_SECRET` definido (independente da password)
-- [ ] Migrations 001–016 executadas no Supabase de produção
-- [ ] Login admin funcional em `/admin`
-- [ ] Formulário de contacto envia email e grava lead
-- [ ] Fluxo comercial: cliente → evento → documento → pagamento
-- [ ] Páginas públicas de evento (RSVP, check-in, find-seat) acessíveis
-- [ ] Sitemap e robots com domínio `www` (ver secção SEO)
+- [ ] `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com` na Vercel (Production)
+- [ ] `RESEND_BRAND_DOMAIN=true` e domínio verificado (`npm run verify:resend`)
+- [ ] Migrations 001–024 aplicadas em produção
+- [ ] Formulário de contacto → email + lead + Brevo
+- [ ] WhatsApp e Instagram correctos no site (footer e contacto)
 - [ ] Sitemap submetido no Google Search Console
+- [ ] Facebook activado em `siteContact` quando a página estiver pronta
 
 ---
 
-## Backlog (Fase 2)
+## Documentação adicional
 
-Funcionalidades planeadas, fora do âmbito actual:
-
-- QR individual por convidado
-- Realtime / scanner QR
-- Arquivamento de eventos na UI
-- Regeneração de tokens
-- Auditoria avançada
-- Rate limiting distribuído (Redis / Supabase)
+| Documento | Conteúdo |
+|-----------|----------|
+| `docs/ELEVATION_REPORT.md` | Evolução editorial e técnica da marca |
+| `docs/BREVO_CAMPAIGNS.md` | Funil e campanhas Brevo |
+| `docs/RESEND_DNS_AUDIT.md` | SPF, DKIM, DMARC |
+| `docs/AREA_CLIENTE_SPEC.md` | Portal do cliente (especificação) |
+| `docs/QA_FASE10_REPORT.md` | Relatório QA |
 
 ---
 

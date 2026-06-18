@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StructuredData from "@/components/seo/StructuredData";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
 import EditorialNarrative from "@/components/marketing/EditorialNarrative";
 import BenefitStories from "@/components/marketing/BenefitStories";
@@ -11,10 +12,11 @@ export const metadata: Metadata = marketingMetadata("plataforma");
 export default function PlataformaEventosPage() {
   return (
     <>
+      <StructuredData page="plataforma" />
       <PageHero
-        label="Ecossistema Operacional"
-        headline="Tecnologia invisível que sustenta a excelência HAXR."
-        description="Por detrás de cada evento assinado HAXR existe um ecossistema próprio — rigor nos bastidores, elegância à frente. Não é software para vender. É a memória e a precisão que permitem curadoria de alto padrão."
+        label="Plataforma HAXR"
+        headline="Organização integral — a extensão natural da assessoria."
+        description="Por detrás de cada evento assinado HAXR existe uma operação própria: eventos, convidados, fornecedores, contratos e documentos. Não é software para vender. É o rigor que permite curadoria de alto padrão."
       />
       <EditorialNarrative narrative={plataformaNarrative} />
       <BenefitStories

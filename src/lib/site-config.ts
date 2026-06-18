@@ -1,4 +1,7 @@
 /** iPhone 17 viewport CSS — ref. https://www.ios-resolution.com/iphone-17-pro/ */
+import { demoCatalog } from "@/lib/demos/catalog";
+import { portfolioAssets } from "@/lib/assets";
+
 export const IPHONE_17_VIEWPORT = {
   width: 402,
   height: 874,
@@ -94,9 +97,13 @@ export const portfolioCopy = {
       "Cada história merece ser ouvida com a discrição e o cuidado que merece.",
     ],
     formIntro:
-      "Partilhe a data, a visão e o que imagina para a experiência. Cada pedido é lido com atenção — respondemos em 2 a 5 dias úteis.",
+      "Partilhe a data, a visão e o que pretende da HAXR. Cada pedido é lido com atenção — respondemos em 2 a 5 dias úteis.",
+    intentLabel: "O que pretende",
+    intentPlaceholder:
+      "Ex.: convite digital para casamento em Outubro, 150 convidados, estilo editorial com RSVP e música.",
+    messageLabel: "Detalhes adicionais",
     messagePlaceholder:
-      "Fale-nos do evento: data, local, número de convidados e o que procura da HAXR.",
+      "Data, local, orçamento indicativo ou qualquer contexto extra (opcional).",
     submitLabel: "Iniciar conversa",
     submitLoading: "A enviar...",
     successMessage:
@@ -109,6 +116,8 @@ export const portfolioCopy = {
     intro: "Palavras de quem viveu a experiência HAXR — depois do convite, do evento e de tudo o que ficou na memória.",
   },
   footer: {
+    manifesto:
+      "Organização e emoção não são opostos. Precisão nos bastidores é o que liberta a experiência à frente.",
     commitment:
       "A HAXR Signature compromete-se com discrição, elegância, profissionalismo e atenção ao detalhe.",
   },
@@ -263,36 +272,21 @@ export type InvitationProject = {
 };
 
 /** Projectos reais — secção Convites Digitais */
-export const invitationShowcase: InvitationProject[] = [
-  {
-    id: "casamento-vania-fabiao",
-    href: "https://casamento-vania-fabiao.vercel.app/",
-    mobileViewportWidth: IPHONE_17_VIEWPORT.width,
-    label: "Ver convite digital completo",
-    mockupImage: "/images/convite-mockup-vania-fabiao.png",
-    previewPortrait: "/images/convite-preview-portrait.png",
-    caption: "Convite de Casamento Signature",
-    occasion: "Curadoria Digital & Identidade",
-    category: "Casamento",
-    format: "Pacote Royal · Convite Digital",
-    editorialNote:
-      "Experiência imersiva com identidade, música, confirmação e narrativa do casal — pensada para viver no telemóvel.",
-  },
-  {
-    id: "save-the-date-jessica-samuel",
-    href: "https://jessica-samuel-save-the-date.vercel.app/",
-    mobileViewportWidth: IPHONE_17_VIEWPORT.width,
-    label: "Ver save the date editorial",
-    mockupImage: "/images/save-the-date-jessica-samuel-preview.png",
-    previewPortrait: "/images/save-the-date-jessica-samuel-preview.png",
-    caption: "Save the Date Bespoke",
-    occasion: "Narrativa Editorial & RSVP",
-    category: "Save the Date",
-    format: "Pacote Royal · Save The Date",
-    editorialNote:
-      "Narrativa em capítulos, dress code com referências visuais e confirmação de presença — o primeiro gesto antes do grande dia.",
-  },
-];
+export const invitationShowcase: InvitationProject[] = demoCatalog.map(
+  (demo) => ({
+    id: demo.id,
+    href: demo.publicPath,
+    mobileViewportWidth: demo.mobileViewportWidth,
+    label: demo.ctaLabel,
+    mockupImage: demo.mockupImage,
+    previewPortrait: demo.previewPortrait,
+    caption: demo.caption,
+    occasion: demo.occasion,
+    category: demo.category,
+    format: demo.format,
+    editorialNote: demo.editorialNote,
+  })
+);
 
 export const siteConfig = {
   featuredInvitation: invitationShowcase[0],
@@ -327,28 +321,28 @@ export const portfolioArchive: PortfolioArchiveItem[] = [
     title: "Convite de Casamento Signature",
     category: "Casamento",
     service: "Convite Digital · Pacote Royal",
-    image: "/images/convite-mockup-vania-fabiao.png",
+    image: portfolioAssets.casamentoSignature,
     span: true,
-    href: "https://casamento-vania-fabiao.vercel.app/",
-    external: true,
-    ctaLabel: "Ver convite ao vivo",
+    href: demoCatalog[0].publicPath,
+    external: false,
+    ctaLabel: demoCatalog[0].ctaLabel,
   },
   {
     id: "save-the-date",
     title: "Save the Date Editorial",
     category: "Noivado",
     service: "Save the Date · Pacote Royal",
-    image: "/images/save-the-date-jessica-samuel-preview.png",
-    href: "https://jessica-samuel-save-the-date.vercel.app/",
-    external: true,
-    ctaLabel: "Ver experiência",
+    image: portfolioAssets.saveTheDate,
+    href: demoCatalog[1].publicPath,
+    external: false,
+    ctaLabel: demoCatalog[1].ctaLabel,
   },
   {
     id: "corporativo",
     title: "Evento Corporativo",
     category: "Corporativo",
     service: "Identidade Visual & Convite",
-    image: "/images/archive-03.webp",
+    image: portfolioAssets.corporativo,
     href: "/contacto?tipo=corporativo",
     ctaLabel: "Solicitar proposta",
   },
@@ -357,7 +351,7 @@ export const portfolioArchive: PortfolioArchiveItem[] = [
     title: "Celebração Privada",
     category: "Privado",
     service: "Assessoria & Curadoria",
-    image: "/images/archive-01.webp",
+    image: portfolioAssets.celebracaoPrivada,
     href: "/contacto?tipo=assessoria",
     ctaLabel: "Solicitar proposta",
   },

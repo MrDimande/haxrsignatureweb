@@ -25,6 +25,9 @@ type FormData = z.infer<typeof contactFormSchema>;
 const inputClass =
   "w-full bg-transparent border-b border-grey/30 focus:border-gold/50 text-white font-sans text-sm py-3 px-0 outline-none placeholder:text-grey/40 transition-colors duration-500";
 
+const labelClass =
+  "block font-mono text-[8px] tracking-[0.4em] uppercase text-gold/50 mb-3";
+
 const PROJECT_TYPES: Record<string, string> = {
   "convite-digital": "convite-digital",
   "identidade-visual": "identidade-visual",
@@ -181,7 +184,13 @@ function ContactForm() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(contactFormSchema),
-    defaultValues: { projectType: defaultType, gotcha: "", marketingOptIn: false },
+    defaultValues: {
+      projectType: defaultType,
+      gotcha: "",
+      marketingOptIn: false,
+      intent: "",
+      message: "",
+    },
   });
 
   useEffect(() => {
@@ -202,7 +211,13 @@ function ContactForm() {
     try {
       await submitContactForm(data, { packageLabel });
       setStatus("success");
-      reset({ projectType: defaultType || "", gotcha: "", marketingOptIn: false });
+      reset({
+        projectType: defaultType || "",
+        gotcha: "",
+        marketingOptIn: false,
+        intent: "",
+        message: "",
+      });
     } catch {
       setStatus("error");
     }
@@ -210,6 +225,9 @@ function ContactForm() {
 
   const {
     formIntro,
+    intentLabel,
+    intentPlaceholder,
+    messageLabel,
     messagePlaceholder,
     submitLabel,
     submitLoading,
@@ -331,13 +349,34 @@ function ContactForm() {
           </div>
 
           <div>
-            <label htmlFor="contact-message" className="sr-only">
-              Mensagem
+            <label htmlFor="contact-intent" className={labelClass}>
+              {intentLabel} <span className="text-gold/80">*</span>
+            </label>
+            <textarea
+              id="contact-intent"
+              placeholder={intentPlaceholder}
+              rows={5}
+              className={`${inputClass} resize-none`}
+              {...register("intent")}
+            />
+            {errors.intent && (
+              <p className="text-gold/60 text-xs mt-2 font-sans">
+                {errors.intent.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="contact-message" className={labelClass}>
+              {messageLabel}{" "}
+              <span className="text-grey/40 normal-case tracking-normal">
+                (opcional)
+              </span>
             </label>
             <textarea
               id="contact-message"
               placeholder={messagePlaceholder}
-              rows={4}
+              rows={3}
               className={`${inputClass} resize-none`}
               {...register("message")}
             />
@@ -346,6 +385,20 @@ function ContactForm() {
                 {errors.message.message}
               </p>
             )}
+          </div>
+
+          <div className="pt-2">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 accent-[#c9a962] bg-transparent border border-grey/40"
+                {...register("marketingOptIn")}
+              />
+              <span className="font-sans text-xs text-grey/70 leading-relaxed group-hover:text-grey transition-colors">
+                Quero receber inspiração editorial e novidades da HAXR
+                Signature por email.
+              </span>
+            </label>
           </div>
         </div>
 

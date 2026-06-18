@@ -1,4 +1,5 @@
 import { enforceAdminAuth } from "@/lib/admin/guard.server";
+import { qrFontClassName } from "@/lib/fonts/qr";
 
 export default async function AdminPanelLayout({
   children,
@@ -6,5 +7,5 @@ export default async function AdminPanelLayout({
   children: React.ReactNode;
 }>) {
   await enforceAdminAuth();
-  return children;
+  return <div className={qrFontClassName}>{children}</div>;
 }

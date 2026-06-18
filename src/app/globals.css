@@ -17,17 +17,34 @@
   --font-serif: var(--font-cormorant), Georgia, serif;
   --font-sans: var(--font-jost), system-ui, sans-serif;
   --font-signature: var(--font-signature), "Brush Script MT", cursive;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   --ease-luxury: cubic-bezier(0.25, 0, 0.1, 1);
+
+  /* Escala editorial — luxo discreto */
+  --text-hero: clamp(2.75rem, 9vw, 8.5rem);
+  --text-display: clamp(2rem, 4.5vw, 3.75rem);
+  --text-headline: clamp(1.625rem, 2.8vw, 2.5rem);
+  --text-subhead: clamp(1.125rem, 1.6vw, 1.375rem);
+  --text-lead: clamp(1.0625rem, 1.35vw, 1.25rem);
+  --text-body: 1rem;
+  --text-small: 0.9375rem;
+  --text-caption: 0.6875rem;
+  --text-label: 0.625rem;
 }
 
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/JetBrainsMono-Light.ttf") format("truetype");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 html.lenis,
@@ -82,12 +99,123 @@ p.text-sm {
 
 .section-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--text-label);
   font-weight: 300;
-  letter-spacing: 0.5em;
+  letter-spacing: 0.48em;
   text-transform: uppercase;
-  color: #3a3a3a;
+  color: rgba(163, 163, 163, 0.72);
   margin: 0;
+}
+
+.type-display {
+  font-family: var(--font-serif);
+  font-size: var(--text-display);
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.type-headline {
+  font-family: var(--font-serif);
+  font-size: var(--text-headline);
+  font-weight: 300;
+  line-height: 1.35;
+}
+
+.type-lead {
+  font-family: var(--font-sans);
+  font-size: var(--text-lead);
+  font-weight: 300;
+  line-height: 1.75;
+}
+
+.type-manifesto {
+  font-family: var(--font-serif);
+  font-size: var(--text-subhead);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.65;
+  color: rgba(245, 245, 240, 0.72);
+}
+
+/* Hero — mais presença no viewport */
+.site-hero {
+  width: 100%;
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .site-hero {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .site-hero {
+    max-width: 80rem;
+  }
+}
+
+/* CTAs editoriais */
+.btn-editorial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-width: 13.5rem;
+  padding: 1.05rem 2.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  transition:
+    color 0.6s var(--ease-luxury),
+    background-color 0.6s var(--ease-luxury),
+    border-color 0.6s var(--ease-luxury),
+    transform 0.6s var(--ease-luxury);
+}
+
+.btn-editorial:hover {
+  transform: translateY(-1px);
+}
+
+.btn-editorial--solid {
+  color: #000000;
+  background-color: var(--color-gold);
+  border: 1px solid var(--color-gold);
+}
+
+.btn-editorial--solid:hover {
+  background-color: rgba(201, 169, 110, 0.92);
+  border-color: rgba(201, 169, 110, 0.92);
+}
+
+.btn-editorial--outline {
+  color: var(--color-gold);
+  background-color: transparent;
+  border: 1px solid rgba(201, 169, 110, 0.38);
+}
+
+.btn-editorial--outline:hover {
+  border-color: var(--color-gold);
+  background-color: rgba(201, 169, 110, 0.06);
+}
+
+.btn-editorial--ghost {
+  color: rgba(163, 163, 163, 0.9);
+  background-color: transparent;
+  border: 1px solid rgba(42, 42, 42, 0.95);
+}
+
+.btn-editorial--ghost:hover {
+  color: var(--color-gold);
+  border-color: rgba(201, 169, 110, 0.35);
 }
 
 .sr-only {

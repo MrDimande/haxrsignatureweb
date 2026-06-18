@@ -1,3 +1,5 @@
+import { brandAssets } from "@/lib/assets";
+
 export type QrCenterMark = "none" | "monogram" | "logo";
 
 export type QrExportSize = "web" | "print";
@@ -193,12 +195,12 @@ export const QR_LOGO_OPTIONS = [
   {
     id: "horizontal",
     label: "Horizontal",
-    src: "/images/brand/logo-horizontal-gold.png",
+    src: brandAssets.logoHorizontal,
   },
   {
     id: "vertical",
     label: "Vertical",
-    src: "/images/brand/logo-vertical-gold.png",
+    src: brandAssets.logoVertical,
   },
 ] as const;
 

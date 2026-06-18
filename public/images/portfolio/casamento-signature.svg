@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Convite de casamento digital">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#050505"/>
+      <stop offset="100%" stop-color="#12100c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8a7348"/>
+      <stop offset="50%" stop-color="#c9a96e"/>
+      <stop offset="100%" stop-color="#8a7348"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <rect x="80" y="80" width="1040" height="740" fill="none" stroke="#c9a96e" stroke-opacity="0.15"/>
+  <rect x="110" y="110" width="980" height="680" fill="none" stroke="#c9a96e" stroke-opacity="0.08"/>
+  <circle cx="600" cy="360" r="140" fill="none" stroke="url(#gold)" stroke-opacity="0.35" stroke-width="1"/>
+  <path d="M600 220 L640 320 L740 320 L660 385 L690 485 L600 425 L510 485 L540 385 L460 320 L560 320 Z" fill="none" stroke="#c9a96e" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="600" y="560" text-anchor="middle" fill="#f5f5f0" font-family="Georgia, serif" font-size="54" font-weight="300" letter-spacing="12">CONVITE SIGNATURE</text>
+  <text x="600" y="620" text-anchor="middle" fill="#c9a96e" font-family="Georgia, serif" font-size="28" font-style="italic" opacity="0.85">Experiência digital · Casamento</text>
+  <text x="600" y="760" text-anchor="middle" fill="#a3a3a3" font-family="ui-monospace, monospace" font-size="14" letter-spacing="6">HAXR SIGNATURE</text>
+</svg>

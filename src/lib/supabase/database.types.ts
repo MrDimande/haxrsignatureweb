@@ -459,12 +459,19 @@ export interface Database {
           email: string;
           project_type: string;
           package_label: string | null;
+          intent: string | null;
           message: string;
           status: "new" | "contacted" | "converted" | "archived";
           marketing_opt_in: boolean;
           source: string;
           created_at: string;
           updated_at: string;
+          brevo_lead_welcome_at: string | null;
+          brevo_portfolio_sent_at: string | null;
+          brevo_experiences_sent_at: string | null;
+          brevo_meeting_sent_at: string | null;
+          brevo_last_call_sent_at: string | null;
+          brevo_newsletter_welcome_at: string | null;
         };
         Insert: {
           id?: string;
@@ -472,12 +479,19 @@ export interface Database {
           email: string;
           project_type: string;
           package_label?: string | null;
-          message: string;
+          intent?: string | null;
+          message?: string;
           status?: "new" | "contacted" | "converted" | "archived";
           marketing_opt_in?: boolean;
           source?: string;
           created_at?: string;
           updated_at?: string;
+          brevo_lead_welcome_at?: string | null;
+          brevo_portfolio_sent_at?: string | null;
+          brevo_experiences_sent_at?: string | null;
+          brevo_meeting_sent_at?: string | null;
+          brevo_last_call_sent_at?: string | null;
+          brevo_newsletter_welcome_at?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["contact_inquiries"]["Insert"]

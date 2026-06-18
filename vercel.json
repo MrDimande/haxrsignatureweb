@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/brevo-funnel",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

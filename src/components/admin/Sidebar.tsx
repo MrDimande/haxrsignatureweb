@@ -52,8 +52,8 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
         data-lenis-prevent
       >
         <div className="flex items-center justify-between px-6 h-16 border-b border-grey-dark/80">
-          <Link href="/admin/dashboard" className="opacity-90 hover:opacity-100">
-            <BrandLogo variant="navbar" />
+          <Link href="/admin/dashboard" className="opacity-95 hover:opacity-100">
+            <BrandLogo variant="admin" />
           </Link>
           <button
             type="button"

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StructuredData from "@/components/seo/StructuredData";
 import Contact from "@/components/sections/Contact";
 import PageHero from "@/components/marketing/PageHero";
 import EditorialNarrative from "@/components/marketing/EditorialNarrative";
@@ -12,6 +13,7 @@ export const metadata: Metadata = marketingMetadata("contacto");
 export default function ContactoPage() {
   return (
     <>
+      <StructuredData page="contacto" />
       <PageHero
         label="Contacto"
         headline="Estamos prontos para ouvir a sua história."

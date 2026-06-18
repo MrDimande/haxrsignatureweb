@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Celebração privada">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#1a1510"/>
+      <stop offset="55%" stop-color="#0a0908"/>
+      <stop offset="100%" stop-color="#030303"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <ellipse cx="600" cy="280" rx="220" ry="80" fill="#c9a96e" fill-opacity="0.06"/>
+  <circle cx="600" cy="420" r="6" fill="#c9a96e" fill-opacity="0.8"/>
+  <circle cx="600" cy="420" r="120" fill="none" stroke="#c9a96e" stroke-opacity="0.12"/>
+  <circle cx="600" cy="420" r="200" fill="none" stroke="#c9a96e" stroke-opacity="0.08"/>
+  <text x="600" y="620" text-anchor="middle" fill="#f5f5f0" font-family="Georgia, serif" font-size="46" font-weight="300" font-style="italic">Celebração Privada</text>
+  <text x="600" y="690" text-anchor="middle" fill="#a3a3a3" font-family="ui-monospace, monospace" font-size="13" letter-spacing="5">ASSESSORIA &amp; CURADORIA</text>
+</svg>

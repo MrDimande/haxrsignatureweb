@@ -5,6 +5,7 @@ import {
   createInquiry,
 } from "@/lib/contact/inquiries.repository";
 import { sendContactEmails } from "@/lib/contact/emails";
+import { syncInquiryToBrevo } from "@/lib/brevo/contacts";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 const RATE_LIMIT_MAX = 3;
@@ -20,7 +21,24 @@ export async function POST(request: Request) {
     }
 
     const raw = await request.json();
-    const parsed = contactFormSchema.safeParse(raw);
+    const normalized = {
+      ...raw,
+      intent:
+        typeof raw.intent === "string" && raw.intent.trim()
+          ? raw.intent
+          : typeof raw.message === "string"
+            ? raw.message
+            : "",
+      message:
+        typeof raw.message === "string" &&
+        typeof raw.intent === "string" &&
+        raw.intent.trim()
+          ? raw.message
+          : typeof raw.message === "string" && !raw.intent
+            ? ""
+            : (raw.message ?? ""),
+    };
+    const parsed = contactFormSchema.safeParse(normalized);
 
     if (!parsed.success) {
       const firstIssue = parsed.error.issues[0]?.message ?? "Dados inválidos.";
@@ -56,6 +74,17 @@ export async function POST(request: Request) {
     });
 
     await sendContactEmails(inquiry);
+
+    const brevo = await syncInquiryToBrevo(inquiry);
+    if (!brevo.synced && brevo.error) {
+      console.warn("[api/contact] Brevo sync:", brevo.error);
+    }
+    if (brevo.funnel?.leadWelcome?.error) {
+      console.warn(
+        "[api/contact] Brevo funnel welcome:",
+        brevo.funnel.leadWelcome.error
+      );
+    }
 
     return NextResponse.json({ success: true, id: inquiry.id });
   } catch (err) {

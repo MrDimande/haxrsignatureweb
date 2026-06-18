@@ -1,4 +1,6 @@
 /** Diretriz editorial HAXR — narrativa, não catálogo */
+import { portfolioAssets } from "@/lib/assets";
+import { getDemoById } from "@/lib/demos/catalog";
 
 export type PageNarrative = {
   problem: string;
@@ -75,7 +77,7 @@ export const plataformaNarrative: PageNarrative = {
   emotionalImpact:
     "A fragilidade de uma operação que parece organizada — até o dia em que um detalhe escapa.",
   solution:
-    "Um ecossistema operacional próprio, invisível para o convidado, que sustenta cada decisão da equipa HAXR com rigor e memória.",
+    "A Plataforma HAXR — extensão da assessoria, não um produto à parte. Organização integral para eventos, convidados, fornecedores, contratos e documentos.",
   feelingAfter:
     "A confiança de uma operação que funciona nos bastidores — para que a experiência à frente permaneça impecável.",
 };
@@ -117,10 +119,14 @@ export const areaClienteNarrative: PageNarrative = {
   emotionalImpact:
     "A distância entre o que acontece nos bastidores e o que o cliente consegue visualizar.",
   solution:
-    "Um ecossistema em evolução — onde cronograma, documentos e decisões partilhadas encontrarão lugar.",
+    "O Portal Exclusivo HAXR — uma evolução natural da relação, onde cronograma, documentos e decisões partilhadas encontrarão lugar.",
   feelingAfter:
-    "A tranquilidade de um acompanhamento contínuo — hoje pela equipa, amanhã num espaço dedicado.",
+    "A tranquilidade de um acompanhamento contínuo — hoje pela equipa, amanhã num espaço dedicado à sua experiência.",
 };
+
+export function getCaseStudyForDemo(demoId: string): CaseStudy | undefined {
+  return caseStudies.find((study) => study.id === demoId);
+}
 
 export const caseStudies: CaseStudy[] = [
   {
@@ -135,9 +141,9 @@ export const caseStudies: CaseStudy[] = [
       "Convite digital Signature com identidade própria, música, confirmação de presença e curadoria editorial HAXR.",
     result:
       "Os convidados falaram do convite durante semanas. A experiência digital antecipou a fluidez do dia do casamento.",
-    image: "/images/convite-mockup-vania-fabiao.png",
-    href: "https://casamento-vania-fabiao.vercel.app/",
-    external: true,
+    image: portfolioAssets.casamentoSignature,
+    href: getDemoById("casamento-vania-fabiao")?.publicPath,
+    external: false,
   },
   {
     id: "save-the-date-jessica-samuel",
@@ -151,9 +157,9 @@ export const caseStudies: CaseStudy[] = [
       "Save the date em capítulos, referências visuais de dress code e RSVP integrado — assinatura Royal HAXR.",
     result:
       "O primeiro contacto com os convidados estabeleceu expectativa, tom e elegância antes de qualquer outro detalhe.",
-    image: "/images/save-the-date-jessica-samuel-preview.png",
-    href: "https://jessica-samuel-save-the-date.vercel.app/",
-    external: true,
+    image: portfolioAssets.saveTheDate,
+    href: getDemoById("save-the-date-jessica-samuel")?.publicPath,
+    external: false,
   },
   {
     id: "corporativo",
@@ -167,7 +173,7 @@ export const caseStudies: CaseStudy[] = [
       "Identidade visual e convite digital alinhados à marca, com curadoria HAXR de ponta a ponta.",
     result:
       "Uma experiência que reflectiu o posicionamento da organização — antes, durante e após o evento.",
-    image: "/images/archive-03.webp",
+    image: portfolioAssets.corporativo,
   },
   {
     id: "celebracao-privada",
@@ -181,6 +187,6 @@ export const caseStudies: CaseStudy[] = [
       "Assessoria e curadoria HAXR — do conceito à execução, com atenção ao detalhe em cada etapa.",
     result:
       "Um evento vivido com leveza pelo cliente, conduzido com precisão nos bastidores.",
-    image: "/images/archive-01.webp",
+    image: portfolioAssets.celebracaoPrivada,
   },
 ];

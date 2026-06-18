@@ -29,8 +29,8 @@ export const marketingPillars: MarketingPillar[] = [
   },
   {
     num: "04",
-    title: "Ecossistema Operacional",
-    desc: "Tecnologia invisível que sustenta a excelência HAXR — rigor nos bastidores, elegância à frente.",
+    title: "Plataforma HAXR",
+    desc: "Organização integral nos bastidores — eventos, convidados, fornecedores e documentos numa só operação.",
     href: "/plataforma-eventos",
   },
 ];
@@ -39,25 +39,25 @@ export const homeHowWeWork = [
   {
     phase: "Antes",
     items: [
-      "Escuta e alinhamento de visão",
-      "Curadoria de cada decisão",
+      "Planeamento com estratégia e orçamento",
+      "Curadoria de fornecedores e contratos",
       "Cronograma com margem e intenção",
     ],
   },
   {
     phase: "Durante",
     items: [
-      "Presença discreta da equipa",
-      "Fluidez em cada momento",
-      "Resolução sem exposição",
+      "Coordenação e gestão operacional",
+      "Supervisão discreta da equipa",
+      "Cerimonial com elegância",
     ],
   },
   {
     phase: "Depois",
     items: [
       "Encerramento com rigor",
+      "Relatórios e avaliação",
       "Memória do que foi vivido",
-      "Acompanhamento até ao fim",
     ],
   },
 ] as const;
@@ -91,55 +91,113 @@ export const assessoriaPhases = [
     headline: "Clareza antes de qualquer execução.",
     items: [
       {
-        title: "Escuta profunda",
-        body: "Compreendemos a essência do evento, o perfil dos convidados e o nível de acompanhamento que procura — antes de qualquer decisão.",
+        title: "Planeamento",
+        body: "Estruturamos o projecto com objectivos, prioridades e marcos — para que cada decisão tenha contexto e cada etapa tenha sentido.",
       },
       {
-        title: "Curadoria de decisões",
-        body: "Fornecedores, espaços e referências seleccionados com critério absoluto. Nada entra por conveniência.",
+        title: "Estratégia",
+        body: "Definimos o tom, o perfil dos convidados e o nível de acompanhamento — alinhando visão, orçamento e ambição do evento.",
       },
       {
-        title: "Cronograma vivo",
+        title: "Orçamento",
+        body: "Controlo financeiro transparente, com alinhamento contínuo — sem surpresas, sem fragmentação.",
+      },
+      {
+        title: "Cronograma",
         body: "Cada etapa tem responsável, horário e margem — para que a semana do evento respire com tranquilidade.",
       },
       {
-        title: "Orçamento transparente",
-        body: "Controlo financeiro com discrição e alinhamento contínuo — sem surpresas, sem fragmentação.",
+        title: "Fornecedores",
+        body: "Espaços, catering, produção e parceiros seleccionados com critério absoluto. Nada entra por conveniência.",
+      },
+      {
+        title: "Contratos",
+        body: "Acordos, prazos e entregáveis acompanhados com rigor — para que a operação avance com segurança.",
       },
     ],
   },
   {
-    phase: "No dia",
+    phase: "Durante o evento",
     headline: "Presença invisível. Execução impecável.",
     items: [
       {
-        title: "Coordenação integral",
+        title: "Coordenação",
         body: "A equipa HAXR conduz montagem, fornecedores e sequência — para que cada momento decorra como foi imaginado.",
       },
       {
-        title: "Supervisão discreta",
+        title: "Supervisão",
         body: "Imprevistos resolvidos longe do seu campo de visão. A complexidade permanece nos bastidores.",
       },
       {
-        title: "Cerimonial sensível",
+        title: "Gestão operacional",
+        body: "Fluxos, equipas e fornecedores alinhados em tempo real — para que nada dependa de improviso.",
+      },
+      {
+        title: "Cerimonial",
         body: "Momentos-chave conduzidos com elegância — você vive a experiência, nós cuidamos do resto.",
       },
     ],
   },
   {
-    phase: "Depois",
+    phase: "Depois do evento",
     headline: "Encerramento com a mesma atenção do início.",
     items: [
       {
-        title: "Síntese e memória",
-        body: "Relatório do que foi executado — especialmente relevante para eventos corporativos e celebrações de grande dimensão.",
+        title: "Encerramento",
+        body: "Pagamentos, devoluções e fecho administrativo com o rigor que cada projecto merece.",
       },
       {
-        title: "Follow-up cuidadoso",
-        body: "Pagamentos, devoluções e encerramento administrativo com o rigor que cada projecto merece.",
+        title: "Relatórios",
+        body: "Síntese do que foi executado — especialmente relevante para eventos corporativos e celebrações de grande dimensão.",
+      },
+      {
+        title: "Avaliação",
+        body: "Revisão cuidadosa do percurso, aprendizagens e próximos passos — para fechar o ciclo com memória e clareza.",
       },
     ],
   },
+] as const;
+
+export const convitesOfferings = [
+  {
+    title: "Save The Date",
+    body: "O primeiro gesto editorial — data, tom e expectativa definidos com elegância.",
+  },
+  {
+    title: "Convites digitais",
+    body: "Experiências imersivas com música, galeria e confirmação integrada.",
+  },
+  {
+    title: "Websites de casamento",
+    body: "Presença digital coerente com a identidade do casal e do evento.",
+  },
+  {
+    title: "Monogramas",
+    body: "Assinatura visual exclusiva — do convite ao papel de mesa.",
+  },
+  {
+    title: "Menus",
+    body: "Composição editorial para cada momento da recepção.",
+  },
+  {
+    title: "Seating charts",
+    body: "Planos de mesa com curadoria estética e clareza operacional.",
+  },
+  {
+    title: "Identidade visual completa",
+    body: "Paleta, tipografia e linguagem visual unificadas em cada ponto de contacto.",
+  },
+] as const;
+
+export const convidadosCapabilities = [
+  { title: "RSVP", body: "Confirmações personalizadas com clareza para a equipa." },
+  { title: "Find Your Seat", body: "O convidado encontra o lugar pelo nome, sem filas." },
+  { title: "Check-in", body: "Presença registada em tempo real na recepção." },
+  { title: "QR Codes", body: "Materiais impressos e digitais com assinatura HAXR." },
+  { title: "Seating Plan", body: "Mesas e lugares definidos com visão operacional." },
+  { title: "Gestão de listas", body: "Base de convidados organizada, validada e actualizada." },
+  { title: "Google Sheets", body: "Sincronização elegante para equipas que trabalham em folha de cálculo." },
+  { title: "Confirmações", body: "Visibilidade total sobre quem vem, quem falta e acompanhantes." },
 ] as const;
 
 export const convitesCreativeProcess = [
@@ -283,23 +341,27 @@ export function filterPortfolioByCategory(
 export const insightsCategories = [
   {
     title: "A arte de organizar casamentos",
-    desc: "Reflexões sobre planeamento, fornecedores e decisões que definem o grande dia.",
-  },
-  {
-    title: "Confirmações com elegância",
-    desc: "Como estruturar convites digitais e acompanhar presenças com discrição.",
-  },
-  {
-    title: "A experiência do convidado",
-    desc: "Do primeiro contacto ao acolhimento na recepção — cada etapa importa.",
-  },
-  {
-    title: "Assessoria e presença",
-    desc: "Porque a excelência operacional é o que permite viver o momento.",
+    desc: "Planeamento, fornecedores e decisões que definem o grande dia — com método, não com sorte.",
   },
   {
     title: "Eventos corporativos de alto padrão",
     desc: "Identidade, operação e memória para marcas e instituições exigentes.",
+  },
+  {
+    title: "Gestão de convidados com clareza",
+    desc: "RSVP, listas, mesas e recepção — como estruturar cada etapa com discrição.",
+  },
+  {
+    title: "Etiqueta e experiência do convidado",
+    desc: "Do primeiro contacto ao acolhimento — cada gesto comunica o nível do evento.",
+  },
+  {
+    title: "Tendências em convites digitais",
+    desc: "O que muda na forma como comunicamos datas, dress codes e narrativas.",
+  },
+  {
+    title: "Assessoria e tranquilidade",
+    desc: "Porque organização nos bastidores é o que liberta a experiência à frente.",
   },
 ] as const;
 

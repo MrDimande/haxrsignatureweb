@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
+import { shouldUseScrollAnimations } from "@/lib/motion/preferences";
 
 interface RevealOnScrollProps {
   children: React.ReactNode;
@@ -22,7 +23,16 @@ export default function RevealOnScroll({
     const el = ref.current;
     if (!el) return;
 
-    gsap.set(el, { opacity: 0, y });
+    if (!shouldUseScrollAnimations()) {
+      gsap.set(el, { opacity: 1, y: 0 });
+      return;
+    }
+
+    const motionY = window.matchMedia("(max-width: 767px)").matches
+      ? Math.min(y, 20)
+      : y;
+
+    gsap.set(el, { opacity: 0, y: motionY });
 
     const fallback = window.setTimeout(() => {
       gsap.set(el, { opacity: 1, y: 0 });
@@ -31,12 +41,12 @@ export default function RevealOnScroll({
     const tween = gsap.to(el, {
       opacity: 1,
       y: 0,
-      duration: 1.2,
+      duration: window.matchMedia("(max-width: 767px)").matches ? 0.8 : 1.2,
       delay,
       ease: "power3.out",
       scrollTrigger: {
         trigger: el,
-        start: "top 85%",
+        start: "top 88%",
         once: true,
       },
       onComplete: () => window.clearTimeout(fallback),

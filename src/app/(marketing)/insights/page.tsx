@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StructuredData from "@/components/seo/StructuredData";
 import Link from "next/link";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
@@ -10,6 +11,7 @@ export const metadata: Metadata = marketingMetadata("insights");
 export default function InsightsPage() {
   return (
     <>
+      <StructuredData page="insights" />
       <PageHero
         label="Insights"
         headline="Reflexões sobre eventos, curadoria e a arte de criar memórias."
@@ -36,8 +38,8 @@ export default function InsightsPage() {
                   <p className="font-sans text-sm text-grey leading-relaxed mb-4">
                     {cat.desc}
                   </p>
-                  <span className="font-mono text-[9px] tracking-[0.25em] uppercase text-grey/40">
-                    Em breve
+                  <span className="font-mono text-[9px] tracking-[0.25em] uppercase text-gold/40">
+                    Em preparação editorial
                   </span>
                 </article>
               </RevealOnScroll>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StructuredData from "@/components/seo/StructuredData";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
 import EditorialNarrative from "@/components/marketing/EditorialNarrative";
 import CaseStudyList from "@/components/marketing/CaseStudyList";
@@ -10,6 +11,7 @@ export const metadata: Metadata = marketingMetadata("portfolio");
 export default function PortfolioPage() {
   return (
     <>
+      <StructuredData page="portfolio" />
       <PageHero
         label="Portfólio"
         headline="Histórias reais — com contexto, desafio, curadoria e memória."

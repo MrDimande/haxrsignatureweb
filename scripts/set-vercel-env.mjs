@@ -29,6 +29,17 @@ const REQUIRED_KEYS = [
 const OPTIONAL_KEYS = [
   "RESEND_FROM_EMAIL",
   "RESEND_BRAND_DOMAIN",
+  "BREVO_API_KEY",
+  "BREVO_LIST_LEADS",
+  "BREVO_LIST_NEWSLETTER",
+  "BREVO_SENDER_EMAIL",
+  "BREVO_SENDER_NAME",
+  "BREVO_FUNNEL_ENABLED",
+  "BREVO_FUNNEL_PORTFOLIO_DAYS",
+  "BREVO_FUNNEL_EXPERIENCES_DAYS",
+  "BREVO_FUNNEL_MEETING_DAYS",
+  "BREVO_FUNNEL_LAST_CALL_DAYS",
+  "CRON_SECRET",
 ];
 
 function parseEnvFile(path) {
@@ -107,6 +118,11 @@ async function addEnv(name, value, environment) {
 async function main() {
   const localEnv = parseEnvFile(ENV_FILE);
 
+  if (!localEnv.CRON_SECRET?.trim()) {
+    localEnv.CRON_SECRET = randomBytes(32).toString("hex");
+    console.log("• CRON_SECRET gerado automaticamente para sync Vercel");
+  }
+
   for (const key of REQUIRED_KEYS) {
     if (!localEnv[key]) {
       throw new Error(`Variável em falta no .env.local: ${key}`);
@@ -144,6 +160,17 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error.message || error);
+  const message = error.message || String(error);
+  if (/no existing credentials|not logged in/i.test(message)) {
+    console.error("Vercel: sessão não encontrada.\n");
+    console.error("1. Corre no terminal:  npx vercel login");
+    console.error("2. Depois:           npm run vercel:env\n");
+    console.error("Ou define variáveis manualmente em:");
+    console.error("https://vercel.com → Project → Settings → Environment Variables");
+    console.error("\nMínimo para o funil Brevo em produção:");
+    console.error("  CRON_SECRET, BREVO_API_KEY, BREVO_LIST_LEADS, BREVO_LIST_NEWSLETTER");
+    process.exit(1);
+  }
+  console.error(message);
   process.exit(1);
 });

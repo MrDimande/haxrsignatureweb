@@ -59,10 +59,10 @@ export default function Nav() {
         <div
           className={`bg-black/95 backdrop-blur-sm border-b border-gold-dim transition-opacity duration-700 ${visible ? "pointer-events-auto" : ""}`}
         >
-          <div className="site-container flex items-center justify-between h-16">
+          <div className="site-container flex items-center justify-between h-[4.25rem] md:h-[4.5rem]">
             <Link
               href="/"
-              className="opacity-90 hover:opacity-100 transition-opacity duration-500 shrink-0"
+              className="opacity-95 hover:opacity-100 transition-opacity duration-500 shrink-0 py-1"
               aria-label="HAXR Signature — início"
             >
               <BrandLogo variant="navbar" priority />

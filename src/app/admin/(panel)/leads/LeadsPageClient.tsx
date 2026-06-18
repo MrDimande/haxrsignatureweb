@@ -78,12 +78,12 @@ export default function LeadsPageClient({
       ),
     },
     {
-      key: "message",
-      header: "Mensagem",
-      className: "max-w-xs",
+      key: "intent",
+      header: "O que pretende",
+      className: "max-w-sm",
       render: (row: ContactInquiry) => (
-        <p className="text-sm text-grey line-clamp-2" title={row.message}>
-          {row.message}
+        <p className="text-sm text-grey line-clamp-3" title={row.intent}>
+          {row.intent}
         </p>
       ),
     },

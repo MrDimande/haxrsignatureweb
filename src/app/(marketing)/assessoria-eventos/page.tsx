@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StructuredData from "@/components/seo/StructuredData";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
 import EditorialNarrative from "@/components/marketing/EditorialNarrative";
 import PhaseTimeline from "@/components/marketing/PhaseTimeline";
@@ -11,6 +12,7 @@ export const metadata: Metadata = marketingMetadata("assessoria");
 export default function AssessoriaEventosPage() {
   return (
     <>
+      <StructuredData page="assessoria" />
       <PageHero
         label="Assessoria de Eventos"
         headline="Direcção estratégica e operacional — para que alguém cuide de tudo por si."

@@ -1,18 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Allura,
-  Cormorant_Garamond,
-  Great_Vibes,
-  Jost,
-  Pinyon_Script,
-  Playfair_Display,
-} from "next/font/google";
+import { Cormorant_Garamond, JetBrains_Mono, Jost, Pinyon_Script } from "next/font/google";
 import { buildSiteMetadata } from "@/lib/seo";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["300", "400"],
   style: ["normal", "italic"],
   variable: "--font-cormorant",
   display: "swap",
@@ -20,7 +13,7 @@ const cormorant = Cormorant_Garamond({
 
 const jost = Jost({
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["300", "400"],
   variable: "--font-jost",
   display: "swap",
 });
@@ -32,25 +25,10 @@ const pinyonScript = Pinyon_Script({
   display: "swap",
 });
 
-const greatVibes = Great_Vibes({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--font-great-vibes",
-  display: "swap",
-});
-
-const allura = Allura({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-allura",
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
-  variable: "--font-playfair",
+  weight: ["300"],
+  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -71,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-MZ"
-      className={`${cormorant.variable} ${jost.variable} ${pinyonScript.variable} ${greatVibes.variable} ${allura.variable} ${playfair.variable}`}
+      className={`${cormorant.variable} ${jost.variable} ${pinyonScript.variable} ${jetbrainsMono.variable}`}
     >
       <body className="bg-black text-white font-sans font-light min-h-screen antialiased">
         {children}

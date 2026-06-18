@@ -21,7 +21,7 @@ export default function PillarCards({
       <div className="site-container site-prose-medium mx-auto">
         <RevealOnScroll>
           <h2 className="section-label mb-6">{label}</h2>
-          <p className="font-serif text-2xl md:text-3xl font-light text-white/90 mb-6 max-w-2xl">
+          <p className="type-headline text-white/90 mb-6 md:mb-8 max-w-2xl">
             {headline}
           </p>
           {intro ? (

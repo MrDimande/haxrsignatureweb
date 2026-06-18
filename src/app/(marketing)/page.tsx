@@ -21,7 +21,7 @@ export const metadata: Metadata = marketingMetadata("home");
 export default function HomePage() {
   return (
     <>
-      <StructuredData />
+      <StructuredData page="home" />
       <Hero />
       <PillarCards
         pillars={marketingPillars}

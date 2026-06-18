@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { rsvpFormSchema } from "@/lib/events/rsvp-validation";
 import { performRsvp } from "@/lib/events/services/rsvp.service";
+import { sendRsvpGuestEmail } from "@/lib/events/services/rsvp-email.service";
 import {
   getRequestIp,
   rateLimit,
@@ -45,7 +46,25 @@ export async function POST(request: Request) {
       return NextResponse.json(result, { status });
     }
 
-    return NextResponse.json(result);
+    const emailResult = await sendRsvpGuestEmail(
+      {
+        eventId: parsed.data.eventId,
+        token: parsed.data.token,
+        name: parsed.data.name,
+        phone: parsed.data.phone || undefined,
+        email: parsed.data.email || undefined,
+        attendance: parsed.data.attendance,
+        plusOnes: parsed.data.plusOnes,
+        dietaryNotes: parsed.data.dietaryNotes || undefined,
+        guestNotes: parsed.data.guestNotes || undefined,
+      },
+      result
+    );
+
+    return NextResponse.json({
+      ...result,
+      emailSent: emailResult.sent,
+    });
   } catch (err) {
     console.error("[api/events/rsvp]", err);
     return NextResponse.json(

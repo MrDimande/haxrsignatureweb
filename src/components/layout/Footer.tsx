@@ -3,90 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  AtSign,
-  Mail,
-  MapPin,
-  MessageCircle,
-  Phone,
-  X,
-  type LucideIcon,
-} from "lucide-react";
-import BrandRubric from "@/components/ui/BrandRubric";
+import { X } from "lucide-react";
+import BrandLogo from "@/components/ui/BrandLogo";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
-import { footerLegalNav, footerNav } from "@/lib/marketing/navigation";
+import { footerLinkGroups } from "@/lib/marketing/navigation";
 import { portfolioCopy, siteContact } from "@/lib/site-config";
 
 const legalTabs = ["condicoes", "termos", "privacidade"] as const;
 type LegalTab = (typeof legalTabs)[number];
 
-const iconStroke = "w-[15px] h-[15px] text-gold/70 stroke-[1.25]";
-
-type FooterLink = {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  href: string;
-  external?: boolean;
-};
-
-const contactLinks: FooterLink[] = [
-  {
-    icon: AtSign,
-    label: "Instagram",
-    value: siteContact.instagram.handle,
-    href: siteContact.instagram.href,
-    external: true,
-  },
-  {
-    icon: MessageCircle,
-    label: "WhatsApp",
-    value: siteContact.whatsapp.display,
-    href: siteContact.whatsapp.href,
-    external: true,
-  },
-  {
-    icon: Mail,
-    label: "Email",
-    value: siteContact.email,
-    href: `mailto:${siteContact.email}`,
-  },
-  ...siteContact.phones.map((phone) => ({
-    icon: Phone,
-    label: "Telefone",
-    value: phone.display,
-    href: `tel:${phone.tel}`,
-  })),
-  {
-    icon: MapPin,
-    label: "Escritório",
-    value: siteContact.shortLocation,
-    href: siteContact.mapsHref,
-    external: true,
-  },
-];
-
-function FooterContactLink({ item }: { item: FooterLink }) {
-  const Icon = item.icon;
-
-  return (
-    <a
-      href={item.href}
-      target={item.external ? "_blank" : undefined}
-      rel={item.external ? "noopener noreferrer" : undefined}
-      className="group flex items-center gap-3 py-2 transition-colors duration-500"
-    >
-      <Icon className={`${iconStroke} group-hover:text-gold transition-colors duration-500`} />
-      <span className="font-sans text-[10px] tracking-[0.18em] uppercase text-grey/55 group-hover:text-gold/80 transition-colors duration-500">
-        {item.value}
-      </span>
-    </a>
-  );
-}
-
 export default function Footer() {
   const year = new Date().getFullYear();
   const [activeTab, setActiveTab] = useState<LegalTab | null>(null);
+  const { footer } = portfolioCopy;
 
   const legalLabel = (tab: LegalTab) =>
     tab === "condicoes"
@@ -96,99 +25,132 @@ export default function Footer() {
         : portfolioCopy.politicaPrivacidade.label;
 
   return (
-    <footer className="relative border-t border-grey-dark/80 bg-gradient-to-b from-black via-black-soft/30 to-black">
-      <div className="site-container py-20 md:py-28">
+    <footer className="relative border-t border-grey-dark/70 bg-black">
+      <div className="site-container py-24 md:py-32 lg:py-36">
         <RevealOnScroll>
-          <div className="line-gold mb-16 md:mb-20" />
+          <div className="line-gold mb-20 md:mb-24 opacity-70" />
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-14 md:gap-10 lg:gap-16">
-            <div className="md:col-span-5 lg:col-span-5 flex flex-col justify-between gap-10">
-              <div>
-                <Link href="/" aria-label="HAXR Signature — início">
-                  <BrandRubric align="left" className="mb-8" />
-                </Link>
-                <p className="font-mono text-[9px] tracking-[0.45em] uppercase text-grey/50 mb-8">
-                  {siteContact.shortLocation}
-                </p>
-                <p className="font-serif text-base md:text-lg font-light italic text-white/35 leading-relaxed max-w-sm">
-                  {portfolioCopy.footer.commitment}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12 xl:gap-16">
+            {/* Assinatura da marca */}
+            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-10 md:gap-12">
+              <Link href="/" aria-label="HAXR Signature — início" className="inline-block w-fit">
+                <BrandLogo variant="footer" className="h-28 md:h-36" />
+              </Link>
+
+              <div className="space-y-6 max-w-md">
+                <p className="type-manifesto">{footer.manifesto}</p>
+                <p className="font-sans text-sm text-grey/70 leading-relaxed">
+                  {footer.commitment}
                 </p>
               </div>
-              <p className="font-mono text-[8px] tracking-[0.5em] uppercase text-gold/35 hidden md:block">
+
+              <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-gold/40">
                 Elegância · Precisão · Exclusividade
               </p>
             </div>
 
-            <div className="md:col-span-3 lg:col-span-3 md:border-l md:border-grey-dark/60 md:pl-10">
-              <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-grey mb-6">
-                Contacto
-              </p>
-              <nav aria-label="Canais de contacto" className="flex flex-col">
-                {contactLinks.map((item) => (
-                  <FooterContactLink key={`${item.label}-${item.href}`} item={item} />
-                ))}
-              </nav>
+            {/* Contacto em destaque */}
+            <div className="lg:col-span-4 xl:col-span-3 lg:border-l lg:border-grey-dark/50 lg:pl-12 xl:pl-14">
+              <p className="section-label mb-8 md:mb-10">Contacto</p>
+
+              <div className="space-y-8 md:space-y-10">
+                <div>
+                  <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/45 mb-3">
+                    Email
+                  </p>
+                  <a
+                    href={`mailto:${siteContact.email}`}
+                    className="font-serif text-xl md:text-2xl font-light text-white/90 hover:text-gold transition-colors duration-500 break-all"
+                  >
+                    {siteContact.email}
+                  </a>
+                </div>
+
+                <div>
+                  <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/45 mb-3">
+                    WhatsApp
+                  </p>
+                  <a
+                    href={siteContact.whatsapp.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-serif text-xl md:text-2xl font-light text-white/90 hover:text-gold transition-colors duration-500"
+                  >
+                    {siteContact.whatsapp.display}
+                  </a>
+                </div>
+
+                <div>
+                  <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/45 mb-3">
+                    Cidade
+                  </p>
+                  <a
+                    href={siteContact.mapsHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-sans text-sm md:text-base text-grey/80 hover:text-gold/80 transition-colors duration-500 leading-relaxed"
+                  >
+                    {siteContact.shortLocation}
+                  </a>
+                </div>
+
+                <Link
+                  href="/contacto"
+                  className="btn-editorial btn-editorial--outline !min-w-0 !px-6 !py-3 inline-flex"
+                >
+                  Iniciar conversa
+                </Link>
+              </div>
             </div>
 
-            <div className="md:col-span-4 lg:col-span-4 md:border-l md:border-grey-dark/60 md:pl-10 flex flex-col justify-between gap-10">
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-grey mb-6">
-                  Navegação
-                </p>
-                <nav aria-label="Secções do site" className="flex flex-col gap-3">
-                  {footerNav.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="font-sans text-[10px] tracking-[0.28em] uppercase text-grey/55 hover:text-gold/80 transition-colors duration-500 w-fit"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                  {footerLegalNav.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="font-sans text-[10px] tracking-[0.28em] uppercase text-grey/45 hover:text-gold/80 transition-colors duration-500 w-fit"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-grey mb-5">
-                  Informação legal
-                </p>
-                <div className="flex flex-col gap-3">
-                  {legalTabs.map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setActiveTab(tab)}
-                      className="font-sans text-[10px] tracking-[0.22em] uppercase text-grey/45 hover:text-gold/75 transition-colors duration-500 text-left w-fit cursor-pointer"
-                    >
-                      {legalLabel(tab)}
-                    </button>
-                  ))}
-                </div>
+            {/* Links por categoria */}
+            <div className="lg:col-span-3 xl:col-span-5 lg:border-l lg:border-grey-dark/50 lg:pl-12 xl:pl-14">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 sm:gap-8">
+                {footerLinkGroups.map((group) => (
+                  <nav key={group.title} aria-label={group.title}>
+                    <p className="section-label mb-6 md:mb-8">{group.title}</p>
+                    <ul className="space-y-4">
+                      {group.links.map((link) => (
+                        <li key={link.href}>
+                          <Link
+                            href={link.href}
+                            className="font-sans text-[11px] tracking-[0.22em] uppercase text-grey/60 hover:text-gold/85 transition-colors duration-500"
+                          >
+                            {link.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="line-gold mt-16 md:mt-20 mb-8 opacity-40" />
+          <div className="line-gold mt-20 md:mt-28 mb-10 opacity-35" />
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <p className="font-mono text-[8px] tracking-[0.35em] uppercase text-grey/40 md:hidden">
-              Elegância · Precisão · Exclusividade
-            </p>
-            <p className="font-mono text-[9px] tracking-[0.3em] text-grey/45">
-              © {year} HAXR Signature
-            </p>
-            <p className="font-mono text-[8px] tracking-[0.35em] uppercase text-grey/35">
-              Curadoria de eventos exclusivos
-            </p>
+          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-wrap gap-x-8 gap-y-3">
+              {legalTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className="font-mono text-[9px] tracking-[0.28em] uppercase text-grey/40 hover:text-gold/70 transition-colors duration-500 cursor-pointer"
+                >
+                  {legalLabel(tab)}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8 text-left sm:text-right">
+              <p className="font-mono text-[9px] tracking-[0.32em] text-grey/45">
+                © {year} HAXR Signature
+              </p>
+              <p className="font-mono text-[8px] tracking-[0.38em] uppercase text-grey/35">
+                Curadoria de eventos exclusivos
+              </p>
+            </div>
           </div>
         </RevealOnScroll>
       </div>
@@ -244,7 +206,7 @@ export default function Footer() {
                 {activeTab === "condicoes" && (
                   <div className="space-y-8">
                     <div>
-                      <h3 className="font-serif text-xl md:text-2xl font-light text-white/90 mb-4 leading-relaxed">
+                      <h3 className="type-headline text-white/90 mb-4">
                         {portfolioCopy.condicoesGerais.headline}
                       </h3>
                       <div className="space-y-4">
@@ -282,7 +244,7 @@ export default function Footer() {
 
                 {activeTab === "termos" && (
                   <div className="space-y-5">
-                    <h3 className="font-serif text-xl md:text-2xl font-light text-white/90 leading-relaxed">
+                    <h3 className="type-headline text-white/90">
                       {portfolioCopy.termosDeServico.headline}
                     </h3>
                     {portfolioCopy.termosDeServico.paragraphs.map((para) => (
@@ -295,7 +257,7 @@ export default function Footer() {
 
                 {activeTab === "privacidade" && (
                   <div className="space-y-5">
-                    <h3 className="font-serif text-xl md:text-2xl font-light text-white/90 leading-relaxed">
+                    <h3 className="type-headline text-white/90">
                       {portfolioCopy.politicaPrivacidade.headline}
                     </h3>
                     {portfolioCopy.politicaPrivacidade.paragraphs.map((para) => (

@@ -20,7 +20,8 @@ const buckets = new Map<string, Bucket>();
 
 export const RATE_LIMITS = {
   adminLogin: { max: 5, windowMs: 15 * 60 * 1000 },
-  findSeat: { max: 20, windowMs: 60 * 1000 },
+  findSeat: { max: 10, windowMs: 60 * 1000 },
+  findSeatPerEvent: { max: 15, windowMs: 60 * 1000 },
   eventAction: { max: 30, windowMs: 60 * 1000 },
 } as const satisfies Record<string, RateLimitConfig>;
 

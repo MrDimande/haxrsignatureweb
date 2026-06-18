@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { InvitationProject } from "@/lib/site-config";
+import { getDemoById } from "@/lib/demos/catalog";
 import InvitationIframe from "@/components/ui/InvitationIframe";
 
 interface LivePhoneScreenProps {
@@ -9,7 +10,9 @@ interface LivePhoneScreenProps {
 }
 
 export default function LivePhoneScreen({ project }: LivePhoneScreenProps) {
-  const { href, label, caption } = project;
+  const demo = getDemoById(project.id);
+  const embedSrc = demo?.embedUrl ?? project.href;
+  const { label, caption } = project;
   const [blocked, setBlocked] = useState(false);
 
   if (blocked) {
@@ -19,9 +22,7 @@ export default function LivePhoneScreen({ project }: LivePhoneScreenProps) {
           A experiência não pode ser embutida neste dispositivo.
         </p>
         <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={project.href}
           className="border border-gold-dim px-5 py-2.5 font-sans text-[10px] tracking-[0.3em] uppercase text-gold"
         >
           Abrir {caption}
@@ -38,7 +39,7 @@ export default function LivePhoneScreen({ project }: LivePhoneScreenProps) {
       onTouchMove={(e) => e.stopPropagation()}
     >
       <InvitationIframe
-        src={href}
+        src={embedSrc}
         title={label}
         viewportWidth={project.mobileViewportWidth}
         onBlocked={() => setBlocked(true)}

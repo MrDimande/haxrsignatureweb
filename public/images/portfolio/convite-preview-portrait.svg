@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" role="img" aria-label="Pré-visualização convite digital">
+  <defs>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#111"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </linearGradient>
+  </defs>
+  <rect width="402" height="874" fill="#000"/>
+  <rect x="16" y="24" width="370" height="826" rx="36" fill="#0a0a0a" stroke="#2a2a2a"/>
+  <rect x="28" y="72" width="346" height="730" fill="url(#screen)"/>
+  <text x="201" y="360" text-anchor="middle" fill="#c9a96e" font-family="Georgia, serif" font-size="42" font-weight="300" letter-spacing="6">HAXR</text>
+  <text x="201" y="410" text-anchor="middle" fill="#c9a96e" font-family="Georgia, serif" font-size="24" font-style="italic" opacity="0.85">Signature</text>
+  <line x1="80" y1="460" x2="322" y2="460" stroke="#c9a96e" stroke-opacity="0.25"/>
+  <text x="201" y="520" text-anchor="middle" fill="#a3a3a3" font-family="ui-monospace, monospace" font-size="10" letter-spacing="4">CONVITE DIGITAL</text>
+  <rect x="121" y="600" width="160" height="36" rx="2" fill="none" stroke="#c9a96e" stroke-opacity="0.45"/>
+  <text x="201" y="624" text-anchor="middle" fill="#c9a96e" font-family="ui-monospace, monospace" font-size="9" letter-spacing="3">CONFIRMAR</text>
+</svg>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StructuredData from "@/components/seo/StructuredData";
 import Link from "next/link";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
 import EditorialNarrative from "@/components/marketing/EditorialNarrative";
@@ -12,10 +13,11 @@ export const metadata: Metadata = marketingMetadata("areaCliente");
 export default function AreaClientePage() {
   return (
     <>
+      <StructuredData page="areaCliente" />
       <PageHero
-        label="Área do Cliente"
-        headline="O seu evento, acompanhado com a mesma atenção — hoje e amanhã."
-        description="A HAXR está a construir um ecossistema onde clientes acompanham cronograma, documentos e decisões com a clareza que cada projecto merece. A tecnologia existe para servir a relação — não para substituí-la."
+        label="Portal Exclusivo HAXR"
+        headline="A sua experiência HAXR, com a mesma atenção — hoje e no próximo capítulo."
+        description="Estamos a evoluir a forma como clientes acompanham cronograma, documentos e decisões. A tecnologia serve a relação — não a substitui."
       />
       <EditorialNarrative narrative={areaClienteNarrative} />
 
@@ -23,7 +25,7 @@ export default function AreaClientePage() {
         <div className="site-container site-prose-medium mx-auto text-center">
           <RevealOnScroll>
             <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-gold/50 mb-8">
-              O que virá
+              Portal Exclusivo HAXR
             </p>
           </RevealOnScroll>
 
@@ -40,7 +42,7 @@ export default function AreaClientePage() {
           <RevealOnScroll>
             <p className="font-sans text-sm text-grey leading-relaxed max-w-md mx-auto mb-8">
               Clientes activos continuam a ser acompanhados pela equipa HAXR —
-              com proximidade, discrição e excelência. O portal será a extensão
+              com proximidade, discrição e excelência. O portal será a evolução
               natural dessa relação.
             </p>
             <Link

@@ -1,4 +1,5 @@
 import { ADMIN_GOLD, DEFAULT_TERMS_BRAINYWRITE, DEFAULT_TERMS_HAXR } from "@/lib/admin/constants";
+import { brandAssets } from "@/lib/assets";
 import type { Business, BusinessId } from "@/lib/admin/types";
 import { siteContact } from "@/lib/site-config";
 
@@ -8,7 +9,7 @@ export const businesses: Business[] = [
   {
     id: "haxr-signature",
     name: "HAXR Signature",
-    logo: "/images/brand/logo-horizontal-gold.png",
+    logo: brandAssets.logoHorizontal,
     nuit: "150725161",
     phone: "+258 87 088 3428 · +258 82 088 3428",
     email: siteContact.email,
@@ -45,7 +46,7 @@ export const businesses: Business[] = [
   {
     id: "brainywrite",
     name: "BrainyWrite",
-    logo: "/images/brand/brainywrite-logo.png",
+    logo: brandAssets.brainywriteLogo,
     nuit: "401234567",
     phone: "+258 84 000 0000",
     email: "contacto@brainywrite.co.mz",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StructuredData from "@/components/seo/StructuredData";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import SplitText from "@/components/ui/SplitText";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
@@ -16,6 +17,7 @@ export default function SobrePage() {
 
   return (
     <>
+      <StructuredData page="sobre" />
       <PageHero
         label="Sobre a HAXR"
         headline="Porque acreditamos que eventos marcam histórias — e cada detalhe importa."

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import BrandRubric from "@/components/ui/BrandRubric";
+import BrandLogo from "@/components/ui/BrandLogo";
 import LoginForm from "@/components/admin/LoginForm";
 import { isAdminConfigured } from "@/lib/admin/auth";
 
@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
     >
       <div className="w-full max-w-md">
         <div className="text-center mb-12">
-          <BrandRubric className="mb-6" />
+          <BrandLogo variant="footer" className="mx-auto mb-6 h-28 md:h-32" />
           <p className="font-mono text-[9px] tracking-[0.45em] uppercase text-grey/50">
             Área de Administração
           </p>

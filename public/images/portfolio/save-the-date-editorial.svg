@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Save the date editorial">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#080808"/>
+      <stop offset="100%" stop-color="#15120e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <line x1="120" y1="180" x2="1080" y2="180" stroke="#c9a96e" stroke-opacity="0.25"/>
+  <line x1="120" y1="720" x2="1080" y2="720" stroke="#c9a96e" stroke-opacity="0.25"/>
+  <text x="600" y="320" text-anchor="middle" fill="#a3a3a3" font-family="ui-monospace, monospace" font-size="16" letter-spacing="10">SAVE THE DATE</text>
+  <text x="600" y="430" text-anchor="middle" fill="#f5f5f0" font-family="Georgia, serif" font-size="88" font-weight="300">12 · 09</text>
+  <text x="600" y="520" text-anchor="middle" fill="#c9a96e" font-family="Georgia, serif" font-size="36" font-style="italic">2026</text>
+  <text x="600" y="640" text-anchor="middle" fill="#a3a3a3" font-family="Georgia, serif" font-size="24" font-weight="300">Narrativa editorial · RSVP integrado</text>
+</svg>

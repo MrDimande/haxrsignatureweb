@@ -24,14 +24,14 @@ export default function PageHero({
 
         <SplitText
           as="h1"
-          className="font-serif text-3xl md:text-5xl font-light leading-relaxed text-white/92 mb-8 max-w-3xl"
+          className="type-display text-white/92 mb-8 md:mb-10 max-w-4xl leading-[1.25]"
         >
           {headline}
         </SplitText>
 
         {description ? (
           <RevealOnScroll delay={0.08}>
-            <p className="font-sans text-sm md:text-base text-grey leading-relaxed max-w-2xl">
+            <p className="type-lead text-grey max-w-2xl">
               {description}
             </p>
           </RevealOnScroll>
@@ -64,23 +64,20 @@ export function CTABand({
     <section className="relative py-20 md:py-28 border-t border-grey-dark/80">
       <div className="site-container site-prose-medium mx-auto text-center">
         <RevealOnScroll>
-          <h2 className="font-serif text-2xl md:text-3xl font-light text-white/90 mb-4">
+          <h2 className="type-headline text-white/90 mb-5 md:mb-6">
             {headline}
           </h2>
-          <p className="font-sans text-sm text-grey max-w-xl mx-auto mb-10">
+          <p className="type-lead text-grey max-w-xl mx-auto mb-12 md:mb-14">
             {description}
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href={primaryHref}
-              className="inline-flex items-center justify-center px-8 py-3 font-mono text-[10px] tracking-[0.3em] uppercase text-black bg-gold hover:bg-gold/90 transition-colors duration-500"
-            >
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 md:gap-5">
+            <Link href={primaryHref} className="btn-editorial btn-editorial--solid">
               {primaryLabel}
             </Link>
             {secondaryHref && secondaryLabel ? (
               <Link
                 href={secondaryHref}
-                className="inline-flex items-center justify-center px-8 py-3 font-mono text-[10px] tracking-[0.3em] uppercase text-gold/70 border border-gold-dim hover:text-gold hover:border-gold/40 transition-colors duration-500"
+                className="btn-editorial btn-editorial--outline"
               >
                 {secondaryLabel}
               </Link>

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import SplitType from "split-type";
 import { gsap } from "@/lib/gsap";
+import { shouldUseScrollAnimations } from "@/lib/motion/preferences";
 
 interface SplitTextProps {
   children: string;
@@ -25,22 +26,27 @@ export default function SplitText({
     const el = ref.current;
     if (!el) return;
 
+    if (!shouldUseScrollAnimations()) {
+      gsap.set(el, { opacity: 1 });
+      return;
+    }
+
     const split = new SplitType(el, { types: "lines,words" });
 
-    gsap.set(split.words, { opacity: 0, y: 24 });
+    gsap.set(split.words, { opacity: 0, y: 20 });
 
     const animation = gsap.to(split.words, {
       opacity: 1,
       y: 0,
-      duration: 1,
-      stagger: 0.04,
+      duration: 0.9,
+      stagger: 0.03,
       delay,
       ease: "power3.out",
       ...(trigger
         ? {
             scrollTrigger: {
               trigger: el,
-              start: "top 85%",
+              start: "top 88%",
               once: true,
             },
           }

@@ -3,6 +3,12 @@ import {
     isAdminConfigured,
     isValidSession,
 } from "@/lib/admin/auth";
+import {
+    isCanonicalHost,
+    isPreviewDeployment,
+    shouldRedirectToCanonical,
+    CANONICAL_SITE_URL,
+} from "@/lib/seo/canonical-host";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -26,8 +32,25 @@ function redirectToLogin(request: NextRequest, pathname: string) {
   return NextResponse.redirect(loginUrl);
 }
 
+function redirectToCanonicalHost(request: NextRequest): NextResponse {
+  const canonical = new URL(request.nextUrl.pathname + request.nextUrl.search, CANONICAL_SITE_URL);
+  return NextResponse.redirect(canonical, 308);
+}
+
+function applySeoHeaders(response: NextResponse): NextResponse {
+  if (isPreviewDeployment()) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  }
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = request.headers.get("host") ?? "";
+
+  if (shouldRedirectToCanonical(host)) {
+    return redirectToCanonicalHost(request);
+  }
 
   if (isProtectedAdminApi(pathname)) {
     if (!isAdminConfigured()) {
@@ -39,16 +62,20 @@ export async function middleware(request: NextRequest) {
       return unauthorizedApiResponse();
     }
 
-    return NextResponse.next();
+    return applySeoHeaders(NextResponse.next());
   }
 
   if (!pathname.startsWith("/admin")) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    if (!isCanonicalHost(host) || isPreviewDeployment()) {
+      response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    }
+    return response;
   }
 
   if (!isAdminConfigured()) {
     if (PUBLIC_ADMIN_PATHS.has(pathname)) {
-      return NextResponse.next();
+      return applySeoHeaders(NextResponse.next());
     }
     return redirectToLogin(request, pathname);
   }
@@ -58,7 +85,7 @@ export async function middleware(request: NextRequest) {
     if (await isValidSession(session)) {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
-    return NextResponse.next();
+    return applySeoHeaders(NextResponse.next());
   }
 
   const session = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
@@ -70,9 +97,11 @@ export async function middleware(request: NextRequest) {
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
-  return response;
+  return applySeoHeaders(response);
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff2?)$).*)",
+  ],
 };
