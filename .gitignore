@@ -18,6 +18,13 @@ yarn-error.log*
 .env
 .env*.local
 !.env.example
+.env.vercel.core.preview
+.env.vercel.core.prod
+.env.vercel.*.preview
+.env.vercel.*.prod
+.env.staging.local
+.env.preview.local
+.env.production.local
 
 # typescript
 next-env.d.ts
