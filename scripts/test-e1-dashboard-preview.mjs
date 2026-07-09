@@ -7,9 +7,18 @@ import { resolve } from "node:path";
 
 const PREVIEW_REF = "uxleigndoomoezwsxlan";
 const STAGING_USER_ID = "acd1d7b7-b679-4c8b-94e1-4d4552f1d8ee";
-const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
 const FOREIGN_EVENT_ID_FALLBACK = "00000000-0000-4000-8000-000000000001";
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
+
+function resolveStagingConfig(fileEnv) {
+  const email = process.env.STAGING_TEST_EMAIL?.trim() || fileEnv.STAGING_TEST_EMAIL?.trim();
+  const password =
+    process.env.STAGING_TEST_PASSWORD?.trim() || fileEnv.STAGING_TEST_PASSWORD?.trim();
+  const eventId =
+    process.env.STAGING_TEST_EVENT_ID?.trim() || fileEnv.STAGING_TEST_EVENT_ID?.trim();
+
+  return { email, password, eventId };
+}
 
 function loadEnv(fileName) {
   const filePath = resolve(process.cwd(), fileName);
@@ -37,14 +46,23 @@ if (env.NEXT_PUBLIC_SUPABASE_URL.includes("oxsrdmydlqyvnueedgtl")) {
   process.exit(1);
 }
 
+const staging = resolveStagingConfig(env);
+if (!staging.email || !staging.password || !staging.eventId) {
+  console.error(
+    "ABORT: set STAGING_TEST_EMAIL, STAGING_TEST_PASSWORD and STAGING_TEST_EVENT_ID " +
+      "(env vars or .env.development.local).",
+  );
+  process.exit(1);
+}
+
 const supabase = createClient(
   env.NEXT_PUBLIC_SUPABASE_URL,
   env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
 const { data: auth, error: authError } = await supabase.auth.signInWithPassword({
-  email: "staging-a@haxrsignature.test",
-  password: "HaxrStaging#2026!",
+  email: staging.email,
+  password: staging.password,
 });
 
 if (authError || !auth.session?.access_token) {
@@ -94,12 +112,12 @@ async function resolveForeignEventId() {
   return data?.id ?? null;
 }
 
-const own = await getDashboard(EVENT_ID);
+const own = await getDashboard(staging.eventId);
 const foreignEventId = await resolveForeignEventId();
 const foreign = await getDashboard(foreignEventId ?? FOREIGN_EVENT_ID_FALLBACK);
 const missing = await getDashboard("00000000-0000-4000-8000-000000009999");
 const unauth = await fetch(
-  `${API_BASE}/api/events/${encodeURIComponent(EVENT_ID)}/dashboard`,
+  `${API_BASE}/api/events/${encodeURIComponent(staging.eventId)}/dashboard`,
   { cache: "no-store" },
 ).then(async (response) => ({
   status: response.status,
@@ -113,7 +131,7 @@ const foreignPass = foreignEventId
 const pass =
   own.status === 200 &&
   own.body.ok === true &&
-  own.body.data?.eventOverview?.eventId === EVENT_ID &&
+  own.body.data?.eventOverview?.eventId === staging.eventId &&
   foreignPass &&
   missing.status === 404 &&
   missing.body.error === "not_found" &&
