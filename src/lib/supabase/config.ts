@@ -35,6 +35,27 @@ export function getSupabaseJwtProjectRef(token?: string): string | null {
   }
 }
 
+/** Reads the Supabase JWT role without logging the token. */
+export function getSupabaseJwtRole(token?: string): string | null {
+  const value = token?.trim();
+  if (!value) return null;
+
+  const payload = value.split(".")[1];
+  if (!payload) return null;
+
+  try {
+    const json = JSON.parse(
+      Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString(
+        "utf8",
+      ),
+    ) as { role?: unknown };
+
+    return typeof json.role === "string" ? json.role : null;
+  } catch {
+    return null;
+  }
+}
+
 export function isSupabaseAnonConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -112,6 +133,14 @@ export function validateClientAppServiceRoleEnvironment(): ClientAppAuthEnvCheck
       ok: false,
       message:
         "SUPABASE_SERVICE_ROLE_KEY inválida. Use a service role do preview uxleigndoomoezwsxlan em .env.development.local.",
+    };
+  }
+
+  if (getSupabaseJwtRole(process.env.SUPABASE_SERVICE_ROLE_KEY) !== "service_role") {
+    return {
+      ok: false,
+      message:
+        "SUPABASE_SERVICE_ROLE_KEY não tem role service_role. Use a service role do preview uxleigndoomoezwsxlan em .env.development.local.",
     };
   }
 

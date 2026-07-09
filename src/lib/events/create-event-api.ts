@@ -16,6 +16,8 @@ export type CreateEventApiResponseBody =
         eventType: string;
         eventDate: string | null;
         isActive: boolean;
+        operationalEventId: string | null;
+        operationalLinked: boolean;
         createdAt: string;
         redirectTo: string;
       };

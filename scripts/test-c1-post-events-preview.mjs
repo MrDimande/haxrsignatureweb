@@ -144,6 +144,19 @@ function validatePostResponse(result, label) {
     return { valid: false, reason: `${label}: missing eventId` };
   }
 
+  const operationalEventId = result.body?.data?.operationalEventId;
+  if (
+    !operationalEventId ||
+    typeof operationalEventId !== "string" ||
+    !operationalEventId.trim()
+  ) {
+    return { valid: false, reason: `${label}: missing operationalEventId` };
+  }
+
+  if (result.body?.data?.operationalLinked !== true) {
+    return { valid: false, reason: `${label}: operationalLinked !== true` };
+  }
+
   return { valid: true, eventId };
 }
 
@@ -212,6 +225,8 @@ if (outcome.pass) {
         pass: true,
         mode: outcome.mode,
         eventId: outcome.eventId,
+        operationalEventId: first.body.data.operationalEventId,
+        operationalLinked: first.body.data.operationalLinked,
         summary:
           outcome.mode === "created_first_run"
             ? "PASS: 201 + 200 idempotent"

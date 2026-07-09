@@ -55,6 +55,7 @@ export type ClientEventInsert = {
   source?: ClientEventSource;
   services_interested?: string[];
   phone?: string | null;
+  operational_event_id?: string | null;
   onboarding_fingerprint?: string | null;
   is_active?: boolean;
 };
@@ -82,6 +83,8 @@ export type ClientEventPublic = {
   eventType: ClientEventType;
   eventDate: string | null;
   isActive: boolean;
+  operationalEventId: string | null;
+  operationalLinked: boolean;
   createdAt: string;
   redirectTo: string;
 };
