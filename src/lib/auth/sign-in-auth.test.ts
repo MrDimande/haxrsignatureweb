@@ -3,6 +3,7 @@ import { afterEach, describe, it } from "node:test";
 import {
   hasSignInFieldErrors,
   mapSupabaseSignInError,
+  signOutFromSupabase,
   signInWithEmailPassword,
   validateSignInCredentials,
   type EmailPasswordSignInClient,
@@ -179,6 +180,36 @@ describe("sign-in-auth", () => {
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.match(result.formError, /ligar ao servidor/i);
+    }
+  });
+
+  it("signOutFromSupabase calls Supabase signOut", async () => {
+    let called = false;
+    const result = await signOutFromSupabase({
+      auth: {
+        signOut: async () => {
+          called = true;
+          return { error: null };
+        },
+      },
+    });
+
+    assert.equal(called, true);
+    assert.deepEqual(result, { ok: true });
+  });
+
+  it("signOutFromSupabase maps Supabase errors", async () => {
+    const result = await signOutFromSupabase({
+      auth: {
+        signOut: async () => ({
+          error: { message: "Failed to fetch" },
+        }),
+      },
+    });
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.match(result.message, /ligar ao servidor/i);
     }
   });
 });
