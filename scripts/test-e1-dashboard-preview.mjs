@@ -138,11 +138,23 @@ const pass =
   unauth.status === 401 &&
   unauth.body.error === "unauthorized";
 
+const kpiSnapshot = own.body.ok
+  ? {
+      operationalLinked: own.body.data.meta?.operationalLinked ?? false,
+      operationalEventId: own.body.data.meta?.operationalEventId ?? null,
+      guestsTotal: own.body.data.guestSnapshot?.total,
+      guestsConfirmed: own.body.data.guestSnapshot?.confirmed,
+      paidAmount: own.body.data.financeSnapshot?.paidAmount,
+      vendorsActive: own.body.data.stats?.find((s) => s.id === "vendors-active")?.value,
+    }
+  : null;
+
 console.log(
   JSON.stringify(
     {
       pass,
       own: { status: own.status, eventName: own.body.data?.eventOverview?.name },
+      kpis: kpiSnapshot,
       foreign: {
         status: foreign.status,
         error: foreign.body.error,

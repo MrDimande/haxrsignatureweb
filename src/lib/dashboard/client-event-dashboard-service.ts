@@ -1,11 +1,19 @@
 import { formatOnboardingEventDate } from "@/lib/auth/onboarding-storage";
 import type { ClientAppProfile } from "@/lib/auth/app-user-display";
+import {
+  EMPTY_OPERATIONAL_KPIS,
+  fetchOperationalKpis,
+  listOperationalVendors,
+  mapVendorStatusLabel,
+  type ClientEventOperationalKpis,
+} from "@/lib/dashboard/client-event-operational-kpis";
 import type { DashboardData } from "@/lib/dashboard/types";
 import type {
   ClientEventRow,
   ClientEventStatus,
   ClientEventType,
 } from "@/lib/events/client-app-database.types";
+import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export type ClientEventDashboardAccessResult =
   | { kind: "ok"; event: ClientEventRow }
@@ -75,17 +83,80 @@ function resolveBudgetEstimated(event: ClientEventRow): number {
   return event.budget_max ?? event.budget_min ?? 0;
 }
 
+function percentOf(part: number, total: number): number {
+  if (total <= 0) {
+    return 0;
+  }
+  return Math.min(100, Math.round((part / total) * 100));
+}
+
+function resolveGuestDisplayMetrics(
+  event: ClientEventRow,
+  operationalKpis: ClientEventOperationalKpis | null,
+): {
+  total: number;
+  confirmed: number;
+  pending: number;
+  declined: number;
+  plusOnes: number;
+  tablesAssigned: number;
+  tablesTotal: number;
+} {
+  const estimatedGuests = event.estimated_guests ?? 0;
+
+  if (!event.operational_event_id || !operationalKpis) {
+    return {
+      total: estimatedGuests,
+      confirmed: 0,
+      pending: estimatedGuests,
+      declined: 0,
+      plusOnes: 0,
+      tablesAssigned: 0,
+      tablesTotal: 0,
+    };
+  }
+
+  return {
+    total: operationalKpis.guestsTotal,
+    confirmed: operationalKpis.guestsConfirmed,
+    pending: operationalKpis.guestsPending,
+    declined: operationalKpis.guestsDeclined,
+    plusOnes: operationalKpis.guestsPlusOnes,
+    tablesAssigned: operationalKpis.tablesAssigned,
+    tablesTotal: operationalKpis.tablesTotal,
+  };
+}
+
 export function mapClientEventToDashboardData(
   event: ClientEventRow,
   profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null,
+  operationalKpis: ClientEventOperationalKpis | null = null,
 ): DashboardData {
-  const guests = event.estimated_guests ?? 0;
   const budget = resolveBudgetEstimated(event);
   const dateIso = event.event_date ?? undefined;
   const dateLabel = dateIso ? formatOnboardingEventDate(dateIso) : "Data por definir";
   const responsible =
     profile?.full_name?.trim() ||
     (profile?.app_role === "planner" ? "Planner HAXR" : "Equipa HAXR");
+
+  const hasOperationalLink = Boolean(event.operational_event_id);
+  const kpis = hasOperationalLink && operationalKpis ? operationalKpis : EMPTY_OPERATIONAL_KPIS;
+  const guests = resolveGuestDisplayMetrics(event, hasOperationalLink ? kpis : null);
+
+  const checklistOpen = Math.max(0, kpis.checklistTotal - kpis.checklistCompleted);
+  const documentsCount =
+    kpis.documentsCount + kpis.conciergeUploadsCount + kpis.conciergePortalItemsCount;
+  const financeRegistered = kpis.paymentsTotal;
+  const financePending = Math.max(0, budget - kpis.paymentsTotal);
+
+  const vendorProgress = kpis.vendorsCount > 0 ? Math.min(100, kpis.vendorsCount * 15) : 0;
+  const progressOverall = Math.round(
+    (percentOf(guests.confirmed, Math.max(guests.total, 1)) +
+      percentOf(kpis.checklistCompleted, Math.max(kpis.checklistTotal, 1)) +
+      vendorProgress +
+      percentOf(kpis.paymentsTotal, Math.max(budget, 1))) /
+      4,
+  );
 
   return {
     eventOverview: {
@@ -98,27 +169,36 @@ export function mapClientEventToDashboardData(
       location: event.event_location || "Local por definir",
       status: mapStatusLabel(event.status),
       responsible,
-      progress: event.status === "planning" ? 8 : event.status === "active" ? 20 : 0,
+      progress:
+        hasOperationalLink && operationalKpis
+          ? progressOverall
+          : event.status === "planning"
+            ? 8
+            : event.status === "active"
+              ? 20
+              : 0,
     },
     meta: {
       lastSyncedAt: event.updated_at,
       lastSyncedLabel: "Agora",
       role: "client",
+      operationalLinked: hasOperationalLink,
+      operationalEventId: event.operational_event_id,
     },
     stats: [
       {
         id: "guests-estimated",
-        label: "Convidados estimados",
-        value: guests,
+        label: hasOperationalLink ? "Convidados registados" : "Convidados estimados",
+        value: guests.total,
         valueType: "number",
-        detail: "definidos no evento",
+        detail: hasOperationalLink ? "na lista operacional" : "definidos no evento",
       },
       {
         id: "guests-confirmed",
         label: "Convidados confirmados",
-        value: 0,
+        value: guests.confirmed,
         valueType: "number",
-        detail: `de ${guests} convidados`,
+        detail: `de ${guests.total} convidados`,
       },
       {
         id: "budget-planned",
@@ -130,32 +210,71 @@ export function mapClientEventToDashboardData(
       {
         id: "tasks-open",
         label: "Tarefas abertas",
-        value: 0,
+        value: checklistOpen,
         valueType: "number",
-        detail: "sem dados operacionais",
+        detail:
+          hasOperationalLink && kpis.checklistTotal > 0
+            ? `${kpis.checklistCompleted} concluídas`
+            : hasOperationalLink
+              ? "sem checklist operacional"
+              : "sem dados operacionais",
       },
       {
         id: "vendors-active",
         label: "Fornecedores activos",
-        value: 0,
+        value: kpis.vendorsCount,
         valueType: "number",
-        detail: "comece a adicionar",
+        detail:
+          kpis.vendorsCount > 0
+            ? "registados no evento"
+            : hasOperationalLink
+              ? "comece a adicionar"
+              : "sem ligação operacional",
       },
       {
         id: "documents",
         label: "Documentos",
-        value: 0,
+        value: documentsCount,
         valueType: "number",
-        detail: "HAXR Concierge",
+        detail: hasOperationalLink ? "operacionais + Concierge" : "HAXR Concierge",
       },
     ],
     progress: [
-      { id: "overall", name: "Progresso Geral", value: event.status === "planning" ? 8 : 0 },
-      { id: "checklist", name: "Checklist", value: 0 },
-      { id: "guests", name: "Convidados", value: 0 },
-      { id: "vendors", name: "Fornecedores", value: 0 },
-      { id: "finance", name: "Financeiro", value: budget > 0 ? 5 : 0 },
-      { id: "invitation", name: "Convite Digital", value: 0 },
+      {
+        id: "overall",
+        name: "Progresso Geral",
+        value:
+          hasOperationalLink && operationalKpis
+            ? progressOverall
+            : event.status === "planning"
+              ? 8
+              : 0,
+      },
+      {
+        id: "checklist",
+        name: "Checklist",
+        value: percentOf(kpis.checklistCompleted, Math.max(kpis.checklistTotal, 1)),
+      },
+      {
+        id: "guests",
+        name: "Convidados",
+        value: percentOf(guests.confirmed, Math.max(guests.total, 1)),
+      },
+      {
+        id: "vendors",
+        name: "Fornecedores",
+        value: kpis.vendorsCount > 0 ? Math.min(100, kpis.vendorsCount * 15) : 0,
+      },
+      {
+        id: "finance",
+        name: "Financeiro",
+        value: percentOf(kpis.paymentsTotal, Math.max(budget, 1)),
+      },
+      {
+        id: "invitation",
+        name: "Convite Digital",
+        value: 0,
+      },
     ],
     nextActions: [
       {
@@ -188,9 +307,12 @@ export function mapClientEventToDashboardData(
         id: "guests",
         title: "Convidados",
         description: "Lista e confirmações",
-        metric: `${guests} estimados`,
+        metric:
+          guests.total > 0
+            ? `${guests.confirmed}/${guests.total} confirmados`
+            : "0 registados",
         href: `/app/events/${event.id}/guests`,
-        status: "setup",
+        status: guests.total > 0 ? "active" : "setup",
         category: "Experiência",
       },
       {
@@ -206,41 +328,45 @@ export function mapClientEventToDashboardData(
         id: "checklist",
         title: "Checklist",
         description: "Tarefas do evento",
-        metric: "0 tarefas",
+        metric:
+          kpis.checklistTotal > 0
+            ? `${kpis.checklistCompleted}/${kpis.checklistTotal} tarefas`
+            : "0 tarefas",
         href: `/app/events/${event.id}/checklist`,
-        status: "setup",
+        status: kpis.checklistTotal > 0 ? "active" : "setup",
         category: "Planeamento",
       },
       {
         id: "concierge",
         title: "HAXR Concierge",
         description: "Documentos e propostas",
-        metric: "Activar",
+        metric:
+          documentsCount > 0 ? `${documentsCount} documentos` : "Activar",
         href: "/app/concierge",
-        status: "setup",
+        status: documentsCount > 0 ? "active" : "setup",
         category: "Overview",
       },
     ],
     financeSnapshot: {
       currency: "MT",
       budgetEstimated: budget,
-      budgetRegistered: 0,
-      paidAmount: 0,
-      pendingAmount: 0,
+      budgetRegistered: financeRegistered,
+      paidAmount: kpis.paymentsTotal,
+      pendingAmount: financePending,
       nextPayment: {
         vendorName: "—",
         dueDate: "—",
-        amount: 0,
+        amount: financePending,
       },
     },
     guestSnapshot: {
-      total: guests,
-      confirmed: 0,
-      pending: guests,
-      declined: 0,
-      plusOnes: 0,
-      tablesAssigned: 0,
-      tablesTotal: 0,
+      total: guests.total,
+      confirmed: guests.confirmed,
+      pending: guests.pending,
+      declined: guests.declined,
+      plusOnes: guests.plusOnes,
+      tablesAssigned: guests.tablesAssigned,
+      tablesTotal: guests.tablesTotal,
     },
     vendorSnapshot: [],
     recentActivity: [
@@ -255,12 +381,44 @@ export function mapClientEventToDashboardData(
     ],
     conciergeSummary: {
       documentsToday: 0,
-      contractsAwaiting: 0,
+      contractsAwaiting: kpis.conciergeReviewItemsCount,
       proposalsApproval: 0,
-      guestsNoResponse: guests,
+      guestsNoResponse: guests.pending,
       href: "/app/concierge",
     },
   };
+}
+
+export async function mapClientEventToDashboardDataWithOperationalKpis(
+  event: ClientEventRow,
+  profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null,
+): Promise<DashboardData> {
+  let operationalKpis: ClientEventOperationalKpis | null = null;
+  let vendorSnapshot: DashboardData["vendorSnapshot"] = [];
+
+  if (event.operational_event_id && isSupabaseConfigured()) {
+    try {
+      const adminClient = createAdminClient();
+      operationalKpis = await fetchOperationalKpis(
+        event.operational_event_id,
+        { clientEventId: event.id, slug: event.slug },
+        adminClient as never,
+      );
+      const vendors = await listOperationalVendors(event.operational_event_id, adminClient as never);
+      vendorSnapshot = vendors.map((vendor) => ({
+        id: vendor.id,
+        name: vendor.name,
+        service: vendor.service_category || "Fornecedor",
+        status: mapVendorStatusLabel(vendor.status),
+      }));
+    } catch {
+      operationalKpis = null;
+      vendorSnapshot = [];
+    }
+  }
+
+  const dashboard = mapClientEventToDashboardData(event, profile, operationalKpis);
+  return { ...dashboard, vendorSnapshot };
 }
 
 export async function resolveClientEventDashboardAccess(
@@ -323,6 +481,9 @@ export async function getClientEventDashboardData(input: {
   return {
     kind: "ok",
     event: access.event,
-    dashboard: mapClientEventToDashboardData(access.event, input.profile ?? null),
+    dashboard: await mapClientEventToDashboardDataWithOperationalKpis(
+      access.event,
+      input.profile ?? null,
+    ),
   };
 }

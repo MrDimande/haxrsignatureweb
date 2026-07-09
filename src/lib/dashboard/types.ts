@@ -129,6 +129,9 @@ export interface DashboardMeta {
   lastSyncedLabel: string;
   /** TODO: Resolve from authenticated session */
   role?: DashboardRole;
+  /** True when client_events.operational_event_id is linked to events(id). */
+  operationalLinked?: boolean;
+  operationalEventId?: string | null;
 }
 
 export interface DashboardData {
