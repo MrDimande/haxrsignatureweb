@@ -11,7 +11,24 @@ import { ONBOARDING_COMPLETE_KEY } from "../src/lib/auth/onboarding-status.ts";
 import { performOnboardingSync } from "../src/lib/auth/onboarding-sync.ts";
 
 const PREVIEW_REF = "uxleigndoomoezwsxlan";
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3001";
+
+function trimEnv(value) {
+  return value?.trim() || undefined;
+}
+
+function resolveStagingConfig(fileEnv) {
+  const email =
+    trimEnv(process.env.STAGING_TEST_EMAIL) || trimEnv(fileEnv.STAGING_TEST_EMAIL);
+  const password =
+    trimEnv(process.env.STAGING_TEST_PASSWORD) || trimEnv(fileEnv.STAGING_TEST_PASSWORD);
+  const baseUrl =
+    trimEnv(process.env.STAGING_TEST_BASE_URL) ||
+    trimEnv(process.env.API_BASE_URL) ||
+    trimEnv(fileEnv.STAGING_TEST_BASE_URL) ||
+    "http://localhost:3000";
+
+  return { email, password, baseUrl };
+}
 
 function loadEnv(fileName) {
   const filePath = resolve(process.cwd(), fileName);
@@ -36,6 +53,15 @@ if (!env.NEXT_PUBLIC_SUPABASE_URL?.includes(PREVIEW_REF)) {
 
 if (env.NEXT_PUBLIC_SUPABASE_URL.includes("oxsrdmydlqyvnueedgtl")) {
   console.error("ABORT: production ref detected.");
+  process.exit(1);
+}
+
+const staging = resolveStagingConfig(env);
+if (!staging.email || !staging.password) {
+  console.error(
+    "ABORT: set STAGING_TEST_EMAIL and STAGING_TEST_PASSWORD " +
+      "(env vars or .env.development.local).",
+  );
   process.exit(1);
 }
 
@@ -79,8 +105,8 @@ const supabase = createClient(
 );
 
 const { data: auth, error: authError } = await supabase.auth.signInWithPassword({
-  email: "staging-a@haxrsignature.test",
-  password: "HaxrStaging#2026!",
+  email: staging.email,
+  password: staging.password,
 });
 
 if (authError) {
@@ -102,7 +128,7 @@ const first = await performOnboardingSync({
   hashFingerprint: nodeSha256,
   fetchFn: async (url, init) => {
     postCount += 1;
-    return fetch(`${API_BASE}${url}`, {
+    return fetch(`${staging.baseUrl}${url}`, {
       ...init,
       headers: {
         ...(init?.headers ?? {}),

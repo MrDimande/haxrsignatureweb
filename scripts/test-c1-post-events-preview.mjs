@@ -7,9 +7,27 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const PREVIEW_REF = "uxleigndoomoezwsxlan";
-const STAGING_EMAIL = "staging-a@haxrsignature.test";
-const STAGING_PASSWORD = "HaxrStaging#2026!";
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
+
+function trimEnv(value) {
+  return value?.trim() || undefined;
+}
+
+function resolveStagingConfig(fileEnv) {
+  const email =
+    trimEnv(process.env.STAGING_TEST_EMAIL) || trimEnv(fileEnv.STAGING_TEST_EMAIL);
+  const password =
+    trimEnv(process.env.STAGING_TEST_PASSWORD) || trimEnv(fileEnv.STAGING_TEST_PASSWORD);
+  const eventFingerprint =
+    trimEnv(process.env.STAGING_TEST_EVENT_FINGERPRINT) ||
+    trimEnv(fileEnv.STAGING_TEST_EVENT_FINGERPRINT);
+  const baseUrl =
+    trimEnv(process.env.STAGING_TEST_BASE_URL) ||
+    trimEnv(process.env.API_BASE_URL) ||
+    trimEnv(fileEnv.STAGING_TEST_BASE_URL) ||
+    "http://localhost:3000";
+
+  return { email, password, eventFingerprint, baseUrl };
+}
 
 function loadEnvFile(fileName) {
   const filePath = resolve(process.cwd(), fileName);
@@ -64,6 +82,15 @@ if (!serviceRoleKey) {
   );
 }
 
+const staging = resolveStagingConfig(env);
+if (!staging.email || !staging.password || !staging.eventFingerprint) {
+  console.error(
+    "ABORT: set STAGING_TEST_EMAIL, STAGING_TEST_PASSWORD and STAGING_TEST_EVENT_FINGERPRINT " +
+      "(env vars or .env.development.local).",
+  );
+  process.exit(1);
+}
+
 const payload = {
   eventType: "wedding",
   eventName: "Evento Teste Staging A",
@@ -77,7 +104,7 @@ const payload = {
   servicesInterested: ["convites_digitais", "rsvp"],
   phone: "+258840000000",
   source: "onboarding",
-  localFingerprint: "staging-a-evento-teste-001",
+  localFingerprint: staging.eventFingerprint,
 };
 
 const authClient = createClient(supabaseUrl, anonKey, {
@@ -86,8 +113,8 @@ const authClient = createClient(supabaseUrl, anonKey, {
 
 const { data: signInData, error: signInError } =
   await authClient.auth.signInWithPassword({
-    email: STAGING_EMAIL,
-    password: STAGING_PASSWORD,
+    email: staging.email,
+    password: staging.password,
   });
 
 if (signInError || !signInData.session?.access_token) {
@@ -98,7 +125,7 @@ if (signInError || !signInData.session?.access_token) {
 const accessToken = signInData.session.access_token;
 
 async function postEvent(label) {
-  const response = await fetch(`${API_BASE}/api/events`, {
+  const response = await fetch(`${staging.baseUrl}/api/events`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
