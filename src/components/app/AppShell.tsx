@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { resolveAppNavIcon } from "@/components/app/AppNavIcons";
 import HaxrLogo from "@/components/brand/HaxrLogo";
+import OnboardingSyncController from "@/components/app/OnboardingSyncController";
 import { signOutFromSupabase } from "@/lib/auth/sign-in-auth";
 import type { AppUserDisplay } from "@/lib/auth/app-user-display";
 import { useAppEvent } from "@/hooks/use-app-event";
@@ -93,6 +94,9 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
 
   return (
     <div className="flex min-h-screen overflow-x-hidden bg-[#0c0a09] font-sans text-zinc-100 antialiased">
+      <Suspense fallback={null}>
+        <OnboardingSyncController />
+      </Suspense>
       <aside className="scrollbar-none sticky top-0 z-40 hidden h-screen w-[260px] shrink-0 select-none flex-col overflow-y-auto border-r border-brand-champagne/10 bg-[#0c0a09] lg:flex">
         <div className="flex flex-col justify-center border-b border-brand-champagne/10 p-6">
           <HaxrLogo
