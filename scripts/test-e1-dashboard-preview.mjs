@@ -1,0 +1,142 @@
+/**
+ * E.1 preview smoke — GET /api/events/[eventId]/dashboard with real auth.
+ */
+import { createClient } from "@supabase/supabase-js";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const PREVIEW_REF = "uxleigndoomoezwsxlan";
+const STAGING_USER_ID = "acd1d7b7-b679-4c8b-94e1-4d4552f1d8ee";
+const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
+const FOREIGN_EVENT_ID_FALLBACK = "00000000-0000-4000-8000-000000000001";
+const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
+
+function loadEnv(fileName) {
+  const filePath = resolve(process.cwd(), fileName);
+  if (!existsSync(filePath)) return {};
+
+  const entries = {};
+  for (const line of readFileSync(filePath, "utf8").split(/\r?\n/)) {
+    if (!line || line.startsWith("#")) continue;
+    const idx = line.indexOf("=");
+    if (idx === -1) continue;
+    entries[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+  }
+  return entries;
+}
+
+const env = { ...loadEnv(".env.local"), ...loadEnv(".env.development.local") };
+
+if (!env.NEXT_PUBLIC_SUPABASE_URL?.includes(PREVIEW_REF)) {
+  console.error(`ABORT: preview ref ${PREVIEW_REF} required.`);
+  process.exit(1);
+}
+
+if (env.NEXT_PUBLIC_SUPABASE_URL.includes("oxsrdmydlqyvnueedgtl")) {
+  console.error("ABORT: production ref detected.");
+  process.exit(1);
+}
+
+const supabase = createClient(
+  env.NEXT_PUBLIC_SUPABASE_URL,
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+);
+
+const { data: auth, error: authError } = await supabase.auth.signInWithPassword({
+  email: "staging-a@haxrsignature.test",
+  password: "HaxrStaging#2026!",
+});
+
+if (authError || !auth.session?.access_token) {
+  console.error("AUTH FAIL");
+  process.exit(1);
+}
+
+const token = auth.session.access_token;
+
+async function getDashboard(eventId) {
+  const response = await fetch(
+    `${API_BASE}/api/events/${encodeURIComponent(eventId)}/dashboard`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+  const body = await response.json();
+  return { status: response.status, body };
+}
+
+async function resolveForeignEventId() {
+  if (process.env.FOREIGN_EVENT_ID?.trim()) {
+    return process.env.FOREIGN_EVENT_ID.trim();
+  }
+
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    return null;
+  }
+
+  const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await admin
+    .from("client_events")
+    .select("id")
+    .neq("owner_user_id", STAGING_USER_ID)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("WARN: foreign event lookup failed:", error.message);
+    return null;
+  }
+
+  return data?.id ?? null;
+}
+
+const own = await getDashboard(EVENT_ID);
+const foreignEventId = await resolveForeignEventId();
+const foreign = await getDashboard(foreignEventId ?? FOREIGN_EVENT_ID_FALLBACK);
+const missing = await getDashboard("00000000-0000-4000-8000-000000009999");
+const unauth = await fetch(
+  `${API_BASE}/api/events/${encodeURIComponent(EVENT_ID)}/dashboard`,
+  { cache: "no-store" },
+).then(async (response) => ({
+  status: response.status,
+  body: await response.json(),
+}));
+
+const foreignPass = foreignEventId
+  ? foreign.status === 403 && foreign.body.error === "forbidden"
+  : foreign.status === 404 && foreign.body.error === "not_found";
+
+const pass =
+  own.status === 200 &&
+  own.body.ok === true &&
+  own.body.data?.eventOverview?.eventId === EVENT_ID &&
+  foreignPass &&
+  missing.status === 404 &&
+  missing.body.error === "not_found" &&
+  unauth.status === 401 &&
+  unauth.body.error === "unauthorized";
+
+console.log(
+  JSON.stringify(
+    {
+      pass,
+      own: { status: own.status, eventName: own.body.data?.eventOverview?.name },
+      foreign: {
+        status: foreign.status,
+        error: foreign.body.error,
+        mode: foreignEventId ? "existing_foreign_event" : "missing_foreign_uuid",
+        eventId: foreignEventId ?? FOREIGN_EVENT_ID_FALLBACK,
+      },
+      missing: { status: missing.status, error: missing.body.error },
+      unauth: { status: unauth.status, error: unauth.body.error },
+    },
+    null,
+    2,
+  ),
+);
+
+process.exit(pass ? 0 : 1);
