@@ -30,6 +30,7 @@ const basePayload: CreateClientEventInput = {
 };
 
 const ownerUserId = "acd1d7b7-b679-4c8b-94e1-4d4552f1d8ee";
+const operationalEventId = "11111111-1111-4111-8111-111111111111";
 
 function makeEventRow(overrides: Partial<ClientEventRow> = {}): ClientEventRow {
   return {
@@ -64,6 +65,10 @@ type MockState = {
   insertedEvent: ClientEventRow | null;
   memberInserted: boolean;
   snapshotInserted: boolean;
+  rpcProvisionCalls: number;
+  rpcProvisionShouldFail: boolean;
+  rpcReuseExisting: boolean;
+  rpcExistingOperationalEventId: string | null;
   profileUpdated: boolean;
   deletedEventIds: string[];
   memberShouldFail: boolean;
@@ -171,6 +176,53 @@ function createMockDeps(state: MockState): CreateClientEventDeps {
 
       throw new Error(`Unexpected admin table ${table}`);
     },
+    async rpc(_fn: string, args: { p_client_event_id: string }) {
+      state.rpcProvisionCalls += 1;
+
+      if (state.rpcProvisionShouldFail) {
+        return { data: null, error: { message: "operational failed" } };
+      }
+
+      const eventId = args.p_client_event_id;
+      const source =
+        state.insertedEvent ??
+        state.activeByFingerprint ??
+        makeEventRow({ id: eventId });
+      const alreadyLinked = Boolean(source.operational_event_id);
+      const reused =
+        !alreadyLinked &&
+        state.rpcReuseExisting &&
+        state.rpcExistingOperationalEventId !== null;
+      const created = !alreadyLinked && !reused;
+
+      const linkedOperationalId =
+        source.operational_event_id ??
+        (reused ? state.rpcExistingOperationalEventId : operationalEventId);
+
+      const linked = {
+        ...source,
+        operational_event_id: linkedOperationalId,
+      };
+
+      if (state.insertedEvent?.id === eventId) {
+        state.insertedEvent = linked;
+      }
+      if (state.activeByFingerprint?.id === eventId) {
+        state.activeByFingerprint = linked;
+      }
+
+      return {
+        data: [
+          {
+            client_event_id: eventId,
+            operational_event_id: linkedOperationalId,
+            created,
+            reused,
+          },
+        ],
+        error: null,
+      };
+    },
   };
 
   return {
@@ -199,6 +251,13 @@ function restoreEnv(): void {
   else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRole;
 }
 
+function createFakeSupabaseJwt(payload: Record<string, unknown>): string {
+  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString(
+    "base64url",
+  );
+  return `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${encodedPayload}.x`;
+}
+
 describe("client-event-service", () => {
   afterEach(() => {
     restoreEnv();
@@ -211,6 +270,10 @@ describe("client-event-service", () => {
       insertedEvent: null,
       memberInserted: false,
       snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
       profileUpdated: false,
       deletedEventIds: [],
       memberShouldFail: false,
@@ -227,22 +290,29 @@ describe("client-event-service", () => {
     if (result.ok) {
       assert.equal(result.created, true);
       assert.equal(result.data.slug, "staging-a");
+      assert.equal(result.data.operationalEventId, operationalEventId);
+      assert.equal(result.data.operationalLinked, true);
       assert.match(result.data.redirectTo, /^\/app\/dashboard\?eventId=/);
     }
     assert.equal(state.memberInserted, true);
     assert.equal(state.snapshotInserted, true);
+    assert.equal(state.rpcProvisionCalls, 1);
     assert.equal(state.profileUpdated, true);
     assert.deepEqual(state.deletedEventIds, []);
   });
 
   it("returns existing event when fingerprint matches (idempotent)", async () => {
-    const existing = makeEventRow();
+    const existing = makeEventRow({ operational_event_id: operationalEventId });
     const state: MockState = {
       activeByFingerprint: existing,
       activeForOwner: existing,
       insertedEvent: null,
       memberInserted: false,
       snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
       profileUpdated: false,
       deletedEventIds: [],
       memberShouldFail: false,
@@ -259,8 +329,75 @@ describe("client-event-service", () => {
     if (result.ok) {
       assert.equal(result.created, false);
       assert.equal(result.data.eventId, existing.id);
+      assert.equal(result.data.operationalEventId, operationalEventId);
+      assert.equal(result.data.operationalLinked, true);
     }
     assert.equal(state.memberInserted, false);
+    assert.equal(state.rpcProvisionCalls, 1);
+  });
+
+  it("provisions old idempotent client_event when operational_event_id is missing", async () => {
+    const existing = makeEventRow({ operational_event_id: null });
+    const state: MockState = {
+      activeByFingerprint: existing,
+      activeForOwner: existing,
+      insertedEvent: null,
+      memberInserted: false,
+      snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
+      profileUpdated: false,
+      deletedEventIds: [],
+      memberShouldFail: false,
+      snapshotShouldFail: false,
+      profileShouldFail: false,
+    };
+
+    const result = await createClientEventFromPayload(
+      basePayload,
+      createMockDeps(state),
+    );
+
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.created, false);
+      assert.equal(result.data.operationalEventId, operationalEventId);
+      assert.equal(result.data.operationalLinked, true);
+    }
+    assert.equal(state.rpcProvisionCalls, 1);
+  });
+
+  it("reuses orphaned provisioned operational event instead of duplicating", async () => {
+    const existing = makeEventRow({ operational_event_id: null });
+    const state: MockState = {
+      activeByFingerprint: existing,
+      activeForOwner: existing,
+      insertedEvent: null,
+      memberInserted: false,
+      snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: true,
+      rpcExistingOperationalEventId: operationalEventId,
+      profileUpdated: false,
+      deletedEventIds: [],
+      memberShouldFail: false,
+      snapshotShouldFail: false,
+      profileShouldFail: false,
+    };
+
+    const result = await createClientEventFromPayload(
+      basePayload,
+      createMockDeps(state),
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(state.rpcProvisionCalls, 1);
+    if (result.ok) {
+      assert.equal(result.data.operationalEventId, operationalEventId);
+    }
   });
 
   it("returns 409 when active event exists with different fingerprint", async () => {
@@ -273,6 +410,10 @@ describe("client-event-service", () => {
       insertedEvent: null,
       memberInserted: false,
       snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
       profileUpdated: false,
       deletedEventIds: [],
       memberShouldFail: false,
@@ -300,6 +441,10 @@ describe("client-event-service", () => {
       insertedEvent: null,
       memberInserted: false,
       snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
       profileUpdated: false,
       deletedEventIds: [],
       memberShouldFail: true,
@@ -326,6 +471,10 @@ describe("client-event-service", () => {
       insertedEvent: null,
       memberInserted: false,
       snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
       profileUpdated: false,
       deletedEventIds: [],
       memberShouldFail: false,
@@ -345,6 +494,69 @@ describe("client-event-service", () => {
     assert.deepEqual(state.deletedEventIds, ["event-uuid-1"]);
   });
 
+  it("compensates when operational event provisioning fails", async () => {
+    const state: MockState = {
+      activeByFingerprint: null,
+      activeForOwner: null,
+      insertedEvent: null,
+      memberInserted: false,
+      snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: true,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
+      profileUpdated: false,
+      deletedEventIds: [],
+      memberShouldFail: false,
+      snapshotShouldFail: false,
+      profileShouldFail: false,
+    };
+
+    const result = await createClientEventFromPayload(
+      basePayload,
+      createMockDeps(state),
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.error, "operational_event_provision_failed");
+    }
+    assert.equal(state.snapshotInserted, true);
+    assert.deepEqual(state.deletedEventIds, ["event-uuid-1"]);
+    assert.equal(state.rpcProvisionCalls, 1);
+  });
+
+  it("compensates client_event when profile update fails after provisioning", async () => {
+    const state: MockState = {
+      activeByFingerprint: null,
+      activeForOwner: null,
+      insertedEvent: null,
+      memberInserted: false,
+      snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
+      profileUpdated: false,
+      deletedEventIds: [],
+      memberShouldFail: false,
+      snapshotShouldFail: false,
+      profileShouldFail: true,
+    };
+
+    const result = await createClientEventFromPayload(
+      basePayload,
+      createMockDeps(state),
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.error, "profile_update_failed");
+    }
+    assert.deepEqual(state.deletedEventIds, ["event-uuid-1"]);
+    assert.equal(state.rpcProvisionCalls, 1);
+  });
+
   it("returns service_role_unavailable without admin client", async () => {
     const deps = createMockDeps({
       activeByFingerprint: null,
@@ -352,6 +564,10 @@ describe("client-event-service", () => {
       insertedEvent: null,
       memberInserted: false,
       snapshotInserted: false,
+      rpcProvisionCalls: 0,
+      rpcProvisionShouldFail: false,
+      rpcReuseExisting: false,
+      rpcExistingOperationalEventId: null,
       profileUpdated: false,
       deletedEventIds: [],
       memberShouldFail: false,
@@ -413,6 +629,23 @@ describe("client-app env guards for POST /api/events", () => {
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.match(result.message, /não corresponde|produção/i);
+    }
+  });
+
+  it("rejects preview anon key in the service role slot", () => {
+    process.env.NODE_ENV = "development";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = createFakeSupabaseJwt({
+      iss: "supabase",
+      ref: SUPABASE_PREVIEW_URL.split("//")[1]?.split(".")[0],
+      role: "anon",
+    });
+
+    const result = validateClientAppServiceRoleEnvironment();
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.match(result.message, /service_role/i);
     }
   });
 });

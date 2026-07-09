@@ -13,11 +13,18 @@ import {
   normalizeCreateEventInput,
   resolveOnboardingFingerprint,
 } from "@/lib/events/create-event-helpers";
+import {
+  deleteOperationalEventBestEffort,
+  provisionOperationalEventForClientEvent,
+  type OperationalEventProvisioningClient,
+  type ProvisionOperationalEventResult,
+} from "@/lib/events/operational-event-provisioning";
 
 export type CreateClientEventErrorCode =
   | "active_event_exists"
   | "member_insert_failed"
   | "snapshot_insert_failed"
+  | "operational_event_provision_failed"
   | "profile_update_failed"
   | "event_insert_failed"
   | "service_role_unavailable";
@@ -77,7 +84,7 @@ type AdminClient = {
   from(table: "event_onboarding_snapshots"): {
     insert(values: OnboardingSnapshotInsert): Promise<QueryResult<null>>;
   };
-};
+} & OperationalEventProvisioningClient;
 
 export type CreateClientEventDeps = {
   authClient: AuthClient;
@@ -95,6 +102,8 @@ function toPublicEvent(row: ClientEventRow): ClientEventPublic {
     eventType: row.event_type,
     eventDate: row.event_date,
     isActive: row.is_active,
+    operationalEventId: row.operational_event_id,
+    operationalLinked: Boolean(row.operational_event_id),
     createdAt: row.created_at,
     redirectTo: buildClientEventRedirect(row.id),
   };
@@ -147,11 +156,43 @@ async function compensateDeleteEvent(
   await adminClient.from("client_events").delete().eq("id", eventId);
 }
 
+async function provisionOperationalEventOrReturnError(
+  event: ClientEventRow,
+  adminClient: AdminClient,
+): Promise<
+  | { ok: true; provisioning: ProvisionOperationalEventResult }
+  | {
+      ok: false;
+      error: CreateClientEventResult & { ok: false };
+    }
+> {
+  try {
+    const provisioning = await provisionOperationalEventForClientEvent(
+      event,
+      adminClient,
+    );
+    return { ok: true, provisioning };
+  } catch {
+    return {
+      ok: false,
+      error: {
+        ok: false,
+        status: 500,
+        error: "operational_event_provision_failed",
+        message:
+          "Não foi possível provisionar o evento operacional. Tente novamente.",
+      },
+    };
+  }
+}
+
 /**
  * Creates a client_event with owner membership, onboarding snapshot and profile link.
  *
- * Limitação conhecida: sem RPC/transacção Postgres, usamos compensação via delete
- * do evento (CASCADE em members/snapshots) se uma etapa posterior falhar.
+ * O provisioning operacional é transaccional via RPC SECURITY DEFINER. Se uma
+ * etapa posterior falhar, compensamos com delete do client_event (CASCADE em
+ * members/snapshots). Eventos operacionais órfãos ficam reutilizáveis pela nota
+ * idempotente na RPC.
  */
 export async function createClientEventFromPayload(
   rawInput: CreateClientEventInput,
@@ -178,10 +219,19 @@ export async function createClientEventFromPayload(
   );
 
   if (existingByFingerprint) {
+    const provisioning = await provisionOperationalEventOrReturnError(
+      existingByFingerprint,
+      adminClient,
+    );
+
+    if (!provisioning.ok) {
+      return provisioning.error;
+    }
+
     return {
       ok: true,
       created: false,
-      data: toPublicEvent(existingByFingerprint),
+      data: toPublicEvent(provisioning.provisioning.clientEvent),
     };
   }
 
@@ -258,12 +308,28 @@ export async function createClientEventFromPayload(
     };
   }
 
+  const provisioning = await provisionOperationalEventOrReturnError(
+    createdEvent,
+    adminClient,
+  );
+
+  if (!provisioning.ok) {
+    await compensateDeleteEvent(adminClient, eventId);
+    return provisioning.error;
+  }
+
   const { error: profileError } = await authClient
     .from("profiles")
     .update({ active_client_event_id: eventId })
     .eq("id", ownerUserId);
 
   if (profileError) {
+    if (provisioning.provisioning.createdOperationalEvent) {
+      await deleteOperationalEventBestEffort(
+        adminClient,
+        provisioning.provisioning.operationalEventId,
+      );
+    }
     await compensateDeleteEvent(adminClient, eventId);
     return {
       ok: false,
@@ -276,6 +342,6 @@ export async function createClientEventFromPayload(
   return {
     ok: true,
     created: true,
-    data: toPublicEvent(createdEvent),
+    data: toPublicEvent(provisioning.provisioning.clientEvent),
   };
 }
