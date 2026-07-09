@@ -124,6 +124,66 @@ if (signInError || !signInData.session?.access_token) {
 
 const accessToken = signInData.session.access_token;
 
+const FAIL_STATUSES = new Set([400, 401, 403, 503]);
+
+function validatePostResponse(result, label) {
+  if (FAIL_STATUSES.has(result.status)) {
+    return { valid: false, reason: `${label}: unexpected status ${result.status}` };
+  }
+
+  if (result.status !== 200 && result.status !== 201) {
+    return { valid: false, reason: `${label}: unexpected status ${result.status}` };
+  }
+
+  if (result.body?.ok !== true) {
+    return { valid: false, reason: `${label}: ok !== true` };
+  }
+
+  const eventId = result.body?.data?.eventId;
+  if (!eventId || typeof eventId !== "string" || !eventId.trim()) {
+    return { valid: false, reason: `${label}: missing eventId` };
+  }
+
+  return { valid: true, eventId };
+}
+
+function evaluateIdempotentSmoke(first, second) {
+  const firstCheck = validatePostResponse(first, "first");
+  if (!firstCheck.valid) return { pass: false, reason: firstCheck.reason };
+
+  const secondCheck = validatePostResponse(second, "second");
+  if (!secondCheck.valid) return { pass: false, reason: secondCheck.reason };
+
+  if (firstCheck.eventId !== secondCheck.eventId) {
+    return { pass: false, reason: "eventIds differ between calls" };
+  }
+
+  const scenarioA =
+    first.status === 201 &&
+    first.body?.created === true &&
+    second.status === 200 &&
+    second.body?.created === false;
+
+  const scenarioB =
+    first.status === 200 &&
+    first.body?.created === false &&
+    second.status === 200 &&
+    second.body?.created === false;
+
+  if (!scenarioA && !scenarioB) {
+    return {
+      pass: false,
+      reason: "neither created_first_run nor idempotent_existing_event matched",
+    };
+  }
+
+  return {
+    pass: true,
+    mode: scenarioA ? "created_first_run" : "idempotent_existing_event",
+    eventId: firstCheck.eventId,
+  };
+}
+
 async function postEvent(label) {
   const response = await fetch(`${staging.baseUrl}/api/events`, {
     method: "POST",
@@ -143,15 +203,26 @@ async function postEvent(label) {
 const first = await postEvent("create");
 const second = await postEvent("idempotent-replay");
 
-const ok =
-  first.status === 201 &&
-  first.body?.ok === true &&
-  first.body?.created === true &&
-  second.status === 200 &&
-  second.body?.ok === true &&
-  second.body?.created === false &&
-  first.body?.data?.eventId &&
-  first.body.data.eventId === second.body?.data?.eventId;
+const outcome = evaluateIdempotentSmoke(first, second);
 
-console.log(ok ? "\nPASS: 201 + 200 idempotent" : "\nFAIL: unexpected responses");
-process.exit(ok ? 0 : 1);
+if (outcome.pass) {
+  console.log(
+    JSON.stringify(
+      {
+        pass: true,
+        mode: outcome.mode,
+        eventId: outcome.eventId,
+        summary:
+          outcome.mode === "created_first_run"
+            ? "PASS: 201 + 200 idempotent"
+            : "PASS: 200 + 200 idempotent (existing event)",
+      },
+      null,
+      2,
+    ),
+  );
+  process.exit(0);
+}
+
+console.error("\nFAIL:", outcome.reason);
+process.exit(1);
