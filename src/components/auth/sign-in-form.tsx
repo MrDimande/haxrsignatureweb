@@ -2,9 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { resolvePostLoginRedirect } from "@/lib/auth/onboarding-status";
+import { resolvePostLoginRedirectWithReturnPath } from "@/lib/auth/client-app-middleware";
+import { isOnboardingComplete } from "@/lib/auth/onboarding-status";
 import {
   hasSignInFieldErrors,
   signInWithEmailPassword,
@@ -42,6 +43,8 @@ function GoogleIcon({ className }: { className?: string }) {
 
 export default function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromParam = searchParams?.get("from") ?? null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -73,7 +76,9 @@ export default function SignInForm() {
         return;
       }
 
-      router.push(resolvePostLoginRedirect());
+      router.push(
+        resolvePostLoginRedirectWithReturnPath(fromParam, isOnboardingComplete()),
+      );
       router.refresh();
     } catch {
       setFormError("Não foi possível iniciar sessão. Tente novamente.");

@@ -1,17 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { User } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { isSupabaseAnonConfigured } from "@/lib/supabase/config";
+
+export type SupabaseAuthSessionResult = {
+  response: NextResponse;
+  user: User | null;
+};
 
 /**
  * Refreshes the Supabase Auth session cookie on each request.
  * Wired into middleware in Fase B.2 (/app/* protection).
  */
-export async function updateSupabaseAuthSession(request: NextRequest) {
+export async function updateSupabaseAuthSession(
+  request: NextRequest,
+): Promise<SupabaseAuthSessionResult> {
   let supabaseResponse = NextResponse.next({ request });
 
   if (!isSupabaseAnonConfigured()) {
-    return supabaseResponse;
+    return { response: supabaseResponse, user: null };
   }
 
   const supabase = createServerClient<Database>(
@@ -35,6 +43,9 @@ export async function updateSupabaseAuthSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
-  return supabaseResponse;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return { response: supabaseResponse, user };
 }

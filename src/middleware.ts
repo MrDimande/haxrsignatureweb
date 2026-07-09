@@ -4,11 +4,16 @@ import {
     isValidSession,
 } from "@/lib/admin/auth";
 import {
+    evaluateClientAppAuthMiddleware,
+    shouldHandleClientAppAuth,
+} from "@/lib/auth/client-app-middleware";
+import {
     isCanonicalHost,
     isPreviewDeployment,
     shouldRedirectToCanonical,
     CANONICAL_SITE_URL,
 } from "@/lib/seo/canonical-host";
+import { updateSupabaseAuthSession } from "@/lib/supabase/middleware-auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -48,7 +53,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get("host") ?? "";
 
-  if (shouldRedirectToCanonical(host)) {
+  if (
+    shouldRedirectToCanonical(host) &&
+    !pathname.startsWith("/api/v1/edition/")
+  ) {
     return redirectToCanonicalHost(request);
   }
 
@@ -63,6 +71,19 @@ export async function middleware(request: NextRequest) {
     }
 
     return applySeoHeaders(NextResponse.next());
+  }
+
+  if (shouldHandleClientAppAuth(pathname)) {
+    const { response: sessionResponse, user } = await updateSupabaseAuthSession(request);
+    const decision = evaluateClientAppAuthMiddleware({
+      pathname,
+      requestUrl: request.url,
+      user,
+      sessionResponse,
+      fromParam: request.nextUrl.searchParams.get("from"),
+    });
+
+    return applySeoHeaders(decision.response);
   }
 
   if (!pathname.startsWith("/admin")) {
