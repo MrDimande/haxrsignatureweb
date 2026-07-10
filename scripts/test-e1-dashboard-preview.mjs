@@ -128,16 +128,6 @@ const foreignPass = foreignEventId
   ? foreign.status === 403 && foreign.body.error === "forbidden"
   : foreign.status === 404 && foreign.body.error === "not_found";
 
-const pass =
-  own.status === 200 &&
-  own.body.ok === true &&
-  own.body.data?.eventOverview?.eventId === staging.eventId &&
-  foreignPass &&
-  missing.status === 404 &&
-  missing.body.error === "not_found" &&
-  unauth.status === 401 &&
-  unauth.body.error === "unauthorized";
-
 const kpiSnapshot = own.body.ok
   ? {
       operationalLinked: own.body.data.meta?.operationalLinked ?? false,
@@ -145,9 +135,25 @@ const kpiSnapshot = own.body.ok
       guestsTotal: own.body.data.guestSnapshot?.total,
       guestsConfirmed: own.body.data.guestSnapshot?.confirmed,
       paidAmount: own.body.data.financeSnapshot?.paidAmount,
+      pendingAmount: own.body.data.financeSnapshot?.pendingAmount,
+      budgetEstimated: own.body.data.financeSnapshot?.budgetEstimated,
       vendorsActive: own.body.data.stats?.find((s) => s.id === "vendors-active")?.value,
     }
   : null;
+
+const pass =
+  own.status === 200 &&
+  own.body.ok === true &&
+  own.body.data?.eventOverview?.eventId === staging.eventId &&
+  (kpiSnapshot?.operationalLinked !== true ||
+    (kpiSnapshot.paidAmount === 40000 &&
+      own.body.data.financeSnapshot?.pendingAmount === 110000 &&
+      own.body.data.financeSnapshot?.budgetEstimated === 150000)) &&
+  foreignPass &&
+  missing.status === 404 &&
+  missing.body.error === "not_found" &&
+  unauth.status === 401 &&
+  unauth.body.error === "unauthorized";
 
 console.log(
   JSON.stringify(

@@ -13,6 +13,11 @@ import type {
   ClientEventStatus,
   ClientEventType,
 } from "@/lib/events/client-app-database.types";
+import {
+  mapRpcPayloadToDashboardFinanceMetrics,
+  type ClientEventDashboardFinanceMetrics,
+} from "@/lib/payments/client-event-payments-finance";
+import { fetchClientEventPaymentsViaRpc } from "@/lib/payments/client-event-payments-rpc";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export type ClientEventDashboardAccessResult =
@@ -131,8 +136,10 @@ export function mapClientEventToDashboardData(
   event: ClientEventRow,
   profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null,
   operationalKpis: ClientEventOperationalKpis | null = null,
+  financeMetrics: ClientEventDashboardFinanceMetrics | null = null,
 ): DashboardData {
-  const budget = resolveBudgetEstimated(event);
+  const budget =
+    financeMetrics?.budgetEstimated ?? resolveBudgetEstimated(event);
   const dateIso = event.event_date ?? undefined;
   const dateLabel = dateIso ? formatOnboardingEventDate(dateIso) : "Data por definir";
   const responsible =
@@ -143,18 +150,24 @@ export function mapClientEventToDashboardData(
   const kpis = hasOperationalLink && operationalKpis ? operationalKpis : EMPTY_OPERATIONAL_KPIS;
   const guests = resolveGuestDisplayMetrics(event, hasOperationalLink ? kpis : null);
 
+  const paidAmount =
+    financeMetrics?.paidAmount ??
+    (hasOperationalLink ? kpis.paymentsTotal : 0);
+  const pendingAmount =
+    financeMetrics?.pendingAmount ??
+    Math.max(0, budget - paidAmount);
+
   const checklistOpen = Math.max(0, kpis.checklistTotal - kpis.checklistCompleted);
   const documentsCount =
     kpis.documentsCount + kpis.conciergeUploadsCount + kpis.conciergePortalItemsCount;
-  const financeRegistered = kpis.paymentsTotal;
-  const financePending = Math.max(0, budget - kpis.paymentsTotal);
+  const financeRegistered = paidAmount;
 
   const vendorProgress = kpis.vendorsCount > 0 ? Math.min(100, kpis.vendorsCount * 15) : 0;
   const progressOverall = Math.round(
     (percentOf(guests.confirmed, Math.max(guests.total, 1)) +
       percentOf(kpis.checklistCompleted, Math.max(kpis.checklistTotal, 1)) +
       vendorProgress +
-      percentOf(kpis.paymentsTotal, Math.max(budget, 1))) /
+      percentOf(paidAmount, Math.max(budget, 1))) /
       4,
   );
 
@@ -268,7 +281,7 @@ export function mapClientEventToDashboardData(
       {
         id: "finance",
         name: "Financeiro",
-        value: percentOf(kpis.paymentsTotal, Math.max(budget, 1)),
+        value: percentOf(paidAmount, Math.max(budget, 1)),
       },
       {
         id: "invitation",
@@ -351,13 +364,15 @@ export function mapClientEventToDashboardData(
       currency: "MT",
       budgetEstimated: budget,
       budgetRegistered: financeRegistered,
-      paidAmount: kpis.paymentsTotal,
-      pendingAmount: financePending,
-      nextPayment: {
-        vendorName: "—",
-        dueDate: "—",
-        amount: financePending,
-      },
+      paidAmount,
+      pendingAmount,
+      nextPayment:
+        financeMetrics?.nextPayment ??
+        {
+          vendorName: "—",
+          dueDate: "—",
+          amount: pendingAmount,
+        },
     },
     guestSnapshot: {
       total: guests.total,
@@ -394,6 +409,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
   profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null,
 ): Promise<DashboardData> {
   let operationalKpis: ClientEventOperationalKpis | null = null;
+  let financeMetrics: ClientEventDashboardFinanceMetrics | null = null;
   let vendorSnapshot: DashboardData["vendorSnapshot"] = [];
 
   if (event.operational_event_id && isSupabaseConfigured()) {
@@ -411,13 +427,29 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
         service: vendor.service_category || "Fornecedor",
         status: mapVendorStatusLabel(vendor.status),
       }));
+
+      try {
+        const paymentsPayload = await fetchClientEventPaymentsViaRpc(
+          adminClient as never,
+          event.id,
+        );
+        financeMetrics = mapRpcPayloadToDashboardFinanceMetrics(event, paymentsPayload);
+      } catch {
+        financeMetrics = null;
+      }
     } catch {
       operationalKpis = null;
+      financeMetrics = null;
       vendorSnapshot = [];
     }
   }
 
-  const dashboard = mapClientEventToDashboardData(event, profile, operationalKpis);
+  const dashboard = mapClientEventToDashboardData(
+    event,
+    profile,
+    operationalKpis,
+    financeMetrics,
+  );
   return { ...dashboard, vendorSnapshot };
 }
 

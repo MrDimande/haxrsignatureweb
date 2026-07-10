@@ -10,6 +10,8 @@ import {
   mapClientEventToDashboardData,
 } from "@/lib/dashboard/client-event-dashboard-service";
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
+import { mapRpcPayloadToDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
+import type { ClientEventPaymentsRpcPayload } from "@/lib/payments/client-event-payments-rpc";
 
 const OPERATIONAL_EVENT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -190,8 +192,8 @@ describe("mapClientEventToDashboardData operational KPIs", () => {
         guestsPlusOnes: 3,
         tablesAssigned: 5,
         tablesTotal: 8,
-        paymentsCount: 2,
-        paymentsTotal: 50000,
+        paymentsCount: 0,
+        paymentsTotal: 0,
         documentsCount: 1,
         vendorsCount: 2,
         checklistTotal: 6,
@@ -202,6 +204,17 @@ describe("mapClientEventToDashboardData operational KPIs", () => {
         conciergePortalItemsCount: 0,
         contactProfilesCount: 9,
       },
+      {
+        paymentCount: 2,
+        paidAmount: 50000,
+        pendingAmount: 100000,
+        budgetEstimated: 150000,
+        nextPayment: {
+          vendorName: "Sinal decoração",
+          dueDate: "9 jul. 2026",
+          amount: 25000,
+        },
+      },
     );
 
     assert.equal(dashboard.meta.operationalLinked, true);
@@ -210,9 +223,77 @@ describe("mapClientEventToDashboardData operational KPIs", () => {
     assert.equal(dashboard.guestSnapshot.confirmed, 7);
     assert.equal(dashboard.guestSnapshot.pending, 4);
     assert.equal(dashboard.financeSnapshot.paidAmount, 50000);
+    assert.equal(dashboard.financeSnapshot.pendingAmount, 100000);
+    assert.equal(dashboard.financeSnapshot.budgetEstimated, 150000);
+    assert.equal(dashboard.financeSnapshot.nextPayment.vendorName, "Sinal decoração");
     assert.equal(dashboard.stats.find((s) => s.id === "vendors-active")?.value, 2);
     assert.equal(dashboard.stats.find((s) => s.id === "tasks-open")?.value, 3);
     assert.equal(dashboard.modules.find((m) => m.id === "checklist")?.metric, "3/6 tarefas");
+  });
+
+  it("RPC finance metrics map staging-a payment totals for dashboard", () => {
+    const rpcPayload: ClientEventPaymentsRpcPayload = {
+      payments: [
+        {
+          id: "pay-1",
+          amount: 25000,
+          currency: "MZN",
+          payment_method: "mpesa",
+          reference: "MPESA-001",
+          notes: "Sinal",
+          paid_at: "2026-07-09T10:00:00.000Z",
+          created_at: "2026-07-09T10:00:00.000Z",
+          document: null,
+        },
+        {
+          id: "pay-2",
+          amount: 15000,
+          currency: "MZN",
+          payment_method: "bank_transfer",
+          reference: "TRF-002",
+          notes: "Transferência",
+          paid_at: "2026-07-09T11:00:00.000Z",
+          created_at: "2026-07-09T11:00:00.000Z",
+          document: null,
+        },
+      ],
+      summary: {
+        paymentCount: 2,
+        totalPayments: 40000,
+        totalPaid: 40000,
+        pendingAmount: 110000,
+        currency: "MZN",
+        budgetMin: null,
+        budgetMax: 150000,
+        budgetRange: null,
+        lastPayment: {
+          id: "pay-2",
+          amount: 15000,
+          currency: "MZN",
+          payment_method: "bank_transfer",
+          reference: "TRF-002",
+          paid_at: "2026-07-09T11:00:00.000Z",
+        },
+      },
+    };
+
+    const finance = mapRpcPayloadToDashboardFinanceMetrics(
+      { ...baseEvent, operational_event_id: OPERATIONAL_EVENT_ID, budget_max: 150000 },
+      rpcPayload,
+    );
+    const dashboard = mapClientEventToDashboardData(
+      { ...baseEvent, operational_event_id: OPERATIONAL_EVENT_ID, budget_max: 150000 },
+      null,
+      null,
+      finance,
+    );
+
+    assert.equal(finance.paymentCount, 2);
+    assert.equal(finance.paidAmount, 40000);
+    assert.equal(finance.pendingAmount, 110000);
+    assert.equal(finance.budgetEstimated, 150000);
+    assert.equal(dashboard.financeSnapshot.paidAmount, 40000);
+    assert.equal(dashboard.financeSnapshot.pendingAmount, 110000);
   });
 
   it("operational event with empty operational data returns safe zeros", () => {

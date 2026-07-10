@@ -13,6 +13,7 @@ export type ClientEventOperationalKpis = {
   tablesAssigned: number;
   tablesTotal: number;
   paymentsCount: number;
+  /** Legacy direct-table aggregate; dashboard finance uses RPC via payments service. */
   paymentsTotal: number;
   documentsCount: number;
   vendorsCount: number;

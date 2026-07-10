@@ -10,6 +10,7 @@ import type {
 } from "@/lib/event-modules/types";
 import { PAYMENT_METHOD_LABELS } from "@/lib/finance/constants";
 import type { PaymentMethod } from "@/lib/finance/types";
+import { mapRpcPayloadToDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
 import {
   ClientEventPaymentsRpcError,
   fetchClientEventPaymentsViaRpc,
@@ -17,6 +18,9 @@ import {
   type ClientEventPaymentsRpcPayload,
   type ClientEventPaymentsRpcPaymentRow,
 } from "@/lib/payments/client-event-payments-rpc";
+
+export type { ClientEventDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
+export { mapRpcPayloadToDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
 
 export type ClientEventPaymentsAuthClient = ClientEventDashboardAuthClient;
 
@@ -76,16 +80,6 @@ export function buildBudgetModuleContext(event: ClientEventRow): EventModuleCont
   };
 }
 
-function resolveEstimatedBudget(summary: ClientEventPaymentsRpcPayload["summary"]): number {
-  if (summary.budgetMax !== null && summary.budgetMax > 0) {
-    return summary.budgetMax;
-  }
-  if (summary.budgetMin !== null && summary.budgetMin > 0) {
-    return summary.budgetMin;
-  }
-  return 0;
-}
-
 function formatPaidAtLabel(paidAt: string): string {
   const parsed = new Date(paidAt);
   if (Number.isNaN(parsed.getTime())) return paidAt;
@@ -122,42 +116,20 @@ function mapPaymentRowToRecord(row: ClientEventPaymentsRpcPaymentRow): BudgetPay
   };
 }
 
-function resolveLastPaymentLabel(payload: ClientEventPaymentsRpcPayload): string {
-  const last = payload.summary.lastPayment;
-  if (!last) return "—";
-  const row = payload.payments.find((payment) => payment.id === last.id);
-  if (row) return resolvePaymentLabel(row);
-  if (last.reference?.trim()) return last.reference.trim();
-  return "Pagamento registado";
-}
-
 export function mapRpcPayloadToBudgetModuleData(
   event: ClientEventRow,
   payload: ClientEventPaymentsRpcPayload,
 ): BudgetModuleData {
-  const estimated = resolveEstimatedBudget(payload.summary);
-  const paid = payload.summary.totalPaid;
-  const pending = payload.summary.pendingAmount;
-  const lastPayment = payload.summary.lastPayment;
+  const finance = mapRpcPayloadToDashboardFinanceMetrics(event, payload);
 
   return {
     context: buildBudgetModuleContext(event),
     summary: {
-      estimated,
-      registered: paid,
-      paid,
-      pending,
-      nextPayment: lastPayment
-        ? {
-            vendorName: resolveLastPaymentLabel(payload),
-            dueDate: formatPaidAtLabel(lastPayment.paid_at),
-            amount: lastPayment.amount,
-          }
-        : {
-            vendorName: "—",
-            dueDate: "—",
-            amount: 0,
-          },
+      estimated: finance.budgetEstimated,
+      registered: finance.paidAmount,
+      paid: finance.paidAmount,
+      pending: finance.pendingAmount,
+      nextPayment: finance.nextPayment,
     },
     categories: [],
     items: [],
