@@ -91,6 +91,14 @@ export interface DashboardVendorSnapshot {
   status: VendorContractStatus;
 }
 
+export interface DashboardChecklistSnapshotItem {
+  id: string;
+  title: string;
+  dueDate: string;
+  priority: string;
+  status: string;
+}
+
 export type DashboardActivityType =
   | "guests"
   | "finance"
@@ -145,6 +153,7 @@ export interface DashboardData {
   financeSnapshot: DashboardFinanceSnapshot;
   guestSnapshot: DashboardGuestSnapshot;
   vendorSnapshot: DashboardVendorSnapshot[];
+  checklistSnapshot: DashboardChecklistSnapshotItem[];
   recentActivity: DashboardRecentActivity[];
   conciergeSummary: DashboardConciergeSummary;
 }

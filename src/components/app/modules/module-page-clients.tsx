@@ -76,7 +76,12 @@ export function DocumentsModulePageClient(props: BaseProps<DocumentModuleData>) 
 
 export function ChecklistModulePageClient(props: BaseProps<ChecklistModuleData>) {
   return (
-    <ModulePageClient eventId={props.eventId} modulePath="checklist" initialResult={props.initialResult}>
+    <ModulePageClient
+      eventId={props.eventId}
+      modulePath="checklist"
+      apiPath={`/api/events/${encodeURIComponent(props.eventId)}/checklist`}
+      initialResult={props.initialResult}
+    >
       {(data) => <ChecklistModuleView data={data} />}
     </ModulePageClient>
   );

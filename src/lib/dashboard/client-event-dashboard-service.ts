@@ -19,6 +19,11 @@ import {
 } from "@/lib/payments/client-event-payments-finance";
 import { fetchClientEventPaymentsViaRpc } from "@/lib/payments/client-event-payments-rpc";
 import {
+  mapRpcPayloadToDashboardChecklistMetrics,
+  type ClientEventDashboardChecklistMetrics,
+} from "@/lib/checklist/client-event-checklist-dashboard";
+import { fetchClientEventChecklistViaRpc } from "@/lib/checklist/client-event-checklist-rpc";
+import {
   mapRpcPayloadToDashboardVendorMetrics,
   type ClientEventDashboardVendorMetrics,
 } from "@/lib/vendors/client-event-vendors-dashboard";
@@ -143,6 +148,7 @@ export function mapClientEventToDashboardData(
   operationalKpis: ClientEventOperationalKpis | null = null,
   financeMetrics: ClientEventDashboardFinanceMetrics | null = null,
   vendorMetrics: ClientEventDashboardVendorMetrics | null = null,
+  checklistMetrics: ClientEventDashboardChecklistMetrics | null = null,
 ): DashboardData {
   const budget =
     financeMetrics?.budgetEstimated ?? resolveBudgetEstimated(event);
@@ -163,7 +169,13 @@ export function mapClientEventToDashboardData(
     financeMetrics?.pendingAmount ??
     Math.max(0, budget - paidAmount);
 
-  const checklistOpen = Math.max(0, kpis.checklistTotal - kpis.checklistCompleted);
+  const checklistTotal =
+    checklistMetrics?.checklistTotal ??
+    (hasOperationalLink ? kpis.checklistTotal : 0);
+  const checklistCompleted =
+    checklistMetrics?.checklistCompleted ??
+    (hasOperationalLink ? kpis.checklistCompleted : 0);
+  const checklistOpen = Math.max(0, checklistTotal - checklistCompleted);
   const documentsCount =
     kpis.documentsCount + kpis.conciergeUploadsCount + kpis.conciergePortalItemsCount;
   const financeRegistered = paidAmount;
@@ -174,7 +186,7 @@ export function mapClientEventToDashboardData(
   const vendorProgress = vendorsActive > 0 ? Math.min(100, vendorsActive * 15) : 0;
   const progressOverall = Math.round(
     (percentOf(guests.confirmed, Math.max(guests.total, 1)) +
-      percentOf(kpis.checklistCompleted, Math.max(kpis.checklistTotal, 1)) +
+      percentOf(checklistCompleted, Math.max(checklistTotal, 1)) +
       vendorProgress +
       percentOf(paidAmount, Math.max(budget, 1))) /
       4,
@@ -235,8 +247,8 @@ export function mapClientEventToDashboardData(
         value: checklistOpen,
         valueType: "number",
         detail:
-          hasOperationalLink && kpis.checklistTotal > 0
-            ? `${kpis.checklistCompleted} concluídas`
+          hasOperationalLink && checklistTotal > 0
+            ? `${checklistCompleted} concluídas`
             : hasOperationalLink
               ? "sem checklist operacional"
               : "sem dados operacionais",
@@ -275,7 +287,7 @@ export function mapClientEventToDashboardData(
       {
         id: "checklist",
         name: "Checklist",
-        value: percentOf(kpis.checklistCompleted, Math.max(kpis.checklistTotal, 1)),
+        value: percentOf(checklistCompleted, Math.max(checklistTotal, 1)),
       },
       {
         id: "guests",
@@ -351,11 +363,11 @@ export function mapClientEventToDashboardData(
         title: "Checklist",
         description: "Tarefas do evento",
         metric:
-          kpis.checklistTotal > 0
-            ? `${kpis.checklistCompleted}/${kpis.checklistTotal} tarefas`
+          checklistTotal > 0
+            ? `${checklistCompleted}/${checklistTotal} tarefas`
             : "0 tarefas",
         href: `/app/events/${event.id}/checklist`,
-        status: kpis.checklistTotal > 0 ? "active" : "setup",
+        status: checklistTotal > 0 ? "active" : "setup",
         category: "Planeamento",
       },
       {
@@ -393,6 +405,7 @@ export function mapClientEventToDashboardData(
       tablesTotal: guests.tablesTotal,
     },
     vendorSnapshot: [],
+    checklistSnapshot: checklistMetrics?.checklistSnapshot ?? [],
     recentActivity: [
       {
         id: `event-created-${event.id}`,
@@ -420,7 +433,9 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
   let operationalKpis: ClientEventOperationalKpis | null = null;
   let financeMetrics: ClientEventDashboardFinanceMetrics | null = null;
   let vendorMetrics: ClientEventDashboardVendorMetrics | null = null;
+  let checklistMetrics: ClientEventDashboardChecklistMetrics | null = null;
   let vendorSnapshot: DashboardData["vendorSnapshot"] = [];
+  let checklistSnapshot: DashboardData["checklistSnapshot"] = [];
 
   if (event.operational_event_id && isSupabaseConfigured()) {
     try {
@@ -461,11 +476,25 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
           status: mapVendorStatusLabel(vendor.status),
         }));
       }
+
+      try {
+        const checklistPayload = await fetchClientEventChecklistViaRpc(
+          adminClient as never,
+          event.id,
+        );
+        checklistMetrics = mapRpcPayloadToDashboardChecklistMetrics(checklistPayload);
+        checklistSnapshot = checklistMetrics.checklistSnapshot;
+      } catch {
+        checklistMetrics = null;
+        checklistSnapshot = [];
+      }
     } catch {
       operationalKpis = null;
       financeMetrics = null;
       vendorMetrics = null;
+      checklistMetrics = null;
       vendorSnapshot = [];
+      checklistSnapshot = [];
     }
   }
 
@@ -475,8 +504,9 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
     operationalKpis,
     financeMetrics,
     vendorMetrics,
+    checklistMetrics,
   );
-  return { ...dashboard, vendorSnapshot };
+  return { ...dashboard, vendorSnapshot, checklistSnapshot };
 }
 
 export async function resolveClientEventDashboardAccess(

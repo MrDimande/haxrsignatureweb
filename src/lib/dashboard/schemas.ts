@@ -79,6 +79,14 @@ const dashboardVendorSnapshotSchema = z.object({
   status: z.enum(["Em revisão", "Pendente", "Assinado", "Aguardando"]),
 });
 
+const dashboardChecklistSnapshotSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  dueDate: z.string(),
+  priority: z.string(),
+  status: z.string(),
+});
+
 const dashboardRecentActivitySchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -122,6 +130,7 @@ export const dashboardDataSchema = z.object({
   financeSnapshot: dashboardFinanceSnapshotSchema,
   guestSnapshot: dashboardGuestSnapshotSchema,
   vendorSnapshot: z.array(dashboardVendorSnapshotSchema),
+  checklistSnapshot: z.array(dashboardChecklistSnapshotSchema),
   recentActivity: z.array(dashboardRecentActivitySchema),
   conciergeSummary: dashboardConciergeSummarySchema,
 });
