@@ -15,16 +15,16 @@
 export const HAXR_BRAND_ALT = "HAXR Signature" as const;
 
 export const HAXR_BRAND_ASSETS = {
-  markGold: "/images/brand/haxr-mark-gold.png",
+  markGold: "/images/brand/logo-horizontal-gold.png",
   markLight: "/images/brand/haxr-mark-light.png",
-  logoHorizontalGold: "/images/brand/haxr-mark-gold.png",
+  logoHorizontalGold: "/images/brand/logo-horizontal-gold.png",
   logoHorizontalLight: "/images/brand/logo-horizontal-light.png",
   logoVerticalGold: "/images/brand/logo-vertical-gold.png",
   logoDark: "/images/brand/haxr-logo-dark.png",
   /** Email — horizontal preferido; mark como fallback */
-  emailHorizontal: "/images/brand/haxr-mark-gold.png",
+  emailHorizontal: "/images/brand/logo-horizontal-gold.png",
   emailHorizontalCropped: "/images/brand/logo-horizontal-gold-email.png",
-  emailMark: "/images/brand/haxr-mark-gold.png",
+  emailMark: "/images/brand/logo-horizontal-gold.png",
 } as const;
 
 /** Ficheiros confirmados em public/ */
