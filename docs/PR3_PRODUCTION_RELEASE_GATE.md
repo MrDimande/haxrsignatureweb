@@ -4,7 +4,7 @@
 **Branch:** `rebuild-haxr-platform`  
 **Estado PR:** Draft  
 **Gate:** pré-produção — **não** merge / promote até checklist verde  
-**Referência migrations:** `docs/PRODUCTION_MIGRATION_PLAN_036_043.md`
+**Referência migrations:** `docs/PRODUCTION_MIGRATION_PLAN_036_043.md` · `docs/PRODUCTION_MIGRATION_DRY_RUN_036_043.md`
 
 ---
 
@@ -49,8 +49,10 @@
 ## 4. Checklist Produção — **antes** de apply 036–043
 
 - [ ] Backup / snapshot de `oxsrdmydlqyvnueedgtl`
-- [ ] Re-ler `PRODUCTION_MIGRATION_PLAN_036_043.md`
-- [ ] Confirmar mapa 028 ↔ `commercial_admin_v2` e 0281 ↔ `concierge_portal`
+- [x] Re-ler `PRODUCTION_MIGRATION_PLAN_036_043.md`
+- [x] Confirmar mapa 028 ↔ `commercial_admin_v2` e 0281 ↔ `concierge_portal` (PR.3 + PR.4)
+- [x] Estado pré-036 confirmado em produção (read-only, PR.4)
+- [ ] Dry-run físico 036–043 num clone isolado (scripts PR.4 prontos; infra Pro/Docker pendente)
 - [ ] Dry-run CLI: **só** 036–043 pendentes (sem reaplicar 001–035)
 - [ ] Autorização explícita por escrito para apply em produção
 - [ ] Janela de manutenção definida
@@ -88,7 +90,9 @@
 ```text
 Preview validado (feito)
         ↓
-Auditoria produção (este gate + plano 036–043)  ← estamos aqui
+Auditoria produção PR.3 (feito)
+        ↓
+Ensaio migrations PR.4 — tooling + pré-estado (feito); clone físico (pendente infra)
         ↓
 Backup produção
         ↓
@@ -113,9 +117,9 @@ Smoke produção + monitorização
 | **GO com condições** | Preview OK + plano migrations aprovado + **ainda sem** apply em produção (estado actual da auditoria) |
 | **NO-GO** | Gap 028 tratado como “reaplicar SQL”; `db push` cego; merge app antes de 036; env Production a apontar para preview; repair sem mapa |
 
-### Decisão actual (2026-07-11)
+### Decisão actual (2026-07-11, pós PR.4)
 
-**GO com condições** — documentação e Preview prontos; **produção ainda sem 036–043**; apply e merge **bloqueados** até checklist §4–§5.
+**GO com condições** — Preview OK; auditoria PR.3 OK; PR.4 confirmou pré-estado produção e entregou scripts de ensaio; **clone físico e apply real ainda pendentes** (branching Pro ou Docker).
 
 ---
 
@@ -124,7 +128,7 @@ Smoke produção + monitorização
 | Camada | Acção |
 |--------|-------|
 | App | Reverter commit / redeploy build anterior; PR volta a Draft se necessário |
-| DB 039–043 / 038 | `DROP FUNCTION` das RPCs + provision |
+| DB 039–043 / 038 | `DROP FUNCTION` das RPCs + provision (`scripts/pr4/rollback-036-043.sql` no clone) |
 | DB 037 | REVOKE grants |
 | DB 036 | Remover trigger Auth + drop tabelas app cliente (só se sem dados reais críticos) |
 | Dados operacionais | **Não** apagar `events`/`guests`/`payments` legados |
@@ -138,7 +142,8 @@ Smoke produção + monitorização
 | Produção alterada | ❌ Não |
 | Migrations aplicadas | ❌ Não |
 | Merge / promote / deploy manual | ❌ Não |
-| Documentos criados | `PRODUCTION_MIGRATION_PLAN_036_043.md`, este ficheiro |
+| Documentos | `PRODUCTION_MIGRATION_PLAN_036_043.md`, `PRODUCTION_MIGRATION_DRY_RUN_036_043.md`, este ficheiro |
+| Scripts PR.4 | `scripts/pr4/*` (sem credenciais) |
 
 ---
 

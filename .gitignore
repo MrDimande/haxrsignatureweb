@@ -40,3 +40,9 @@ skills-lock.json
 
 # vercel
 .vercel
+
+# PR.4 dry-run artifacts (never commit)
+backups/
+*.dump
+*.sql.gz
+pr4-*.local
