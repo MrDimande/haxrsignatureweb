@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --import tsx --test src/lib/events/*.test.ts src/lib/events/**/*.test.ts src/lib/edition/**/*.test.ts src/lib/concierge/*.test.ts src/lib/concierge/**/*.test.ts src/lib/concierge/portal/*.test.ts src/lib/email/marketing/*.test.ts src/lib/admin/*.test.ts src/lib/admin/**/*.test.ts src/lib/portal/**/*.test.ts src/lib/auth/*.test.ts src/lib/dashboard/*.test.ts src/lib/guests/*.test.ts src/lib/payments/*.test.ts src/lib/supabase/*.test.ts",
+    "test": "node --import tsx --test src/lib/events/*.test.ts src/lib/events/**/*.test.ts src/lib/edition/**/*.test.ts src/lib/concierge/*.test.ts src/lib/concierge/**/*.test.ts src/lib/concierge/portal/*.test.ts src/lib/email/marketing/*.test.ts src/lib/admin/*.test.ts src/lib/admin/**/*.test.ts src/lib/portal/**/*.test.ts src/lib/auth/*.test.ts src/lib/dashboard/*.test.ts src/lib/guests/*.test.ts src/lib/payments/*.test.ts src/lib/vendors/*.test.ts src/lib/supabase/*.test.ts",
     "contract:edition-rsvp": "node scripts/contract/edition-rsvp.contract.mjs",
     "contract:edition-rsvp:local": "node scripts/contract/edition-rsvp.local.mjs",
     "contract:edition-rsvp:staging": "node scripts/contract/edition-rsvp.staging.mjs",

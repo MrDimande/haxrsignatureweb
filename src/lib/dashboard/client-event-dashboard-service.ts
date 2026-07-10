@@ -18,6 +18,11 @@ import {
   type ClientEventDashboardFinanceMetrics,
 } from "@/lib/payments/client-event-payments-finance";
 import { fetchClientEventPaymentsViaRpc } from "@/lib/payments/client-event-payments-rpc";
+import {
+  mapRpcPayloadToDashboardVendorMetrics,
+  type ClientEventDashboardVendorMetrics,
+} from "@/lib/vendors/client-event-vendors-dashboard";
+import { fetchClientEventVendorsViaRpc } from "@/lib/vendors/client-event-vendors-rpc";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export type ClientEventDashboardAccessResult =
@@ -137,6 +142,7 @@ export function mapClientEventToDashboardData(
   profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null,
   operationalKpis: ClientEventOperationalKpis | null = null,
   financeMetrics: ClientEventDashboardFinanceMetrics | null = null,
+  vendorMetrics: ClientEventDashboardVendorMetrics | null = null,
 ): DashboardData {
   const budget =
     financeMetrics?.budgetEstimated ?? resolveBudgetEstimated(event);
@@ -161,8 +167,11 @@ export function mapClientEventToDashboardData(
   const documentsCount =
     kpis.documentsCount + kpis.conciergeUploadsCount + kpis.conciergePortalItemsCount;
   const financeRegistered = paidAmount;
+  const vendorsActive =
+    vendorMetrics?.activeVendors ??
+    (hasOperationalLink ? kpis.vendorsCount : 0);
 
-  const vendorProgress = kpis.vendorsCount > 0 ? Math.min(100, kpis.vendorsCount * 15) : 0;
+  const vendorProgress = vendorsActive > 0 ? Math.min(100, vendorsActive * 15) : 0;
   const progressOverall = Math.round(
     (percentOf(guests.confirmed, Math.max(guests.total, 1)) +
       percentOf(kpis.checklistCompleted, Math.max(kpis.checklistTotal, 1)) +
@@ -235,13 +244,13 @@ export function mapClientEventToDashboardData(
       {
         id: "vendors-active",
         label: "Fornecedores activos",
-        value: kpis.vendorsCount,
+        value: vendorsActive,
         valueType: "number",
         detail:
-          kpis.vendorsCount > 0
+          vendorsActive > 0
             ? "registados no evento"
             : hasOperationalLink
-              ? "comece a adicionar"
+              ? "sem fornecedores ainda"
               : "sem ligação operacional",
       },
       {
@@ -276,7 +285,7 @@ export function mapClientEventToDashboardData(
       {
         id: "vendors",
         name: "Fornecedores",
-        value: kpis.vendorsCount > 0 ? Math.min(100, kpis.vendorsCount * 15) : 0,
+        value: vendorsActive > 0 ? Math.min(100, vendorsActive * 15) : 0,
       },
       {
         id: "finance",
@@ -410,6 +419,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
 ): Promise<DashboardData> {
   let operationalKpis: ClientEventOperationalKpis | null = null;
   let financeMetrics: ClientEventDashboardFinanceMetrics | null = null;
+  let vendorMetrics: ClientEventDashboardVendorMetrics | null = null;
   let vendorSnapshot: DashboardData["vendorSnapshot"] = [];
 
   if (event.operational_event_id && isSupabaseConfigured()) {
@@ -420,13 +430,6 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
         { clientEventId: event.id, slug: event.slug },
         adminClient as never,
       );
-      const vendors = await listOperationalVendors(event.operational_event_id, adminClient as never);
-      vendorSnapshot = vendors.map((vendor) => ({
-        id: vendor.id,
-        name: vendor.name,
-        service: vendor.service_category || "Fornecedor",
-        status: mapVendorStatusLabel(vendor.status),
-      }));
 
       try {
         const paymentsPayload = await fetchClientEventPaymentsViaRpc(
@@ -437,9 +440,31 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
       } catch {
         financeMetrics = null;
       }
+
+      try {
+        const vendorsPayload = await fetchClientEventVendorsViaRpc(
+          adminClient as never,
+          event.id,
+        );
+        vendorMetrics = mapRpcPayloadToDashboardVendorMetrics(vendorsPayload);
+        vendorSnapshot = vendorMetrics.vendorSnapshot;
+      } catch {
+        vendorMetrics = null;
+        const vendors = await listOperationalVendors(
+          event.operational_event_id,
+          adminClient as never,
+        );
+        vendorSnapshot = vendors.map((vendor) => ({
+          id: vendor.id,
+          name: vendor.name,
+          service: vendor.service_category || "Fornecedor",
+          status: mapVendorStatusLabel(vendor.status),
+        }));
+      }
     } catch {
       operationalKpis = null;
       financeMetrics = null;
+      vendorMetrics = null;
       vendorSnapshot = [];
     }
   }
@@ -449,6 +474,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
     profile,
     operationalKpis,
     financeMetrics,
+    vendorMetrics,
   );
   return { ...dashboard, vendorSnapshot };
 }

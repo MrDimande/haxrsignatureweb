@@ -55,7 +55,12 @@ export function BudgetModulePageClient(props: BaseProps<BudgetModuleData>) {
 
 export function VendorsModulePageClient(props: BaseProps<VendorModuleData>) {
   return (
-    <ModulePageClient eventId={props.eventId} modulePath="vendors" initialResult={props.initialResult}>
+    <ModulePageClient
+      eventId={props.eventId}
+      modulePath="vendors"
+      apiPath={`/api/events/${encodeURIComponent(props.eventId)}/vendors`}
+      initialResult={props.initialResult}
+    >
       {(data) => <VendorsModuleView data={data} />}
     </ModulePageClient>
   );
