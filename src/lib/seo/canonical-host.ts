@@ -14,8 +14,17 @@ export function isCanonicalHost(host: string): boolean {
   return normalized === CANONICAL_HOST;
 }
 
+/** Deploy Vercel Preview — permite servir a branch sem redirect canónico. */
+export function isVercelPreviewDeployment(): boolean {
+  return process.env.VERCEL_ENV === "preview";
+}
+
 /** Hosts que devem redireccionar 308 para o domínio oficial. */
 export function shouldRedirectToCanonical(host: string): boolean {
+  if (isVercelPreviewDeployment()) {
+    return false;
+  }
+
   const normalized = host.toLowerCase().split(":")[0] ?? host;
   if (NON_CANONICAL_HOSTS.has(normalized)) return true;
   return normalized.endsWith(VERCEL_PREVIEW_SUFFIX);
@@ -23,5 +32,5 @@ export function shouldRedirectToCanonical(host: string): boolean {
 
 /** Deploys de preview Vercel — nunca indexar. */
 export function isPreviewDeployment(): boolean {
-  return process.env.VERCEL_ENV === "preview";
+  return isVercelPreviewDeployment();
 }
