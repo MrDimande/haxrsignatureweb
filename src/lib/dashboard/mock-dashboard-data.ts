@@ -337,6 +337,22 @@ function buildJessicaSamuelDashboard(): DashboardData {
         status: "aberta",
       },
     ],
+    documentSnapshot: [
+      {
+        id: "doc-1",
+        title: "Proposta_Decoracao_Elegance.pdf",
+        source: "concierge_portal",
+        status: "por_validar",
+        uploadedLabel: "Há 3 h",
+      },
+      {
+        id: "doc-2",
+        title: "Contrato_Lens_Studio.pdf",
+        source: "commercial_document",
+        status: "validado",
+        uploadedLabel: "10 Mai 2026",
+      },
+    ],
     recentActivity: [
       {
         id: "activity-1",

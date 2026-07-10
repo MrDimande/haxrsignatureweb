@@ -188,6 +188,7 @@ export function adaptOnboardingToDashboardData(data: OnboardingRawData): Dashboa
     },
     vendorSnapshot: [],
     checklistSnapshot: [],
+    documentSnapshot: [],
     recentActivity: [
       {
         id: "onboarding-complete",

@@ -24,6 +24,11 @@ import {
 } from "@/lib/checklist/client-event-checklist-dashboard";
 import { fetchClientEventChecklistViaRpc } from "@/lib/checklist/client-event-checklist-rpc";
 import {
+  mapRpcPayloadToDashboardDocumentMetrics,
+  type ClientEventDashboardDocumentMetrics,
+} from "@/lib/documents/client-event-documents-dashboard";
+import { fetchClientEventDocumentsViaRpc } from "@/lib/documents/client-event-documents-rpc";
+import {
   mapRpcPayloadToDashboardVendorMetrics,
   type ClientEventDashboardVendorMetrics,
 } from "@/lib/vendors/client-event-vendors-dashboard";
@@ -149,6 +154,7 @@ export function mapClientEventToDashboardData(
   financeMetrics: ClientEventDashboardFinanceMetrics | null = null,
   vendorMetrics: ClientEventDashboardVendorMetrics | null = null,
   checklistMetrics: ClientEventDashboardChecklistMetrics | null = null,
+  documentMetrics: ClientEventDashboardDocumentMetrics | null = null,
 ): DashboardData {
   const budget =
     financeMetrics?.budgetEstimated ?? resolveBudgetEstimated(event);
@@ -177,6 +183,7 @@ export function mapClientEventToDashboardData(
     (hasOperationalLink ? kpis.checklistCompleted : 0);
   const checklistOpen = Math.max(0, checklistTotal - checklistCompleted);
   const documentsCount =
+    documentMetrics?.documentsTotal ??
     kpis.documentsCount + kpis.conciergeUploadsCount + kpis.conciergePortalItemsCount;
   const financeRegistered = paidAmount;
   const vendorsActive =
@@ -406,6 +413,7 @@ export function mapClientEventToDashboardData(
     },
     vendorSnapshot: [],
     checklistSnapshot: checklistMetrics?.checklistSnapshot ?? [],
+    documentSnapshot: documentMetrics?.documentSnapshot ?? [],
     recentActivity: [
       {
         id: `event-created-${event.id}`,
@@ -417,9 +425,10 @@ export function mapClientEventToDashboardData(
       },
     ],
     conciergeSummary: {
-      documentsToday: 0,
-      contractsAwaiting: kpis.conciergeReviewItemsCount,
-      proposalsApproval: 0,
+      documentsToday: documentMetrics?.documentsTotal ?? 0,
+      contractsAwaiting:
+        documentMetrics?.pendingReviewCount ?? kpis.conciergeReviewItemsCount,
+      proposalsApproval: documentMetrics?.approvedCount ?? 0,
       guestsNoResponse: guests.pending,
       href: "/app/concierge",
     },
@@ -434,8 +443,10 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
   let financeMetrics: ClientEventDashboardFinanceMetrics | null = null;
   let vendorMetrics: ClientEventDashboardVendorMetrics | null = null;
   let checklistMetrics: ClientEventDashboardChecklistMetrics | null = null;
+  let documentMetrics: ClientEventDashboardDocumentMetrics | null = null;
   let vendorSnapshot: DashboardData["vendorSnapshot"] = [];
   let checklistSnapshot: DashboardData["checklistSnapshot"] = [];
+  let documentSnapshot: DashboardData["documentSnapshot"] = [];
 
   if (event.operational_event_id && isSupabaseConfigured()) {
     try {
@@ -488,13 +499,27 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
         checklistMetrics = null;
         checklistSnapshot = [];
       }
+
+      try {
+        const documentsPayload = await fetchClientEventDocumentsViaRpc(
+          adminClient as never,
+          event.id,
+        );
+        documentMetrics = mapRpcPayloadToDashboardDocumentMetrics(event, documentsPayload);
+        documentSnapshot = documentMetrics.documentSnapshot;
+      } catch {
+        documentMetrics = null;
+        documentSnapshot = [];
+      }
     } catch {
       operationalKpis = null;
       financeMetrics = null;
       vendorMetrics = null;
       checklistMetrics = null;
+      documentMetrics = null;
       vendorSnapshot = [];
       checklistSnapshot = [];
+      documentSnapshot = [];
     }
   }
 
@@ -505,8 +530,9 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
     financeMetrics,
     vendorMetrics,
     checklistMetrics,
+    documentMetrics,
   );
-  return { ...dashboard, vendorSnapshot, checklistSnapshot };
+  return { ...dashboard, vendorSnapshot, checklistSnapshot, documentSnapshot };
 }
 
 export async function resolveClientEventDashboardAccess(

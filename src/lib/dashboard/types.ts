@@ -99,6 +99,14 @@ export interface DashboardChecklistSnapshotItem {
   status: string;
 }
 
+export interface DashboardDocumentSnapshotItem {
+  id: string;
+  title: string;
+  source: string;
+  status: string;
+  uploadedLabel: string;
+}
+
 export type DashboardActivityType =
   | "guests"
   | "finance"
@@ -154,6 +162,7 @@ export interface DashboardData {
   guestSnapshot: DashboardGuestSnapshot;
   vendorSnapshot: DashboardVendorSnapshot[];
   checklistSnapshot: DashboardChecklistSnapshotItem[];
+  documentSnapshot: DashboardDocumentSnapshotItem[];
   recentActivity: DashboardRecentActivity[];
   conciergeSummary: DashboardConciergeSummary;
 }

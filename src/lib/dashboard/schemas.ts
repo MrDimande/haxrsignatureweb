@@ -87,6 +87,14 @@ const dashboardChecklistSnapshotSchema = z.object({
   status: z.string(),
 });
 
+const dashboardDocumentSnapshotSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  source: z.string(),
+  status: z.string(),
+  uploadedLabel: z.string(),
+});
+
 const dashboardRecentActivitySchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -131,6 +139,7 @@ export const dashboardDataSchema = z.object({
   guestSnapshot: dashboardGuestSnapshotSchema,
   vendorSnapshot: z.array(dashboardVendorSnapshotSchema),
   checklistSnapshot: z.array(dashboardChecklistSnapshotSchema),
+  documentSnapshot: z.array(dashboardDocumentSnapshotSchema),
   recentActivity: z.array(dashboardRecentActivitySchema),
   conciergeSummary: dashboardConciergeSummarySchema,
 });
