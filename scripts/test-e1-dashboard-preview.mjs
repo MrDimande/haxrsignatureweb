@@ -134,6 +134,8 @@ const kpiSnapshot = own.body.ok
       operationalEventId: own.body.data.meta?.operationalEventId ?? null,
       guestsTotal: own.body.data.guestSnapshot?.total,
       guestsConfirmed: own.body.data.guestSnapshot?.confirmed,
+      guestsPending: own.body.data.guestSnapshot?.pending,
+      guestsPlusOnes: own.body.data.guestSnapshot?.plusOnes,
       paidAmount: own.body.data.financeSnapshot?.paidAmount,
       pendingAmount: own.body.data.financeSnapshot?.pendingAmount,
       budgetEstimated: own.body.data.financeSnapshot?.budgetEstimated,
@@ -146,7 +148,11 @@ const pass =
   own.body.ok === true &&
   own.body.data?.eventOverview?.eventId === staging.eventId &&
   (kpiSnapshot?.operationalLinked !== true ||
-    (kpiSnapshot.paidAmount === 40000 &&
+    (kpiSnapshot.guestsTotal === 2 &&
+      kpiSnapshot.guestsConfirmed === 1 &&
+      kpiSnapshot.guestsPending === 1 &&
+      kpiSnapshot.guestsPlusOnes === 1 &&
+      kpiSnapshot.paidAmount === 40000 &&
       own.body.data.financeSnapshot?.pendingAmount === 110000 &&
       own.body.data.financeSnapshot?.budgetEstimated === 150000)) &&
   foreignPass &&

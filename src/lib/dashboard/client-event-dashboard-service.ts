@@ -29,6 +29,11 @@ import {
 } from "@/lib/documents/client-event-documents-dashboard";
 import { fetchClientEventDocumentsViaRpc } from "@/lib/documents/client-event-documents-rpc";
 import {
+  mapRpcPayloadToDashboardGuestMetrics,
+  type ClientEventDashboardGuestMetrics,
+} from "@/lib/guests/client-event-guests-dashboard";
+import { fetchClientEventGuestsViaRpc } from "@/lib/guests/client-event-guests-rpc";
+import {
   mapRpcPayloadToDashboardVendorMetrics,
   type ClientEventDashboardVendorMetrics,
 } from "@/lib/vendors/client-event-vendors-dashboard";
@@ -112,19 +117,11 @@ function percentOf(part: number, total: number): number {
 
 function resolveGuestDisplayMetrics(
   event: ClientEventRow,
-  operationalKpis: ClientEventOperationalKpis | null,
-): {
-  total: number;
-  confirmed: number;
-  pending: number;
-  declined: number;
-  plusOnes: number;
-  tablesAssigned: number;
-  tablesTotal: number;
-} {
+  guestMetrics: ClientEventDashboardGuestMetrics | null,
+): DashboardData["guestSnapshot"] {
   const estimatedGuests = event.estimated_guests ?? 0;
 
-  if (!event.operational_event_id || !operationalKpis) {
+  if (!event.operational_event_id) {
     return {
       total: estimatedGuests,
       confirmed: 0,
@@ -136,14 +133,18 @@ function resolveGuestDisplayMetrics(
     };
   }
 
+  if (guestMetrics) {
+    return guestMetrics.guestSnapshot;
+  }
+
   return {
-    total: operationalKpis.guestsTotal,
-    confirmed: operationalKpis.guestsConfirmed,
-    pending: operationalKpis.guestsPending,
-    declined: operationalKpis.guestsDeclined,
-    plusOnes: operationalKpis.guestsPlusOnes,
-    tablesAssigned: operationalKpis.tablesAssigned,
-    tablesTotal: operationalKpis.tablesTotal,
+    total: 0,
+    confirmed: 0,
+    pending: 0,
+    declined: 0,
+    plusOnes: 0,
+    tablesAssigned: 0,
+    tablesTotal: 0,
   };
 }
 
@@ -151,6 +152,7 @@ export function mapClientEventToDashboardData(
   event: ClientEventRow,
   profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null,
   operationalKpis: ClientEventOperationalKpis | null = null,
+  guestMetrics: ClientEventDashboardGuestMetrics | null = null,
   financeMetrics: ClientEventDashboardFinanceMetrics | null = null,
   vendorMetrics: ClientEventDashboardVendorMetrics | null = null,
   checklistMetrics: ClientEventDashboardChecklistMetrics | null = null,
@@ -166,7 +168,10 @@ export function mapClientEventToDashboardData(
 
   const hasOperationalLink = Boolean(event.operational_event_id);
   const kpis = hasOperationalLink && operationalKpis ? operationalKpis : EMPTY_OPERATIONAL_KPIS;
-  const guests = resolveGuestDisplayMetrics(event, hasOperationalLink ? kpis : null);
+  const guests = resolveGuestDisplayMetrics(
+    event,
+    hasOperationalLink ? guestMetrics : null,
+  );
 
   const paidAmount =
     financeMetrics?.paidAmount ??
@@ -440,6 +445,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
   profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null,
 ): Promise<DashboardData> {
   let operationalKpis: ClientEventOperationalKpis | null = null;
+  let guestMetrics: ClientEventDashboardGuestMetrics | null = null;
   let financeMetrics: ClientEventDashboardFinanceMetrics | null = null;
   let vendorMetrics: ClientEventDashboardVendorMetrics | null = null;
   let checklistMetrics: ClientEventDashboardChecklistMetrics | null = null;
@@ -456,6 +462,16 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
         { clientEventId: event.id, slug: event.slug },
         adminClient as never,
       );
+
+      try {
+        const guestsPayload = await fetchClientEventGuestsViaRpc(
+          adminClient as never,
+          event.id,
+        );
+        guestMetrics = mapRpcPayloadToDashboardGuestMetrics(guestsPayload);
+      } catch {
+        guestMetrics = null;
+      }
 
       try {
         const paymentsPayload = await fetchClientEventPaymentsViaRpc(
@@ -513,6 +529,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
       }
     } catch {
       operationalKpis = null;
+      guestMetrics = null;
       financeMetrics = null;
       vendorMetrics = null;
       checklistMetrics = null;
@@ -527,6 +544,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
     event,
     profile,
     operationalKpis,
+    guestMetrics,
     financeMetrics,
     vendorMetrics,
     checklistMetrics,

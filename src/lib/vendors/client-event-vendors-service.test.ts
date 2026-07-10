@@ -318,6 +318,7 @@ describe("client-event-vendors-dashboard", () => {
       null,
       null,
       null,
+      null,
       metrics,
     );
 

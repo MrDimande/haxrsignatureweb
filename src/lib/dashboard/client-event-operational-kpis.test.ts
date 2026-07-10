@@ -12,6 +12,8 @@ import {
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
 import { mapRpcPayloadToDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
 import type { ClientEventPaymentsRpcPayload } from "@/lib/payments/client-event-payments-rpc";
+import { mapRpcPayloadToDashboardGuestMetrics } from "@/lib/guests/client-event-guests-dashboard";
+import type { ClientEventGuestsRpcPayload } from "@/lib/guests/client-event-guests-rpc";
 
 const OPERATIONAL_EVENT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -144,9 +146,9 @@ describe("client-event-operational-kpis", () => {
       }),
     );
 
-    assert.equal(kpis.guestsTotal, 2);
-    assert.equal(kpis.guestsConfirmed, 1);
-    assert.equal(kpis.guestsPending, 1);
+    assert.equal(kpis.guestsTotal, 0);
+    assert.equal(kpis.guestsConfirmed, 0);
+    assert.equal(kpis.guestsPending, 0);
     assert.equal(kpis.paymentsCount, 2);
     assert.equal(kpis.paymentsTotal, 40000.5);
     assert.equal(kpis.vendorsCount, 1);
@@ -180,17 +182,29 @@ describe("mapClientEventToDashboardData operational KPIs", () => {
     assert.equal(dashboard.stats.find((s) => s.id === "tasks-open")?.value, 0);
   });
 
-  it("with operational_event_id uses real guest and payment KPIs", () => {
+  it("with operational_event_id uses RPC guest and payment KPIs", () => {
+    const guestMetrics = mapRpcPayloadToDashboardGuestMetrics({
+      guests: [],
+      summary: {
+        total: 12,
+        confirmed: 7,
+        pending: 4,
+        declined: 1,
+        plusOnes: 3,
+        tablesAssigned: 5,
+        tablesTotal: 8,
+      },
+    });
     const dashboard = mapClientEventToDashboardData(
       { ...baseEvent, operational_event_id: OPERATIONAL_EVENT_ID },
       { full_name: "Staging A", app_role: "client" },
       {
-        guestsTotal: 12,
-        guestsConfirmed: 7,
-        guestsPending: 4,
-        guestsDeclined: 1,
-        guestsPlusOnes: 3,
-        tablesAssigned: 5,
+        guestsTotal: 0,
+        guestsConfirmed: 0,
+        guestsPending: 0,
+        guestsDeclined: 0,
+        guestsPlusOnes: 0,
+        tablesAssigned: 0,
         tablesTotal: 8,
         paymentsCount: 0,
         paymentsTotal: 0,
@@ -204,6 +218,7 @@ describe("mapClientEventToDashboardData operational KPIs", () => {
         conciergePortalItemsCount: 0,
         contactProfilesCount: 9,
       },
+      guestMetrics,
       {
         paymentCount: 2,
         paidAmount: 50000,
@@ -285,6 +300,7 @@ describe("mapClientEventToDashboardData operational KPIs", () => {
       { ...baseEvent, operational_event_id: OPERATIONAL_EVENT_ID, budget_max: 150000 },
       null,
       null,
+      null,
       finance,
     );
 
@@ -296,7 +312,39 @@ describe("mapClientEventToDashboardData operational KPIs", () => {
     assert.equal(dashboard.financeSnapshot.pendingAmount, 110000);
   });
 
-  it("operational event with empty operational data returns safe zeros", () => {
+  it("RPC guest metrics map staging-a guest totals for dashboard", () => {
+    const rpcPayload: ClientEventGuestsRpcPayload = {
+      guests: [],
+      summary: {
+        total: 2,
+        confirmed: 1,
+        pending: 1,
+        declined: 0,
+        plusOnes: 1,
+        tablesAssigned: 0,
+        tablesTotal: 0,
+      },
+    };
+
+    const guestMetrics = mapRpcPayloadToDashboardGuestMetrics(rpcPayload);
+    const dashboard = mapClientEventToDashboardData(
+      { ...baseEvent, operational_event_id: OPERATIONAL_EVENT_ID },
+      null,
+      null,
+      guestMetrics,
+    );
+
+    assert.equal(guestMetrics.guestsTotal, 2);
+    assert.equal(guestMetrics.guestsConfirmed, 1);
+    assert.equal(guestMetrics.guestsPending, 1);
+    assert.equal(guestMetrics.guestsPlusOnes, 1);
+    assert.equal(dashboard.guestSnapshot.total, 2);
+    assert.equal(dashboard.guestSnapshot.confirmed, 1);
+    assert.equal(dashboard.guestSnapshot.pending, 1);
+    assert.equal(dashboard.guestSnapshot.plusOnes, 1);
+  });
+
+  it("operational event without guest RPC returns safe zeros", () => {
     const dashboard = mapClientEventToDashboardData(
       { ...baseEvent, operational_event_id: OPERATIONAL_EVENT_ID },
       null,

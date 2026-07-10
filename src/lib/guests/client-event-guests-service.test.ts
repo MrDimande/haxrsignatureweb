@@ -16,6 +16,7 @@ import {
   type ClientEventGuestsRpcClient,
   type ClientEventGuestsRpcPayload,
 } from "@/lib/guests/client-event-guests-rpc";
+import { mapRpcPayloadToDashboardGuestMetrics } from "@/lib/guests/client-event-guests-dashboard";
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
 
 const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
@@ -422,5 +423,28 @@ describe("client-event-guests-api", () => {
     assert.equal(result.status, 503);
     if (result.body.ok) return;
     assert.equal(result.body.error, "unavailable");
+  });
+});
+
+describe("client-event-guests-dashboard", () => {
+  it("mapRpcPayloadToDashboardGuestMetrics maps summary to guestSnapshot", () => {
+    const payload: ClientEventGuestsRpcPayload = {
+      guests: sampleGuestRows,
+      summary: {
+        total: 2,
+        confirmed: 1,
+        pending: 1,
+        declined: 0,
+        plusOnes: 1,
+        tablesAssigned: 0,
+        tablesTotal: 0,
+      },
+    };
+
+    const metrics = mapRpcPayloadToDashboardGuestMetrics(payload);
+    assert.equal(metrics.guestsTotal, 2);
+    assert.equal(metrics.guestSnapshot.confirmed, 1);
+    assert.equal(metrics.guestSnapshot.pending, 1);
+    assert.equal(metrics.guestSnapshot.plusOnes, 1);
   });
 });

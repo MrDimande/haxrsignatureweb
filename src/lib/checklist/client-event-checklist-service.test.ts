@@ -339,6 +339,7 @@ describe("client-event-checklist-dashboard", () => {
       null,
       null,
       null,
+      null,
       metrics,
     );
 

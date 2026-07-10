@@ -350,6 +350,7 @@ describe("client-event-documents-dashboard", () => {
       null,
       null,
       null,
+      null,
       metrics,
     );
 

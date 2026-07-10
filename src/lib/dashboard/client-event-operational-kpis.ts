@@ -2,6 +2,9 @@
  * Operational KPI aggregates for client dashboard (events.* schema).
  * Loaded server-side via service role after ACL check — operational tables
  * have RLS without authenticated policies (migration 006).
+ *
+ * Guest KPIs on the dashboard are sourced from get_client_event_guests RPC;
+ * guest fields here remain zero (legacy shape for auxiliary counts only).
  */
 
 export type ClientEventOperationalKpis = {
@@ -125,7 +128,6 @@ type CountTable =
   | "seats";
 
 export type OperationalKpisAdminClient = {
-  from(table: "guests"): ListQuery<GuestRow>;
   from(table: "payments"): ListQuery<PaymentRow>;
   from(table: CountTable): CountQuery;
   from(table: "event_vendors"): ListQuery<VendorRow>;
@@ -243,7 +245,6 @@ export async function fetchOperationalKpis(
   adminClient: OperationalKpisAdminClient,
 ): Promise<ClientEventOperationalKpis> {
   const [
-    guestsResult,
     paymentsResult,
     vendorsResult,
     checklistResult,
@@ -255,7 +256,6 @@ export async function fetchOperationalKpis(
     tablesTotal,
     conciergePortalItemsCount,
   ] = await Promise.all([
-    adminClient.from("guests").select("status, plus_ones, seat_id").eq("event_id", operationalEventId),
     adminClient.from("payments").select("amount").eq("event_id", operationalEventId),
     adminClient
       .from("event_vendors")
@@ -271,18 +271,6 @@ export async function fetchOperationalKpis(
     countPortalItems(adminClient, portalScope),
   ]);
 
-  const guestMetrics =
-    guestsResult.error || !guestsResult.data
-      ? {
-          guestsTotal: 0,
-          guestsConfirmed: 0,
-          guestsPending: 0,
-          guestsDeclined: 0,
-          guestsPlusOnes: 0,
-          tablesAssigned: 0,
-        }
-      : aggregateGuestMetrics(guestsResult.data);
-
   const paymentMetrics =
     paymentsResult.error || !paymentsResult.data
       ? { count: 0, total: 0 }
@@ -297,7 +285,12 @@ export async function fetchOperationalKpis(
   const vendorsRows = vendorsResult.error ? [] : (vendorsResult.data ?? []);
 
   return {
-    ...guestMetrics,
+    guestsTotal: 0,
+    guestsConfirmed: 0,
+    guestsPending: 0,
+    guestsDeclined: 0,
+    guestsPlusOnes: 0,
+    tablesAssigned: 0,
     tablesTotal,
     paymentsCount: paymentMetrics.count,
     paymentsTotal: paymentMetrics.total,
