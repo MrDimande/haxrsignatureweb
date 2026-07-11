@@ -1,35 +1,96 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import pg from "pg";
 
 const PRODUCTION_REF = "oxsrdmydlqyvnueedgtl";
+const DRY_RUN_REF = "rkkxfrwtmsqzpnbkshnd";
 
-export function resolveDatabaseUrl() {
-  const url =
-    process.env.PR4_DATABASE_URL?.trim() ||
-    process.env.DATABASE_URL?.trim() ||
-    process.env.SUPABASE_DB_URL?.trim();
+/** URL libpq (psql/pg_dump/pg_restore) — nunca uselibpqcompat, nunca password embebida. */
+export function resolveLibpqDatabaseUrl() {
+  const url = process.env.PR4_DATABASE_URL?.trim();
 
   if (!url) {
-    throw new Error(
-      "Defina PR4_DATABASE_URL (ou DATABASE_URL) apontando para o clone de ensaio.",
-    );
+    throw new Error("Defina PR4_DATABASE_URL apontando para o clone de ensaio.");
   }
 
-  if (url.includes(PRODUCTION_REF) && process.env.PR4_ALLOW_PRODUCTION !== "1") {
-    throw new Error(
-      "ABORT: URL aponta para produção. Use um clone isolado ou PR4_ALLOW_PRODUCTION=1 (não recomendado).",
-    );
+  if (url.includes(PRODUCTION_REF)) {
+    throw new Error("ABORT: URL aponta para produção.");
+  }
+
+  if (!url.includes(DRY_RUN_REF)) {
+    throw new Error("ABORT: URL não aponta para o clone dry-run.");
+  }
+
+  if (/uselibpqcompat/i.test(url)) {
+    throw new Error("ABORT: PR4_DATABASE_URL (libpq) não deve conter uselibpqcompat.");
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("ABORT: PR4_DATABASE_URL inválida.");
+  }
+
+  if (parsed.password) {
+    throw new Error("ABORT: password embebida na URL. Usar PGPASSWORD.");
   }
 
   return url;
 }
 
-export async function withClient(fn) {
-  const client = new pg.Client({
-    connectionString: resolveDatabaseUrl(),
-    ssl: { rejectUnauthorized: false },
+/** URL node-postgres — deriva de PR4_DATABASE_URL + uselibpqcompat=true. */
+export function buildNodeConnectionString() {
+  const parsed = new URL(resolveLibpqDatabaseUrl());
+  parsed.searchParams.set("uselibpqcompat", "true");
+  return parsed.toString();
+}
+
+/** @deprecated Prefer resolveLibpqDatabaseUrl ou buildNodeConnectionString. */
+export function resolveDatabaseUrl() {
+  return resolveLibpqDatabaseUrl();
+}
+
+/** Config pg (Node): URL derivada + PGPASSWORD obrigatório. */
+export function buildPgClientConfig() {
+  const password = process.env.PGPASSWORD?.trim();
+  if (!password) {
+    throw new Error("ABORT: PGPASSWORD em falta para ligação Node.");
+  }
+
+  return {
+    connectionString: buildNodeConnectionString(),
+    password,
+  };
+}
+
+export function resolvePsqlBin() {
+  const pg17 = "C:\\Program Files\\PostgreSQL\\17\\bin\\psql.exe";
+  if (existsSync(pg17)) {
+    return pg17;
+  }
+
+  const result = spawnSync("psql", ["--version"], {
+    encoding: "utf8",
+    stdio: "pipe",
   });
+  const version = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (
+    result.status === 0 &&
+    version.includes("psql (PostgreSQL)") &&
+    !version.includes("EnterpriseDB")
+  ) {
+    return "psql";
+  }
+
+  throw new Error(
+    "ABORT: psql PostgreSQL 17 não encontrado e PATH não aponta para psql (PostgreSQL).",
+  );
+}
+
+export async function withClient(fn) {
+  const client = new pg.Client(buildPgClientConfig());
   await client.connect();
   try {
     return await fn(client);
