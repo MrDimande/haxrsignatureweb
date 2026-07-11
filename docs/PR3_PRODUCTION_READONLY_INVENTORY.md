@@ -50,6 +50,42 @@ Ir a **Project Settings → General** e **Database → Backups** (read-only):
 | Janela PITR (se activo) | _Pendente_ | earliest / latest recovery point |
 | Snapshot manual criado nesta fase | **Não** | — |
 
+#### 2.1.1 Bloco de recolha manual (Dashboard read-only)
+
+> Preencher **manualmente** a partir do Dashboard. **Não** inventar valores. Campos ainda não recolhidos permanecem como `Pendente de recolha manual no Dashboard`. **Não** colocar passwords, connection strings completas, service-role keys, tokens ou screenshots com segredos.
+
+| Campo | Valor |
+|---|---|
+| Data/hora da verificação | Pendente de recolha manual no Dashboard |
+| Plano | Pendente de recolha manual no Dashboard |
+| Região | Pendente de recolha manual no Dashboard |
+| Último backup disponível | Pendente de recolha manual no Dashboard |
+| Retenção | Pendente de recolha manual no Dashboard |
+| PITR (activo / inactivo / não disponível) | Pendente de recolha manual no Dashboard |
+| backupAvailable (true / false / por confirmar) | por confirmar |
+| restoreProcedureKnown (true / false / por confirmar) | por confirmar |
+| restoreAuthorityIdentified (true / false / por confirmar) | por confirmar |
+| Restauro testável (sim / não / por confirmar) | por confirmar |
+| Responsável por autorizar | Pendente de recolha manual no Dashboard |
+| Responsável por executar | Pendente de recolha manual no Dashboard |
+| Tempo estimado de recuperação | Pendente de recolha manual no Dashboard |
+| Evidência sanitizada | Pendente de recolha manual no Dashboard |
+| Observações | Pendente de recolha manual no Dashboard |
+| productionTouched | false |
+
+#### 2.1.2 Gate para avançar aos itens 4–6
+
+```text
+backupAvailable = true
+restoreProcedureKnown = true
+restoreAuthorityIdentified = true
+productionTouched = false
+```
+
+Enquanto **qualquer** campo obrigatório do gate estiver pendente ou por confirmar, mantém-se:
+
+**NO-GO TEMPORÁRIO — prontidão de restauro ainda não comprovada**
+
 ### 2.2 Referência documental (não substitui Dashboard)
 
 - [Supabase Database Backups](https://supabase.com/docs/guides/platform/backups)
