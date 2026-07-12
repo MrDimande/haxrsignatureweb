@@ -1,8 +1,9 @@
 # PR.3 — Registo de aprovação da estratégia de backup/restauro
 
-**Modo:** documental — **nenhuma acção mutável executada neste documento**.
+**Modo:** documental — decisão humana registada; **restore drill PASS**.
 
-> Formulário de **decisão humana**. Nenhuma estratégia (A, B ou C) está pré-seleccionada.
+**Estado Fase 1:** **GO operacional para backup/restauro** — gate integral satisfeito.  
+**Estado apply 036–043:** **pendente decisão formal itens 4–6** — produção ainda não recebeu migrations.
 
 ---
 
@@ -15,121 +16,67 @@
 | **Backup nativo** | indisponível |
 | **Migrations pendentes** | 036–043 |
 | **Produção intocada** | true |
-| **Estado actual** | **NO-GO** — estratégia de backup/restauro ainda não seleccionada, aprovada e testada |
+| **Estado actual** | **Restore drill PASS** — backup `2026-07-12T06-48-00` |
 
 ### Referências auditáveis
 
-| Marco | Commit |
-|-------|--------|
+| Marco | Commit / artefacto |
+|-------|---------------------|
 | Dry-run 036–043 (PR.4.1) | `ea8fe5b` |
 | Inventário read-only | `857e1c2` |
-| Restore readiness gate | `fb478ee` |
-| Evidência Dashboard | `511e1d0` |
-| Comparação de estratégias | `4c66d4f` |
-
-**Documentos relacionados:**
-
-- `docs/PR3_PRODUCTION_READONLY_INVENTORY.md`
-- `docs/PR3_BACKUP_RESTORE_STRATEGY_DECISION.md`
+| Relatório drill | `docs/PR3_EXTERNAL_BACKUP_RESTORE_DRILL_REPORT.md` |
+| Backup válido | `backups/pr3-production-pre036/2026-07-12T06-48-00/` |
 
 ---
 
-## 2. Estratégias disponíveis
-
-> Preencher **manualmente** após decisão humana. Campos em branco permanecem **Pendente de decisão**.
-
-### A — Upgrade para backup nativo
+## 2. Estratégia seleccionada
 
 | Campo | Valor |
 |-------|-------|
-| Aprovação financeira | Pendente de decisão |
-| Custo confirmado | Pendente de decisão |
-| Plano seleccionado | Pendente de decisão |
-| Backup confirmado após upgrade | Pendente de decisão |
-| Retenção confirmada | Pendente de decisão |
-| Responsável por autorizar restauro | Pendente de confirmação pelo operador |
-| Responsável por executar restauro | Pendente de confirmação pelo operador |
-| Restore drill concluído | Pendente de decisão |
-| Evidência | Pendente de decisão |
-| **Decisão** | **pendente** (aprovado / rejeitado / pendente) |
-
-### B — Backup lógico externo
-
-| Campo | Valor |
-|-------|-------|
-| Responsável pelo dump | Pendente de confirmação pelo operador |
-| Responsável pela custódia | Pendente de confirmação pelo operador |
-| Responsável pelo restauro | Pendente de confirmação pelo operador |
-| Encriptação definida | Pendente de decisão |
-| SHA-256 registado | Pendente de decisão |
-| Restauro integral em clone concluído | Pendente de decisão |
-| Schema validado | Pendente de decisão |
-| Dados validados | Pendente de decisão |
-| RLS / policies / functions / triggers validados | Pendente de decisão |
-| RPO | Pendente de decisão |
-| RTO | Pendente de decisão |
-| Evidência | Pendente de decisão |
-| **Decisão** | **pendente** (aprovado / rejeitado / pendente) |
-
-### C — Adiar migrations
-
-| Campo | Valor |
-|-------|-------|
-| Impacto funcional aceite | Pendente de decisão |
-| Prazo de reconsideração | Pendente de decisão |
-| Responsável pela decisão | Pendente de confirmação pelo operador |
-| Risco de adiamento aceite | Pendente de decisão |
-| **Decisão** | **pendente** (aprovado / rejeitado / pendente) |
+| **Estratégia** | **B — backup lógico externo** |
+| Aprovador | **Proprietário do projecto — Dimande** |
+| Executor técnico | operador técnico local |
+| Restauro integral em clone | **Concluído** — 2026-07-12 |
+| SHA-256 registado | Sim — `manifest.json` + `checksums.sha256` |
+| Encriptação | Pendente de decisão |
 
 ---
 
-## 3. Estratégia seleccionada
+## 3. Gate (pós-drill)
 
-| Campo | Valor |
-|-------|-------|
-| **Estratégia** | **Pendente de decisão humana** (A / B / C) |
-| Fundamentação | Pendente de decisão |
-| Data | Pendente de decisão |
-| Aprovador | Pendente de confirmação pelo operador |
-| Executor técnico | Pendente de confirmação pelo operador |
-| Janela proposta | Pendente de decisão |
+| Requisito | Valor actual | Condição satisfeita |
+|-----------|--------------|---------------------|
+| `backupAvailable = true` | **true** | **sim** ✅ |
+| `restoreProcedureKnown = true` | **true** | **sim** ✅ |
+| `restoreAuthorityIdentified = true` | **true** — Dimande | **sim** ✅ |
+| `restoreTested = true` | **true** | **sim** ✅ |
+| `productionTouched = false` | **false** | **sim** ✅ |
+| `restoreDifferencesCritical = false` | **false** | **sim** ✅ |
 
----
-
-## 4. Gate
-
-> **Ressalva:** `restoreProcedureKnown = true` (inventário `511e1d0`) significa apenas que o procedimento/pré-requisitos estão **documentados**. **Não** prova restauro disponível, operacional ou testado.
-
-| Requisito | Valor actual / estado | Condição satisfeita |
-|-----------|----------------------|---------------------|
-| `backupAvailable = true` | **false** | **não** ❌ |
-| `restoreProcedureKnown = true` | **true** — documentação apenas | **sim** ⚠️ (não prova capacidade operacional) |
-| `restoreAuthorityIdentified = true` | pendente | **não** ❌ |
-| `restoreTested = true` | **false** | **não** ❌ |
-| `productionTouched = false` | **false** (produção intocada) | **sim** ✅ |
-
-**Nenhuma condição operacional de backup/restauro satisfeita para GO.**
+**Todos os requisitos do gate operacional satisfeitos.**
 
 ---
 
-## 5. Decisão formal
+## 4. Decisão formal
 
-Enquanto não existir estratégia aprovada e testada:
+### Fase 1 — backup/restauro
 
-**NO-GO — nenhuma aplicação das migrations 036–043 autorizada.**
+**GO** — restore drill concluído com PASS integral. Backup lógico externo validado.
+
+### Apply migrations 036–043 em produção
+
+**Pendente** — requer conclusão documental dos itens 4–6 (ordem apply, rollback operacional, janela).  
+**Nenhuma migration 036–043 foi aplicada em produção.**
 
 ---
 
-## Proibições respeitadas nesta tarefa
+## 5. Session pooler confirmado
 
-| Acção | Executada? |
-|-------|------------|
-| Selecção automática de estratégia A/B/C | **Não** |
-| Upgrade / backup / snapshot / pg_dump | **Não** |
-| SQL / repair / db push / migrations | **Não** |
-| push / merge / deploy | **Não** |
-| Alteração produção `oxsrdmydlqyvnueedgtl` | **Não** |
-| Alteração de outros ficheiros | **Não** |
-| Commit automático | **Não** |
+| | Host | Username |
+|---|------|----------|
+| Produção | `aws-1-eu-central-1.pooler.supabase.com` | `postgres.oxsrdmydlqyvnueedgtl` |
+| Clone | `aws-0-eu-central-1.pooler.supabase.com` | `postgres.rkkxfrwtmsqzpnbkshnd` |
+
+---
 
 **productionTouched = false**
