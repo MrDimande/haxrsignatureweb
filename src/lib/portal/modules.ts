@@ -18,7 +18,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "dashboard",
     label: "Resumo",
-    path: "/portal",
+    path: "/portal/[token]",
     phase: "mvp",
     dataSource: "getClientCommercialOverview()",
     notes: "KPIs + próximo marco + alertas de aprovação.",
@@ -26,7 +26,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "events",
     label: "Eventos",
-    path: "/portal/eventos",
+    path: "/portal/[token]/eventos",
     phase: "mvp",
     dataSource: "eventsRepo.listEventsByClientId()",
     notes: "Lista read-only; detalhe por evento.",
@@ -34,7 +34,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "guests",
     label: "Convidados",
-    path: "/portal/eventos/[id]/convidados",
+    path: "/portal/[token]/eventos/[id]/convidados",
     phase: "mvp",
     dataSource: "guestsRepo.getEventStats()",
     notes: "Apenas estatísticas agregadas — sem nomes/emails.",
@@ -42,7 +42,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "documents",
     label: "Documentos",
-    path: "/portal/documentos",
+    path: "/portal/[token]/documentos",
     phase: "mvp",
     dataSource: "documentsRepo.listDocuments({ clientId })",
     notes: "Proformas, facturas, recibos; PDF se sent/paid.",
@@ -50,7 +50,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "finance",
     label: "Financeiro",
-    path: "/portal/financeiro",
+    path: "/portal/[token]/financeiro",
     phase: "mvp",
     dataSource: "paymentsRepo.listPaymentsByClientId()",
     notes: "Histórico de pagamentos e saldo pendente.",
@@ -58,7 +58,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "timeline",
     label: "Cronograma",
-    path: "/portal/cronograma",
+    path: "/portal/[token]/cronograma",
     phase: "v2",
     dataSource: "portal_timeline_items (nova tabela)",
     notes: "Marcos partilhados; admin gere visibilidade.",
@@ -66,7 +66,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "approvals",
     label: "Aprovações",
-    path: "/portal/aprovacoes",
+    path: "/portal/[token]/aprovacoes",
     phase: "v2",
     dataSource: "portal_approvals (nova tabela)",
     notes: "Cliente aprova layouts, textos, entregas.",
@@ -74,7 +74,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "contracts",
     label: "Contratos",
-    path: "/portal/contratos",
+    path: "/portal/[token]/contratos",
     phase: "v2",
     dataSource: "documents + portal_contracts",
     notes: "Contratos assinados e condições gerais.",
@@ -82,7 +82,7 @@ export const portalModules: PortalModuleSpec[] = [
   {
     id: "suppliers",
     label: "Fornecedores",
-    path: "/portal/fornecedores",
+    path: "/portal/[token]/fornecedores",
     phase: "v2",
     dataSource: "portal_suppliers (nova tabela)",
     notes: "Vista resumida; dados sensíveis só no admin.",
