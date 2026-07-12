@@ -1,7 +1,7 @@
 import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import * as paymentsRepo from "@/lib/finance/repositories/payments.repository";
-import type { ClientCommercialStats, Currency, InvoiceDocument } from "@/lib/admin/types";
+import type { Client, ClientCommercialStats, Currency, InvoiceDocument } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
 import type { PaymentRecord } from "@/lib/finance/types";
 
@@ -13,12 +13,12 @@ export type ClientCommercialOverview = {
 };
 
 export async function getClientCommercialOverview(
-  clientId: string
+  client: Client
 ): Promise<ClientCommercialOverview> {
   const [events, documents, payments] = await Promise.all([
-    eventsRepo.listEventsByClientId(clientId),
-    documentsRepo.listDocuments({ clientId }),
-    paymentsRepo.listPaymentsByClientId(clientId),
+    eventsRepo.listEventsByClientId(client.id),
+    documentsRepo.listDocumentsForClient(client),
+    paymentsRepo.listPaymentsByClientId(client.id),
   ]);
 
   const currency: Currency = documents[0]?.totals.currency ?? "MZN";

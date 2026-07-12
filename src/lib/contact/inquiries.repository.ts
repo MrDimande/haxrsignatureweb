@@ -85,6 +85,19 @@ export async function countRecentInquiriesByEmail(
   return count ?? 0;
 }
 
+export async function getInquiryById(id: string): Promise<ContactInquiry | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("contact_inquiries")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  const row = asTableRow<"contact_inquiries">(data);
+  return row ? mapInquiry(row) : null;
+}
+
 export async function listInquiries(): Promise<ContactInquiry[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase

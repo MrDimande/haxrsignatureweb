@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { ArrowLeft, FileText, Plus, Wallet } from "lucide-react";
+import ClientPortalPanel from "@/components/admin/clients/ClientPortalPanel";
+import ClientTimelinePanel from "@/components/admin/clients/ClientTimelinePanel";
 import AdminShell from "@/components/admin/AdminShell";
 import DataTable from "@/components/admin/DataTable";
 import { formatCurrency } from "@/lib/calculations";
@@ -11,6 +13,7 @@ import {
   DOCUMENT_TYPE_LABELS,
   EVENT_TYPE_LABELS,
 } from "@/lib/admin/constants";
+import type { ClientTimelineEntry } from "@/lib/admin/services/client-timeline.service";
 import type { Client, ClientCommercialStats, InvoiceDocument } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
 import type { PaymentRecord } from "@/lib/finance/types";
@@ -21,6 +24,8 @@ type ClientDetailClientProps = {
   documents: InvoiceDocument[];
   payments: PaymentRecord[];
   stats: ClientCommercialStats;
+  portalUrl?: string | null;
+  timeline: ClientTimelineEntry[];
 };
 
 function formatDate(date: string | null): string {
@@ -39,6 +44,8 @@ export default function ClientDetailClient({
   documents,
   payments,
   stats,
+  portalUrl = null,
+  timeline,
 }: ClientDetailClientProps) {
   return (
     <AdminShell
@@ -79,6 +86,10 @@ export default function ClientDetailClient({
           </div>
         ))}
       </div>
+
+      <ClientPortalPanel clientId={client.id} initialUrl={portalUrl} />
+
+      <ClientTimelinePanel entries={timeline} />
 
       <div className="flex flex-wrap gap-3 mb-8">
         <Link

@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Plus, Trash2, BookOpen, MessageCircle, PenLine } from "lucide-react";
+import { Plus, Trash2, BookOpen, MessageCircle, PenLine, Mail } from "lucide-react";
 import { AdminInput, AdminSelect, AdminTextarea } from "@/components/admin/AdminField";
 import InvoicePreview from "@/components/admin/InvoicePreview";
 import ServiceCatalogPanel from "@/components/admin/ServiceCatalogPanel";
 import SignaturePadModal from "@/components/admin/SignaturePadModal";
 import {
   markPdfGeneratedAction,
+  markWhatsAppSharedAction,
   peekDocumentNumberAction,
   saveDocumentAction,
+  sendDocumentEmailAction,
 } from "@/lib/admin/actions/documents.actions";
 import { calculateLineItems, calculateTotals, formatCurrency } from "@/lib/calculations";
 import {
@@ -35,6 +37,11 @@ import {
   signatureToFormFields,
 } from "@/lib/invoice-generator";
 import { downloadInvoicePDF } from "@/lib/pdf";
+import {
+  validateDocumentEmail,
+  validateDocumentWhatsApp,
+  validateInvoiceForm,
+} from "@/lib/admin/validate-invoice-form";
 import type {
   Business,
   BusinessSignature,
@@ -108,8 +115,10 @@ export default function InvoiceForm({
   const [showSignPad, setShowSignPad] = useState(false);
   const [isNewClient, setIsNewClient] = useState(!initialForm.clientId);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [numberError, setNumberError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const businessSignatures = useMemo(
     () => signatures.filter((sig) => sig.businessId === form.businessId),
@@ -146,6 +155,12 @@ export default function InvoiceForm({
     () => calculateTotals(form.lineItems, form.includeVat, form.currency),
     [form.lineItems, form.includeVat, form.currency]
   );
+
+  useEffect(() => {
+    if (initialDocument) {
+      setForm(documentToForm(initialDocument));
+    }
+  }, [initialDocument]);
 
   useEffect(() => {
     if (initialDocument) return;
@@ -341,34 +356,122 @@ export default function InvoiceForm({
     setShowCatalog(false);
   }
 
-  async function handleSave() {
+  async function persistDocument(markAsSent = false) {
+    const validation = validateInvoiceForm(form);
+    if (!validation.ok) {
+      setError(validation.error);
+      return null;
+    }
+
     setError("");
-    const result = await saveDocumentAction(form, initialDocument?.id);
+    setSuccess("");
+
+    const payload =
+      markAsSent && form.status === "draft"
+        ? { ...form, status: "sent" as const }
+        : form;
+
+    const result = await saveDocumentAction(payload, initialDocument?.id, {
+      createClientIfMissing: isNewClient,
+    });
     if (!result.success) {
       setError(result.error);
-      return;
+      return null;
     }
-    onSaved(result.data);
+
+    const saved = result.data;
+    setForm(documentToForm(saved));
+    return saved;
+  }
+
+  async function handleSave() {
+    setIsSubmitting(true);
+    try {
+      const saved = await persistDocument();
+      if (!saved) return;
+      setSuccess("Documento guardado com sucesso.");
+      onSaved(saved);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   async function handleGeneratePdf() {
-    setError("");
-    const saveResult = await saveDocumentAction(form, initialDocument?.id);
-    if (!saveResult.success) {
-      setError(saveResult.error);
-      return;
+    setIsSubmitting(true);
+    try {
+      const saved = await persistDocument();
+      if (!saved) return;
+
+      const pdfResult = await markPdfGeneratedAction(saved.id);
+      const doc = pdfResult.success ? pdfResult.data : saved;
+
+      try {
+        await downloadInvoicePDF(doc, activeBusiness);
+      } catch (pdfError) {
+        const message =
+          pdfError instanceof Error
+            ? pdfError.message
+            : "Não foi possível gerar o PDF.";
+        setError(`Documento guardado, mas falhou o PDF: ${message}`);
+        onSaved(doc);
+        return;
+      }
+
+      setSuccess("PDF guardado e transferência iniciada.");
+      onSaved(doc);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const pdfResult = await markPdfGeneratedAction(saveResult.data.id);
-    const doc = pdfResult.success ? pdfResult.data : saveResult.data;
-
-    await downloadInvoicePDF(doc, activeBusiness);
-    onSaved(doc);
   }
 
-  function handleWhatsApp() {
-    const doc = buildInvoiceDocument(form, initialDocument);
-    window.open(getWhatsAppShareUrl(doc), "_blank", "noopener,noreferrer");
+  async function handleWhatsApp() {
+    setIsSubmitting(true);
+    try {
+      const phoneCheck = validateDocumentWhatsApp(
+        form,
+        activeBusiness?.whatsapp ?? ""
+      );
+      if (!phoneCheck.ok) {
+        setError(phoneCheck.error);
+        return;
+      }
+
+      const saved = await persistDocument(true);
+      if (!saved) return;
+
+      window.open(getWhatsAppShareUrl(saved), "_blank", "noopener,noreferrer");
+      await markWhatsAppSharedAction(saved.id);
+      setSuccess("Documento guardado. WhatsApp aberto para partilha.");
+      onSaved(saved);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleSendEmail() {
+    setIsSubmitting(true);
+    try {
+      const emailCheck = validateDocumentEmail(form);
+      if (!emailCheck.ok) {
+        setError(emailCheck.error);
+        return;
+      }
+
+      const saved = await persistDocument();
+      if (!saved) return;
+
+      const sendResult = await sendDocumentEmailAction(saved.id);
+      if (!sendResult.success) {
+        setError(sendResult.error);
+        return;
+      }
+
+      setForm(documentToForm(sendResult.data));
+      setSuccess(`Documento enviado para ${sendResult.data.clientEmail}.`);
+      onSaved(sendResult.data);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const vatPercent = Math.round(VAT_RATE * 100);
@@ -379,6 +482,11 @@ export default function InvoiceForm({
         {error ? (
           <p className="text-red-400 text-sm admin-card p-4" role="alert">
             {error}
+          </p>
+        ) : null}
+        {success ? (
+          <p className="text-emerald-300/90 text-sm admin-card p-4" role="status">
+            {success}
           </p>
         ) : null}
 
@@ -859,20 +967,34 @@ export default function InvoiceForm({
           <button
             type="button"
             onClick={handleSave}
-            disabled={isPending}
+            disabled={isPending || isSubmitting}
             className="admin-btn-primary"
           >
-            Guardar Documento
+            {isSubmitting ? "A guardar…" : "Guardar Documento"}
           </button>
           <button
             type="button"
             onClick={handleGeneratePdf}
-            disabled={isPending}
+            disabled={isPending || isSubmitting}
             className="admin-btn-secondary"
           >
-            Gerar PDF
+            {isSubmitting ? "A gerar PDF…" : "Guardar PDF"}
           </button>
-          <button type="button" onClick={handleWhatsApp} className="admin-btn-secondary">
+          <button
+            type="button"
+            onClick={handleSendEmail}
+            disabled={isPending || isSubmitting}
+            className="admin-btn-secondary"
+          >
+            <Mail className="w-4 h-4" />
+            {isSubmitting ? "A enviar…" : "Enviar por Email"}
+          </button>
+          <button
+            type="button"
+            onClick={handleWhatsApp}
+            disabled={isPending || isSubmitting}
+            className="admin-btn-secondary"
+          >
             <MessageCircle className="w-4 h-4" />
             Partilhar WhatsApp
           </button>

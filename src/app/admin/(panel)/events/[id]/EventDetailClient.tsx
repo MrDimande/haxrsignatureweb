@@ -8,15 +8,43 @@ import AdminShell from "@/components/admin/AdminShell";
 import EventForm from "@/components/events/EventForm";
 import SeatAssignment from "@/components/events/SeatAssignment";
 import GuestManagement from "@/components/events/GuestManagement";
+import GuestReviewQueue from "@/components/events/GuestReviewQueue";
+import EventContactProfilesPanel from "@/components/events/EventContactProfilesPanel";
 import GuestHistoryPanel from "@/components/events/GuestHistoryPanel";
 import CheckInDashboard from "@/components/events/CheckInDashboard";
 import GuestReportPanel from "@/components/events/GuestReportPanel";
+import EditionGiftReservationsPanel from "@/components/events/EditionGiftReservationsPanel";
+import EditionRsvpOpsPanel from "@/components/events/EditionRsvpOpsPanel";
+import type { EditionGiftReservation } from "@/lib/events/repositories/edition-gifts.repository";
 import EventQrPanel from "@/components/events/EventQrPanel";
 import GoogleSheetsSync from "@/components/events/GoogleSheetsSync";
 import EventKpiPanel from "@/components/events/EventKpiPanel";
 import { EVENT_TYPE_LABELS } from "@/lib/admin/constants";
 import { archiveEventAction, deleteEventAction } from "@/lib/events/actions/events.actions";
-import type { BusinessId, Client } from "@/lib/admin/types";
+import ConciergePanel from "@/components/concierge/ConciergePanel";
+import ConciergeMigrationNotice from "@/components/concierge/ConciergeMigrationNotice";
+import EventPortalPanel from "@/components/admin/events/EventPortalPanel";
+import EventCommercialShortcutsPanel from "@/components/admin/events/EventCommercialShortcutsPanel";
+import EventCommandCenterPanel from "@/components/admin/events/EventCommandCenterPanel";
+import EventOperationalTimelinePanel from "@/components/admin/events/EventOperationalTimelinePanel";
+import EventWhatsAppShortcutsPanel from "@/components/admin/events/EventWhatsAppShortcutsPanel";
+import PortalPaymentProofsPanel from "@/components/admin/events/PortalPaymentProofsPanel";
+import EventPortalContentPanel from "@/components/admin/events/EventPortalContentPanel";
+import type { EventCommandCenterData } from "@/lib/admin/services/event-command-center.service";
+import type {
+  PortalContract,
+  PortalCreativeApproval,
+  PortalPaymentProof,
+  PortalTeamMessage,
+  PortalTimelineItem,
+} from "@/lib/portal/portal-premium.types";
+import type { BusinessId, Client, InvoiceDocument } from "@/lib/admin/types";
+import type {
+  ConciergeReviewItem,
+  EventChecklistItem,
+  EventMoodboardItem,
+  EventVendor,
+} from "@/lib/concierge/types";
 import type {
   EventGuest,
   EventSeat,
@@ -24,9 +52,24 @@ import type {
   GuestAuditEntry,
   GuestGroup,
   ManagedEvent,
+  ReviewQueueResult,
 } from "@/lib/events/types";
+import type { EventContactProfileRow } from "@/lib/events/repositories/event-contact-profiles.repository";
 
-type Tab = "guests" | "seats" | "qr" | "sheets" | "checkin" | "report" | "history" | "settings";
+type Tab =
+  | "guests"
+  | "review"
+  | "contacts"
+  | "seats"
+  | "qr"
+  | "sheets"
+  | "checkin"
+  | "report"
+  | "gifts"
+  | "history"
+  | "concierge"
+  | "portal"
+  | "settings";
 
 type EventDetailClientProps = {
   event: ManagedEvent;
@@ -37,6 +80,25 @@ type EventDetailClientProps = {
   auditEntries: GuestAuditEntry[];
   businesses: { id: BusinessId; name: string }[];
   clients: Client[];
+  giftReservations?: EditionGiftReservation[];
+  conciergeReviews?: ConciergeReviewItem[];
+  conciergeVendors?: EventVendor[];
+  conciergeChecklist?: EventChecklistItem[];
+  conciergeMoodboard?: EventMoodboardItem[];
+  conciergeSchemaMissing?: boolean;
+  conciergeAiConfigured?: boolean;
+  conciergeAiModel?: string;
+  reviewQueue?: ReviewQueueResult;
+  contactProfiles?: EventContactProfileRow[];
+  clientPortalUrl?: string | null;
+  eventDocuments?: InvoiceDocument[];
+  commandCenter?: EventCommandCenterData;
+  operationalPhases?: PortalTimelineItem[];
+  portalPaymentProofs?: PortalPaymentProof[];
+  portalMessages?: PortalTeamMessage[];
+  portalApprovals?: PortalCreativeApproval[];
+  portalContracts?: PortalContract[];
+  clientPhone?: string | null;
 };
 
 function formatDate(date: string | null): string {
@@ -59,6 +121,25 @@ export default function EventDetailClient({
   auditEntries,
   businesses,
   clients,
+  giftReservations = [],
+  conciergeReviews = [],
+  conciergeVendors = [],
+  conciergeChecklist = [],
+  conciergeMoodboard = [],
+  conciergeSchemaMissing = false,
+  conciergeAiConfigured = false,
+  conciergeAiModel = "gemini-2.0-flash",
+  reviewQueue = { items: [], summary: { toReview: 0, ignored: 0, missingGuest: 0, possibleDuplicates: 0, syncErrors: 0, total: 0 } },
+  contactProfiles = [],
+  clientPortalUrl = null,
+  eventDocuments = [],
+  commandCenter,
+  operationalPhases = [],
+  portalPaymentProofs = [],
+  portalMessages = [],
+  portalApprovals = [],
+  portalContracts = [],
+  clientPhone = null,
 }: EventDetailClientProps) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
@@ -69,14 +150,30 @@ export default function EventDetailClient({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
-  const tabs: { id: Tab; label: string }[] = [
+  const reviewBadge =
+    reviewQueue.summary.toReview +
+    reviewQueue.summary.missingGuest +
+    reviewQueue.summary.syncErrors;
+
+  const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: "guests", label: "Convidados" },
+    {
+      id: "review",
+      label: "Revisão",
+      badge: reviewBadge > 0 ? reviewBadge : undefined,
+    },
+    { id: "contacts", label: "Contactos" },
+    ...(event.editionRegistryKey
+      ? [{ id: "gifts" as const, label: "Presentes" }]
+      : []),
     { id: "seats", label: "Lugares" },
     { id: "qr", label: "Atelier QR" },
     { id: "sheets", label: "Sheets" },
     { id: "checkin", label: "Check-in" },
+    { id: "concierge", label: "Concierge" },
     { id: "report", label: "Relatório" },
     { id: "history", label: "Histórico" },
+    { id: "portal", label: "Portal" },
     { id: "settings", label: "Definições" },
   ];
 
@@ -142,6 +239,56 @@ export default function EventDetailClient({
     >
       <EventKpiPanel event={event} stats={initialStats} />
 
+      {commandCenter ? (
+        <EventCommandCenterPanel
+          event={event}
+          guestStats={initialStats}
+          command={commandCenter}
+          clientPortalUrl={clientPortalUrl}
+          onOpenTab={(tab) => setTab(tab)}
+        />
+      ) : null}
+
+      <EventOperationalTimelinePanel phases={operationalPhases} />
+
+      <PortalPaymentProofsPanel proofs={portalPaymentProofs} />
+
+      {event.clientId ? (
+        <EventPortalContentPanel
+          eventId={event.id}
+          clientId={event.clientId}
+          messages={portalMessages}
+          approvals={portalApprovals}
+          contracts={portalContracts}
+        />
+      ) : null}
+
+      <EventWhatsAppShortcutsPanel
+        event={event}
+        clientPhone={clientPhone}
+        portalUrl={clientPortalUrl}
+        documentNumber={
+          eventDocuments.find((doc) => doc.documentType === "proforma")?.documentNumber ??
+          null
+        }
+      />
+
+      <EventCommercialShortcutsPanel
+        event={event}
+        documents={eventDocuments}
+        clientPortalUrl={clientPortalUrl}
+      />
+
+      {event.editionRegistryKey ? (
+        <EditionRsvpOpsPanel
+          event={event}
+          guests={initialGuests}
+          stats={initialStats}
+          giftReservationCount={giftReservations.length}
+          onOpenReport={() => setTab("report")}
+        />
+      ) : null}
+
       <div className="flex flex-wrap gap-2 mb-8 border-b border-grey-dark/80 pb-4">
         {tabs.map((item) => (
           <button
@@ -155,6 +302,11 @@ export default function EventDetailClient({
             }`}
           >
             {item.label}
+            {item.badge ? (
+              <span className="ml-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-amber-500/20 text-amber-200 px-1.5 py-0.5 text-[8px]">
+                {item.badge}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -166,6 +318,22 @@ export default function EventDetailClient({
           groups={groups}
           seats={initialSeats}
           onChanged={handleRefresh}
+        />
+      ) : null}
+
+      {tab === "review" ? (
+        <GuestReviewQueue
+          eventId={event.id}
+          guests={initialGuests}
+          initialQueue={reviewQueue}
+          onChanged={handleRefresh}
+        />
+      ) : null}
+
+      {tab === "contacts" ? (
+        <EventContactProfilesPanel
+          contacts={contactProfiles}
+          guests={initialGuests}
         />
       ) : null}
 
@@ -198,17 +366,46 @@ export default function EventDetailClient({
         <CheckInDashboard guests={initialGuests} stats={initialStats} />
       ) : null}
 
+      {tab === "concierge" ? (
+        conciergeSchemaMissing ? (
+          <ConciergeMigrationNotice />
+        ) : (
+          <ConciergePanel
+            eventId={event.id}
+            initialReviews={conciergeReviews}
+            initialVendors={conciergeVendors}
+            initialChecklist={conciergeChecklist}
+            initialMoodboard={conciergeMoodboard}
+            aiConfigured={conciergeAiConfigured}
+            aiModel={conciergeAiModel}
+            onNavigateTab={(target) => setTab(target)}
+          />
+        )
+      ) : null}
+
       {tab === "report" ? (
         <GuestReportPanel
           event={event}
           guests={initialGuests}
           seats={initialSeats}
           stats={initialStats}
+          giftReservations={giftReservations}
+        />
+      ) : null}
+
+      {tab === "gifts" && event.editionRegistryKey ? (
+        <EditionGiftReservationsPanel
+          reservations={giftReservations}
+          registryKey={event.editionRegistryKey}
         />
       ) : null}
 
       {tab === "history" ? (
         <GuestHistoryPanel entries={auditEntries} />
+      ) : null}
+
+      {tab === "portal" ? (
+        <EventPortalPanel event={event} portalUrl={clientPortalUrl} />
       ) : null}
 
       {tab === "settings" ? (

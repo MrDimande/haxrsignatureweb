@@ -2,6 +2,11 @@ export type DocumentType = "proforma" | "invoice" | "receipt";
 
 export type DocumentStatus = "draft" | "sent" | "paid" | "cancelled";
 
+export type ClientApprovalStatus =
+  | "pending"
+  | "approved"
+  | "changes_requested";
+
 export type Currency = "MZN" | "USD" | "ZAR";
 
 export type BusinessId = "haxr-signature" | "brainywrite";
@@ -94,6 +99,7 @@ export interface Client {
   email: string;
   phone: string;
   address: string;
+  portalToken: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -164,9 +170,20 @@ export interface InvoiceDocument {
   createdAt: string;
   updatedAt: string;
   pdfGeneratedAt: string | null;
+  convertedFromDocumentId: string | null;
+  emailSentAt: string | null;
+  whatsappSharedAt: string | null;
+  clientApprovalStatus: ClientApprovalStatus | null;
+  clientApprovedAt: string | null;
+  clientApprovalNote: string | null;
 }
 
-export type ClientFormData = Omit<Client, "id" | "createdAt" | "updatedAt">;
+export type ClientFormData = Omit<
+  Client,
+  "id" | "createdAt" | "updatedAt" | "portalToken"
+> & {
+  portalToken?: string | null;
+};
 
 export type InvoiceFormData = {
   documentType: DocumentType;

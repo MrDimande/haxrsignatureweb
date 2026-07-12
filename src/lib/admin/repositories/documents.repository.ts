@@ -1,4 +1,6 @@
 import { VAT_RATE } from "@/lib/admin/constants";
+import { parseSignatureDataUrl } from "@/lib/admin/signatures";
+import { upsertClient } from "@/lib/admin/repositories/clients.repository";
 import { mapDocument } from "@/lib/admin/db/mappers";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -6,11 +8,18 @@ import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import { calculateLineItems, calculateTotals } from "@/lib/calculations";
 import type {
   BusinessId,
+  Client,
   DashboardStats,
   DocumentType,
   InvoiceDocument,
   InvoiceFormData,
 } from "@/lib/admin/types";
+import { documentBelongsToPortalClient } from "@/lib/portal/services/portal-client-match";
+
+export type SaveDocumentOptions = {
+  convertedFromDocumentId?: string;
+  createClientIfMissing?: boolean;
+};
 
 async function fetchLineItems(documentIds: string[]) {
   if (!documentIds.length) return [];
@@ -73,6 +82,43 @@ export async function listDocuments(filters?: {
   );
 }
 
+export async function listPortalDocumentsForClient(
+  client: Pick<Client, "id" | "fullName">
+): Promise<InvoiceDocument[]> {
+  const documents = await listDocumentsForClient(client);
+  return documents.filter(
+    (doc) => doc.status === "sent" || doc.status === "paid"
+  );
+}
+
+export async function listDocumentsForClient(
+  client: Pick<Client, "id" | "fullName">
+): Promise<InvoiceDocument[]> {
+  const supabase = createAdminClient();
+  const { data: docs, error } = await supabase
+    .from("documents")
+    .select("*")
+    .or(`client_id.eq.${client.id},client_id.is.null`)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const rows = asTableRows<"documents">(docs).filter((doc) => {
+    const mapped = mapDocument(doc, []);
+    return documentBelongsToPortalClient(mapped, client);
+  });
+
+  if (rows.length === 0) return [];
+
+  const lineItems = await fetchLineItems(rows.map((d) => d.id));
+  return rows.map((doc) =>
+    mapDocument(
+      doc,
+      lineItems.filter((li) => li.document_id === doc.id)
+    )
+  );
+}
+
 export async function getDocumentById(id: string): Promise<InvoiceDocument | null> {
   const supabase = createAdminClient();
   const { data: docRow, error } = await supabase
@@ -119,9 +165,33 @@ export async function reserveDocumentNumber(
 
 export async function saveDocument(
   form: InvoiceFormData,
-  existingId?: string
+  existingId?: string,
+  options?: SaveDocumentOptions
 ): Promise<InvoiceDocument> {
   const supabase = createAdminClient();
+
+  if (form.issuerSignatureImage.trim()) {
+    parseSignatureDataUrl(form.issuerSignatureImage);
+  }
+
+  let clientId = form.clientId;
+  if (
+    !clientId &&
+    options?.createClientIfMissing &&
+    form.clientName.trim()
+  ) {
+    const client = await upsertClient({
+      fullName: form.clientName.trim(),
+      clientType: form.clientType,
+      companyName: form.companyName.trim(),
+      nuit: form.clientNuit.trim(),
+      email: form.clientEmail.trim(),
+      phone: form.clientPhone.trim(),
+      address: form.clientAddress.trim(),
+    });
+    clientId = client.id;
+  }
+
   const lineItems = calculateLineItems(form.lineItems);
   const totals = calculateTotals(lineItems, form.includeVat, form.currency, VAT_RATE);
 
@@ -137,7 +207,7 @@ export async function saveDocument(
     document_number: documentNumber,
     status: form.status,
     currency: form.currency,
-    client_id: form.clientId,
+    client_id: clientId,
     client_type: form.clientType,
     client_name: form.clientName.trim(),
     company_name: form.companyName.trim(),
@@ -162,7 +232,12 @@ export async function saveDocument(
     issuer_name: form.issuerName.trim(),
     issuer_role: form.issuerRole.trim(),
     issuer_signature_image: form.issuerSignatureImage,
-  };
+    ...(options?.convertedFromDocumentId
+      ? {
+          converted_from_document_id: options.convertedFromDocumentId,
+        }
+      : {}),
+  } as TablesInsert<"documents">;
 
   let doc;
 
@@ -216,6 +291,136 @@ export async function saveDocument(
   const savedLines = asTableRows<"document_line_items">(savedLinesData);
 
   return mapDocument(doc, savedLines);
+}
+
+export async function findInvoiceBySourceProforma(
+  proformaId: string
+): Promise<InvoiceDocument | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("converted_from_document_id", proformaId)
+    .eq("document_type", "invoice")
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  const doc = asTableRow<"documents">(data);
+  if (!doc) return null;
+
+  const lineItems = await fetchLineItems([doc.id]);
+  return mapDocument(doc, lineItems.filter((li) => li.document_id === doc.id));
+}
+
+export async function markEmailSent(id: string): Promise<InvoiceDocument> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("documents")
+    .update({ email_sent_at: now } as never)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  const doc = asTableRow<"documents">(data);
+  if (!doc) throw new Error("Documento não encontrado.");
+
+  const lineItems = await fetchLineItems([doc.id]);
+  return mapDocument(doc, lineItems.filter((li) => li.document_id === doc.id));
+}
+
+export async function markWhatsAppShared(id: string): Promise<InvoiceDocument> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("documents")
+    .update({ whatsapp_shared_at: now } as never)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  const doc = asTableRow<"documents">(data);
+  if (!doc) throw new Error("Documento não encontrado.");
+
+  const lineItems = await fetchLineItems([doc.id]);
+  return mapDocument(doc, lineItems.filter((li) => li.document_id === doc.id));
+}
+
+export async function markClientApprovalPending(
+  id: string
+): Promise<InvoiceDocument> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("documents")
+    .update({
+      client_approval_status: "pending",
+      client_approved_at: null,
+      client_approval_note: null,
+    } as never)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  const doc = asTableRow<"documents">(data);
+  if (!doc) throw new Error("Documento não encontrado.");
+
+  const lineItems = await fetchLineItems([doc.id]);
+  return mapDocument(doc, lineItems.filter((li) => li.document_id === doc.id));
+}
+
+export async function recordClientApproval(
+  id: string,
+  status: "approved" | "changes_requested",
+  note?: string
+): Promise<InvoiceDocument> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("documents")
+    .update({
+      client_approval_status: status,
+      client_approved_at: now,
+      client_approval_note: note?.trim() || null,
+    } as never)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  const doc = asTableRow<"documents">(data);
+  if (!doc) throw new Error("Documento não encontrado.");
+
+  const lineItems = await fetchLineItems([doc.id]);
+  return mapDocument(doc, lineItems.filter((li) => li.document_id === doc.id));
+}
+
+export async function countPortalApprovalsPending(): Promise<number> {
+  const supabase = createAdminClient();
+  const { count, error } = await supabase
+    .from("documents")
+    .select("*", { count: "exact", head: true })
+    .eq("document_type", "proforma")
+    .eq("status", "sent")
+    .eq("client_approval_status", "pending");
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export async function countPortalClientResponses(): Promise<number> {
+  const supabase = createAdminClient();
+  const { count, error } = await supabase
+    .from("documents")
+    .select("*", { count: "exact", head: true })
+    .eq("document_type", "proforma")
+    .eq("status", "sent")
+    .in("client_approval_status", ["approved", "changes_requested"]);
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 export async function updateDocumentStatus(

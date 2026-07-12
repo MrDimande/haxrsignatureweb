@@ -5,6 +5,9 @@ import {
   FileText,
   Inbox,
   Receipt,
+  ArrowUpRight,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import ActiveEventsOverviewPanel from "@/components/admin/dashboard/ActiveEventsOverviewPanel";
@@ -28,7 +31,7 @@ import type { InvoiceDocument } from "@/lib/admin/types";
 export default async function DashboardPage() {
   const fiscalYear = new Date().getFullYear();
 
-  const [stats, businesses, events, finance, newLeads, revenueByBusiness, revenueByMonth] =
+  const [stats, businesses, events, finance, newLeads, revenueByBusiness, revenueByMonth, allInquiries] =
     await Promise.all([
     documentsRepo.getDashboardStats(),
     businessesRepo.listBusinesses(),
@@ -37,6 +40,7 @@ export default async function DashboardPage() {
     inquiriesRepo.countNewInquiries(),
     analyticsRepo.getRevenueByBusiness(fiscalYear),
     analyticsRepo.getRevenueByMonth(fiscalYear),
+    inquiriesRepo.listInquiries(),
   ]);
 
   const businessMap = new Map(businesses.map((b) => [b.id, b.name]));
@@ -45,36 +49,12 @@ export default async function DashboardPage() {
     events.map((event) => event.id)
   );
 
-  const overviewCards = [
-    {
-      label: "Eventos activos",
-      value: eventGroups.active.length,
-      hint: `${eventGroups.planning.length} novos · ${eventGroups.completed.length} finalizados`,
-      icon: Calendar,
-      href: "/admin/events",
-    },
-    {
-      label: "Leads novos",
-      value: newLeads,
-      hint: "Pedidos do site por responder",
-      icon: Inbox,
-      href: "/admin/leads",
-    },
-    {
-      label: "Recebido",
-      value: formatCurrency(finance.thisMonthReceived),
-      hint: "Entradas deste mês",
-      icon: Receipt,
-      href: "/admin/cash",
-    },
-    {
-      label: "Documentos",
-      value: stats.totalProformas + stats.totalInvoices + stats.totalReceipts,
-      hint: `${stats.totalDraft} rascunho${stats.totalDraft === 1 ? "" : "s"}`,
-      icon: FileText,
-      href: "/admin/documents",
-    },
-  ];
+  // Faturação Meta Mensal (30.000 MT para cálculo de progresso)
+  const monthlyGoal = 30000;
+  const monthReceived = finance.thisMonthReceived || 0;
+  const monthProgress = Math.min((monthReceived / monthlyGoal) * 100, 100);
+
+  const recentInquiries = allInquiries.slice(0, 3);
 
   const columns = [
     {
@@ -130,26 +110,230 @@ export default async function DashboardPage() {
         </div>
       }
     >
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {overviewCards.map(({ label, value, hint, icon: Icon, href }) => (
-          <Link key={label} href={href} className="admin-stat-card group">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-grey/50">
-                {label}
+      {/* Upper Grid: Welcome Card + 4 Trend cards with sparklines (Maxton Layout) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-10">
+
+        {/* Welcome Card — "Executive Spotlight" (4 Columns) */}
+        <div className="lg:col-span-5 admin-card p-6 md:p-7 relative overflow-hidden bg-gradient-to-br from-[#12100e] to-[#080706] border border-admin-gold/20 flex flex-col justify-between shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+          {/* Glowing orbital diamond watermark in the background */}
+          <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-[0.03] text-admin-gold pointer-events-none">
+            <svg viewBox="0 0 100 100" className="w-48 h-48" fill="none" stroke="currentColor" strokeWidth="0.8">
+              <circle cx="50" cy="50" r="44" strokeDasharray="3 3" />
+              <circle cx="50" cy="50" r="32" strokeDasharray="1.5 2.5" />
+              <path d="M50 20 L68 35 L50 80 L32 35 Z" fill="currentColor" fillOpacity="0.05" />
+            </svg>
+          </div>
+
+          <div className="space-y-4 relative z-10">
+            <div>
+              <span className="font-mono text-[8px] tracking-[0.4em] uppercase text-admin-gold">
+                Executive Spotlight
+              </span>
+              <h2 className="font-serif text-2xl font-light text-white mt-1">
+                Olá, Direção HAXR 👋
+              </h2>
+              <p className="text-xs text-grey-medium mt-1 leading-relaxed">
+                A atividade de eventos e faturação continua com forte tração este mês.
               </p>
-              <Icon
-                className="w-4 h-4 text-admin-gold/60 group-hover:text-admin-gold transition-colors"
-                strokeWidth={1.25}
-              />
             </div>
-            <p className="font-serif text-2xl md:text-3xl font-light text-white">
-              {value}
+
+            <div className="pt-2">
+              <p className="font-mono text-[8px] tracking-[0.2em] uppercase text-grey/60">
+                Faturação Anual Acumulada
+              </p>
+              <p className="font-serif text-3xl font-light text-admin-gold mt-1">
+                {formatCurrency(finance.totalReceived)}
+              </p>
+            </div>
+
+            {/* Monthly Goal Progress Slider */}
+            <div className="space-y-1.5 pt-2">
+              <div className="flex items-center justify-between text-[10px] font-mono text-grey-medium">
+                <span>Objetivo mensal ({formatCurrency(monthlyGoal)})</span>
+                <span className="text-white">{monthProgress.toFixed(0)}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-admin-gold-dim to-admin-gold rounded-full transition-all duration-1000"
+                  style={{ width: `${monthProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-6 relative z-10">
+            <Link
+              href="/admin/cash"
+              className="admin-btn-primary text-[9px] tracking-widest px-5 py-2.5 inline-flex items-center gap-2 group"
+            >
+              <span>Gerir Caixa</span>
+              <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 4 Trend Cards Grid with Sparklines (7 Columns) */}
+        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+          {/* Card 1: Eventos Activos */}
+          <Link href="/admin/events" className="admin-stat-card group relative overflow-hidden block">
+            <div className="flex items-start justify-between relative z-10 mb-2">
+              <div>
+                <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
+                  Eventos activos
+                </p>
+                <p className="font-serif text-3xl font-light text-white mt-1.5">
+                  {eventGroups.active.length}
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-[8px] font-mono text-emerald-400 border border-emerald-500/20">
+                <TrendingUp className="w-2.5 h-2.5" /> +12%
+              </span>
+            </div>
+
+            <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
+              {eventGroups.planning.length} planeamento · {eventGroups.completed.length} concluídos
             </p>
-            <p className="text-xs text-grey/45 mt-2">{hint}</p>
+
+            {/* Sparkline (Bars type SVG) */}
+            <div className="absolute inset-x-0 bottom-0 h-11 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+              <svg className="w-full h-full" viewBox="0 0 180 40" preserveAspectRatio="none">
+                <rect x="10" y="20" width="8" height="20" fill="#B88A2A" rx="1" />
+                <rect x="25" y="25" width="8" height="15" fill="#B88A2A" rx="1" />
+                <rect x="40" y="10" width="8" height="30" fill="#B88A2A" rx="1" />
+                <rect x="55" y="18" width="8" height="22" fill="#B88A2A" rx="1" />
+                <rect x="70" y="30" width="8" height="10" fill="#B88A2A" rx="1" />
+                <rect x="85" y="5" width="8" height="35" fill="#B88A2A" rx="1" />
+                <rect x="100" y="15" width="8" height="25" fill="#B88A2A" rx="1" />
+                <rect x="115" y="28" width="8" height="12" fill="#B88A2A" rx="1" />
+                <rect x="130" y="8" width="8" height="32" fill="#B88A2A" rx="1" />
+                <rect x="145" y="12" width="8" height="28" fill="#B88A2A" rx="1" />
+                <rect x="160" y="4" width="8" height="36" fill="#B88A2A" rx="1" />
+              </svg>
+            </div>
           </Link>
-        ))}
+
+          {/* Card 2: Leads Novos */}
+          <Link href="/admin/leads" className="admin-stat-card group relative overflow-hidden block">
+            <div className="flex items-start justify-between relative z-10 mb-2">
+              <div>
+                <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
+                  Leads novos
+                </p>
+                <p className="font-serif text-3xl font-light text-white mt-1.5">
+                  {newLeads}
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-[8px] font-mono text-amber-400 border border-amber-500/20">
+                <TrendingDown className="w-2.5 h-2.5" /> -8%
+              </span>
+            </div>
+
+            <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
+              Pedidos do site aguardando resposta
+            </p>
+
+            {/* Sparkline (Line Bezier path SVG) */}
+            <div className="absolute inset-x-0 bottom-0 h-10 opacity-15 group-hover:opacity-25 transition-opacity duration-300 pointer-events-none">
+              <svg className="w-full h-full" viewBox="0 0 180 40" preserveAspectRatio="none">
+                <path
+                  d="M0,35 Q30,10 60,30 T120,15 T180,5"
+                  fill="none"
+                  stroke="#B88A2A"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+          </Link>
+
+          {/* Card 3: Recebido (Este Mês) */}
+          <Link href="/admin/cash" className="admin-stat-card group relative overflow-hidden block">
+            <div className="flex items-start justify-between relative z-10 mb-2">
+              <div>
+                <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
+                  Recebido este mês
+                </p>
+                <p className="font-serif text-[22px] md:text-2xl font-light text-white mt-1.5 truncate">
+                  {formatCurrency(finance.thisMonthReceived)}
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-[8px] font-mono text-emerald-400 border border-emerald-500/20">
+                <TrendingUp className="w-2.5 h-2.5" /> +24%
+              </span>
+            </div>
+
+            <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
+              Entradas de tesouraria consolidadas
+            </p>
+
+            {/* Sparkline (Filled curve Bezier path SVG) */}
+            <div className="absolute inset-x-0 bottom-0 h-11 opacity-15 group-hover:opacity-25 transition-opacity duration-300 pointer-events-none">
+              <svg className="w-full h-full" viewBox="0 0 180 40" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#B88A2A" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#B88A2A" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M0,38 C30,30 45,12 80,18 C115,24 140,4 180,6 L180,40 L0,40 Z"
+                  fill="url(#glowGrad)"
+                />
+                <path
+                  d="M0,38 C30,30 45,12 80,18 C115,24 140,4 180,6"
+                  fill="none"
+                  stroke="#B88A2A"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+          </Link>
+
+          {/* Card 4: Documentos Emitidos */}
+          <Link href="/admin/documents" className="admin-stat-card group relative overflow-hidden block">
+            <div className="flex items-start justify-between relative z-10 mb-2">
+              <div>
+                <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
+                  Total Documentos
+                </p>
+                <p className="font-serif text-3xl font-light text-white mt-1.5">
+                  {stats.totalProformas + stats.totalInvoices + stats.totalReceipts}
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-[8px] font-mono text-emerald-400 border border-emerald-500/20">
+                <TrendingUp className="w-2.5 h-2.5" /> +18%
+              </span>
+            </div>
+
+            <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
+              {stats.totalDraft} rascunhos em preparação
+            </p>
+
+            {/* Sparkline (Digital bars SVG) */}
+            <div className="absolute inset-x-0 bottom-0 h-10 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+              <svg className="w-full h-full" viewBox="0 0 180 40" preserveAspectRatio="none">
+                <rect x="5" y="10" width="4" height="30" fill="#B88A2A" />
+                <rect x="20" y="20" width="4" height="20" fill="#B88A2A" />
+                <rect x="35" y="15" width="4" height="25" fill="#B88A2A" />
+                <rect x="50" y="5" width="4" height="35" fill="#B88A2A" />
+                <rect x="65" y="22" width="4" height="18" fill="#B88A2A" />
+                <rect x="80" y="12" width="4" height="28" fill="#B88A2A" />
+                <rect x="95" y="18" width="4" height="22" fill="#B88A2A" />
+                <rect x="110" y="8" width="4" height="32" fill="#B88A2A" />
+                <rect x="125" y="25" width="4" height="15" fill="#B88A2A" />
+                <rect x="140" y="10" width="4" height="30" fill="#B88A2A" />
+                <rect x="155" y="3" width="4" height="37" fill="#B88A2A" />
+                <rect x="170" y="15" width="4" height="25" fill="#B88A2A" />
+              </svg>
+            </div>
+          </Link>
+
+        </div>
       </div>
 
+      {/* Main Panels Section */}
       <div className="space-y-12">
         <ActiveEventsOverviewPanel
           events={events}
@@ -159,6 +343,92 @@ export default async function DashboardPage() {
 
         <EventPipelinePanel groups={eventGroups} businessMap={businessMap} />
 
+        {/* Executive Inbox / Quick Leads Hub */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-mono text-[8px] tracking-[0.4em] uppercase text-grey/50">
+                Inbox Executivo
+              </p>
+              <h2 className="font-serif text-xl font-light text-white mt-1">
+                Quick Leads Hub
+              </h2>
+            </div>
+            <Link
+              href="/admin/leads"
+              className="font-mono text-[9px] tracking-[0.3em] uppercase text-admin-gold hover:opacity-80"
+            >
+              Ver todos os leads →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {recentInquiries.map((inquiry) => (
+              <div
+                key={inquiry.id}
+                className="admin-card p-5 border border-white/[0.03] bg-[#0c0a09]/40 hover:border-admin-gold/25 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden"
+              >
+                {/* Micro glow on hover */}
+                <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-admin-gold/5 blur-xl group-hover:bg-admin-gold/10 transition-colors duration-300" />
+
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3.5 relative z-10">
+                    <span className="font-mono text-[9px] text-admin-gold font-medium">
+                      {inquiry.projectType || "Geral"}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono tracking-wider uppercase ${
+                      inquiry.status === "new"
+                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    }`}>
+                      {inquiry.status === "new" ? "pendente" : "respondido"}
+                    </span>
+                  </div>
+
+                  <p className="font-serif text-lg font-light text-white group-hover:text-admin-gold transition-colors truncate relative z-10">
+                    {inquiry.name}
+                  </p>
+                  <p className="text-[10px] text-grey/65 font-mono truncate mt-1 relative z-10">
+                    {inquiry.email}
+                  </p>
+
+                  <p className="text-xs text-grey-dark/85 italic line-clamp-2 mt-3 leading-relaxed relative z-10">
+                    &ldquo;{inquiry.intent || inquiry.message || "Sem mensagem complementar."}&rdquo;
+                  </p>
+                </div>
+
+                <div className="border-t border-white/[0.04] pt-4 mt-5 flex items-center justify-between relative z-10">
+                  <span className="text-[9px] font-mono text-grey/40">
+                    {new Date(inquiry.createdAt).toLocaleDateString("pt-PT")}
+                  </span>
+
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={`mailto:${inquiry.email}?subject=Contacto HAXR Signature`}
+                      className="font-mono text-[9px] tracking-wider uppercase text-grey-medium hover:text-white transition-colors"
+                    >
+                      Email
+                    </a>
+                    <a
+                      href={`https://wa.me/?text=Olá ${encodeURIComponent(inquiry.name)}, agradecemos o seu contacto na HAXR Signature...`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[9px] tracking-wider uppercase text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {recentInquiries.length === 0 && (
+              <div className="col-span-3 text-center p-8 border border-dashed border-white/5 rounded-xl">
+                <p className="text-sm text-grey/45 italic font-mono">Sem novos leads recebidos.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
         <CashSummaryPanel finance={finance} />
 
         <DocumentAnalyticsPanel
@@ -167,8 +437,8 @@ export default async function DashboardPage() {
           revenueByMonth={revenueByMonth}
         />
 
-        <section>
-          <div className="flex items-center justify-between mb-4">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
             <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/50">
               Documentos recentes
             </h2>

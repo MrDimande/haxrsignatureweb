@@ -20,9 +20,9 @@ const PIPELINE_ORDER: EventPipelineStatus[] = [
 ];
 
 const PIPELINE_STYLES: Record<EventPipelineStatus, string> = {
-  planning: "border-blue-500/20 bg-blue-500/5",
-  active: "border-admin-gold/25 bg-admin-gold/5",
-  completed: "border-grey-dark/80 bg-black-soft/30",
+  planning: "border-blue-500/15 bg-gradient-to-b from-blue-500/[0.03] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.3)]",
+  active: "border-admin-gold/25 bg-gradient-to-b from-admin-gold/[0.04] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)]",
+  completed: "border-white/[0.06] bg-gradient-to-b from-white/[0.01] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.2)]",
 };
 
 function formatEventDate(date: string | null): string {
@@ -40,7 +40,7 @@ export default function EventPipelinePanel({
   businessMap,
 }: EventPipelinePanelProps) {
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/50">
@@ -58,51 +58,52 @@ export default function EventPipelinePanel({
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {PIPELINE_ORDER.map((status) => {
           const events = groups[status].slice(0, 5);
           return (
             <div
               key={status}
-              className={`admin-card p-5 border ${PIPELINE_STYLES[status]}`}
+              className={`p-6 border transition-all duration-300 hover:border-admin-gold/30 hover:shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${PIPELINE_STYLES[status]}`}
             >
-              <div className="flex items-center justify-between mb-4">
-                <p className="font-mono text-[9px] tracking-[0.25em] uppercase text-white/70">
+              <div className="flex items-center justify-between mb-4 border-b border-white/[0.04] pb-3">
+                <p className="font-mono text-[9px] tracking-[0.25em] uppercase text-grey-medium">
                   {EVENT_PIPELINE_LABELS[status]}
                 </p>
-                <span className="font-serif text-2xl font-light text-white/90">
+                <span className="font-serif text-2xl font-light text-white/95">
                   {groups[status].length}
                 </span>
               </div>
-              <p className="text-xs text-grey/45 mb-4 leading-relaxed">
+              <p className="text-[11px] leading-relaxed text-grey/60 mb-5">
                 {EVENT_PIPELINE_HINTS[status]}
               </p>
 
               {events.length === 0 ? (
-                <p className="text-xs text-grey/40 italic py-4">
-                  Nenhum evento nesta fase.
-                </p>
+                <div className="text-center py-8">
+                  <p className="text-xs text-grey/40 font-mono italic">
+                    Nenhum evento nesta fase.
+                  </p>
+                </div>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-4">
                   {events.map((event) => (
                     <li key={event.id}>
                       <Link
                         href={`/admin/events/${event.id}`}
-                        className="block group"
+                        className="block p-3 rounded-lg bg-white/[0.01] border border-white/[0.02] hover:border-admin-gold/20 hover:bg-white/[0.03] transition-all duration-300 group"
                       >
-                        <p className="text-sm text-white/85 group-hover:text-admin-gold transition-colors line-clamp-1">
+                        <p className="text-[13px] font-serif font-light text-white group-hover:text-admin-gold transition-colors duration-300 line-clamp-1">
                           {event.name}
                         </p>
-                        <p className="text-[10px] font-mono text-grey/45 mt-1 flex items-center gap-2">
-                          <Calendar className="w-3 h-3 shrink-0" />
-                          {formatEventDate(event.date)}
-                        </p>
-                        <p className="text-[10px] text-grey/40 mt-0.5">
-                          {EVENT_TYPE_LABELS[event.type]}
-                          {businessMap.get(event.businessId)
-                            ? ` · ${businessMap.get(event.businessId)}`
-                            : ""}
-                        </p>
+                        <div className="flex items-center justify-between gap-2 mt-2">
+                          <p className="text-[9.5px] font-mono text-grey-medium flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-admin-gold/50" strokeWidth={1.5} />
+                            {formatEventDate(event.date)}
+                          </p>
+                          <p className="text-[9px] text-grey/50 font-mono tracking-wide">
+                            {EVENT_TYPE_LABELS[event.type]}
+                          </p>
+                        </div>
                       </Link>
                     </li>
                   ))}

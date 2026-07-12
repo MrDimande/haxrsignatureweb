@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import AdminShell from "@/components/admin/AdminShell";
+import DocumentCommercialActions from "@/components/admin/documents/DocumentCommercialActions";
 import DocumentDeletePanel from "@/components/admin/DocumentDeletePanel";
 import DocumentQuickPayment from "@/components/admin/finance/DocumentQuickPayment";
 import InvoiceForm from "@/components/admin/InvoiceForm";
@@ -55,6 +56,8 @@ export default function DocumentDetailClient({
         </button>
       }
     >
+      <DocumentCommercialActions document={document} />
+
       <InvoiceForm
         documentType={document.documentType}
         businesses={businesses}

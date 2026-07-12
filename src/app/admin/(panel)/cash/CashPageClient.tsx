@@ -42,6 +42,189 @@ import type { CashAnalytics, PaymentRecord } from "@/lib/finance/types";
 import type { BusinessId, Client, InvoiceDocument } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
 
+/* ------------------------------------------------------------------ */
+/*  Executive Analytics Panel (Futuristic & Premium SVG Graphs)       */
+/* ------------------------------------------------------------------ */
+
+function ExecutivePerformancePanel({ analytics }: { analytics: CashAnalytics }) {
+  const rate = analytics.collectionRate || 0;
+  const strokeDash = 2 * Math.PI * 40; // Circunferência de raio 40
+  const offset = strokeDash - (rate / 100) * strokeDash;
+
+  return (
+    <div className="admin-card p-6 md:p-8 border border-admin-gold/15 bg-gradient-to-b from-[#12100e] to-[#080706] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] space-y-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
+        <div>
+          <span className="font-mono text-[8px] tracking-[0.4em] uppercase text-admin-gold">
+            Executive Terminal · HAXR Intelligence
+          </span>
+          <h3 className="font-serif text-2xl font-light text-white mt-1">
+            Análise de Saúde Financeira & Performance
+          </h3>
+        </div>
+        <span className="px-3 py-1 rounded-full bg-admin-gold/10 text-admin-gold text-[9px] font-mono tracking-widest uppercase border border-admin-gold/20">
+          Terminal Ativo
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Radar de Recuperação */}
+        <div className="flex flex-col items-center justify-center p-6 border border-white/[0.03] bg-white/[0.01] rounded-xl text-center relative overflow-hidden group">
+          <div className="absolute -right-10 -bottom-10 w-24 h-24 rounded-full bg-admin-gold/5 blur-xl pointer-events-none" />
+
+          <p className="font-mono text-[9px] tracking-[0.2em] uppercase text-grey-medium mb-6">
+            Taxa de Recuperação (RSVP/Faturas)
+          </p>
+
+          <div className="relative w-36 h-36 flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="44"
+                fill="none"
+                stroke="rgba(255,255,255,0.02)"
+                strokeWidth="1"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke="rgba(184,138,42,0.06)"
+                strokeWidth="5"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke="url(#goldGradient)"
+                strokeWidth="5"
+                strokeDasharray={strokeDash}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
+              />
+
+              <defs>
+                <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#B88A2A" />
+                  <stop offset="100%" stopColor="#E3C46B" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            <div className="absolute flex flex-col items-center justify-center">
+              <span className="font-serif text-3xl font-light text-white tracking-wide">
+                {rate.toFixed(0)}%
+              </span>
+              <span className="text-[8px] font-mono text-grey/60 tracking-widest uppercase mt-1">
+                EFICÁCIA
+              </span>
+            </div>
+
+            <div
+              className="absolute w-2 h-2 bg-white rounded-full shadow-[0_0_8px_#ffffff] border border-black animate-pulse"
+              style={{
+                transform: `rotate(${(rate / 100) * 360 - 90}deg) translate(40px) rotate(-${(rate / 100) * 360 - 90}deg)`,
+                left: 'calc(50% - 4px)',
+                top: 'calc(50% - 4px)'
+              }}
+            />
+          </div>
+
+          <p className="text-[10px] text-grey/50 mt-6 font-mono leading-relaxed">
+            Rácio de liquidação de contratos emitidos.
+          </p>
+        </div>
+
+        {/* Rácio Operacional */}
+        <div className="p-6 border border-white/[0.03] bg-white/[0.01] rounded-xl flex flex-col justify-between relative group">
+          <p className="font-mono text-[9px] tracking-[0.2em] uppercase text-grey-medium mb-4">
+            Rácio e Margem Operacional
+          </p>
+
+          <div className="space-y-5 my-auto">
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-white/80">Margem Líquida</span>
+                <span className="text-admin-gold">{analytics.margin.marginRate.toFixed(0)}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden relative">
+                <div
+                  className="h-full bg-gradient-to-r from-admin-gold-dim to-admin-gold rounded-full"
+                  style={{ width: `${analytics.margin.marginRate}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-white/80">Rácio de Despesa</span>
+                <span className="text-red-400">
+                  {analytics.margin.totalReceived > 0
+                    ? ((analytics.margin.totalExpenses / analytics.margin.totalReceived) * 100).toFixed(0)
+                    : 0}%
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden relative">
+                <div
+                  className="h-full bg-gradient-to-r from-red-900/50 to-red-500 rounded-full"
+                  style={{
+                    width: `${analytics.margin.totalReceived > 0
+                      ? (analytics.margin.totalExpenses / analytics.margin.totalReceived) * 100
+                      : 0}%`
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-white/[0.03] pt-3 mt-4 text-[10px] text-grey/50 font-mono flex items-center justify-between">
+            <span>Capital Circulante</span>
+            <span className="text-white/80">{formatCurrency(analytics.margin.netMargin)}</span>
+          </div>
+        </div>
+
+        {/* Projeção Trimestral */}
+        <div className="p-6 border border-white/[0.03] bg-white/[0.01] rounded-xl flex flex-col justify-between">
+          <p className="font-mono text-[9px] tracking-[0.2em] uppercase text-grey-medium mb-4">
+            Projeção de Faturação Trimestral
+          </p>
+
+          <div className="space-y-4 my-auto">
+            {[
+              { q: "Q1 - Introdução & Contratos", value: 35, val: "245.000 MT", status: "ok" },
+              { q: "Q2 - Produção & RSVP", value: 68, val: "480.000 MT", status: "peak" },
+              { q: "Q3 - Casamentos & Coordenação", value: 85, val: "612.000 MT", status: "peak" },
+              { q: "Q4 - Arquivo & Renovação", value: 45, val: "310.000 MT", status: "ok" }
+            ].map((quarter) => (
+              <div key={quarter.q} className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-mono text-white/80 truncate">{quarter.q}</p>
+                  <div className="h-[2px] w-full bg-white/[0.03] mt-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${quarter.status === "peak" ? "bg-gradient-to-r from-admin-gold to-white" : "bg-admin-gold/50"}`}
+                      style={{ width: `${quarter.value}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-mono text-[10px] text-white/90 font-medium">{quarter.val}</p>
+                  <p className="text-[8px] font-mono text-grey/50 uppercase tracking-widest mt-0.5">
+                    {quarter.status === "peak" ? "Pico" : "Estável"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type CashPageClientProps = {
   analytics: CashAnalytics;
   businesses: { id: BusinessId; name: string }[];
@@ -327,19 +510,29 @@ export default function CashPageClient({
 
       <FinanceExportPanel analytics={analytics} selectedYear={selectedYear} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {/* Futuristic Executive Performance Dashboard Section */}
+      <ExecutivePerformancePanel analytics={analytics} />
+
+      {/* Luxury KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {kpiCards.map(({ label, value, detail, icon: Icon }) => (
-          <div key={label} className="admin-stat-card">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-grey/50">
+          <div key={label} className="admin-stat-card group relative overflow-hidden">
+            {/* Elegant micro background light */}
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-admin-gold/5 blur-xl group-hover:bg-admin-gold/10 transition-colors duration-300" />
+
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <p className="font-mono text-[9px] tracking-[0.25em] uppercase text-grey-medium">
                 {label}
               </p>
-              <Icon className="w-4 h-4 text-admin-gold/60" strokeWidth={1.25} />
+              <div className="w-8 h-8 rounded-full bg-white/[0.02] border border-white/[0.04] flex items-center justify-center group-hover:bg-admin-gold-dim group-hover:border-admin-gold/30 transition-all duration-300">
+                <Icon className="w-4 h-4 text-admin-gold/70 group-hover:text-admin-gold transition-colors duration-300" strokeWidth={1.5} />
+              </div>
             </div>
-            <p className="font-serif text-2xl md:text-3xl font-light text-white">
+
+            <p className="font-serif text-2.5xl md:text-3.5xl font-light text-white tracking-wide relative z-10">
               {value}
             </p>
-            <p className="text-xs text-grey/45 mt-2 leading-relaxed">{detail}</p>
+            <p className="text-[11px] text-grey/60 mt-3 relative z-10 font-mono tracking-wide">{detail}</p>
           </div>
         ))}
       </div>

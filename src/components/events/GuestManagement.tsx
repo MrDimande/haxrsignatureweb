@@ -91,7 +91,11 @@ export default function GuestManagement({
         (guest) => Boolean(guest.email.trim() || guest.phone.trim())
       );
     } else if (listFilter === "rsvp") {
-      rows = rows.filter((guest) => guest.guestSource === "sheet_rsvp");
+      rows = rows.filter(
+        (guest) =>
+          guest.guestSource === "sheet_rsvp" ||
+          guest.guestSource === "edition_rsvp"
+      );
     } else if (listFilter === "duplicates") {
       rows = rows.filter((guest) => isPossibleDuplicate(guest, guests));
     } else if (listFilter === "unassigned") {
@@ -126,7 +130,9 @@ export default function GuestManagement({
     (g) => g.email.trim() || g.phone.trim()
   ).length;
   const withEmailCount = guests.filter((g) => g.email.trim()).length;
-  const rsvpCount = guests.filter((g) => g.guestSource === "sheet_rsvp").length;
+  const rsvpCount = guests.filter(
+    (g) => g.guestSource === "sheet_rsvp" || g.guestSource === "edition_rsvp"
+  ).length;
 
   const tables = useMemo(
     () => [...new Set(seats.map((seat) => seat.tableName))].sort(),
@@ -612,7 +618,9 @@ export default function GuestManagement({
                           className={`text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${
                             guest.guestSource === "sheet_rsvp"
                               ? "bg-blue-500/10 text-blue-300 border-blue-500/25"
-                              : "bg-grey/10 text-grey/60 border-grey/25"
+                              : guest.guestSource === "edition_rsvp"
+                                ? "bg-gold/10 text-gold border-gold/25"
+                                : "bg-grey/10 text-grey/60 border-grey/25"
                           }`}
                         >
                           {GUEST_SOURCE_LABELS[guest.guestSource]}

@@ -70,7 +70,8 @@ export default function GuestMergePanel({
         </p>
         <p className="text-sm text-grey/55 leading-relaxed">
           Escolha o registo principal — email, telefone, lugar e estado mais
-          avançado são preservados automaticamente.
+          avançado são preservados automaticamente. As variantes fundidas ficam
+          memorizadas para que syncs futuros da folha não recriem duplicados.
         </p>
       </div>
 

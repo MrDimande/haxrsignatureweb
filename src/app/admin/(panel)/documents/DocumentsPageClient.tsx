@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import DocumentRowActions from "@/components/admin/documents/DocumentRowActions";
 import AdminShell from "@/components/admin/AdminShell";
 import DataTable from "@/components/admin/DataTable";
 import DocumentDeletePanel from "@/components/admin/DocumentDeletePanel";
@@ -91,19 +92,30 @@ export default function DocumentsPageClient({
     {
       key: "pdf",
       header: "PDF",
-      render: (row: InvoiceDocument) =>
-        row.pdfGeneratedAt ? (
-          <span className="text-emerald-400 text-xs">Gerado</span>
-        ) : (
-          <span className="text-grey/40 text-xs">—</span>
-        ),
+      render: (row: InvoiceDocument) => (
+        <div className="text-xs">
+          {row.pdfGeneratedAt ? (
+            <span className="text-emerald-400">Gerado</span>
+          ) : (
+            <span className="text-grey/40">—</span>
+          )}
+          {row.emailSentAt ? (
+            <p className="text-grey/40 mt-0.5">Email ✓</p>
+          ) : null}
+          {row.whatsappSharedAt ? (
+            <p className="text-grey/40 mt-0.5">WhatsApp ✓</p>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "actions",
       header: "",
-      className: "text-right w-12",
+      className: "text-right w-24",
       render: (row: InvoiceDocument) => (
-        <button
+        <div className="flex items-center justify-end gap-1">
+          <DocumentRowActions document={row} />
+          <button
           type="button"
           onClick={() => setDocumentToDelete(row)}
           className="p-2 text-grey/40 hover:text-red-300/90 transition-colors"
@@ -112,6 +124,7 @@ export default function DocumentsPageClient({
         >
           <Trash2 className="w-4 h-4" />
         </button>
+        </div>
       ),
     },
   ];

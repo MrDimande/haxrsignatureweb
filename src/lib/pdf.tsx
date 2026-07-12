@@ -2,8 +2,8 @@
 
 import { pdf } from "@react-pdf/renderer";
 import { getBusiness } from "@/lib/admin/businesses";
-import type { Business } from "@/lib/admin/types";
-import type { InvoiceDocument } from "@/lib/admin/types";
+import { resolvePdfLogoUrl, getPdfFilename } from "@/lib/admin/pdf-assets";
+import type { Business, InvoiceDocument } from "@/lib/admin/types";
 import InvoicePDFDocument from "@/components/admin/InvoicePDFDocument";
 
 export async function generateInvoicePDF(
@@ -14,7 +14,9 @@ export async function generateInvoicePDF(
     business ?? getBusiness(invoiceDoc.businessId);
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
-  const logoUrl = `${origin}${resolvedBusiness.logo}`;
+  const logoUrl = origin
+    ? resolvePdfLogoUrl(resolvedBusiness.logo, origin)
+    : undefined;
 
   return pdf(
     <InvoicePDFDocument
@@ -30,13 +32,14 @@ export function downloadPdf(blob: Blob, filename: string): void {
   const anchor = window.document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
+  anchor.rel = "noopener";
+  window.document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function getPdfFilename(invoiceDoc: InvoiceDocument): string {
-  return `${invoiceDoc.documentNumber.replace(/\//g, "-")}.pdf`;
-}
+export { getPdfFilename } from "@/lib/admin/pdf-assets";
 
 export async function downloadInvoicePDF(
   invoiceDocument: InvoiceDocument,
