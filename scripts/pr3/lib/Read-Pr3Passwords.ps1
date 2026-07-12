@@ -18,6 +18,9 @@ function Read-Pr3PasswordIfMissing {
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try {
         Set-Item -Path "Env:$EnvName" -Value ([Runtime.InteropServices.Marshal]::PtrToStringAuto($ptr))
+        if ($EnvName -eq "PR3_SOURCE_PGPASSWORD") {
+            Set-Item -Path "Env:PGPASSWORD" -Value ([Environment]::GetEnvironmentVariable($EnvName, "Process"))
+        }
     }
     finally {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) | Out-Null

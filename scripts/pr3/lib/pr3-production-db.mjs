@@ -41,12 +41,17 @@ export function resolveProductionLibpqUrl() {
   return url;
 }
 
-export function buildProductionNodeConfig() {
+export function resolveProductionPassword() {
   const password =
     process.env.PR3_SOURCE_PGPASSWORD?.trim() || process.env.PGPASSWORD?.trim();
-  if (!password) {
-    throw new Error("ABORT: PR3_SOURCE_PGPASSWORD em falta.");
+  if (!password || typeof password !== "string") {
+    throw new Error("ABORT: PR3_SOURCE_PGPASSWORD ou PGPASSWORD em falta.");
   }
+  return password;
+}
+
+export function buildProductionNodeConfig() {
+  const password = resolveProductionPassword();
 
   const parsed = new URL(resolveProductionLibpqUrl());
   parsed.searchParams.set("uselibpqcompat", "true");

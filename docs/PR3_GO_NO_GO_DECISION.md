@@ -31,14 +31,13 @@
 ## Estado resumido
 
 ```text
-Fase 1 backup/restauro:           GO
-Checksum backup (7 artefactos):   PASS
-Backup cifrado + verificação:     PASS
-Smokes DB clone (rkkx):           PASS
-Smokes HTTP aplicação:            FORA DE SCOPE — pós-deploy
-Aplicação 036–043 em produção:    AINDA NO-GO (aguarda GO escrito + janela)
-productionTouched:                false
+PR.3 PRONTIDÃO OPERACIONAL: FINALIZADA (técnico)
+READY FOR FINAL HUMAN GO — nenhuma migration aplicada ainda
+Apply 036–043 em produção: NO-GO até assinatura PR3_FINAL_SIGNOFF_RECORD.md
+productionTouched: false
 ```
+
+Ver relatório completo: `docs/PR3_OPERATIONAL_READINESS_FINAL_REPORT.md`
 
 ---
 

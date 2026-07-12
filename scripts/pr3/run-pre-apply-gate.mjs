@@ -83,12 +83,33 @@ if (existsSync(SMOKE_REPORT)) {
 const hasProdPw = Boolean(
   process.env.PR3_SOURCE_PGPASSWORD?.trim() || process.env.PGPASSWORD?.trim(),
 );
+const prodVerifyFile = resolve(
+  process.cwd(),
+  "backups/pr3-production-pre036/production-pre036-verification.json",
+);
+
 if (hasProdPw) {
   const prod = runNode("scripts/pr3/verify-production-pre-036.mjs");
+  const prodPass = prod.code === 0;
   allPass =
-    check("production_still_pre036", prod.code === 0, {
+    check("production_still_pre036", prodPass, {
       skipped: false,
+      method: "live_psql",
+      ...(prodPass ? {} : { stderrTail: (prod.stderr || "").slice(-500) }),
     }) && allPass;
+} else if (existsSync(prodVerifyFile)) {
+  try {
+    const evidence = JSON.parse(readFileSync(prodVerifyFile, "utf8"));
+    const evidencePass = evidence.pass === true && evidence.productionTouched === false;
+    check("production_still_pre036", evidencePass, {
+      skipped: false,
+      method: "evidence_file",
+      verifiedAt: evidence.verifiedAt,
+    });
+    if (!evidencePass) allPass = false;
+  } catch {
+    allPass = check("production_still_pre036", false, { reason: "invalid_evidence_file" }) && allPass;
+  }
 } else {
   check("production_still_pre036", true, {
     skipped: true,
