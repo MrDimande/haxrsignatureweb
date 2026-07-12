@@ -1,6 +1,7 @@
 import type { ClientType } from "@/lib/admin/types";
 import type { GuestStatus, GuestLabel } from "@/lib/events/types";
 import type { SheetGuestRow } from "@/lib/events/sheets/types";
+import { enrichSheetRowWithPartyParse } from "@/lib/events/party-sheet";
 import { parseGuestNameInput } from "@/lib/events/normalize";
 import {
   analyzeSheetHeaders,
@@ -177,8 +178,7 @@ export function mapCsvToGuestRows(csvText: string): SheetGuestRow[] {
     if (!rawName) continue;
 
     const parsedName = parseGuestNameInput(rawName);
-    const name = parsedName.name;
-    if (!name) continue;
+    if (!parsedName.name) continue;
 
     const email = emailIdx >= 0 ? (cells[emailIdx] ?? "").trim() : "";
     const phone = phoneIdx >= 0 ? (cells[phoneIdx] ?? "").trim() : "";
@@ -190,7 +190,6 @@ export function mapCsvToGuestRows(csvText: string): SheetGuestRow[] {
     const plusFromColumn = plusRaw
       ? Math.max(0, Number.parseInt(plusRaw, 10) || 0)
       : 0;
-    const plusOnes = Math.max(parsedName.plusOnes, plusFromColumn) || undefined;
     const dietaryNotes =
       dietaryIdx >= 0 ? (cells[dietaryIdx] ?? "").trim() : undefined;
     const guestNotes = notesIdx >= 0 ? (cells[notesIdx] ?? "").trim() : undefined;
@@ -198,23 +197,23 @@ export function mapCsvToGuestRows(csvText: string): SheetGuestRow[] {
     const label = labelRaw ? parseGuestLabel(labelRaw) : undefined;
     const explicitGroup =
       groupIdx >= 0 ? (cells[groupIdx] ?? "").trim() : "";
-    const groupName =
-      explicitGroup || parsedName.inferredGroupName || undefined;
 
-    guests.push({
-      name,
+    const baseRow = {
+      name: parsedName.name,
       email,
       phone,
       clientType,
       status,
       statusRaw: statusRaw || undefined,
-      plusOnes,
+      plusOnes: plusFromColumn > 0 ? plusFromColumn : undefined,
       dietaryNotes,
       guestNotes,
       label,
-      groupName: groupName || undefined,
+      groupName: explicitGroup || undefined,
       rowNumber: i + 1,
-    });
+    };
+
+    guests.push(enrichSheetRowWithPartyParse(baseRow, rawName));
   }
 
   if (!guests.length) {

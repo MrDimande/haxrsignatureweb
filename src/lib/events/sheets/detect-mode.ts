@@ -144,4 +144,5 @@ export const GUEST_SOURCE_LABELS = {
   manual: "Manual",
   sheet_master: "Sheets · lista",
   sheet_rsvp: "RSVP · Sheets",
+  edition_rsvp: "Edition · Convite digital",
 } as const;

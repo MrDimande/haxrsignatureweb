@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-07-02T09:25:43.692Z",
+  "editionBase": "https://projecto-haxrsignature-edition-bgoszdjk8.vercel.app",
+  "coreBase": "https://haxrsignatureweb-aludimande-7792-alberto-dimandes-projects.vercel.app",
+  "editionRepoRoot": "C:\\project-x\\projecto_haxrsignature",
+  "results": [
+    {
+      "id": "T1",
+      "name": "honeypot safety",
+      "category": "honeypot-nonempty",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "expectedSuccess": true,
+      "actualSuccess": true,
+      "expectedError": null,
+      "actualError": null,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "id": "T2",
+      "name": "farewell phone required",
+      "category": "farewell-validation-no-phone",
+      "expectedStatus": 400,
+      "actualStatus": 400,
+      "expectedSuccess": false,
+      "actualSuccess": false,
+      "expectedError": "Indique o telefone para contacto (WhatsApp).",
+      "actualError": "Indique o telefone para contacto (WhatsApp).",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "id": "T3",
+      "name": "missing contact",
+      "category": "kulaya-validation-no-contact",
+      "expectedStatus": 400,
+      "actualStatus": 400,
+      "expectedSuccess": false,
+      "actualSuccess": false,
+      "expectedError": "Indique email ou telefone para contacto.",
+      "actualError": "Indique email ou telefone para contacto.",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "id": "T4",
+      "name": "core proxy-secret rejection",
+      "category": "core-direct-no-secret",
+      "expectedStatus": 401,
+      "actualStatus": 401,
+      "expectedSuccess": false,
+      "actualSuccess": false,
+      "expectedError": "unauthorized envelope",
+      "actualError": "Não autorizado.",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "id": "T5",
+      "name": "timeout / upstream failure (local proxy)",
+      "category": "invalid-core-base-local",
+      "expectedStatus": 500,
+      "actualStatus": 500,
+      "expectedSuccess": false,
+      "actualSuccess": false,
+      "expectedError": "controlled generic Edition error",
+      "actualError": "Ocorreu um erro ao processar o seu RSVP.",
+      "pass": true,
+      "failures": [],
+      "note": "Local-only gate; Preview env unchanged. Validates no automatic fallback.",
+      "editionRepoRoot": "C:\\project-x\\projecto_haxrsignature"
+    },
+    {
+      "id": "T6",
+      "name": "core observability confirmation",
+      "category": "post-test-log-audit",
+      "expectedStatus": null,
+      "actualStatus": null,
+      "expectedSuccess": null,
+      "actualSuccess": null,
+      "expectedError": "requestId + proxyOrigin edition + no secrets",
+      "actualError": "observability fields present",
+      "pass": true,
+      "failures": [],
+      "evidence": {
+        "coreLogEntries": 2,
+        "editionLogEntries": 4
+      }
+    },
+    {
+      "id": "T7",
+      "name": "duplicate side-effect verification",
+      "category": "supabase-guest-audit",
+      "expectedStatus": null,
+      "actualStatus": null,
+      "expectedSuccess": null,
+      "actualSuccess": null,
+      "expectedError": "zero contract test guest rows",
+      "actualError": "contractNames=0, recentEventGuests=0",
+      "pass": true,
+      "failures": [],
+      "evidence": {
+        "contractNameCount": 0,
+        "recentEventGuestCount": 0
+      },
+      "note": "Email side-effects inferred: honeypot/400/401 paths skip sendEditionRsvpNotificationEmail."
+    }
+  ],
+  "passed": 7,
+  "total": 7,
+  "verdict": "READY FOR P1.2 PRODUCTION PLAN"
+}

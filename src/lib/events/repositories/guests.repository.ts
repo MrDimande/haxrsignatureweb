@@ -17,6 +17,8 @@ import {
 import { generateQrToken } from "@/lib/events/tokens";
 import { GUEST_LABEL_LABELS, GUEST_STATUS_LABELS } from "@/lib/events/constants";
 import { logGuestAudit } from "@/lib/events/repositories/guest-audit.repository";
+import { safeSyncGuestContactProfile } from "@/lib/events/repositories/event-contact-profiles.repository";
+import { recordManualMergeResolution } from "@/lib/events/repositories/guest-duplicate-resolutions.repository";
 import * as seatsRepo from "@/lib/events/repositories/seats.repository";
 import {
   formatValidationErrors,
@@ -176,6 +178,11 @@ export async function createGuest(
   if (!row) throw new Error("Falha ao criar convidado.");
   const guest = mapGuest(row);
   await logGuestAudit(guest.id, eventId, guest.name, "Convidado criado");
+  await safeSyncGuestContactProfile({
+    eventId,
+    guest,
+    source: "admin",
+  });
   return guest;
 }
 
@@ -254,6 +261,12 @@ export async function updateGuest(
       `${GUEST_LABEL_LABELS[existing.label]} → ${GUEST_LABEL_LABELS[data.label]}`
     );
   }
+
+  await safeSyncGuestContactProfile({
+    eventId: existing.eventId,
+    guest,
+    source: "admin",
+  });
 
   return guest;
 }
@@ -973,6 +986,9 @@ export async function mergeGuests(
         .update({ seat_id: null } as never)
         .eq("id", secondary.id);
     }
+
+    await recordManualMergeResolution(eventId, primaryId, secondary);
+
     await removeGuestSilently(secondary.id);
   }
 
@@ -984,7 +1000,7 @@ export async function mergeGuests(
     eventId,
     finalGuest.name,
     "Duplicados fundidos",
-    `${secondaries.length} registo(s) unificado(s)`
+    `${secondaries.length} registo(s) unificado(s) — variantes memorizadas para sync futuro`
   );
 
   return finalGuest;

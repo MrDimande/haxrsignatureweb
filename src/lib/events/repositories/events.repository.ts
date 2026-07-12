@@ -241,3 +241,38 @@ export async function recordSheetSync(
 
   if (error) throw new Error(error.message);
 }
+
+/** Eventos com data passada há ≥1 dia, sem relatório enviado. */
+export async function listEventsPendingPostEventReport(
+  limit = 20
+): Promise<ManagedEvent[]> {
+  const supabase = createAdminClient();
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .not("date", "is", null)
+    .lt("date", cutoff)
+    .is("post_event_report_sent_at", null)
+    .not("client_id", "is", null)
+    .order("date", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    if (error.message.includes("post_event_report_sent_at")) return [];
+    throw new Error(error.message);
+  }
+
+  return enrichEventsWithClientNames(asTableRows<"events">(data));
+}
+
+export async function markPostEventReportSent(eventId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ post_event_report_sent_at: new Date().toISOString() } as never)
+    .eq("id", eventId);
+
+  if (error) throw new Error(error.message);
+}
