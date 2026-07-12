@@ -85,11 +85,12 @@ Relatórios: `backups/pr3-production-pre036/production-apply-report.json`, `prod
 | Monitorização T+30 | **PASS** — nenhum incidente de produção |
 | PR closeout | `pr3-post-window-closeout` → main |
 | Artefactos smoke | **Removidos** (GO Dimande 2026-07-12) |
-| `passwordRotationStatus` | **deferred_by_owner** |
+| `passwordRotationStatus` | **completed** |
 | `passwordRotationRequired` | **true** |
-| `passwordRotationCompleted` | **false** |
-| Responsável rotação | Proprietário — Dimande |
-| Prazo rotação | Imediatamente após encerramento desta sessão |
+| `passwordRotationCompleted` | **true** |
+| `postRotationPreflight` | **PASS** |
+| Confirmado por | Proprietário — Dimande |
+| Data confirmação | 2026-07-12 |
 
 ---
 

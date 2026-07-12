@@ -177,16 +177,13 @@ Script: `scripts/pr3/remove-smoke-artifacts.mjs` (requer GO token).
 
 | Campo | Valor |
 |-------|-------|
-| `passwordRotationStatus` | **deferred_by_owner** |
+| `passwordRotationStatus` | **completed** |
 | `passwordRotationRequired` | **true** |
-| `passwordRotationCompleted` | **false** |
-| `postRotationPreflight` | **n/a** (pendente rotação) |
-| Responsável | Proprietário — Dimande |
-| Prazo | Imediatamente após encerramento desta sessão |
+| `passwordRotationCompleted` | **true** |
+| `postRotationPreflight` | **PASS** |
+| Confirmado | Proprietário — Dimande · 2026-07-12 |
 
-A app Vercel **não usa** password postgres em runtime (`NEXT_PUBLIC_SUPABASE_*` + `SUPABASE_SERVICE_ROLE_KEY`).
-
-Após rotação manual no Dashboard: confirmar `passwordRotationCompleted=true` e `postRotationPreflight=PASS`.
+Rotação executada no Supabase Dashboard (`oxsrdmydlqyvnueedgtl`). Nova password registada apenas no gestor de passwords do proprietário — **nunca no repositório**.
 
 ### Veredicto final PR.3
 
@@ -198,6 +195,6 @@ T+30 monitorização:     PASS — nenhum incidente
 Smoke cleanup:          DONE
 Restore/rollback:       NÃO executado
 productionTouched:      true (autorizado)
-Password rotation:      PENDENTE (única acção segurança restante)
-PR.3:                   FECHADA
+Password rotation:      PASS
+PR.3:                   FECHADA (completa)
 ```
