@@ -1,9 +1,9 @@
 # PR.3 — Plano de apply e rollback em produção (036–043)
 
-**Modo:** prontidão operacional concluída — **nenhum SQL mutável em produção**  
-**Estado:** pronto para GO humano final — apply **não autorizado** até assinatura + janela  
-**Produção:** `oxsrdmydlqyvnueedgtl` · **intocada**  
-**Reavaliação:** 2026-07-12
+**Modo:** janela executada — apply 036–043 concluído  
+**Estado:** **PASS** — smokes HTTP PASS, restore integral não executado  
+**Produção:** `oxsrdmydlqyvnueedgtl` · **tocada**  
+**Reavaliação:** 2026-07-12 (pós-janela)
 
 ---
 
@@ -15,7 +15,7 @@
 | `encryptedArchiveChecksumValid` | **true** |
 | `backupCustodian` | **Proprietário — Dimande** |
 | `cloneDbSmokesPass` | **true** |
-| `productionTouched` | **false** |
+| `productionTouched` | **true** |
 
 ---
 
@@ -53,10 +53,10 @@
 | 4 | Custódia registada (Dimande) | ✅ |
 | 5 | Smokes DB clone E2E | ✅ PASS |
 | 6 | Objectos 036–043 ausentes em produção | ✅ |
-| 7 | Aprovação formal rollback | ⚠️ **Pendente** |
-| 8 | Janela de manutenção | ⚠️ **Pendente** |
-| 9 | GO escrito proprietário | ⚠️ **Pendente** |
-| 10 | Revalidação checksum imediata pré-apply | Pendente janela |
+| 7 | Aprovação formal rollback | ✅ |
+| 8 | Janela de manutenção | ✅ 2026-07-12 |
+| 9 | GO escrito proprietário | ✅ |
+| 10 | Revalidação checksum imediata pré-apply | ✅ |
 
 ---
 
@@ -120,26 +120,34 @@ Scripts `scripts/test-*-preview.mjs` (adaptar para ambiente pós-deploy).
 Prontidão operacional PR.3:     COMPLETA
 Backup cifrado:                 PASS
 Smokes DB clone:                PASS
-Apply 036–043 produção:         NO-GO (GO humano + janela pendentes)
+Apply 036–043 produção:         PASS (2026-07-12T16:30–16:31 UTC)
+Smokes HTTP produção:           PASS (2026-07-12T16:49 UTC)
+Restore integral:               NÃO executado
 
-READY FOR FINAL HUMAN GO — nenhuma migration aplicada ainda.
-
-productionTouched = false
+productionTouched = true
 ```
 
----
-
-## Confirmação produção (read-only 2026-07-12)
-
-- `profiles`, `client_events`, `provision_client_operational_event`: **ausentes**
-- Migrations 036–043: **nenhuma**
-- **Nenhuma** acção mutável sobre produção nesta tarefa
+Relatórios: `production-apply-report.json`, `production-http-smoke-report.json`
 
 ---
 
-## Proibições respeitadas
+## Confirmação produção (pós-apply 2026-07-12)
 
-Apply produção · smokes produção · `db push` · repair · restore produção · deploy · merge · push · commit automático — **todos não executados**.
+- `profiles`, `client_events`, `provision_client_operational_event`: **presentes**
+- RPCs `get_client_event_*` (5): **presentes**
+- Apply via SQL directo — histórico Supabase pode não reflectir nomes 036–043
+- Restore integral: **não executado**
+
+---
+
+## Proibições respeitadas na janela
+
+| Acção | Executado |
+|-------|-----------|
+| Apply produção 036–043 | **Sim** (GO autorizado) |
+| Smokes HTTP produção | **Sim** |
+| Restore integral produção | **Não** (sem nova confirmação) |
+| Rollback destrutivo | **Não** |
 
 ---
 
@@ -149,6 +157,6 @@ Apply produção · smokes produção · `db push` · repair · restore produç�
 |------|---------|
 | Gate pré-apply | `node scripts/pr3/run-pre-apply-gate.mjs` |
 | Apply 036–043 | `$env:PR3_APPLY_AUTHORIZED='PR3_HUMAN_GO_CONFIRMED'` + `run-production-apply-in-session.ps1` |
-| Smokes HTTP | Após deploy app — scripts `test-*-preview.mjs` adaptados |
+| Smokes HTTP | `node scripts/pr3/run-production-http-smokes.mjs` (PR3_HTTP_SMOKE_AUTHORIZED=1) |
 
 O runner de apply exige **dupla confirmação**: token `PR3_HUMAN_GO_CONFIRMED` + prompt `APPLY-PRODUCTION`.

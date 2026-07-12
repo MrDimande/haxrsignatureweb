@@ -2,7 +2,7 @@
 
 **Projecto:** HAXR Signature · migrations 036–043  
 **Produção:** `oxsrdmydlqyvnueedgtl` · **Clone ensaio:** `rkkxfrwtmsqzpnbkshnd`  
-**Branch:** `rebuild-haxr-platform` · **PR:** #3 (Draft)
+**Branch:** `main` · **PR:** #3 — **MERGED** (`e51e973`)
 
 ---
 
@@ -62,14 +62,19 @@ EU, DIMANDE, AUTORIZO O GO DE PRODUÇÃO DA PR.3, A APLICAÇÃO CONTROLADA DAS M
 
 ## 4. Registo pós-execução
 
-_(Actualizado após janela — ver `production-apply-report.json` e relatório final)_
-
 | Campo | Valor |
 |-------|-------|
-| Preflight | _(pendente execução)_ |
-| Apply 036–043 | _(pendente execução)_ |
-| Deploy | _(pendente execução)_ |
-| Smokes HTTP | _(pendente execução)_ |
+| Preflight / pre-apply gate | **PASS** |
+| Apply 036–043 | **PASS** — `2026-07-12T16:30:10Z` → `2026-07-12T16:31:29Z` |
+| Verificações schema | **PASS** (post-036, post-038, RPCs 043) |
+| Merge PR #3 | **DONE** — `e51e973` |
+| Deploy Vercel prod | **Ready** — `https://www.haxrsignature.com` |
+| Smokes HTTP | **PASS** — `production-http-smoke-report.json` (8/8) |
+| Restore integral | **NÃO executado** (conforme GO) |
+| `productionTouched` | **true** |
+| Resultado janela | **PASS** |
+
+Relatórios: `backups/pr3-production-pre036/production-apply-report.json`, `production-http-smoke-report.json`
 
 ---
 
