@@ -1,7 +1,7 @@
 # PR.3 — Relatório final de prontidão operacional
 
-**Data fecho janela:** 2026-07-12  
-**Merge PR #3:** `e51e973` (main)  
+**Data fecho janela:** 2026-07-12
+**Merge PR #3:** `e51e973` (main)
 **Produção:** `oxsrdmydlqyvnueedgtl` · **`productionTouched = true`**
 
 ---

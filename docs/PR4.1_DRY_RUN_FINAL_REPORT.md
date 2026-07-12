@@ -1,9 +1,9 @@
 # PR.4.1 — Relatório final do ensaio migrations 036–043
 
-**Data de conclusão:** 2026-07-11 (22:44 UTC)  
-**Branch:** `rebuild-haxr-platform`  
-**PR relacionada:** #3 (Draft)  
-**Artefacto machine-readable:** `backups/pr4-dry-run-report.json`  
+**Data de conclusão:** 2026-07-11 (22:44 UTC)
+**Branch:** `rebuild-haxr-platform`
+**PR relacionada:** #3 (Draft)
+**Artefacto machine-readable:** `backups/pr4-dry-run-report.json`
 **Pipeline exit code:** `0`
 
 ---

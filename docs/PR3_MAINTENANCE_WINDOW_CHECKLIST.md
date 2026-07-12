@@ -1,6 +1,6 @@
 # PR.3 — Checklist janela de manutenção (036–043)
 
-**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone:** `rkkxfrwtmsqzpnbkshnd`  
+**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone:** `rkkxfrwtmsqzpnbkshnd`
 **Branch:** `main` · **PR:** #3 — **MERGED** (`e51e973`)
 
 ---

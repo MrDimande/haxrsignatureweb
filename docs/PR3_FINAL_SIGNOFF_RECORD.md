@@ -1,7 +1,7 @@
 # PR.3 — Registo de assinatura (GO + rollback)
 
-**Projecto:** HAXR Signature · migrations 036–043  
-**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone ensaio:** `rkkxfrwtmsqzpnbkshnd`  
+**Projecto:** HAXR Signature · migrations 036–043
+**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone ensaio:** `rkkxfrwtmsqzpnbkshnd`
 **Branch:** `main` · **PR:** #3 — **MERGED** (`e51e973`)
 
 ---
@@ -16,7 +16,7 @@
 | Smokes DB clone | **PASS** | `pr3-clone-e2e-smoke-report.json` |
 | Pre-apply gate | **PASS** | `run-pre-apply-gate.mjs` |
 
-**Custodiante backup:** Proprietário — Dimande  
+**Custodiante backup:** Proprietário — Dimande
 **Executor técnico:** operador técnico local
 
 ---

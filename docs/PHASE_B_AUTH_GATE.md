@@ -1,7 +1,7 @@
 # Gate Fase B — Supabase Auth no sign-in
 
-**Data:** Julho 2026  
-**Estado:** 🟢 **Gate desbloqueado — apenas local/preview**  
+**Data:** Julho 2026
+**Estado:** 🟢 **Gate desbloqueado — apenas local/preview**
 **Fecho técnico:** Fase A.4
 
 ---

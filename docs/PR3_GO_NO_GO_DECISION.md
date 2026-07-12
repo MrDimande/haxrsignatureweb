@@ -1,7 +1,7 @@
 # PR.3 — Decisão GO / NO-GO (produção 036–043)
 
-**Modo:** janela executada — migrations 036–043 aplicadas em produção  
-**Data fecho:** 2026-07-12  
+**Modo:** janela executada — migrations 036–043 aplicadas em produção
+**Data fecho:** 2026-07-12
 **Produção:** `oxsrdmydlqyvnueedgtl` · **tocada** (`productionTouched = true`)
 
 ---

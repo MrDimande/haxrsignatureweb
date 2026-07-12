@@ -1,7 +1,7 @@
 # Relatório — Preview Supabase como staging do Core
 
-**Data:** Julho 2026  
-**Estado:** ✅ Staging confirmado — **apply ainda não executado**  
+**Data:** Julho 2026
+**Estado:** ✅ Staging confirmado — **apply ainda não executado**
 **Âmbito:** Apenas `haxrsignature` (Core). Edition **fora de âmbito**.
 
 ---

@@ -1,7 +1,7 @@
 # HAXR Signature — Auditoria do Website
 
-**URL:** https://www.haxrsignature.com  
-**Data:** 18 Junho 2026  
+**URL:** https://www.haxrsignature.com
+**Data:** 18 Junho 2026
 **Âmbito:** site institucional, SEO, integrações, segurança, operação comercial
 
 ---
