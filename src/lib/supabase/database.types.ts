@@ -181,6 +181,7 @@ export interface Database {
           email: string;
           phone: string;
           address: string;
+          portal_token: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -239,6 +240,12 @@ export interface Database {
           issuer_role: string;
           issuer_signature_image: string;
           pdf_generated_at: string | null;
+          converted_from_document_id: string | null;
+          email_sent_at: string | null;
+          whatsapp_shared_at: string | null;
+          client_approval_status: string | null;
+          client_approved_at: string | null;
+          client_approval_note: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -497,6 +504,55 @@ export interface Database {
           Database["public"]["Tables"]["contact_inquiries"]["Insert"]
         >;
       };
+      marketing_contacts: {
+        Row: {
+          id: string;
+          email: string;
+          first_name: string;
+          last_name: string | null;
+          phone: string | null;
+          company_name: string | null;
+          role: string | null;
+          segment: string;
+          source: string;
+          consent_status: string;
+          consent_text: string | null;
+          consent_at: string | null;
+          city: string | null;
+          event_type: string | null;
+          event_date: string | null;
+          message: string | null;
+          metadata: Json;
+          brevo_synced_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          first_name: string;
+          last_name?: string | null;
+          phone?: string | null;
+          company_name?: string | null;
+          role?: string | null;
+          segment: string;
+          source: string;
+          consent_status?: string;
+          consent_text?: string | null;
+          consent_at?: string | null;
+          city?: string | null;
+          event_type?: string | null;
+          event_date?: string | null;
+          message?: string | null;
+          metadata?: Json;
+          brevo_synced_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["marketing_contacts"]["Insert"]
+        >;
+      };
       events: {
         Row: {
           id: string;
@@ -520,6 +576,9 @@ export interface Database {
           sheets_sync_summary: string;
           sheets_sync_mode: "master" | "rsvp";
           find_seat_code: string;
+          edition_registry_key: string;
+          post_event_report_sent_at: string | null;
+          date_hold_until: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -545,10 +604,266 @@ export interface Database {
           sheets_sync_summary?: string;
           sheets_sync_mode?: "master" | "rsvp";
           find_seat_code?: string;
+          edition_registry_key?: string;
+          post_event_report_sent_at?: string | null;
+          date_hold_until?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
+      };
+      event_sheet_import_rows: {
+        Row: {
+          id: string;
+          event_id: string;
+          source: "google_sheet" | "csv_upload";
+          source_url: string | null;
+          source_gid: string | null;
+          source_file_name: string | null;
+          source_row_number: number | null;
+          row_fingerprint: string;
+          row_payload: Json;
+          normalized_email: string | null;
+          normalized_phone: string | null;
+          normalized_name: string | null;
+          sync_batch_id: string;
+          first_seen_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          source: "google_sheet" | "csv_upload";
+          source_url?: string | null;
+          source_gid?: string | null;
+          source_file_name?: string | null;
+          source_row_number?: number | null;
+          row_fingerprint: string;
+          row_payload?: Json;
+          normalized_email?: string | null;
+          normalized_phone?: string | null;
+          normalized_name?: string | null;
+          sync_batch_id: string;
+          first_seen_at?: string;
+          last_seen_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_sheet_import_rows"]["Insert"]
+        >;
+      };
+      event_sheet_sync_ledger: {
+        Row: {
+          id: string;
+          event_id: string;
+          source: "google_sheet" | "csv_upload";
+          row_fingerprint: string;
+          guest_id: string | null;
+          action:
+            | "created"
+            | "updated"
+            | "matched"
+            | "skipped"
+            | "ignored"
+            | "error";
+          reason: string | null;
+          sync_batch_id: string;
+          row_payload: Json | null;
+          created_at: string;
+          updated_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          source: "google_sheet" | "csv_upload";
+          row_fingerprint: string;
+          guest_id?: string | null;
+          action:
+            | "created"
+            | "updated"
+            | "matched"
+            | "skipped"
+            | "ignored"
+            | "error";
+          reason?: string | null;
+          sync_batch_id: string;
+          row_payload?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+          last_seen_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_sheet_sync_ledger"]["Insert"]
+        >;
+      };
+      guest_duplicate_resolutions: {
+        Row: {
+          id: string;
+          event_id: string;
+          primary_guest_id: string;
+          duplicate_guest_id: string | null;
+          duplicate_name: string | null;
+          duplicate_name_normalized: string | null;
+          duplicate_email: string | null;
+          duplicate_phone: string | null;
+          duplicate_fingerprint: string | null;
+          source:
+            | "manual_merge"
+            | "google_sheet"
+            | "csv_upload"
+            | "rsvp"
+            | "admin"
+            | null;
+          resolution_status: "merged" | "ignored" | "restored" | "needs_review";
+          resolved_by: string | null;
+          resolved_at: string;
+          notes: string | null;
+          metadata: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          primary_guest_id: string;
+          duplicate_guest_id?: string | null;
+          duplicate_name?: string | null;
+          duplicate_name_normalized?: string | null;
+          duplicate_email?: string | null;
+          duplicate_phone?: string | null;
+          duplicate_fingerprint?: string | null;
+          source?:
+            | "manual_merge"
+            | "google_sheet"
+            | "csv_upload"
+            | "rsvp"
+            | "admin"
+            | null;
+          resolution_status: "merged" | "ignored" | "restored" | "needs_review";
+          resolved_by?: string | null;
+          resolved_at?: string;
+          notes?: string | null;
+          metadata?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["guest_duplicate_resolutions"]["Insert"]
+        >;
+      };
+      event_contact_profiles: {
+        Row: {
+          id: string;
+          event_id: string;
+          guest_id: string | null;
+          full_name: string | null;
+          normalized_name: string | null;
+          email: string | null;
+          normalized_email: string | null;
+          phone: string | null;
+          normalized_phone: string | null;
+          source:
+            | "rsvp"
+            | "google_sheet"
+            | "csv_upload"
+            | "admin"
+            | "edition_rsvp"
+            | "checkin"
+            | "unknown";
+          confidence: "high" | "medium" | "low";
+          consent_status:
+            | "operational_only"
+            | "marketing_granted"
+            | "marketing_denied"
+            | "unknown";
+          marketing_allowed: boolean;
+          first_seen_at: string;
+          last_seen_at: string;
+          metadata: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          guest_id?: string | null;
+          full_name?: string | null;
+          normalized_name?: string | null;
+          email?: string | null;
+          normalized_email?: string | null;
+          phone?: string | null;
+          normalized_phone?: string | null;
+          source:
+            | "rsvp"
+            | "google_sheet"
+            | "csv_upload"
+            | "admin"
+            | "edition_rsvp"
+            | "checkin"
+            | "unknown";
+          confidence?: "high" | "medium" | "low";
+          consent_status?:
+            | "operational_only"
+            | "marketing_granted"
+            | "marketing_denied"
+            | "unknown";
+          marketing_allowed?: boolean;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          metadata?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_contact_profiles"]["Insert"]
+        >;
+      };
+      guest_party_members: {
+        Row: {
+          id: string;
+          event_id: string;
+          guest_id: string;
+          label: string;
+          normalized_label: string | null;
+          role:
+            | "primary"
+            | "spouse"
+            | "named_guest"
+            | "plus_one"
+            | "family"
+            | "unknown_companion";
+          count: number;
+          status: "suggested" | "confirmed" | "dismissed";
+          source: "parser" | "admin" | "sheet" | "csv" | "rsvp" | null;
+          confidence: "high" | "medium" | "low" | null;
+          metadata: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          guest_id: string;
+          label: string;
+          normalized_label?: string | null;
+          role:
+            | "primary"
+            | "spouse"
+            | "named_guest"
+            | "plus_one"
+            | "family"
+            | "unknown_companion";
+          count?: number;
+          status?: "suggested" | "confirmed" | "dismissed";
+          source?: "parser" | "admin" | "sheet" | "csv" | "rsvp" | null;
+          confidence?: "high" | "medium" | "low" | null;
+          metadata?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["guest_party_members"]["Insert"]
+        >;
       };
       seats: {
         Row: {
@@ -605,7 +920,7 @@ export interface Database {
           dietary_notes: string;
           guest_notes: string;
           label: "none" | "vip" | "family" | "wedding_party" | "corporate" | "other";
-          guest_source: "manual" | "sheet_master" | "sheet_rsvp";
+          guest_source: "manual" | "sheet_master" | "sheet_rsvp" | "edition_rsvp";
           created_at: string;
           updated_at: string;
         };
@@ -625,7 +940,7 @@ export interface Database {
           dietary_notes?: string;
           guest_notes?: string;
           label?: "none" | "vip" | "family" | "wedding_party" | "corporate" | "other";
-          guest_source?: "manual" | "sheet_master" | "sheet_rsvp";
+          guest_source?: "manual" | "sheet_master" | "sheet_rsvp" | "edition_rsvp";
           created_at?: string;
           updated_at?: string;
         };
@@ -666,6 +981,46 @@ export interface Database {
           checkin_time?: string;
         };
         Update: Partial<Database["public"]["Tables"]["checkins"]["Insert"]>;
+      };
+      edition_gift_reservations: {
+        Row: {
+          id: string;
+          registry_key: string;
+          gift_id: string;
+          gift_name: string;
+          reserved_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          registry_key: string;
+          gift_id: string;
+          gift_name?: string;
+          reserved_by: string;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["edition_gift_reservations"]["Insert"]
+        >;
+      };
+      edition_rsvp_reminder_log: {
+        Row: {
+          id: string;
+          event_id: string;
+          guest_id: string;
+          reminder_key: string;
+          sent_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          guest_id: string;
+          reminder_key: string;
+          sent_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["edition_rsvp_reminder_log"]["Insert"]
+        >;
       };
     };
     Views: {
@@ -772,7 +1127,7 @@ export interface Database {
       inquiry_status: "new" | "contacted" | "converted" | "archived";
       guest_status: "invited" | "confirmed" | "checked_in" | "declined";
       guest_label: "none" | "vip" | "family" | "wedding_party" | "corporate" | "other";
-      guest_source: "manual" | "sheet_master" | "sheet_rsvp";
+      guest_source: "manual" | "sheet_master" | "sheet_rsvp" | "edition_rsvp";
       sheets_sync_mode: "master" | "rsvp";
       payment_method:
         | "cash"
