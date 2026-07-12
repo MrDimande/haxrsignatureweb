@@ -12,11 +12,11 @@ export const IPHONE_17_VIEWPORT = {
 export const portfolioCopy = {
   hero: {
     location: "Maputo · Moçambique",
-    tagline: "Assessoria, Design e Tecnologia para Eventos",
+    tagline: "Do sonho ao sim, estamos com vocês.",
     subtitle:
-      "Tranquilidade, elegância e precisão — para eventos que merecem ser lembrados.",
-    ctaPrimary: "Iniciar conversa",
-    ctaSecondary: "Descobrir o universo HAXR",
+      "Planeamos, organizamos e coordenamos para que vocês vivam o que realmente importa.",
+    ctaPrimary: "Fale connosco",
+    ctaSecondary: "Conheça os nossos serviços",
   },
   quemSomos: {
     label: "Quem Somos",
@@ -185,22 +185,22 @@ export const portfolioCopy = {
 
 /** Contactos oficiais — HAXR Signature */
 export const siteContact = {
-  location: "Av. Julius Nyerere, 119, Polana Canico 'B', Cidade de Maputo · Moçambique",
-  shortLocation: "Maputo · Moçambique",
+  location: "Maputo, Moçambique",
+  shortLocation: "Maputo, Moçambique",
   mapsHref:
-    "https://www.google.com/maps/search/?api=1&query=Av.+Julius+Nyerere+119+Polana+Canico+Maputo+Mo%C3%A7ambique",
-  email: "hello@haxrsignature.com",
+    "https://www.google.com/maps/search/?api=1&query=Maputo+Mo%C3%A7ambique",
+  email: "info@haxrsignature.com",
   instagram: {
-    handle: "@haxrsignature",
-    href: "https://www.instagram.com/haxrsignature/",
+    handle: "@haxr.signature",
+    href: "https://www.instagram.com/haxr.signature/",
   },
   whatsapp: {
-    display: "+258 87 088 3428",
+    display: "+258 870 883 428",
     href: "https://wa.me/258870883428",
   },
   phones: [
-    { display: "+258 87 088 3428", tel: "+258870883428" },
-    { display: "+258 82 088 3428", tel: "+258820883428" },
+    { display: "+258 820 883 478", tel: "+258820883478" },
+    { display: "+258 870 883 428", tel: "+258870883428" },
   ],
   facebook: null as { href: string; label: string } | null,
 } as const;

@@ -4,142 +4,273 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Heart, MessageCircle, Trash2, X } from "lucide-react";
 import BrandLogo from "@/components/ui/BrandLogo";
-import { primaryNav } from "@/lib/marketing/navigation";
+import NavMegaMenu, { type NavVariant } from "@/components/layout/NavMegaMenu";
+import NavMobileDrawer from "@/components/layout/NavMobileDrawer";
+import {
+  navCta,
+  navDirectLinks,
+  navGroups,
+} from "@/lib/marketing/navigation";
+
+interface FavoriteItem {
+  id: string;
+  title: string;
+  category: string;
+  image: string;
+}
 
 export default function Nav() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const [visible, setVisible] = useState(!isHome);
+  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+
+  const navVariant: NavVariant =
+    isHome && !scrolled ? "hero" : "dark";
+
+  useEffect(() => {
+    const loadFavorites = () => {
+      try {
+        const stored = localStorage.getItem("haxr-favorites");
+        setFavorites(stored ? JSON.parse(stored) : []);
+      } catch {
+        setFavorites([]);
+      }
+    };
+
+    loadFavorites();
+    window.addEventListener("haxr-favorites-updated", loadFavorites);
+    window.addEventListener("storage", loadFavorites);
+    return () => {
+      window.removeEventListener("haxr-favorites-updated", loadFavorites);
+      window.removeEventListener("storage", loadFavorites);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isHome) {
-      setVisible(true);
+      setScrolled(true);
       return;
     }
 
-    const hero = document.getElementById("hero");
-    if (!hero) {
-      setVisible(true);
-      return;
-    }
+    const onScroll = () => {
+      setScrolled(window.scrollY > 48);
+    };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(!entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-
-    observer.observe(hero);
-    return () => observer.disconnect();
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, [isHome, pathname]);
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
+    document.body.style.overflow =
+      menuOpen || favoritesOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [menuOpen]);
+  }, [menuOpen, favoritesOpen]);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
+  const removeFavorite = (id: string) => {
+    const updated = favorites.filter((item) => item.id !== id);
+    localStorage.setItem("haxr-favorites", JSON.stringify(updated));
+    setFavorites(updated);
+    window.dispatchEvent(new Event("haxr-favorites-updated"));
+  };
+
+  const getWhatsAppShareLink = () => {
+    const itemsList = favorites
+      .map((item) => `- ${item.title} (${item.category})`)
+      .join("\n");
+    const message = `Olá HAXR Signature! Estive a explorar o vosso site e guardei os seguintes serviços nos meus favoritos:\n\n${itemsList}\n\nGostaria de falar com um consultor para obter mais informações e uma proposta personalizada.`;
+    return `https://wa.me/258870883428?text=${encodeURIComponent(message)}`;
+  };
+
+  const directLinkClass = (href: string) => {
+    const active = pathname === href;
+    return active
+      ? "text-white"
+      : "text-white/80 hover:text-white";
+  };
+
   return (
     <>
-      <motion.nav
-        initial={false}
-        animate={{
-          y: visible ? 0 : -80,
-          opacity: visible ? 1 : 0,
-        }}
-        transition={{ duration: 0.7, ease: [0.25, 0, 0.1, 1] }}
-        className="fixed top-0 left-0 w-full z-50 pointer-events-none"
+      <nav
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-700 ${
+          navVariant === "hero" ? "nav-home-hero" : "nav-home-scrolled"
+        }`}
       >
-        <div
-          className={`bg-black/95 backdrop-blur-sm border-b border-gold-dim transition-opacity duration-700 ${visible ? "pointer-events-auto" : ""}`}
-        >
-          <div className="site-container flex items-center justify-between h-[4.25rem] md:h-[4.5rem]">
+        <div className="site-container-wide flex items-center justify-between h-[4.25rem] md:h-[4.5rem] gap-4">
+          <Link
+            href="/"
+            className="opacity-95 hover:opacity-100 transition-opacity duration-500 shrink-0 py-1"
+            aria-label="HAXR Signature — início"
+          >
+            <BrandLogo variant="navbar" priority />
+          </Link>
+
+          <NavMegaMenu groups={navGroups} variant={navVariant} />
+
+          <div className="hidden lg:flex items-center gap-4 xl:gap-5 shrink-0">
+            {navDirectLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`font-sans text-[11px] font-semibold tracking-[0.22em] uppercase transition-colors duration-500 whitespace-nowrap ${directLinkClass(link.href)}`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
             <Link
-              href="/"
-              className="opacity-95 hover:opacity-100 transition-opacity duration-500 shrink-0 py-1"
-              aria-label="HAXR Signature — início"
+              href="/sign-in"
+              className="font-sans text-[11px] font-semibold tracking-[0.2em] uppercase text-white hover:text-brand-gold border border-white/20 px-4 py-2.5 hover:border-brand-gold hover:bg-white/5 transition-all duration-300 whitespace-nowrap"
             >
-              <BrandLogo variant="navbar" priority />
+              Sign In
             </Link>
 
-            <div className="hidden xl:flex items-center gap-6">
-              {primaryNav.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={
-                    link.accent
-                      ? "font-sans text-[10px] tracking-[0.28em] uppercase text-gold/60 hover:text-gold transition-colors duration-500 border border-gold-dim px-3 py-1.5"
-                      : `font-sans text-[10px] tracking-[0.28em] uppercase transition-colors duration-500 ${
-                          pathname === link.href
-                            ? "text-white"
-                            : "text-grey hover:text-white"
-                        }`
-                  }
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
+            <Link
+              href={navCta.href}
+              className="font-sans text-[11px] font-semibold tracking-[0.2em] uppercase text-brand-black bg-brand-gold border border-brand-gold px-4 py-2.5 hover:bg-brand-gold-light hover:border-brand-gold-light transition-colors duration-500 whitespace-nowrap"
+            >
+              {navCta.label}
+            </Link>
+          </div>
 
+          <div className="lg:hidden flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setMenuOpen((o) => !o)}
-              className="xl:hidden flex flex-col gap-1.5 p-2 pointer-events-auto"
-              aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+              onClick={() => setMenuOpen(true)}
+              className="flex flex-col gap-1.5 p-2 cursor-pointer"
+              aria-label="Abrir menu"
               aria-expanded={menuOpen}
             >
-              <span
-                className={`block w-5 h-px bg-white transition-all duration-500 origin-center ${menuOpen ? "rotate-45 translate-y-[3.5px]" : ""}`}
-              />
-              <span
-                className={`block w-5 h-px bg-white transition-all duration-500 ${menuOpen ? "opacity-0" : ""}`}
-              />
-              <span
-                className={`block w-5 h-px bg-white transition-all duration-500 origin-center ${menuOpen ? "-rotate-45 -translate-y-[3.5px]" : ""}`}
-              />
+              <span className="block w-5 h-px bg-white transition-all duration-500" />
+              <span className="block w-5 h-px bg-white transition-all duration-500" />
+              <span className="block w-3 h-px ml-auto bg-white/80 transition-all duration-500" />
             </button>
           </div>
         </div>
-      </motion.nav>
+      </nav>
+
+      <NavMobileDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        groups={navGroups}
+        directLinks={navDirectLinks}
+        cta={navCta}
+        favorites={favorites}
+        onRemoveFavorite={removeFavorite}
+        whatsAppShareHref={getWhatsAppShareLink()}
+      />
 
       <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-40 bg-black/98 flex flex-col items-center justify-center gap-8 xl:hidden overflow-y-auto py-24"
-          >
-            {primaryNav.map((link, i) => (
-              <motion.div
-                key={link.href}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.5 }}
-              >
-                <Link
-                  href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={
-                    link.accent
-                      ? "font-sans text-sm tracking-[0.35em] uppercase text-gold/60 hover:text-gold transition-colors duration-500"
-                      : "font-sans text-sm tracking-[0.35em] uppercase text-grey hover:text-white transition-colors duration-500"
-                  }
+        {favoritesOpen ? (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setFavoritesOpen(false)}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs cursor-pointer"
+            />
+
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] bg-brand-ivory text-brand-text-dark z-50 shadow-2xl flex flex-col justify-between"
+            >
+              <div className="p-6 border-b border-brand-champagne/45 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-brand-gold fill-brand-gold" strokeWidth={1.25} />
+                  <h3 className="font-serif text-lg font-light text-brand-text-dark tracking-wide">
+                    Os Meus Favoritos ({favorites.length})
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFavoritesOpen(false)}
+                  className="p-2 hover:bg-brand-champagne/20 rounded-full transition-colors cursor-pointer"
                 >
-                  {link.label}
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
+                  <X className="w-5 h-5 text-brand-text-dark/60" strokeWidth={1.25} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {favorites.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                    <Heart className="w-12 h-12 text-brand-champagne mb-4 stroke-[1]" />
+                    <p className="font-serif text-base text-brand-text-dark/60 font-light mb-2">
+                      Sem favoritos ainda
+                    </p>
+                    <p className="font-sans text-xs text-brand-text-dark/45 font-light max-w-[240px]">
+                      Explore os nossos serviços e clique no coração para guardar os seus favoritos aqui.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {favorites.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex gap-4 p-3 bg-brand-champagne/15 border border-brand-champagne/30 rounded-xl relative group"
+                      >
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-brand-champagne/20">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0 pr-6 flex flex-col justify-center">
+                          <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-brand-gold font-semibold mb-1 truncate">
+                            {item.category}
+                          </p>
+                          <h4 className="font-serif text-sm font-light text-brand-text-dark truncate">
+                            {item.title}
+                          </h4>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeFavorite(item.id)}
+                          className="absolute right-3 top-3 p-1.5 text-brand-text-dark/40 hover:text-red-500 rounded-full hover:bg-brand-champagne/25 transition-colors cursor-pointer"
+                          aria-label="Remover favorito"
+                        >
+                          <Trash2 className="w-4 h-4" strokeWidth={1.25} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {favorites.length > 0 ? (
+                <div className="p-6 border-t border-brand-champagne/45 bg-brand-champagne/10">
+                  <a
+                    href={getWhatsAppShareLink()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-editorial btn-editorial--solid w-full flex items-center justify-center gap-3 py-4 text-center"
+                  >
+                    <MessageCircle className="w-4.5 h-4.5 stroke-[1.25]" />
+                    <span>Partilhar com a HAXR</span>
+                  </a>
+                </div>
+              ) : null}
+            </motion.div>
+          </>
+        ) : null}
       </AnimatePresence>
     </>
   );

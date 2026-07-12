@@ -183,6 +183,54 @@ export const marketingPagesSeo = {
       "Acompanhamento próximo do seu evento com a HAXR Signature — cronograma, documentos e decisões com clareza e discrição.",
     keywords: ["área do cliente eventos", "HAXR Signature cliente"],
   },
+  styleQuiz: {
+    path: "/style-quiz",
+    title: "Style Quiz — Descubra a Identidade do seu Casamento | HAXR Signature",
+    description: "Faça o nosso teste interativo de estilo e descubra a assinatura estética ideal para o seu grande dia.",
+    keywords: ["style quiz casamento", "estilo de casamento", "identidade visual casamento", "HAXR Signature quiz"],
+  },
+  weddingChecklist: {
+    path: "/tools/wedding-checklist",
+    title: "Checklist do Casal — Tarefas do Evento | HAXR Signature",
+    description: "Organize todas as metas e tarefas para o seu casamento com o nosso checklist interativo premium.",
+    keywords: ["checklist casamento", "planeamento casamento", "tarefas noiva", "HAXR Signature checklist"],
+  },
+  budgetTracker: {
+    path: "/tools/budget-tracker",
+    title: "Calculadora de Orçamento e Despesas | HAXR Signature",
+    description: "Faça o controlo financeiro detalhado das despesas e orçamentos do seu casamento com a nossa calculadora.",
+    keywords: ["calculadora casamento", "orçamento casamento", "despesas casamento", "HAXR Signature budget"],
+  },
+  guestList: {
+    path: "/tools/guest-list",
+    title: "Lista de Convidados e RSVP | HAXR Signature",
+    description: "Gira a sua lista de convidados, grupos e confirmações RSVP em tempo real com a nossa ferramenta premium.",
+    keywords: ["lista de convidados", "gestão RSVP", "convidados casamento", "HAXR Signature guest list"],
+  },
+  vendorManager: {
+    path: "/tools/vendor-manager",
+    title: "Gestor de Fornecedores e Contratos | HAXR Signature",
+    description: "Acompanhe e gira os contratos, pagamentos e contactos de todos os seus fornecedores num único local.",
+    keywords: ["fornecedores casamento", "gestor fornecedores", "contratos casamento", "HAXR Signature vendors"],
+  },
+  visionBoards: {
+    path: "/tools/vision-boards",
+    title: "Vision Board — Painel de Inspiração | HAXR Signature",
+    description: "Crie moodboards visuais elegantes e organize as referências estéticas e paletas de cores do seu casamento.",
+    keywords: ["moodboard casamento", "inspiração casamento", "vision board", "HAXR Signature vision board"],
+  },
+  weddingWebsiteSetup: {
+    path: "/tools/wedding-website/setup",
+    title: "Criador de Website de Casamento | HAXR Signature",
+    description: "Configure o website personalizado do seu casamento escolhendo um dos nossos designs editoriais exclusivos.",
+    keywords: ["website de casamento", "criar site de casamento", "site noivos", "HAXR Signature website"],
+  },
+  cashRegistrySetup: {
+    path: "/tools/cash-registry/setup",
+    title: "Lista de Presentes e Honeymoon Fund | HAXR Signature",
+    description: "Crie a sua lista de presentes virtuais e fundos de lua de mel com elegância e discrição para os seus convidados.",
+    keywords: ["lista de presentes", "honeymoon fund", "prendas casamento", "HAXR Signature registry"],
+  },
 } as const;
 
 export type MarketingPageKey = keyof typeof marketingPagesSeo;

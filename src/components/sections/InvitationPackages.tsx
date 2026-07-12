@@ -63,10 +63,10 @@ export default function InvitationPackages() {
       </RevealOnScroll>
 
       <div className={`flex gap-6 overflow-x-auto pb-8 site-bleed-x md:grid md:gap-8 md:overflow-visible snap-x snap-mandatory scrollbar-none mb-16 ${
-        displayPackages.length === 1 
-          ? "md:grid-cols-1 md:max-w-md md:mx-auto" 
-          : displayPackages.length === 2 
-            ? "md:grid-cols-2 md:max-w-4xl md:mx-auto" 
+        displayPackages.length === 1
+          ? "md:grid-cols-1 md:max-w-md md:mx-auto"
+          : displayPackages.length === 2
+            ? "md:grid-cols-2 md:max-w-4xl md:mx-auto"
             : "md:grid-cols-3"
       }`}>
         <AnimatePresence mode="popLayout">
@@ -128,8 +128,8 @@ export default function InvitationPackages() {
                         <li
                           key={feature}
                           className={`flex items-start gap-4 font-sans text-[13px] leading-relaxed font-light ${
-                            isQuoteMessage 
-                              ? "text-gold bg-gold/5 border border-gold/10 p-4 rounded-sm" 
+                            isQuoteMessage
+                              ? "text-gold bg-gold/5 border border-gold/10 p-4 rounded-sm"
                               : "text-white/70 group-hover/card:text-white/90 transition-colors duration-300"
                           }`}
                         >
@@ -162,8 +162,8 @@ export default function InvitationPackages() {
                               <li
                                 key={feature}
                                 className={`flex items-start gap-4 font-sans text-[13px] leading-relaxed font-light ${
-                                  isQuoteMessage 
-                                    ? "text-gold bg-gold/5 border border-gold/10 p-4 rounded-sm" 
+                                  isQuoteMessage
+                                    ? "text-gold bg-gold/5 border border-gold/10 p-4 rounded-sm"
                                     : "text-white/60 group-hover/card:text-white/80 transition-colors duration-300"
                                 }`}
                               >

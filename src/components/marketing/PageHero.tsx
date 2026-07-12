@@ -17,21 +17,21 @@ export default function PageHero({
 }: PageHeroProps) {
   return (
     <section className="relative pt-28 pb-16 md:pt-36 md:pb-24">
-      <div className="site-container site-prose-medium mx-auto">
+      <div className="site-container mx-auto">
         <RevealOnScroll>
           <p className="section-label mb-8">{label}</p>
         </RevealOnScroll>
 
         <SplitText
           as="h1"
-          className="type-display text-white/92 mb-8 md:mb-10 max-w-4xl leading-[1.25]"
+          className="font-serif text-3xl md:text-5xl font-light text-brand-text-dark mb-8 md:mb-10 max-w-4xl leading-[1.25]"
         >
           {headline}
         </SplitText>
 
         {description ? (
           <RevealOnScroll delay={0.08}>
-            <p className="type-lead text-grey max-w-2xl">
+            <p className="font-sans text-sm md:text-base text-brand-text-dark/80 max-w-2xl leading-relaxed font-light">
               {description}
             </p>
           </RevealOnScroll>
@@ -61,16 +61,16 @@ export function CTABand({
   secondaryLabel,
 }: CTABandProps) {
   return (
-    <section className="relative py-20 md:py-28 border-t border-grey-dark/80">
-      <div className="site-container site-prose-medium mx-auto text-center">
+    <section className="relative py-20 md:py-32 bg-brand-black border-t border-gold-dim">
+      <div className="site-container-wide mx-auto text-center">
         <RevealOnScroll>
-          <h2 className="type-headline text-white/90 mb-5 md:mb-6">
+          <h2 className="font-serif text-[clamp(1.75rem,3vw,2.5rem)] font-medium text-brand-ivory mb-6 max-w-2xl mx-auto leading-relaxed">
             {headline}
           </h2>
-          <p className="type-lead text-grey max-w-xl mx-auto mb-12 md:mb-14">
+          <p className="font-sans text-base md:text-lg text-brand-ivory/85 max-w-xl mx-auto mb-12 md:mb-14 leading-relaxed">
             {description}
           </p>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 md:gap-5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 md:gap-5 w-full sm:w-auto">
             <Link href={primaryHref} className="btn-editorial btn-editorial--solid">
               {primaryLabel}
             </Link>

@@ -25,40 +25,40 @@ export default function SobrePage() {
       />
       <EditorialNarrative narrative={sobreNarrative} />
 
-      <section className="relative py-16 md:py-24 bg-black-soft">
-        <div className="site-container site-prose-medium mx-auto">
+      <section className="relative py-24 md:py-32 bg-brand-champagne/15 border-y border-brand-champagne/30">
+        <div className="site-container mx-auto">
           <RevealOnScroll>
             <h2 className="section-label mb-8">{assinatura.label}</h2>
           </RevealOnScroll>
           <SplitText
             as="h3"
-            className="font-serif text-2xl md:text-3xl font-light text-white/90 mb-8 max-w-2xl"
+            className="font-serif text-2xl md:text-3xl lg:text-4xl font-light text-brand-text-dark mb-8 max-w-2xl"
           >
             {assinatura.headline}
           </SplitText>
           <div className="space-y-6 max-w-2xl">
             {assinatura.paragraphs.map((p, i) => (
               <RevealOnScroll key={p} delay={i * 0.05}>
-                <p className="font-sans text-sm text-grey leading-loose">{p}</p>
+                <p className="font-sans text-sm text-brand-text-dark/80 leading-relaxed font-light">{p}</p>
               </RevealOnScroll>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="relative py-16 md:py-24">
-        <div className="site-container site-prose-medium mx-auto">
+      <section className="relative py-24 md:py-32">
+        <div className="site-container mx-auto">
           <RevealOnScroll>
             <h2 className="section-label mb-12">O que nos move</h2>
           </RevealOnScroll>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             {sobreBeliefs.map((item, i) => (
               <RevealOnScroll key={item.title} delay={i * 0.05}>
-                <article className="border-t border-grey-dark/60 pt-8">
-                  <h3 className="font-serif text-lg font-light text-white mb-3">
+                <article className="border-t border-brand-champagne/45 pt-8">
+                  <h3 className="font-serif text-lg md:text-xl font-light text-brand-text-dark mb-3">
                     {item.title}
                   </h3>
-                  <p className="font-sans text-sm text-grey leading-relaxed">
+                  <p className="font-sans text-sm text-brand-text-dark/75 leading-relaxed font-light">
                     {item.body}
                   </p>
                 </article>

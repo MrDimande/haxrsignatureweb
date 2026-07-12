@@ -12,44 +12,46 @@ type PillarCardsProps = {
 
 export default function PillarCards({
   pillars,
-  label = "Universo HAXR",
+  label = "Serviços",
   headline = "Um universo cuidadosamente curado.",
   intro,
 }: PillarCardsProps) {
   return (
-    <section id="pilares" className="relative py-20 md:py-28 bg-black-soft">
-      <div className="site-container site-prose-medium mx-auto">
+    <section id="servicos" className="relative py-24 md:py-32">
+      <div className="site-container mx-auto">
         <RevealOnScroll>
           <h2 className="section-label mb-6">{label}</h2>
-          <p className="type-headline text-white/90 mb-6 md:mb-8 max-w-2xl">
+          <p className="font-serif text-2xl md:text-3xl lg:text-4xl font-light text-brand-text-dark mb-6 md:mb-8 max-w-2xl">
             {headline}
           </p>
           {intro ? (
-            <p className="font-sans text-sm text-grey leading-relaxed max-w-xl mb-14">
+            <p className="font-sans text-sm text-brand-text-dark/70 leading-relaxed max-w-xl mb-16">
               {intro}
             </p>
           ) : (
-            <div className="mb-14" />
+            <div className="mb-16" />
           )}
         </RevealOnScroll>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-grey-dark">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {pillars.map((pillar, i) => (
-            <RevealOnScroll key={pillar.href} delay={i * 0.06}>
+            <RevealOnScroll key={pillar.title} delay={i * 0.05}>
               <Link
                 href={pillar.href}
-                className="group block bg-black-soft p-8 md:p-10 h-full hover:bg-white/[0.02] transition-colors duration-700"
+                className="group block bg-brand-champagne/15 border border-brand-champagne/40 rounded-sm p-8 md:p-10 h-full hover:bg-brand-champagne/25 hover:border-brand-gold/50 hover:shadow-[0_8px_30px_rgba(184,138,42,0.04)] transition-all duration-700 flex flex-col justify-between"
               >
-                <p className="font-mono text-gold text-[10px] tracking-[0.4em] mb-4">
-                  {pillar.num}
-                </p>
-                <h3 className="font-serif text-xl md:text-2xl font-light text-white mb-4 group-hover:text-gold/80 transition-colors duration-500">
-                  {pillar.title}
-                </h3>
-                <p className="font-sans text-sm text-grey leading-relaxed mb-6">
-                  {pillar.desc}
-                </p>
-                <span className="inline-flex items-center gap-2 font-mono text-[9px] tracking-[0.25em] uppercase text-gold/60 group-hover:text-gold transition-colors duration-500">
+                <div>
+                  <p className="font-mono text-brand-gold text-[10px] tracking-[0.4em] mb-5">
+                    {pillar.num}
+                  </p>
+                  <h3 className="font-serif text-xl md:text-2xl font-light text-brand-text-dark mb-4 group-hover:text-brand-gold transition-colors duration-500">
+                    {pillar.title}
+                  </h3>
+                  <p className="font-sans text-sm text-brand-text-dark/75 leading-relaxed mb-8 font-light">
+                    {pillar.desc}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-2 font-mono text-[9px] tracking-[0.25em] uppercase text-brand-gold/60 group-hover:text-brand-gold transition-colors duration-500">
                   Descobrir
                   <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.25} />
                 </span>
