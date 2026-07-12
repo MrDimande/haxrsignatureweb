@@ -1,90 +1,92 @@
 # PR.3 — Checklist janela de manutenção (036–043)
 
-**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone ensaio:** `rkkxfrwtmsqzpnbkshnd`
+**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone:** `rkkxfrwtmsqzpnbkshnd`  
+**Branch:** `rebuild-haxr-platform` · **PR:** #3 (Draft)
 
 ---
 
-## T-24h
+## Janela proposta
 
-| # | Acção | OK |
-|---|--------|-----|
-| 1 | GO escrito assinado (`PR3_FINAL_SIGNOFF_RECORD.md`) | ☐ |
-| 2 | Rollback aprovado e operador identificado | ☐ |
-| 3 | Freeze deploy comunicado à equipa | ☐ |
-| 4 | Password DB produção confirmada (rotacionada se exposta) | ☐ |
-| 5 | Backup `.enc` acessível ao custodiante | ☐ |
+| Item | Valor |
+|------|-------|
+| Duração | 45–60 min |
+| Operador | operador técnico local |
+| Freeze deploy | Sim |
+| Abort | 1.º erro / divergência preflight / verify falha |
 
 ---
 
-## T-1h
+## T-24h (pré-requisitos técnicos)
 
-| # | Acção | Comando / critério | OK |
-|---|--------|-------------------|-----|
-| 1 | Gate pré-apply local | `node scripts/pr3/run-pre-apply-gate.mjs` | ☐ |
-| 2 | Checksum backup | exit 0 | ☐ |
-| 3 | Produção ainda pré-036 | `node scripts/pr3/verify-production-pre-036.mjs` | ☐ |
-| 4 | Token GO na sessão | `PR3_APPLY_AUTHORIZED=PR3_HUMAN_GO_CONFIRMED` | ☐ |
-| 5 | Registar hora início | timestamp UTC+2 | ☐ |
+| # | Acção | Estado |
+|---|--------|--------|
+| 1 | Restore drill PASS | ✅ |
+| 2 | Backup cifrado + checksum | ✅ |
+| 3 | Smokes DB clone PASS | ✅ |
+| 4 | Pre-apply gate PASS | ✅ |
+| 5 | GO escrito Dimande | ⏳ **PENDENTE** |
+| 6 | Rollback aprovado | ⏳ **PENDENTE** |
+| 7 | Password DB (Read-Host) | ⏳ na janela |
+
+---
+
+## T-0 — Preflight (autónomo + password)
+
+| # | Acção | Comando | OK |
+|---|--------|---------|-----|
+| 1 | Gate pré-apply | `node scripts/pr3/run-pre-apply-gate.mjs` | ☐ |
+| 2 | Produção pré-036 live | `verify-production-pre-036.mjs` | ☐ |
+| 3 | Token GO | `PR3_APPLY_AUTHORIZED=PR3_HUMAN_GO_CONFIRMED` | ☐ |
+| 4 | Timestamp início | UTC+2 | ☐ |
 
 ---
 
 ## Durante apply
-
-| # | Regra |
-|---|--------|
-| 1 | Uma migration por transacção — ordem 036→043 |
-| 2 | Parar no **primeiro** erro |
-| 3 | Registar exit code de cada passo |
-| 4 | **Não** `db push`, repair, nem restore automático |
 
 ```powershell
 $env:PR3_APPLY_AUTHORIZED = "PR3_HUMAN_GO_CONFIRMED"
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\pr3\run-production-apply-in-session.ps1
 ```
 
-Relatório: `backups/pr3-production-pre036/production-apply-report.json`
+| Migration | Ficheiro | OK |
+|-----------|----------|-----|
+| 036 | `036_client_app_auth.sql` | ☐ |
+| 037 | `037_client_app_service_role_grants.sql` | ☐ |
+| 038 | `038_provision_client_operational_event.sql` | ☐ |
+| 039 | `039_client_event_guests_rpc.sql` | ☐ |
+| 040 | `040_client_event_payments_rpc.sql` | ☐ |
+| 041 | `041_client_event_vendors_rpc.sql` | ☐ |
+| 042 | `042_client_event_checklist_rpc.sql` | ☐ |
+| 043 | `043_client_event_documents_rpc.sql` | ☐ |
 
 ---
 
-## T+0 pós-apply (schema)
+## T+0 pós-schema
 
 | # | Verificação | OK |
 |---|-------------|-----|
-| 1 | `verify-production-post-036.mjs` | ☐ |
-| 2 | `verify-production-post-038.mjs` | ☐ |
-| 3 | `verify-production-rpcs.mjs` | ☐ |
-| 4 | Relatório apply guardado | ☐ |
+| 1 | post-036 | ☐ |
+| 2 | post-038 | ☐ |
+| 3 | RPCs (043) | ☐ |
 
 ---
 
-## T+deploy (app client — fase separada)
+## T+deploy
 
 | # | Acção | OK |
 |---|--------|-----|
-| 1 | Deploy app autorizado | ☐ |
-| 2 | Smokes HTTP (C.1, D, E.*) | ☐ |
-| 3 | Monitorização 30 min | ☐ |
+| 1 | Schema PASS confirmado | ☐ |
+| 2 | Deploy Vercel | ☐ |
+| 3 | Smokes HTTP C.1, D, E.* | ☐ |
+| 4 | Monitorização 30 min | ☐ |
 
 ---
 
-## Abort
-
-Se qualquer passo falhar:
-
-1. **Parar** — não continuar migrations
-2. Preservar logs (sanitizados)
-3. Escalar ao proprietário (Dimande)
-4. Decidir: rollback schema vs restore integral (secção rollback do plano)
-
----
-
-## Registo final janela
+## Registo final
 
 | Campo | Valor |
 |-------|-------|
 | Início | |
 | Fim | |
-| Migrations aplicadas | 036–043 ☐ |
 | Resultado | ☐ PASS · ☐ ABORT |
-| Operador | |
-| productionTouched | true apenas se apply executado |
+| productionTouched | |
