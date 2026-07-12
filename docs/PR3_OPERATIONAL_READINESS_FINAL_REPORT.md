@@ -123,3 +123,81 @@ Utilizador efémero de smoke provisionado via service role (`pr3-http-smoke@prov
 - **Nenhum** restore integral executado
 
 **PR.3 fechada com sucesso operacional.**
+
+---
+
+## Housekeeping pós-janela — FECHADO (2026-07-12)
+
+### Monitorização T+30 — PASS
+
+**Intervalo:** `2026-07-12T16:49:50Z` → `2026-07-12T17:19:50Z`
+
+| Sinal | Resultado |
+|-------|-----------|
+| Erros runtime Vercel | **Nenhum** |
+| Respostas 5xx | **Nenhuma** |
+| Supabase API/Auth (intervalo) | **Sem falhas de app** |
+| RPCs 039–043 | **Sem erros** |
+| RLS / permissões | **Sem erros** |
+| Provisioning | **Sem falhas** |
+| `/sign-in` e rotas protegidas | 200 / 307 / 401 conforme esperado |
+
+**Incidentes de produção no intervalo T+30:** **nenhum**.
+
+Nota: evento auth `400` às 16:46 UTC ocorreu **antes** de T+0 (smoke inicial preview). Fora do intervalo T+30.
+
+### PR closeout
+
+| Item | Valor |
+|------|-------|
+| Branch | `pr3-post-window-closeout` |
+| Conteúdo | docs PR.3 + `run-production-http-smokes.mjs` + `remove-smoke-artifacts.mjs` |
+| Excluído | backups, `.enc`, `.env`, segredos |
+| Deploy activo | `e51e973` (inalterado pelo PR documental) |
+
+### Remoção artefactos smoke — DONE
+
+**Autorização recebida (literal):** remoção exclusiva dos IDs inventariados.
+
+| Tabela | Linhas removidas |
+|--------|------------------|
+| `event_onboarding_snapshots` | 1 |
+| `event_members` | 1 |
+| `profiles` (active_client_event_id → NULL) | 1 |
+| `client_events` | 1 |
+| `events` (operacional) | 1 |
+| `profiles` | 1 |
+| `auth.users` | 1 |
+
+**Pós-verificação:** smoke user/profile/client_event ausentes · `total_users=0` · `total_client_events=0` · nenhum dado real de produção afectado (único conteúdo client-app era smoke).
+
+Script: `scripts/pr3/remove-smoke-artifacts.mjs` (requer GO token).
+
+### Rotação password DB
+
+| Campo | Valor |
+|-------|-------|
+| `passwordRotationStatus` | **deferred_by_owner** |
+| `passwordRotationRequired` | **true** |
+| `passwordRotationCompleted` | **false** |
+| `postRotationPreflight` | **n/a** (pendente rotação) |
+| Responsável | Proprietário — Dimande |
+| Prazo | Imediatamente após encerramento desta sessão |
+
+A app Vercel **não usa** password postgres em runtime (`NEXT_PUBLIC_SUPABASE_*` + `SUPABASE_SERVICE_ROLE_KEY`).
+
+Após rotação manual no Dashboard: confirmar `passwordRotationCompleted=true` e `postRotationPreflight=PASS`.
+
+### Veredicto final PR.3
+
+```text
+Migrations 036–043:     LIVE
+Deploy activo:          e51e973
+Smokes HTTP:            8/8 PASS
+T+30 monitorização:     PASS — nenhum incidente
+Smoke cleanup:          DONE
+Restore/rollback:       NÃO executado
+productionTouched:      true (autorizado)
+Password rotation:      PENDENTE (única acção segurança restante)
+PR.3:                   FECHADA
+```

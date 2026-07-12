@@ -17,6 +17,9 @@
 | `productionTouched` | **true** |
 | `productionApplyPass` | **true** |
 | `productionHttpSmokesPass` | **true** |
+| `postWindowHousekeepingComplete` | **true** |
+| `smokeArtifactsRemoved` | **true** |
+| `passwordRotationCompleted` | **false** |
 
 ---
 
@@ -36,7 +39,10 @@
 PR.3 JANELA: GO EXECUTADO — PASS
 Apply 036–043 em produção: PASS
 Deploy + smokes HTTP: PASS
+Housekeeping pós-janela: PASS
 Restore destrutivo: NÃO executado (conforme GO)
+Password DB rotation: PENDENTE (deferred_by_owner)
+PR.3: FECHADA (operacional)
 ```
 
 Ver relatório completo: `docs/PR3_OPERATIONAL_READINESS_FINAL_REPORT.md`

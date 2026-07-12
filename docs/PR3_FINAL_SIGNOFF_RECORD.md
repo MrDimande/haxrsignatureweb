@@ -78,4 +78,19 @@ Relatórios: `backups/pr3-production-pre036/production-apply-report.json`, `prod
 
 ---
 
+## 5. Housekeeping pós-janela
+
+| Campo | Valor |
+|-------|-------|
+| Monitorização T+30 | **PASS** — nenhum incidente de produção |
+| PR closeout | `pr3-post-window-closeout` → main |
+| Artefactos smoke | **Removidos** (GO Dimande 2026-07-12) |
+| `passwordRotationStatus` | **deferred_by_owner** |
+| `passwordRotationRequired` | **true** |
+| `passwordRotationCompleted` | **false** |
+| Responsável rotação | Proprietário — Dimande |
+| Prazo rotação | Imediatamente após encerramento desta sessão |
+
+---
+
 **Sem passwords neste documento.**

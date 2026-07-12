@@ -86,4 +86,7 @@
 | Fim smokes HTTP | 2026-07-12T16:49:50Z |
 | Resultado | **PASS** |
 | productionTouched | **true** |
+| Monitorização T+30 | **PASS** |
+| Smoke cleanup | **DONE** |
+| Password DB rotation | **PENDENTE** (proprietário) |
 | Restore executado | **Não** |
