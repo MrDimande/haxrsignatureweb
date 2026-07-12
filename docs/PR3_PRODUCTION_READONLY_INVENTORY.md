@@ -7,7 +7,7 @@
 ### Estado do pacote 1 (checkpoint)
 
 ```text
-Item 1: parcialmente concluído — evidência manual do Dashboard pendente
+Item 1: concluído — evidência Dashboard recolhida (2026-07-12); restauro não viável no plano Free
 Item 2: concluído
 Item 3: concluído
 Estado: NO-GO TEMPORÁRIO
@@ -35,42 +35,43 @@ Este commit é **checkpoint de inventário PR.3** — não representa `GO` de pr
 
 > **Distinção:** consultar backups no Dashboard é read-only. **Criar snapshot manual** só após inventário completo e imediatamente antes de eventual janela de aplicação.
 
-### 2.1 Recolha manual pendente (Dashboard)
+### 2.1 Recolha manual (Dashboard)
 
-Ir a **Project Settings → General** e **Database → Backups** (read-only):
+Ir a **Project Settings → General**, **Organization → Billing** e **Database → Backups** (read-only):
 
 | Campo | Valor | Evidência |
 |-------|-------|-----------|
-| Plano Supabase | _Pendente_ | Dashboard → Settings → Billing |
-| Região do projecto | _Confirmar eu-central-1_ | Dashboard → Settings → General |
-| Backups automáticos activos | _Pendente_ | Database → Backups → Scheduled |
-| Data/hora backup mais recente | _Pendente_ | Database → Backups → Scheduled |
-| Retenção disponível | _Pendente_ (Pro típico: 7 dias) | Dashboard |
-| PITR activo | _Pendente_ | Database → Backups → Point in Time |
-| Janela PITR (se activo) | _Pendente_ | earliest / latest recovery point |
+| Plano Supabase | **Free Plan** (organização Dimande Digital) | Dashboard → Organization → Billing |
+| Região do projecto | **Central EU (Frankfurt)** (`eu-central-1`) | Dashboard → Project Settings → General |
+| Backups automáticos activos | **Não** — Free Plan não inclui project backups | Database → Backups → Scheduled |
+| Data/hora backup mais recente | **N/A** — nenhum backup listado | Database → Backups → Scheduled |
+| Retenção disponível | **N/A** no plano actual (Pro: até 7 dias, conforme Dashboard) | Database → Backups → Scheduled |
+| PITR activo | **Não disponível** — add-on Pro Plan | Database → Backups → Point in time |
+| Janela PITR (se activo) | **N/A** | — |
 | Snapshot manual criado nesta fase | **Não** | — |
 
 #### 2.1.1 Bloco de recolha manual (Dashboard read-only)
 
-> Preencher **manualmente** a partir do Dashboard. **Não** inventar valores. Campos ainda não recolhidos permanecem como `Pendente de recolha manual no Dashboard`. **Não** colocar passwords, connection strings completas, service-role keys, tokens ou screenshots com segredos.
+> Recolha efectuada via **Browser Cursor** (read-only). **Não** colocar passwords, connection strings completas, service-role keys, tokens ou screenshots com segredos.
 
 | Campo | Valor |
 |---|---|
-| Data/hora da verificação | Pendente de recolha manual no Dashboard |
-| Plano | Pendente de recolha manual no Dashboard |
-| Região | Pendente de recolha manual no Dashboard |
-| Último backup disponível | Pendente de recolha manual no Dashboard |
-| Retenção | Pendente de recolha manual no Dashboard |
-| PITR (activo / inactivo / não disponível) | Pendente de recolha manual no Dashboard |
-| backupAvailable (true / false / por confirmar) | por confirmar |
-| restoreProcedureKnown (true / false / por confirmar) | por confirmar |
-| restoreAuthorityIdentified (true / false / por confirmar) | por confirmar |
-| Restauro testável (sim / não / por confirmar) | por confirmar |
-| Responsável por autorizar | Pendente de recolha manual no Dashboard |
-| Responsável por executar | Pendente de recolha manual no Dashboard |
-| Tempo estimado de recuperação | Pendente de recolha manual no Dashboard |
-| Evidência sanitizada | Pendente de recolha manual no Dashboard |
-| Observações | Pendente de recolha manual no Dashboard |
+| Data/hora da verificação | 2026-07-12 ~01:44 (UTC+2) — recolha Browser Cursor |
+| Plano | Free Plan (organização Dimande Digital) |
+| Região | Central EU (Frankfurt) |
+| Último backup disponível | Nenhum — Dashboard: «Free Plan does not include project backups» |
+| Retenção | N/A no plano actual (Dashboard referencia Pro Plan: até 7 dias) |
+| PITR (activo / inactivo / não disponível) | não disponível |
+| backupAvailable (true / false / por confirmar) | false |
+| restoreProcedureKnown (true / false / por confirmar) | true — procedimento/pré-requisitos **documentados** no Dashboard (não implica prontidão operacional) |
+| capacidade de restauro nativo disponível | false |
+| restoreAuthorityIdentified (true / false / por confirmar) | false |
+| Restauro testável (sim / não / por confirmar) | não |
+| Responsável por autorizar | Pendente de confirmação pelo operador |
+| Responsável por executar | Pendente de confirmação pelo operador |
+| Tempo estimado de recuperação | Não apresentado pelo Dashboard |
+| Evidência sanitizada | Ver §2.1.3 abaixo |
+| Observações | Plano Free confirmado; backups scheduled e PITR indisponíveis; restore-to-new-project requer Pro + physical backups. Diverge da referência documental que assumia Pro. |
 | productionTouched | false |
 
 #### 2.1.2 Gate para avançar aos itens 4–6
@@ -82,7 +83,65 @@ restoreAuthorityIdentified = true
 productionTouched = false
 ```
 
-Enquanto **qualquer** campo obrigatório do gate estiver pendente ou por confirmar, mantém-se:
+**Estado actual do gate (pós-recolha Dashboard):**
+
+| Condição | Valor observado | Gate |
+|----------|-----------------|------|
+| backupAvailable | **false** | ❌ |
+| restoreProcedureKnown | **true** (procedimento/pré-requisitos documentados — **≠ prontidão operacional**) | ✅ |
+| capacidade de restauro nativo disponível | **false** | ❌ |
+| restoreAuthorityIdentified | **false** | ❌ |
+| Restauro testável | **não** | ❌ |
+| productionTouched | **false** | ✅ |
+
+> **Distinção semântica:** `restoreProcedureKnown = true` significa apenas que o Dashboard documenta **como** o restauro funcionaria e quais **pré-requisitos** exige (ex.: Pro Plan, physical backups). **Não** significa que a capacidade de restauro nativo esteja disponível nem que a prontidão operacional esteja comprovada.
+
+Enquanto **qualquer** condição obrigatória do gate falhar ou estiver pendente, mantém-se:
+
+**NO-GO TEMPORÁRIO — prontidão de restauro ainda não comprovada**
+
+#### 2.1.3 Evidência sanitizada (texto)
+
+```text
+Projecto: haxr-business-suite (ref oxsrdmydlqyvnueedgtl)
+Organização: Dimande Digital — Free Plan (Billing)
+Região: Central EU (Frankfurt) — General settings
+
+Scheduled backups (Database → Backups):
+  «Projects are backed up daily around midnight of your project's region
+   and can be restored at any time.»
+  «Free Plan does not include project backups.»
+  «Upgrade to the Pro Plan for up to 7 days of scheduled backups.»
+  (Nenhum backup listado; nenhum botão Restore accionado.)
+
+Point in time (Database → Backups):
+  «Point in Time Recovery is a Pro Plan add-on»
+  «Roll back your database to a specific second. Starts at $100/month.»
+
+Restore to new project BETA (Database → Backups):
+  «Restore to a new project requires Pro Plan and above»
+  «To restore to a new project, you need to upgrade to a Pro Plan
+   and have physical backups enabled.»
+
+Nenhum controlo mutável accionado (Upgrade, Restore, Create backup, Pause, Delete).
+productionTouched = false
+```
+
+#### 2.1.4 Declaração semântica (pós-recolha Dashboard)
+
+```text
+backupAvailable = false
+restoreProcedureKnown = true   → procedimento/pré-requisitos documentados no Dashboard
+capacidade de restauro nativo disponível = false
+restauro testável = não
+restoreAuthorityIdentified = false
+productionTouched = false
+
+Plano Free: não oferece backups nativos Supabase para este projecto (oxsrdmydlqyvnueedgtl).
+A existência de documentação de restauro no Dashboard NÃO equivale a prontidão operacional.
+```
+
+**Decisão:**
 
 **NO-GO TEMPORÁRIO — prontidão de restauro ainda não comprovada**
 
@@ -102,7 +161,11 @@ Enquanto **qualquer** campo obrigatório do gate estiver pendente ou por confirm
 
 ### 2.4 Conclusão parcial secção 2
 
-**Prontidão de restauro:** **não confirmada operacionalmente** — falta recolha Dashboard (plano, timestamp último backup, PITR on/off). Capacidade técnica presumida (projecto Pro) **não substitui evidência do operador**.
+**Prontidão de restauro:** **não confirmada operacionalmente**.
+
+Evidência Dashboard (2026-07-12): plano **Free** — **sem backups nativos Supabase** para este projecto, **PITR indisponível**, **restore-to-new-project bloqueado** sem upgrade Pro. `backupAvailable = false`; **capacidade de restauro nativo disponível = false**; **restauro testável = não**. O gate `backupAvailable = true` **falha**. `restoreProcedureKnown = true` reflecte apenas documentação/pré-requisitos — **não** prontidão operacional.
+
+**Bloqueio adicional:** `restoreAuthorityIdentified = false` — pendente de confirmação pelo operador.
 
 ---
 
@@ -273,9 +336,10 @@ Comparação **histórico remoto** vs **schema efectivo** vs **ficheiro local**:
 
 | # | Bloqueio | Severidade | Resolução |
 |---|----------|------------|-----------|
-| 1 | Recolha Dashboard backups (secção 2.1) incompleta | **Alta** | Operador preencher plano, último backup, PITR, retenção |
-| 2 | Autorização restauro não registada | Média | Definir responsável antes de GO |
-| 3 | Itens 4–6 (ordem apply, rollback operacional, GO/NO-GO) | Esperado | Só após desbloquear #1 e validar critérios |
+| 1 | **Free Plan sem backups Supabase** — `backupAvailable = false` | **Crítica** | Upgrade Pro (ou estratégia backup externa documentada) antes de GO |
+| 2 | Autorização restauro não registada (`restoreAuthorityIdentified = false`) | **Alta** | Operador definir responsável autorizar/executar |
+| 3 | Restauro não testável no plano actual | **Alta** | Resolver #1; só então avaliar teste de restauro |
+| 4 | Itens 4–6 (ordem apply, rollback operacional, GO/NO-GO) | Esperado | Só após desbloquear #1–#3 |
 
 **Nenhuma mutação** foi executada durante este inventário.
 
@@ -284,14 +348,14 @@ Comparação **histórico remoto** vs **schema efectivo** vs **ficheiro local**:
 ## 8. Decisão preliminar
 
 ```text
-NO-GO TEMPORÁRIO — inventário de produção ainda em curso
+NO-GO TEMPORÁRIO — prontidão de restauro ainda não comprovada
 ```
 
 ### Critérios para avançar ao plano de aplicação (itens 4–6)
 
 | Critério | Estado |
 |----------|--------|
-| Restauro operacionalmente viável (evidência Dashboard) | ⏳ Pendente |
+| Restauro operacionalmente viável (evidência Dashboard) | ❌ Free Plan — sem backups; gate falha |
 | 028/0281 reconciliadas sem suposições | ✅ Schema + mapeamento timestamp documentados |
 | 036–043 realmente pendentes | ✅ Histórico + schema confirmados |
 | Sem objectos parcialmente aplicados | ✅ Confirmado |
@@ -299,10 +363,11 @@ NO-GO TEMPORÁRIO — inventário de produção ainda em curso
 
 ### Próximos passos (PR.3)
 
-1. Completar secção 2.1 no Dashboard (read-only).
-2. Redigir ordem exacta de aplicação 036→043 + verificações.
-3. Plano backup (snapshot manual **só pré-janela**), rollback operacional, critérios abort.
-4. Decisão formal **GO** ou **NO-GO**.
+1. Decidir estratégia de backup pré-janela (upgrade Pro, backup externo, ou abort).
+2. Registar responsáveis autorizar/executar restauro.
+3. Redigir ordem exacta de aplicação 036→043 + verificações (item 4).
+4. Plano apply, abort e rollback operacional (item 5).
+5. Decisão formal **GO** ou **NO-GO** (item 6).
 
 ---
 
