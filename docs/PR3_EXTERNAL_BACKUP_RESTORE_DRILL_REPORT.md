@@ -1,8 +1,8 @@
 # PR.3 — Relatório do restore drill (backup lógico externo)
 
-**Modo:** Estratégia B — backup read-only + restore no clone  
-**Estado:** **PASS — restore drill concluído**  
-**Backup válido:** `backups/pr3-production-pre036/2026-07-12T06-48-00/`  
+**Modo:** Estratégia B — backup read-only + restore no clone
+**Estado:** **PASS — restore drill concluído**
+**Backup válido:** `backups/pr3-production-pre036/2026-07-12T06-48-00/`
 **Produção:** `oxsrdmydlqyvnueedgtl` · **intocada** (`productionTouched = false`)
 
 ---
@@ -63,7 +63,7 @@
 | `manifest.json` | 2 944 | `EB1941A86B126931A37D072C50027395288A4664340827AD9019C70964122ED4` |
 | `checksums.sha256` | 590 | `0694B24EBADC6455B5A6B4AC96DC875FC517B1B14E068A6869A63F3CE790F05D` |
 
-**Ferramentas:** pg_dump/psql PostgreSQL 17.10  
+**Ferramentas:** pg_dump/psql PostgreSQL 17.10
 **Nota:** `roles_dump_partial_or_failed` — esperado em Supabase managed (roles não exportáveis integralmente).
 
 **Fora do backup lógico SQL:**

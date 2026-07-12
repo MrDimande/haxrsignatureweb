@@ -2,7 +2,7 @@
 
 **Modo:** documental — decisão humana registada; **restore drill PASS**.
 
-**Estado Fase 1:** **GO operacional para backup/restauro** — gate integral satisfeito.  
+**Estado Fase 1:** **GO operacional para backup/restauro** — gate integral satisfeito.
 **Estado apply 036–043:** **pendente decisão formal itens 4–6** — produção ainda não recebeu migrations.
 
 ---
@@ -65,7 +65,7 @@
 
 ### Apply migrations 036–043 em produção
 
-**Pendente** — requer conclusão documental dos itens 4–6 (ordem apply, rollback operacional, janela).  
+**Pendente** — requer conclusão documental dos itens 4–6 (ordem apply, rollback operacional, janela).
 **Nenhuma migration 036–043 foi aplicada em produção.**
 
 ---
