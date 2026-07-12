@@ -42,6 +42,12 @@ export type SendHaxrEmailInput = {
   subject: string;
   html: string;
   replyTo?: string | string[];
+  cc?: string | string[];
+  bcc?: string | string[];
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+  }>;
 };
 
 export async function sendHaxrEmail(
@@ -53,13 +59,29 @@ export async function sendHaxrEmail(
   }
 
   const to = Array.isArray(input.to) ? input.to : [input.to];
+  const cc = input.cc
+    ? Array.isArray(input.cc)
+      ? input.cc
+      : [input.cc]
+    : undefined;
+  const bcc = input.bcc
+    ? Array.isArray(input.bcc)
+      ? input.bcc
+      : [input.bcc]
+    : undefined;
 
   const result = await resend.emails.send({
     from: resolveFrom(input.channel),
     to,
+    cc,
+    bcc,
     subject: input.subject,
     html: input.html,
     replyTo: input.replyTo,
+    attachments: input.attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      content: attachment.content,
+    })),
   });
 
   if (result.error) {

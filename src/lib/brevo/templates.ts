@@ -1,4 +1,5 @@
 import { escapeHtml } from "@/lib/brevo/html";
+import { renderEmailBrandHeader } from "@/lib/brand/logo-url";
 
 export type FunnelEmailKind =
   | "lead_welcome"
@@ -19,7 +20,7 @@ type FunnelTemplate = {
 };
 
 function shell(title: string, body: string, footer?: string): string {
-  return `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HAXR Signature</title></head><body style="margin:0;padding:0;background-color:#0a0a0a;font-family:Georgia,'Times New Roman',serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0a0a0a;"><tr><td align="center" style="padding:40px 16px;"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#111111;border:1px solid #2a2418;"><tr><td style="padding:48px 40px 32px;text-align:center;border-bottom:1px solid #2a2418;"><p style="margin:0;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#c9a962;">HAXR Signature</p><h1 style="margin:16px 0 0;font-size:28px;font-weight:400;line-height:1.35;color:#f5f0e8;">${title}</h1></td></tr><tr><td style="padding:32px 40px 16px;">${body}</td></tr>${footer ? `<tr><td style="padding:24px 40px 40px;border-top:1px solid #2a2418;">${footer}</td></tr>` : ""}</table></td></tr></table></body></html>`;
+  return `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HAXR Signature</title></head><body style="margin:0;padding:0;background-color:#0a0a0a;font-family:Georgia,'Times New Roman',serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0a0a0a;"><tr><td align="center" style="padding:40px 16px;"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#111111;border:1px solid #2a2418;"><tr><td style="padding:48px 40px 32px;text-align:center;border-bottom:1px solid #2a2418;">${renderEmailBrandHeader({ shell: "transactional" })}<h1 style="margin:16px 0 0;font-size:28px;font-weight:400;line-height:1.35;color:#f5f0e8;">${title}</h1></td></tr><tr><td style="padding:32px 40px 16px;">${body}</td></tr>${footer ? `<tr><td style="padding:24px 40px 40px;border-top:1px solid #2a2418;">${footer}</td></tr>` : ""}</table></td></tr></table></body></html>`;
 }
 
 function cta(href: string, label: string): string {

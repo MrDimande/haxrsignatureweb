@@ -5,7 +5,12 @@ import {
   createInquiry,
 } from "@/lib/contact/inquiries.repository";
 import { sendContactEmails } from "@/lib/contact/emails";
-import { syncInquiryToBrevo } from "@/lib/brevo/contacts";
+import { MARKETING_CONSENT_TEXT } from "@/lib/email/marketing/marketing-contact";
+import { captureMarketingContact } from "@/lib/email/marketing/contact-capture";
+import {
+  resolveSegmentFromEventType,
+  splitFullName,
+} from "@/lib/email/marketing/marketing-contact";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 const RATE_LIMIT_MAX = 3;
@@ -75,15 +80,42 @@ export async function POST(request: Request) {
 
     await sendContactEmails(inquiry);
 
-    const brevo = await syncInquiryToBrevo(inquiry);
-    if (!brevo.synced && brevo.error) {
-      console.warn("[api/contact] Brevo sync:", brevo.error);
+    const { firstName, lastName } = splitFullName(inquiry.name);
+    const capture = await captureMarketingContact({
+      email: inquiry.email,
+      firstName,
+      lastName,
+      segment: resolveSegmentFromEventType(inquiry.projectType),
+      source: "site_contact_form",
+      role: "lead",
+      consentStatus: marketingOptIn ? "granted" : "pending",
+      consentText: marketingOptIn ? MARKETING_CONSENT_TEXT : undefined,
+      consentAt: marketingOptIn ? new Date().toISOString() : undefined,
+      message: inquiry.intent,
+      metadata: {
+        projectType: inquiry.projectType,
+        packageLabel: inquiry.packageLabel,
+        inquiryId: inquiry.id,
+      },
+    });
+
+    if (!capture.brevo.synced && capture.brevo.skipped) {
+      console.warn("[api/contact] marketing capture:", capture.brevo.skipped);
     }
-    if (brevo.funnel?.leadWelcome?.error) {
-      console.warn(
-        "[api/contact] Brevo funnel welcome:",
-        brevo.funnel.leadWelcome.error
-      );
+
+    if (marketingOptIn && capture.brevo.synced) {
+      const { triggerLeadFunnelOnSync } = await import("@/lib/brevo/funnel");
+      try {
+        const funnel = await triggerLeadFunnelOnSync(inquiry);
+        if (funnel.leadWelcome?.error) {
+          console.warn(
+            "[api/contact] Brevo funnel welcome:",
+            funnel.leadWelcome.error
+          );
+        }
+      } catch (err) {
+        console.warn("[api/contact] Brevo funnel:", err);
+      }
     }
 
     return NextResponse.json({ success: true, id: inquiry.id });
