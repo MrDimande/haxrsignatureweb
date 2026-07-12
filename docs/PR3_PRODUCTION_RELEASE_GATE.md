@@ -1,9 +1,9 @@
 # PR #3 — Production Release Gate
 
-**PR:** https://github.com/MrDimande/haxrsignatureweb/pull/3  
-**Branch:** `rebuild-haxr-platform`  
-**Estado PR:** Draft  
-**Gate:** pré-produção — **não** merge / promote até checklist verde  
+**PR:** https://github.com/MrDimande/haxrsignatureweb/pull/3
+**Branch:** `rebuild-haxr-platform`
+**Estado PR:** Draft
+**Gate:** pré-produção — **não** merge / promote até checklist verde
 **Referência migrations:** `docs/PRODUCTION_MIGRATION_PLAN_036_043.md` · `docs/PRODUCTION_MIGRATION_DRY_RUN_036_043.md`
 
 ---

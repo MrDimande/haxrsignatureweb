@@ -5,6 +5,7 @@
  * - BREVO_API_KEY — chave API v3 (Contacts)
  * - BREVO_LIST_LEADS — ID da lista «Leads website» (todos os pedidos)
  * - BREVO_LIST_NEWSLETTER — ID da lista «Newsletter» (só com marketingOptIn)
+ * - EMAIL_SEND_MODE — disabled | test | production (ver src/lib/email/email-config.ts)
  */
 
 export function isBrevoConfigured(): boolean {

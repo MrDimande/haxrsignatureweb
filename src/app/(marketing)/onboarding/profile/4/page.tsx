@@ -32,7 +32,7 @@ export default function OnboardingStep4Page() {
     e.preventDefault();
     localStorage.setItem("haxr_onboarding_guests", guestsCount);
     localStorage.setItem("haxr_onboarding_budget", estimatedBudget);
-    
+
     // Open the premium phone gate modal
     setShowPhoneModal(true);
   };
@@ -63,7 +63,7 @@ export default function OnboardingStep4Page() {
 
   return (
     <div className="min-h-screen bg-brand-ivory flex flex-col justify-between font-sans text-brand-text-dark select-none p-6 md:p-12 relative overflow-x-hidden">
-      
+
       {/* Header */}
       <header className="max-w-3xl w-full mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-brand-champagne/30 text-left">
         <OnboardingBrandHeader />
@@ -78,7 +78,7 @@ export default function OnboardingStep4Page() {
 
       {/* Main Content Body */}
       <main className="flex-1 flex items-center justify-center max-w-xl w-full mx-auto py-12 md:py-16">
-        
+
         {loading ? (
           <div className="text-center space-y-4 py-8">
             <Loader2 className="w-10 h-10 text-brand-gold animate-spin mx-auto" />
@@ -87,7 +87,7 @@ export default function OnboardingStep4Page() {
           </div>
         ) : (
           <form onSubmit={handleFormSubmit} className="w-full space-y-8 text-left">
-            
+
             <div className="space-y-2">
               <span className="font-mono text-[8px] tracking-widest text-brand-gold uppercase font-bold">Escala & Orçamento</span>
               <h2 className="font-serif text-2xl md:text-3xl font-light text-brand-text-dark">Dimensão do vosso evento</h2>
@@ -97,7 +97,7 @@ export default function OnboardingStep4Page() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="font-mono text-[9px] tracking-wider uppercase text-zinc-500 font-semibold pl-1">Número Estimado de Convidados</label>
-                <input 
+                <input
                   type="number"
                   required
                   value={guestsCount}
@@ -109,7 +109,7 @@ export default function OnboardingStep4Page() {
 
               <div className="space-y-1.5">
                 <label className="font-mono text-[9px] tracking-wider uppercase text-zinc-500 font-semibold pl-1">Orçamento Planeado (MT)</label>
-                <input 
+                <input
                   type="number"
                   required
                   value={estimatedBudget}
@@ -147,15 +147,15 @@ export default function OnboardingStep4Page() {
       {/* 3. Phone Number Gate Modal (Loverly Flow) */}
       {showPhoneModal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          
+
           <div className="bg-[#120e0d] border border-brand-champagne/30 rounded-3xl max-w-md w-full p-6 md:p-8 space-y-6 text-white text-left shadow-2xl relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_bottom,rgba(184,138,42,0.15),transparent)]" />
-            
+
             <div className="relative z-10 space-y-3">
               <div className="w-10 h-10 rounded-full bg-brand-gold/10 border border-brand-gold/25 flex items-center justify-center text-brand-gold">
                 <Phone className="w-5 h-5 stroke-[1.25]" />
               </div>
-              
+
               <div className="space-y-1">
                 <span className="font-mono text-[8px] tracking-widest text-brand-gold uppercase font-bold">Última Etapa</span>
                 <h3 className="font-serif text-xl md:text-2xl font-light leading-snug">Introduza o seu telemóvel</h3>
@@ -178,7 +178,7 @@ export default function OnboardingStep4Page() {
                   <span className="bg-white/5 border border-white/10 px-3.5 py-3 rounded-xl text-sm font-mono text-zinc-400 flex items-center">
                     +258
                   </span>
-                  <input 
+                  <input
                     type="tel"
                     required
                     autoFocus

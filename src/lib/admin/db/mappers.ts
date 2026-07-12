@@ -4,6 +4,7 @@ import type {
   BusinessId,
   BusinessTheme,
   Client,
+  ClientFormData,
   ClientType,
   Currency,
   DocumentStatus,
@@ -76,6 +77,10 @@ export function mapClient(row: ClientRow): Client {
     email: row.email,
     phone: row.phone,
     address: row.address,
+    portalToken:
+      "portal_token" in row && typeof row.portal_token === "string"
+        ? row.portal_token
+        : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -140,6 +145,32 @@ export function mapDocument(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     pdfGeneratedAt: row.pdf_generated_at,
+    convertedFromDocumentId:
+      "converted_from_document_id" in row &&
+      typeof row.converted_from_document_id === "string"
+        ? row.converted_from_document_id
+        : null,
+    emailSentAt:
+      "email_sent_at" in row && typeof row.email_sent_at === "string"
+        ? row.email_sent_at
+        : null,
+    whatsappSharedAt:
+      "whatsapp_shared_at" in row && typeof row.whatsapp_shared_at === "string"
+        ? row.whatsapp_shared_at
+        : null,
+    clientApprovalStatus:
+      "client_approval_status" in row &&
+      typeof row.client_approval_status === "string"
+        ? (row.client_approval_status as InvoiceDocument["clientApprovalStatus"])
+        : null,
+    clientApprovedAt:
+      "client_approved_at" in row && typeof row.client_approved_at === "string"
+        ? row.client_approved_at
+        : null,
+    clientApprovalNote:
+      "client_approval_note" in row && typeof row.client_approval_note === "string"
+        ? row.client_approval_note
+        : null,
   };
 }
 
@@ -168,7 +199,7 @@ export function mapSignature(row: SignatureRow): BusinessSignature {
 }
 
 export function clientToDbInsert(
-  data: Omit<Client, "id" | "createdAt" | "updatedAt">,
+  data: ClientFormData,
   id?: string
 ): TablesInsert<"clients"> {
   return {

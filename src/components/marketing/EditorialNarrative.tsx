@@ -18,8 +18,8 @@ export default function EditorialNarrative({
   ] as const;
 
   return (
-    <section className="relative py-16 md:py-24 border-b border-grey-dark/40">
-      <div className="site-container site-prose-medium mx-auto">
+    <section className="relative py-20 md:py-28 border-b border-brand-champagne/40">
+      <div className="site-container mx-auto">
         <RevealOnScroll>
           <h2 className="section-label mb-14">{label}</h2>
         </RevealOnScroll>
@@ -28,10 +28,10 @@ export default function EditorialNarrative({
           {blocks.map((block, i) => (
             <RevealOnScroll key={block.key} delay={i * 0.05}>
               <article>
-                <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-gold/50 mb-4">
+                <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-brand-gold font-semibold mb-4">
                   {block.title}
                 </p>
-                <p className="font-serif text-lg md:text-xl font-light text-white/85 leading-relaxed">
+                <p className="font-serif text-lg md:text-xl font-light text-brand-text-dark/90 leading-relaxed">
                   {block.text}
                 </p>
               </article>

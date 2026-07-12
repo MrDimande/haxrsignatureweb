@@ -1,9 +1,9 @@
 # PR.4 — Ensaio migrations 036–043 (dry-run produção)
 
-**Data:** 2026-07-11  
-**Branch:** `rebuild-haxr-platform`  
-**PR:** #3 (Draft)  
-**Produção:** `oxsrdmydlqyvnueedgtl` — **não alterada**  
+**Data:** 2026-07-11
+**Branch:** `rebuild-haxr-platform`
+**PR:** #3 (Draft)
+**Produção:** `oxsrdmydlqyvnueedgtl` — **não alterada**
 **Preview:** `uxleigndoomoezwsxlan` — **não usado como clone** (já contém 036–043)
 
 ---
@@ -46,7 +46,7 @@ npx supabase branches create pr4-dry-run-036-043 `
 
 ### 2.3 Alternativa — projecto temporário novo
 
-Criação automática bloqueada pela política de segurança (escrita remota + credenciais).  
+Criação automática bloqueada pela política de segurança (escrita remota + credenciais).
 **Procedimento manual recomendado** (fora desta sessão):
 
 1. Criar projecto descartável na org HAXR (Dashboard).
@@ -129,8 +129,8 @@ Query executada via MCP `execute_sql` (SELECT only):
 
 ### Evidência secundária (preview, **não** substitui clone pré-036)
 
-- RLS/Auth 036: `docs/036_RLS_AUTH_VALIDATION_REPORT.md` ✅  
-- Smokes E.4 preview: guests/payments/vendors/checklist/documents ✅  
+- RLS/Auth 036: `docs/036_RLS_AUTH_VALIDATION_REPORT.md` ✅
+- Smokes E.4 preview: guests/payments/vendors/checklist/documents ✅
 - Provisioning + RPCs validados em `uxleigndoomoezwsxlan`
 
 ---

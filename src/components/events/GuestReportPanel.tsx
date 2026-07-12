@@ -14,6 +14,8 @@ import {
   buildGuestReportCsv,
   downloadCsvFile,
 } from "@/lib/events/export/csv";
+import { buildEditionCombinedExportCsv } from "@/lib/events/export/edition-csv";
+import type { EditionGiftReservation } from "@/lib/events/repositories/edition-gifts.repository";
 import { downloadGuestReportPdf } from "@/lib/events/export/pdf";
 import TableMapPrintView from "@/components/events/TableMapPrintView";
 import type {
@@ -32,6 +34,7 @@ type GuestReportPanelProps = {
   guests: EventGuest[];
   seats: EventSeat[];
   stats: EventStats;
+  giftReservations?: EditionGiftReservation[];
 };
 
 export default function GuestReportPanel({
@@ -39,6 +42,7 @@ export default function GuestReportPanel({
   guests,
   seats,
   stats,
+  giftReservations = [],
 }: GuestReportPanelProps) {
   const [view, setView] = useState<ViewMode>("list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -68,9 +72,15 @@ export default function GuestReportPanel({
   }, [guests, search, statusFilter]);
 
   function handleCsv() {
-    const csv = buildGuestReportCsv(report);
+    const csv = event.editionRegistryKey
+      ? buildEditionCombinedExportCsv(report, giftReservations)
+      : buildGuestReportCsv(report);
     downloadCsvFile(csv, `haxr-convidados-${eventReportSlug(event)}.csv`);
-    setMessage("CSV exportado com sucesso.");
+    setMessage(
+      event.editionRegistryKey
+        ? "CSV exportado (convidados + presentes)."
+        : "CSV exportado com sucesso."
+    );
   }
 
   function handlePdf() {
@@ -131,7 +141,9 @@ export default function GuestReportPanel({
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={handleCsv} className="admin-btn-secondary">
             <FileSpreadsheet className="w-4 h-4" />
-            Exportar CSV
+            {event.editionRegistryKey
+              ? "Exportar CSV (RSVP + presentes)"
+              : "Exportar CSV"}
           </button>
           <button
             type="button"

@@ -36,10 +36,11 @@ export async function peekDocumentNumberAction(
 
 export async function saveDocumentAction(
   form: InvoiceFormData,
-  existingId?: string
+  existingId?: string,
+  options?: documentsRepo.SaveDocumentOptions
 ) {
   const result = await runAction(() =>
-    documentsRepo.saveDocument(form, existingId)
+    documentsRepo.saveDocument(form, existingId, options)
   );
   if (result.success) {
     revalidatePath("/admin/documents");
@@ -54,6 +55,77 @@ export async function saveDocumentAction(
 
 export async function markPdfGeneratedAction(id: string) {
   const result = await runAction(() => documentsRepo.markPdfGenerated(id));
+  if (result.success) {
+    revalidatePath("/admin/documents");
+    revalidatePath(`/admin/documents/${id}`);
+  }
+  return result;
+}
+
+export async function updateDocumentStatusAction(
+  id: string,
+  status: InvoiceDocument["status"]
+) {
+  const result = await runAction(() =>
+    documentsRepo.updateDocumentStatus(id, status)
+  );
+  if (result.success) {
+    revalidatePath("/admin/documents");
+    revalidatePath(`/admin/documents/${id}`);
+    revalidatePath("/admin/cash");
+  }
+  return result;
+}
+
+export async function sendDocumentEmailAction(id: string) {
+  const result = await runAction(async () => {
+    const { sendDocumentByEmail } = await import(
+      "@/lib/admin/services/send-document.service"
+    );
+    return sendDocumentByEmail(id);
+  });
+  if (result.success) {
+    revalidatePath("/admin/documents");
+    revalidatePath(`/admin/documents/${id}`);
+    revalidatePath("/admin/cash");
+  }
+  return result;
+}
+
+export async function convertProformaToInvoiceAction(proformaId: string) {
+  const result = await runAction(async () => {
+    const { convertProformaToInvoice } = await import(
+      "@/lib/admin/services/convert-proforma.service"
+    );
+    return convertProformaToInvoice(proformaId);
+  });
+  if (result.success) {
+    revalidatePath("/admin/documents");
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/cash");
+    revalidatePath(`/admin/documents/${result.data.id}`);
+    revalidatePath(`/admin/documents/${proformaId}`);
+  }
+  return result;
+}
+
+export async function sendPaymentReminderAction(documentId: string) {
+  const result = await runAction(async () => {
+    const { sendPaymentReminder } = await import(
+      "@/lib/admin/services/send-payment-reminder.service"
+    );
+    return sendPaymentReminder(documentId);
+  });
+  if (result.success) {
+    revalidatePath("/admin/documents");
+    revalidatePath(`/admin/documents/${documentId}`);
+    revalidatePath("/admin/cash");
+  }
+  return result;
+}
+
+export async function markWhatsAppSharedAction(id: string) {
+  const result = await runAction(() => documentsRepo.markWhatsAppShared(id));
   if (result.success) {
     revalidatePath("/admin/documents");
     revalidatePath(`/admin/documents/${id}`);

@@ -27,8 +27,10 @@ describe("mapCsvToGuestRows", () => {
     assert.equal(rows[1].status, "confirmed");
   });
 
-  it("infere grupo familiar em «João e Maria»", () => {
+  it("infere grupo familiar em «João e Maria» via party parser", () => {
     const rows = mapCsvToGuestRows("Nome\nJoão e Maria");
-    assert.equal(rows[0].groupName, "João e Maria");
+    assert.equal(rows[0].name, "João");
+    assert.equal(rows[0].partyParse?.needsReview, true);
+    assert.equal(rows[0].partyParse?.suggestedHeadcount, 2);
   });
 });

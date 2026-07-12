@@ -1,11 +1,11 @@
 # Plano de migrations 036–043 para produção
 
-**Estado:** auditoria read-only — **nenhuma migration aplicada neste documento**.  
-**Data da auditoria:** 2026-07-11  
-**Branch:** `rebuild-haxr-platform`  
-**PR:** #3 (Draft)  
-**Produção:** `oxsrdmydlqyvnueedgtl`  
-**Preview:** `uxleigndoomoezwsxlan`  
+**Estado:** auditoria read-only — **nenhuma migration aplicada neste documento**.
+**Data da auditoria:** 2026-07-11
+**Branch:** `rebuild-haxr-platform`
+**PR:** #3 (Draft)
+**Produção:** `oxsrdmydlqyvnueedgtl`
+**Preview:** `uxleigndoomoezwsxlan`
 
 > **Proibido neste plano:** `db push` cego em produção, `migration repair` sem checklist, merge/promote, deploy manual da app antes das migrations.
 
@@ -205,7 +205,7 @@ Comum a 039–043:
 | Após 036 | Remover trigger `on_auth_user_created`; DROP policies; DROP tables 036; DROP helpers; DROP enums (se sem dependências) |
 | App | Reverter deploy / manter Draft PR — produção app antiga não depende de `client_events` |
 
-**Não** fazer `db reset` em produção.  
+**Não** fazer `db reset` em produção.
 **Não** apagar `events`/`guests`/`payments` operacionais legados.
 
 ---

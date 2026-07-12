@@ -2,6 +2,13 @@ import { fetchSheetCsv } from "@/lib/events/sheets/fetch";
 import { analyzeSheetCsv, mapCsvToGuestRows } from "@/lib/events/sheets/parse-csv";
 import { resolveRsvpRowStatus } from "@/lib/events/sheets/detect-mode";
 import { findGuestMatch } from "@/lib/events/sheets/match";
+import {
+  createEmptyIdempotentStats,
+  createSyncBatchId,
+  mergeIdempotentStats,
+  processImportRowWithLedger,
+  type IdempotentImportContext,
+} from "@/lib/events/sheets/idempotent-import";
 import * as groupsRepo from "@/lib/events/repositories/guest-groups.repository";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import * as guestsRepo from "@/lib/events/repositories/guests.repository";
@@ -62,6 +69,19 @@ export async function syncEventGuestsFromSheet(
   const usedIds = new Set<string>();
   const groupCache = new Map<string, string>();
   const result = emptyResult(syncMode, rows.length);
+  const syncBatchId = createSyncBatchId();
+  const ledgerStats = createEmptyIdempotentStats();
+
+  const importCtx: IdempotentImportContext = {
+    eventId,
+    source: "google_sheet",
+    syncBatchId,
+    syncMode,
+    sourceUrl: event.googleSheetUrl,
+    sourceGid: event.googleSheetGid,
+    existingGuests,
+    usedIds,
+  };
 
   async function resolveGroupId(groupName?: string): Promise<string | null> {
     const trimmed = groupName?.trim();
@@ -141,24 +161,21 @@ export async function syncEventGuestsFromSheet(
 
       const groupId = await resolveGroupId(row.groupName);
       const enrichedRow = { ...row, groupId };
-      const match = findGuestMatch(existingGuests, enrichedRow, usedIds);
 
-      if (match) {
-        usedIds.add(match.id);
-        await guestsRepo.updateGuestFromSheet(match.id, enrichedRow, syncMode);
+      const outcome = await processImportRowWithLedger(importCtx, enrichedRow);
+      mergeIdempotentStats(ledgerStats, outcome);
+
+      if (outcome.kind === "created") {
+        result.created++;
+        if (syncMode === "rsvp") result.confirmedFromSheet++;
+      } else if (outcome.kind === "updated") {
         result.updated++;
         if (syncMode === "rsvp" && enrichedRow.status === "confirmed") {
           result.confirmedFromSheet++;
         }
       } else {
-        const created = await guestsRepo.createGuestFromSheet(
-          eventId,
-          enrichedRow,
-          syncMode
-        );
-        existingGuests.push(created);
-        result.created++;
-        if (syncMode === "rsvp") result.confirmedFromSheet++;
+        result.skipped++;
+        result.errors.push(`Linha ${row.rowNumber}: ${outcome.reason}`);
       }
     } catch (err) {
       result.skipped++;
@@ -171,10 +188,21 @@ export async function syncEventGuestsFromSheet(
   const refreshed = await guestsRepo.listGuestsByEvent(eventId);
   result.pendingGuests = refreshed.filter((g) => g.status === "invited").length;
 
+  result.syncBatchId = syncBatchId;
+  result.importRowsSeen = ledgerStats.importRowsSeen;
+  result.fingerprintsCreated = ledgerStats.fingerprintsCreated;
+  result.ledgerMatched = ledgerStats.ledgerMatched;
+  result.ledgerSkipped = ledgerStats.ledgerSkipped;
+
+  const ledgerNote =
+    ledgerStats.ledgerMatched || ledgerStats.ledgerSkipped
+      ? ` · ledger ${ledgerStats.ledgerMatched} reutilizados · ${ledgerStats.ledgerSkipped} ignorados`
+      : "";
+
   const summary =
     syncMode === "rsvp"
-      ? `RSVP: ${result.confirmedFromSheet} confirmados · ${result.pendingGuests} por confirmar · ${result.created} novos`
-      : `${result.created} novos · ${result.updated} actualizados · ${result.skipped} ignorados`;
+      ? `RSVP: ${result.confirmedFromSheet} confirmados · ${result.pendingGuests} por confirmar · ${result.created} novos${ledgerNote}`
+      : `${result.created} novos · ${result.updated} actualizados · ${result.skipped} ignorados${ledgerNote}`;
 
   await eventsRepo.recordSheetSync(eventId, result.syncedAt, summary);
 

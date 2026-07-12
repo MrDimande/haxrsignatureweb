@@ -1,10 +1,10 @@
 # Relatório A.3 — Validação RLS/Auth (migration 036)
 
-**Data:** Julho 2026  
-**Estado:** ✅ **A.3 APROVADA**  
-**Alvo:** Preview `uxleigndoomoezwsxlan` · `https://uxleigndoomoezwsxlan.supabase.co`  
-**Produção:** `oxsrdmydlqyvnueedgtl` — **não alterada**  
-**MCP `user-supabase`:** não utilizado  
+**Data:** Julho 2026
+**Estado:** ✅ **A.3 APROVADA**
+**Alvo:** Preview `uxleigndoomoezwsxlan` · `https://uxleigndoomoezwsxlan.supabase.co`
+**Produção:** `oxsrdmydlqyvnueedgtl` — **não alterada**
+**MCP `user-supabase`:** não utilizado
 **Edition:** não alterado
 
 ---
@@ -26,7 +26,7 @@
 | **A** | `staging-a@haxrsignature.test` | `acd1d7b7-b679-4c8b-94e1-4d4552f1d8ee` |
 | **B** | `staging-b@haxrsignature.test` | `4a80dc5a-6a0c-43ab-b6a6-772559e60751` |
 
-**Evento de teste (User A):** `2bc57de3-b11f-4f30-81e5-522e3918d8fa`  
+**Evento de teste (User A):** `2bc57de3-b11f-4f30-81e5-522e3918d8fa`
 **Método:** insert SQL em `auth.users` + `auth.identities` no preview (trigger `on_auth_user_created` activo).
 
 > Dados de teste criados **apenas no preview**. Cleanup automático no início do script de validação.

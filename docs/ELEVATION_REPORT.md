@@ -1,6 +1,6 @@
 # Relatório de Elevação — HAXR Signature
 
-Data: Junho 2026  
+Data: Junho 2026
 Objectivo: Reforçar posicionamento premium, conversão e operação (Resend + Brevo) sem reconstruir o website.
 
 ## Branding e metadata

@@ -1,8 +1,8 @@
 # Plano operacional — Apply migrations no preview `uxleigndoomoezwsxlan`
 
-**Data:** Julho 2026  
-**Estado:** 📋 **PLANO APENAS** — nenhum apply executado  
-**Alvo:** `haxr-business-suite-preview` · ref `uxleigndoomoezwsxlan`  
+**Data:** Julho 2026
+**Estado:** 📋 **PLANO APENAS** — nenhum apply executado
+**Alvo:** `haxr-business-suite-preview` · ref `uxleigndoomoezwsxlan`
 **Proibido:** `oxsrdmydlqyvnueedgtl` (produção)
 
 ---

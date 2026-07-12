@@ -33,6 +33,9 @@ export function mapEvent(
     sheetsSyncSummary: row.sheets_sync_summary ?? "",
     sheetsSyncMode: (row.sheets_sync_mode ?? "master") as SheetsSyncMode,
     findSeatCode: row.find_seat_code ?? "",
+    editionRegistryKey: row.edition_registry_key ?? "",
+    postEventReportSentAt: row.post_event_report_sent_at ?? null,
+    dateHoldUntil: row.date_hold_until ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

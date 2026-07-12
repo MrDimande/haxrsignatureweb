@@ -30,7 +30,7 @@ export default function OnboardingStep1Page() {
 
   return (
     <div className="min-h-screen bg-brand-ivory flex flex-col justify-between font-sans text-brand-text-dark select-none p-6 md:p-12 relative overflow-x-hidden">
-      
+
       <header className="max-w-3xl w-full mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-brand-champagne/30 text-left">
         <OnboardingBrandHeader />
 
@@ -43,9 +43,9 @@ export default function OnboardingStep1Page() {
       </header>
 
       <main className="flex-1 flex items-center justify-center max-w-xl w-full mx-auto py-12 md:py-16">
-        
+
         <form onSubmit={handleContinue} className="w-full space-y-8 text-left">
-          
+
           <div className="space-y-2">
             <span className="font-mono text-[8px] tracking-widest text-brand-gold uppercase font-bold">Perfil Inicial</span>
             <h2 className="font-serif text-2xl md:text-3xl font-light text-brand-text-dark">Quem está a planear?</h2>
@@ -53,7 +53,7 @@ export default function OnboardingStep1Page() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div 
+            <div
               onClick={() => setRole("noiva")}
               className={`border rounded-2xl p-4 cursor-pointer text-center transition-all ${
                 role === "noiva" ? "border-brand-gold bg-brand-champagne/10 shadow-sm" : "border-brand-champagne/45 hover:border-brand-gold/40 bg-white"
@@ -62,8 +62,8 @@ export default function OnboardingStep1Page() {
               <span className="font-serif text-sm font-medium text-brand-text-dark">Noiva / Noivo</span>
               <p className="text-[10px] text-zinc-500 font-light mt-1 font-sans">Casal protagonista</p>
             </div>
-            
-            <div 
+
+            <div
               onClick={() => setRole("consultor")}
               className={`border rounded-2xl p-4 cursor-pointer text-center transition-all ${
                 role === "consultor" ? "border-brand-gold bg-brand-champagne/10 shadow-sm" : "border-brand-champagne/45 hover:border-brand-gold/40 bg-white"
@@ -77,7 +77,7 @@ export default function OnboardingStep1Page() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div className="space-y-1.5">
               <label className="font-mono text-[9px] tracking-wider uppercase text-zinc-500 font-semibold pl-1">Nome da Noiva</label>
-              <input 
+              <input
                 type="text"
                 required
                 value={brideName}
@@ -88,7 +88,7 @@ export default function OnboardingStep1Page() {
             </div>
             <div className="space-y-1.5">
               <label className="font-mono text-[9px] tracking-wider uppercase text-zinc-500 font-semibold pl-1">Nome do Noivo</label>
-              <input 
+              <input
                 type="text"
                 required
                 value={groomName}

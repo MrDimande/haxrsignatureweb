@@ -1,44 +1,29 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, JetBrains_Mono, Jost, Pinyon_Script } from "next/font/google";
+import { Fraunces, Source_Sans_3 } from "next/font/google";
 import { buildSiteMetadata } from "@/lib/seo";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: ["300", "400"],
-  style: ["normal", "italic"],
-  variable: "--font-cormorant",
+  weight: ["400", "500", "600"],
+  variable: "--font-fraunces",
   display: "swap",
 });
 
-const jost = Jost({
+const sourceSans = Source_Sans_3({
   subsets: ["latin"],
-  weight: ["300", "400"],
-  variable: "--font-jost",
-  display: "swap",
-});
-
-const pinyonScript = Pinyon_Script({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-signature",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["300"],
-  variable: "--font-jetbrains-mono",
+  weight: ["400", "500", "600"],
+  variable: "--font-source-sans",
   display: "swap",
 });
 
 export const metadata: Metadata = buildSiteMetadata();
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#080706",
   width: "device-width",
   initialScale: 1,
-  colorScheme: "dark",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -49,9 +34,9 @@ export default function RootLayout({
   return (
     <html
       lang="pt-MZ"
-      className={`${cormorant.variable} ${jost.variable} ${pinyonScript.variable} ${jetbrainsMono.variable}`}
+      className={`${fraunces.variable} ${sourceSans.variable}`}
     >
-      <body className="bg-black text-white font-sans font-light min-h-screen antialiased">
+      <body className="bg-brand-ivory text-brand-text-dark font-sans antialiased">
         {children}
       </body>
     </html>

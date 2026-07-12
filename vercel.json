@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/brevo-funnel",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/post-event-reports",
+      "schedule": "0 7 * * *"
     }
   ]
 }

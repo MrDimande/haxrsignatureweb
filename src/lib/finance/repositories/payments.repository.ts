@@ -20,6 +20,22 @@ export async function listPaymentsByClientId(
   return asTableRows<"payments">(data).map((row) => mapPayment(row));
 }
 
+export async function listPaymentsByEventId(
+  eventId: string,
+  limit = 50
+): Promise<PaymentRecord[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("paid_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return asTableRows<"payments">(data).map((row) => mapPayment(row));
+}
+
 export async function listPayments(limit = 100): Promise<PaymentRecord[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase

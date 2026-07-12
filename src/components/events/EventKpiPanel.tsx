@@ -1,4 +1,5 @@
 import { SHEETS_SYNC_MODE_LABELS } from "@/lib/events/sheets/detect-mode";
+import DateHoldBadge from "@/components/shared/DateHoldBadge";
 import type { EventStats, ManagedEvent } from "@/lib/events/types";
 
 type EventKpiPanelProps = {
@@ -60,6 +61,9 @@ export default function EventKpiPanel({ event, stats }: EventKpiPanelProps) {
           Métricas de convidados, capacidade, grupos e sincronização em tempo
           real.
         </p>
+        <div className="mt-3">
+          <DateHoldBadge holdUntil={event.dateHoldUntil} variant="admin" />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">

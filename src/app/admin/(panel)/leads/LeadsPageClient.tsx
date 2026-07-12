@@ -6,6 +6,7 @@ import { ExternalLink, Mail, MessageCircle } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import DataTable from "@/components/admin/DataTable";
 import { updateInquiryStatusAction } from "@/lib/admin/actions/inquiries.actions";
+import ConvertLeadButton from "@/components/admin/leads/ConvertLeadButton";
 import {
   INQUIRY_STATUS_LABELS,
   INQUIRY_STATUS_STYLES,
@@ -121,9 +122,10 @@ export default function LeadsPageClient({
     {
       key: "actions",
       header: "",
-      className: "text-right w-24",
+      className: "text-right w-40",
       render: (row: ContactInquiry) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end items-center gap-2">
+          <ConvertLeadButton inquiry={row} />
           <a
             href={`mailto:${row.email}`}
             onClick={(e) => e.stopPropagation()}

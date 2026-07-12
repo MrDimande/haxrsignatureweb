@@ -60,17 +60,17 @@ export default function ActiveEventsOverviewPanel({
         </Link>
       </div>
 
-      <div className="admin-card overflow-hidden">
+      <div className="admin-card overflow-hidden border border-admin-gold/15 bg-gradient-to-b from-[#12100e] to-[#080706] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
         {filtered.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px]">
+            <table className="w-full min-w-[760px] border-collapse">
               <thead>
-                <tr className="border-b border-grey-dark/80 bg-black-soft">
-                  {["Evento", "Fase", "Data", "Convidados", "Alertas"].map(
+                <tr className="border-b border-white/[0.04] bg-white/[0.01]">
+                  {["Evento", "Fase", "Data", "Ocupação & Convidados", "Estado / Alertas"].map(
                     (heading) => (
                       <th
                         key={heading}
-                        className="px-5 py-3 text-left font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50"
+                        className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium"
                       >
                         {heading}
                       </th>
@@ -78,7 +78,7 @@ export default function ActiveEventsOverviewPanel({
                   )}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/[0.02]">
                 {filtered.map((event) => {
                   const stats = guestStats[event.id];
                   const today = new Date().toISOString().slice(0, 10);
@@ -88,52 +88,96 @@ export default function ActiveEventsOverviewPanel({
                       ? "active"
                       : "completed";
 
+                  // Calcular percentagem de RSVP confirmado
+                  const total = stats?.totalGuests || 0;
+                  const confirmed = stats?.confirmed || 0;
+                  const confirmedPct = total > 0 ? (confirmed / total) * 100 : 0;
+
                   return (
                     <tr
                       key={event.id}
-                      className="border-b border-grey-dark/50 hover:bg-white/[0.02]"
+                      className="group transition-all duration-300 hover:bg-white/[0.02]"
                     >
-                      <td className="px-5 py-4">
+                      {/* Evento */}
+                      <td className="px-6 py-5">
                         <Link
                           href={`/admin/events/${event.id}`}
-                          className="text-white/90 hover:text-admin-gold transition-colors"
+                          className="text-[13.5px] font-serif font-light text-white group-hover:text-admin-gold transition-colors duration-300"
                         >
                           {event.name}
                         </Link>
-                        <p className="text-[10px] text-grey/45 mt-1">
+                        <p className="text-[10px] font-mono tracking-[0.05em] text-grey-medium mt-1">
                           {EVENT_TYPE_LABELS[event.type]}
                           {businessMap.get(event.businessId)
                             ? ` · ${businessMap.get(event.businessId)}`
                             : ""}
                         </p>
                       </td>
-                      <td className="px-5 py-4 text-xs font-mono text-grey/60">
-                        {EVENT_PIPELINE_LABELS[pipeline]}
+
+                      {/* Fase */}
+                      <td className="px-6 py-5">
+                        {pipeline === "active" ? (
+                          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-mono tracking-wider uppercase bg-gold/10 text-admin-gold border border-gold/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                            Em curso
+                          </span>
+                        ) : pipeline === "planning" ? (
+                          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-mono tracking-wider uppercase bg-blue-500/10 text-blue-400 border border-blue-500/15">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                            Planeamento
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-mono tracking-wider uppercase bg-white/[0.04] text-white/50 border border-white/[0.06]">
+                            Concluído
+                          </span>
+                        )}
                       </td>
-                      <td className="px-5 py-4 text-sm text-grey font-mono">
-                        <span className="inline-flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5" />
+
+                      {/* Data */}
+                      <td className="px-6 py-5">
+                        <span className="inline-flex items-center gap-2 font-mono text-xs text-grey-dark/85">
+                          <Calendar className="w-3.5 h-3.5 text-admin-gold/70" strokeWidth={1.5} />
                           {formatEventDate(event.date)}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-sm text-grey/75">
+
+                      {/* Ocupação & Convidados */}
+                      <td className="px-6 py-5">
                         {stats ? (
-                          <span className="inline-flex items-center gap-2">
-                            <Users className="w-3.5 h-3.5" />
-                            {stats.totalGuests} total · {stats.confirmed} conf. ·{" "}
-                            {stats.checkedIn} presentes
-                          </span>
+                          <div className="space-y-2 max-w-[220px]">
+                            <div className="flex items-center justify-between text-[11px] text-grey-dark/70 font-mono">
+                              <span className="flex items-center gap-1.5">
+                                <Users className="w-3 h-3 text-grey-medium" />
+                                {stats.totalGuests} convidados
+                              </span>
+                              <span>{stats.confirmed} conf.</span>
+                            </div>
+                            {/* Barra de progresso premium dourada */}
+                            <div className="h-[3px] w-full bg-white/[0.05] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-admin-gold-dim to-admin-gold rounded-full transition-all duration-500"
+                                style={{ width: `${confirmedPct}%` }}
+                              />
+                            </div>
+                            <p className="text-[9px] text-grey/60 font-mono tracking-wide">
+                              {stats.checkedIn} presentes no local
+                            </p>
+                          </div>
                         ) : (
-                          "—"
+                          <span className="text-xs text-grey/40 font-mono">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-4">
+
+                      {/* Estado / Alertas */}
+                      <td className="px-6 py-5">
                         {stats && stats.unassigned > 0 ? (
-                          <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-amber-300/80">
-                            {stats.unassigned} sem lugar
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-mono tracking-[0.08em] uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_2px_10px_rgba(245,158,11,0.05)] animate-pulse">
+                            ⚠️ {stats.unassigned} sem lugar
                           </span>
                         ) : (
-                          <span className="text-xs text-grey/40">OK</span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-mono tracking-[0.08em] uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_2px_10px_rgba(16,185,129,0.05)]">
+                            ✓ Perfeito
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -143,9 +187,15 @@ export default function ActiveEventsOverviewPanel({
             </table>
           </div>
         ) : (
-          <p className="px-6 py-10 text-sm text-grey/60 text-center">
-            Nenhum evento activo neste momento.
-          </p>
+          <div className="py-12 text-center">
+            <Calendar className="w-8 h-8 mx-auto text-grey/40 mb-3" strokeWidth={1} />
+            <p className="font-serif text-base font-light text-white/80">
+              Nenhum evento activo neste momento.
+            </p>
+            <p className="text-xs text-grey/50 mt-1">
+              Todos os seus eventos finalizados ou inativos aparecem no arquivo.
+            </p>
+          </div>
         )}
       </div>
     </section>

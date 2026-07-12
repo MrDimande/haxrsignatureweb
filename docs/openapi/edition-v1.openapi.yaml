@@ -1,0 +1,844 @@
+openapi: 3.1.0
+info:
+  title: HAXR Edition API
+  version: 1.0.0
+  description: |
+    Official contract between **HAXR Core** (Control Plane) and **HAXR Edition** (Experience Plane).
+
+    This specification is derived from existing production behaviour in:
+    - `projecto_haxrsignature/app/api/rsvp/route.ts`
+    - `projecto_haxrsignature/app/api/gifts/route.ts`
+    - `projecto_haxrsignature/app/api/gifts/reserve/route.ts`
+    - `projecto_haxrsignature/lib/rsvp/*`, `lib/gifts.ts`
+    - `haxrsignature/src/lib/events/repositories/guests.repository.ts`
+    - Supabase RPCs `submit_edition_rsvp`, `reserve_edition_gift`, `check_api_rate_limit`
+
+    **Backward compatibility:** response envelopes use `success` (boolean) to match the current Edition API.
+    Email dispatch for RSVP and gift reservation is orchestrated **inside** the write endpoints
+    (not exposed as separate public routes today).
+
+    **P0 status:** `POST /rsvp` implemented on Core (`/api/v1/edition/rsvp`). Other endpoints contract-only.
+  contact:
+    name: HAXR Signature
+    url: https://www.haxrsignature.com
+  license:
+    name: Proprietary
+    url: https://www.haxrsignature.com
+
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+
+servers:
+  - url: https://www.haxrsignature.com
+    description: Production (HAXR Core)
+  - url: http://localhost:3000
+    description: Local Core development
+
+tags:
+  - name: Events
+    description: Edition event resolution (slug → operational metadata)
+  - name: RSVP
+    description: Open RSVP submissions from Edition invitations
+  - name: Gifts
+    description: Rose Elegance gift registry (despedida-de-solteira)
+  - name: Admin
+    description: Guest management (Control Plane operators)
+
+paths:
+  /api/v1/edition/events/{slug}:
+    get:
+      operationId: getEditionEventBySlug
+      tags: [Events]
+      summary: Resolve Edition invitation slug to operational event metadata
+      description: |
+        Consolidates behaviour currently split across Edition:
+        - `data/invitations.ts` (metadata, slug aliases, status)
+        - `lib/rsvp/events.ts` → `EDITION_EVENT_*_ID` environment variables
+        - `lib/farewell/event-details.ts` (RSVP deadline for `despedida-de-solteira`)
+        - Core `events.edition_registry_key` (e.g. `rose-elegance`)
+
+        Slug resolution MUST honour Edition aliases (`LEGACY_SLUG_REDIRECTS`, `ALIAS_INDEX`),
+        e.g. `jessicakhulaya` → `jessicakulaya`, `jessica-farewell` → `despedida-de-solteira`.
+
+        **Not implemented on Core today.** Edition resolves `eventId` via env vars at runtime.
+      parameters:
+        - $ref: "#/components/parameters/EditionSlug"
+      security: []
+      responses:
+        "200":
+          description: Event resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditionEventResponse"
+        "404":
+          description: Unknown slug, inactive invitation, or event not linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  value:
+                    success: false
+                    error: Evento não encontrado.
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-rate-limit:
+        scope: public
+        key: "edition:event:{clientIp}"
+        max: 60
+        windowSeconds: 60
+        note: Proposed for Core; not enforced on Edition today.
+
+  /api/v1/edition/rsvp:
+    post:
+      operationId: submitEditionRsvp
+      tags: [RSVP]
+      summary: Submit open RSVP from an Edition invitation
+      description: |
+        Mirrors `POST /api/rsvp` on Edition.
+
+        **Processing order (must be preserved):**
+        1. Rate limit (`edition:rsvp:{ip}` — 8 requests / 15 minutes via `check_api_rate_limit`)
+        2. Honeypot check (`honeypot` non-empty → fake `200 success`)
+        3. Field validation (see `EditionRsvpRequest`)
+        4. Slug-specific rules (`despedida-de-solteira` phone required + RSVP deadline)
+        5. Persist via RPC `submit_edition_rsvp` when event binding exists
+        6. Send team + guest emails via Resend when `getRsvpEmailConfig(slug)` is defined
+
+        **Idempotency:** RPC upserts by `(event_id, guest_source='edition_rsvp', name_normalized)`.
+
+        Supported RSVP email slugs today: `jessicakulaya`, `cha-de-lingerie`, `cha-de-panela`,
+        `despedida-de-solteira`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditionRsvpRequest"
+            examples:
+              farewellAttending:
+                summary: Despedida — confirmar presença
+                value:
+                  slug: despedida-de-solteira
+                  name: Maria Silva
+                  attending: true
+                  guests: 1
+                  email: maria@example.com
+                  phone: "258841234567"
+                  messageForBride: Muito feliz por estar convosco!
+                  size: M
+                  dressCodeConfirmed: true
+                  honeypot: ""
+              kulayaDeclined:
+                summary: Kulaya — declinar
+                value:
+                  slug: jessicakulaya
+                  name: Ana Costa
+                  attending: false
+                  email: ana@example.com
+                  honeypot: ""
+      responses:
+        "200":
+          description: RSVP accepted (including honeypot silent accept)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/EditionRsvpSuccessResponse"
+                  - $ref: "#/components/schemas/HoneypotSuccessResponse"
+        "400":
+          description: Validation or business rule failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingName:
+                  value:
+                    success: false
+                    error: Por favor, introduza o seu nome.
+                deadlinePassed:
+                  value:
+                    success: false
+                    error: O prazo para confirmação terminou. Contacte a organizadora.
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          description: Persist succeeded but email failed, or persist failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditionRsvpPartialFailureResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-rate-limit:
+        scope: public
+        key: "edition:rsvp:{clientIp}"
+        max: 8
+        windowSeconds: 900
+        implementation: supabase.rpc.check_api_rate_limit
+        fallback: in-memory per instance (Edition current fallback)
+      x-idempotency:
+        strategy: database-upsert
+        key: "event_id + guest_source=edition_rsvp + name_normalized"
+        rpc: submit_edition_rsvp
+
+  /api/v1/edition/gifts:
+    get:
+      operationId: listEditionGifts
+      tags: [Gifts]
+      summary: List gift registry with reservation state
+      description: |
+        Mirrors `GET /api/gifts` on Edition.
+
+        Merges static catalog `ROSE_ELEGANCE_GIFTS` with rows from
+        `edition_gift_reservations` where `registry_key = 'rose-elegance'`.
+
+        Edition today hardcodes registry `rose-elegance` (only `despedida-de-solteira` uses gifts).
+        Optional `registry` query param defaults to `rose-elegance` for backward compatibility.
+      security: []
+      parameters:
+        - name: registry
+          in: query
+          required: false
+          schema:
+            type: string
+            default: rose-elegance
+            enum: [rose-elegance]
+          description: Gift catalog registry key (only `rose-elegance` exists today)
+      responses:
+        "200":
+          description: Gift list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditionGiftsListResponse"
+        "400":
+          description: Invalid registry parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-rate-limit:
+        scope: public
+        note: Not enforced on Edition today. Recommended 30 req/min/IP on Core.
+
+  /api/v1/edition/gifts/reserve:
+    post:
+      operationId: reserveEditionGift
+      tags: [Gifts]
+      summary: Reserve a gift from the Edition registry
+      description: |
+        Mirrors `POST /api/gifts/reserve` on Edition.
+
+        **Processing order:**
+        1. Validate `giftId` and `reservedBy`
+        2. Reject `category=noiva` items (informational only)
+        3. RPC `reserve_edition_gift` with `registry_key=rose-elegance`
+        4. On success, send notification email asynchronously (fire-and-forget);
+           email failure MUST NOT change HTTP status from 200
+
+        Edition today hardcodes slug `despedida-de-solteira` in the notification email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditionGiftReserveRequest"
+            example:
+              giftId: cozinha-colheres-silicone
+              reservedBy: Ana Costa
+      responses:
+        "200":
+          description: Reservation successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditionGiftReserveSuccessResponse"
+        "400":
+          description: Missing fields or informational-only gift
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingGiftId:
+                  value:
+                    success: false
+                    error: Identificador do presente em falta.
+                noivaItem:
+                  value:
+                    success: false
+                    error: Este item é apenas informativo e não pode ser selecionado.
+        "409":
+          description: Gift already reserved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditionGiftReserveConflictResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-rate-limit:
+        scope: public
+        note: Not enforced on Edition today. Recommended 5 req/15min/IP on Core.
+      x-idempotency:
+        strategy: database-unique-constraint
+        key: "registry_key + gift_id"
+        rpc: reserve_edition_gift
+
+  /api/v1/edition/admin/events/{eventId}/guests:
+    get:
+      operationId: listEditionEventGuests
+      tags: [Admin]
+      summary: List guests for an Edition-linked event (admin)
+      description: |
+        Formalizes data currently returned by Core server actions
+        (`listGuestsByEvent`, `listGuestsPage` in `guests.repository.ts`)
+        and partially exported by Edition `GET /api/admin/export` (CSV).
+
+        This JSON endpoint replaces the need for Edition Bearer-token CSV export
+        for guest inspection; CSV bulk export may remain an admin-only Core feature.
+
+        Filter `source=edition_rsvp` maps to `guest_source = 'edition_rsvp'`.
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, edition_rsvp]
+            default: all
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/GuestStatus"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+      security:
+        - AdminSessionCookie: []
+      responses:
+        "200":
+          description: Guest page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminGuestListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-rate-limit:
+        scope: admin
+        max: 30
+        windowSeconds: 60
+
+components:
+  securitySchemes:
+    AdminSessionCookie:
+      type: apiKey
+      in: cookie
+      name: haxr_admin_session
+      description: |
+        HMAC-signed admin session issued by `POST /api/admin/login` on Core.
+        Middleware validates on `/admin/*` and protected admin API routes.
+
+  parameters:
+    EditionSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 80
+      examples:
+        farewell:
+          value: despedida-de-solteira
+        kulaya:
+          value: jessicakulaya
+        kulayaAlias:
+          value: jessicakhulaya
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Admin session missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error: Não autorizado.
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until retry (Edition sends this header today)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error: Demasiados pedidos. Aguarde alguns minutos e tente novamente.
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            rsvp:
+              value:
+                success: false
+                error: Ocorreu um erro ao processar o seu RSVP.
+            gifts:
+              value:
+                success: false
+                error: Ocorreu um erro ao obter a lista de presentes.
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+          description: Human-readable message in pt-PT (Edition-compatible)
+
+    HoneypotSuccessResponse:
+      type: object
+      required: [success, message]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+          example: RSVP process completed (honeypot trigger).
+
+    EditionRsvpRequest:
+      type: object
+      required: [name, attending]
+      additionalProperties: false
+      properties:
+        slug:
+          type: string
+          description: |
+            Edition invitation slug. Resolved via aliases. Defaults to `jessicakulaya`
+            in Edition when unresolved (implementation detail — clients SHOULD always send slug).
+        name:
+          type: string
+          minLength: 1
+          description: Trimmed. Edition does not enforce max length today; Core SHOULD cap at 200 (RPC uses guest name column).
+        attending:
+          type: boolean
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Required when attending=true. Party size including guest.
+        email:
+          type: string
+          maxLength: 160
+          format: email
+          description: Normalized lowercase. Required when attending and phone omitted.
+        phone:
+          type: string
+          maxLength: 30
+          description: Required when slug is `despedida-de-solteira`.
+        messageForBride:
+          type: string
+          maxLength: 280
+        size:
+          type: string
+          maxLength: 12
+        dressCodeConfirmed:
+          type: boolean
+        honeypot:
+          type: string
+          description: Anti-spam field. Non-empty value triggers silent success without processing.
+
+    RsvpSubmission:
+      type: object
+      description: Echoed in Edition success response as `data` (backward compatibility — includes PII).
+      required: [name, attending, guests, slug]
+      properties:
+        name:
+          type: string
+        attending:
+          type: boolean
+        guests:
+          type: integer
+        slug:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        messageForBride:
+          type: string
+        size:
+          type: string
+        dressCodeConfirmed:
+          type: boolean
+
+    EditionRsvpSuccessResponse:
+      type: object
+      required: [success, message, data, persisted, emailSent, guestEmailSent]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+          example: O seu RSVP foi registado com sucesso!
+        data:
+          $ref: "#/components/schemas/RsvpSubmission"
+        persisted:
+          type: boolean
+          description: True when RPC `submit_edition_rsvp` succeeded
+        emailSent:
+          type: boolean
+          description: Team notification email sent via Resend
+        guestEmailSent:
+          type: boolean
+          description: Guest confirmation email sent (false when no email provided)
+
+    EditionRsvpPartialFailureResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+          examples:
+            - A confirmação foi registada, mas não foi possível enviar o email. Contacte a equipa HAXR.
+            - Não foi possível registar a confirmação. Tente novamente em instantes.
+            - Não foi possível enviar a confirmação. Tente novamente em instantes.
+        persisted:
+          type: boolean
+          description: Present and true when persist succeeded but email failed (502 case)
+
+    EditionEventData:
+      type: object
+      required:
+        - slug
+        - status
+        - persistenceConfigured
+        - rsvpEmailConfigured
+      properties:
+        slug:
+          type: string
+          description: Canonical slug after alias resolution
+        eventId:
+          type: [string, "null"]
+          format: uuid
+          description: From `EDITION_EVENT_*_ID` / Core events table. Null when not configured.
+        registryKey:
+          type: [string, "null"]
+          description: Core `events.edition_registry_key` (e.g. `rose-elegance`)
+        status:
+          type: string
+          enum: [active, draft, archived]
+          description: From Edition `data/invitations.ts`
+        eventName:
+          type: [string, "null"]
+          description: Admin event name, e.g. `Edition · Despedida de Solteira · Jessica Muege`
+        clientName:
+          type: [string, "null"]
+        title:
+          type: string
+        date:
+          type: string
+          format: date
+          description: ISO date from invitation metadata
+        time:
+          type: string
+          example: 11h00
+        location:
+          type: string
+        persistenceConfigured:
+          type: boolean
+          description: Equivalent to `isEditionPersistenceConfigured(slug)` — eventId env var set
+        rsvpEmailConfigured:
+          type: boolean
+          description: Equivalent to `getRsvpEmailConfig(slug) !== null`
+        giftsEnabled:
+          type: boolean
+          description: True when registry key is `rose-elegance` (only farewell today)
+        rsvpDeadlineIso:
+          type: [string, "null"]
+          format: date
+          description: Only for `despedida-de-solteira` — `2026-07-20`
+        rsvpDeadlinePassed:
+          type: boolean
+          description: Computed from `rsvpDeadlineIso` (Maputo timezone)
+        editionUrl:
+          type: string
+          format: uri
+          example: https://edition.haxrsignature.com/despedida-de-solteira
+        adminUrl:
+          type: [string, "null"]
+          format: uri
+          example: https://www.haxrsignature.com/admin/events/00000000-0000-4000-8000-000000000001
+
+    EditionEventResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/EditionEventData"
+
+    GiftItem:
+      type: object
+      required: [id, name, category, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum: [cozinha, casa, banho, noiva]
+        status:
+          type: string
+          enum: [available, reserved]
+        reservedBy:
+          type: [string, "null"]
+        timestamp:
+          type: [string, "null"]
+          format: date-time
+          description: Legacy field; same instant as reservedAt when reserved
+        reservedAt:
+          type: [string, "null"]
+          format: date-time
+        popularityScore:
+          type: integer
+          minimum: 1
+          maximum: 5
+        emotionalTag:
+          type: string
+
+    EditionGiftsListResponse:
+      type: object
+      required: [success, gifts]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          const: true
+        gifts:
+          type: array
+          items:
+            $ref: "#/components/schemas/GiftItem"
+
+    EditionGiftReserveRequest:
+      type: object
+      required: [giftId, reservedBy]
+      additionalProperties: false
+      properties:
+        giftId:
+          type: string
+          minLength: 1
+        reservedBy:
+          type: string
+          minLength: 1
+          description: Trimmed. RPC requires min length 2.
+
+    EditionGiftReserveSuccessResponse:
+      type: object
+      required: [success, message, gifts]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+          example: Presente reservado com sucesso!
+        gifts:
+          type: array
+          items:
+            $ref: "#/components/schemas/GiftItem"
+          description: Full merged catalog after reservation
+
+    EditionGiftReserveConflictResponse:
+      type: object
+      required: [success, error, gifts]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+          example: Este presente já foi oferecido por Ana Costa.
+        gifts:
+          type: array
+          items:
+            $ref: "#/components/schemas/GiftItem"
+
+    GuestStatus:
+      type: string
+      enum: [invited, confirmed, checked_in, declined]
+
+    GuestSource:
+      type: string
+      enum: [manual, sheet_master, sheet_rsvp, edition_rsvp]
+
+    AdminGuest:
+      type: object
+      required:
+        - id
+        - eventId
+        - name
+        - email
+        - phone
+        - status
+        - plusOnes
+        - guestSource
+        - guestNotes
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        nameNormalized:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          $ref: "#/components/schemas/GuestStatus"
+        plusOnes:
+          type: integer
+          minimum: 0
+        guestNotes:
+          type: string
+          description: |
+            Edition RSVP stores message, size, dress code in guest_notes via RPC.
+        guestSource:
+          $ref: "#/components/schemas/GuestSource"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AdminGuestListResponse:
+      type: object
+      required: [success, guests, total, page, pageSize]
+      properties:
+        success:
+          type: boolean
+          const: true
+        guests:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminGuest"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+
+  examples: {}
+
+x-supabase-rpcs:
+  submit_edition_rsvp:
+    grant: service_role
+    migration: haxrsignature/supabase/migrations/026_edition_gifts_rsvp_extras.sql
+    calledBy: Edition POST /api/rsvp
+  reserve_edition_gift:
+    grant: service_role
+    migration: haxrsignature/supabase/migrations/026_edition_gifts_rsvp_extras.sql
+    calledBy: Edition POST /api/gifts/reserve
+  check_api_rate_limit:
+    grant: service_role
+    calledBy: Edition persistentRateLimit (RSVP only)
+
+x-edition-side-effects-not-in-openapi:
+  description: |
+    These flows exist in Edition today but are NOT separate contract endpoints.
+    They MUST be preserved inside the write handlers when Core implements this contract.
+  items:
+    - name: RSVP team email
+      trigger: POST /rsvp success path
+      provider: Resend
+      templates: kulaya-rsvp, farewell-rsvp
+    - name: RSVP guest confirmation email
+      trigger: POST /rsvp when email provided
+      provider: Resend
+      templates: kulaya-guest-rsvp, farewell-guest-rsvp
+    - name: Gift reserve notification email
+      trigger: POST /gifts/reserve success (async)
+      provider: Resend
+      template: farewell-gift-reserve
+    - name: RSVP reminder cron
+      trigger: GET /api/cron/rsvp-reminders (Edition only today)
+      provider: Resend
+      note: Out of P0 path scope; migrate to Core in P2

@@ -20,8 +20,8 @@ export default function BenefitStories({
       : "grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-14";
 
   return (
-    <section className="relative py-16 md:py-24">
-      <div className="site-container site-prose-wide mx-auto">
+    <section className="relative py-24 md:py-32">
+      <div className="site-container mx-auto">
         {label ? (
           <RevealOnScroll>
             <h2 className="section-label mb-6">{label}</h2>
@@ -29,7 +29,7 @@ export default function BenefitStories({
         ) : null}
         {intro ? (
           <RevealOnScroll delay={0.04}>
-            <p className="font-serif text-xl font-light text-white/80 max-w-2xl mb-14 leading-relaxed">
+            <p className="font-serif text-xl font-light text-brand-text-dark mb-16 leading-relaxed max-w-2xl">
               {intro}
             </p>
           </RevealOnScroll>
@@ -38,15 +38,15 @@ export default function BenefitStories({
         <div className={gridClass}>
           {stories.map((story, i) => (
             <RevealOnScroll key={story.title} delay={i * 0.04}>
-              <article className="border-t border-grey-dark/70 pt-8 h-full">
-                <h3 className="font-serif text-lg md:text-xl font-light text-white mb-4">
+              <article className="border-t border-brand-champagne/40 pt-8 h-full">
+                <h3 className="font-serif text-lg md:text-xl font-light text-brand-text-dark mb-4">
                   {story.title}
                 </h3>
-                <p className="font-sans text-sm text-grey leading-relaxed mb-5">
+                <p className="font-sans text-sm text-brand-text-dark/75 leading-relaxed mb-5 font-light">
                   {story.body}
                 </p>
                 {story.feeling ? (
-                  <p className="font-serif text-sm italic text-gold/55 leading-relaxed">
+                  <p className="font-serif text-sm italic text-brand-gold/80 leading-relaxed">
                     {story.feeling}
                   </p>
                 ) : null}

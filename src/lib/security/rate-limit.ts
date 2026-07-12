@@ -23,6 +23,8 @@ export const RATE_LIMITS = {
   findSeat: { max: 10, windowMs: 60 * 1000 },
   findSeatPerEvent: { max: 15, windowMs: 60 * 1000 },
   eventAction: { max: 30, windowMs: 60 * 1000 },
+  /** Edition open RSVP — aligned with projecto_haxrsignature */
+  editionRsvp: { max: 8, windowMs: 15 * 60 * 1000 },
 } as const satisfies Record<string, RateLimitConfig>;
 
 function pruneExpiredBuckets(now: number): void {
@@ -96,6 +98,26 @@ export function rateLimitResponse(
     {
       error: "rate_limited",
       message: "Demasiados pedidos. Tente novamente mais tarde.",
+      ...body,
+    },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(result.retryAfterSeconds),
+      },
+    }
+  );
+}
+
+/** Edition API envelope — matches projecto_haxrsignature/app/api/rsvp */
+export function editionRateLimitResponse(
+  result: RateLimitResult,
+  body?: Record<string, unknown>
+): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Demasiados pedidos. Aguarde alguns minutos e tente novamente.",
       ...body,
     },
     {

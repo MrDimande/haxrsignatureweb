@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import StructuredData from "@/components/seo/StructuredData";
 import Link from "next/link";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
+import PortalDashboardPreview from "@/components/portal/PortalDashboardPreview";
 import EditorialNarrative from "@/components/marketing/EditorialNarrative";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import { areaClienteNarrative } from "@/lib/marketing/editorial";
 import { areaClienteFuture } from "@/lib/marketing/pages";
 import { marketingMetadata } from "@/lib/marketing/seo";
+import { ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = marketingMetadata("areaCliente");
 
@@ -19,6 +21,22 @@ export default function AreaClientePage() {
         headline="A sua experiência HAXR, com a mesma atenção — hoje e no próximo capítulo."
         description="Estamos a evoluir a forma como clientes acompanham cronograma, documentos e decisões. A tecnologia serve a relação — não a substitui."
       />
+      <PortalDashboardPreview />
+
+      <section className="py-8 bg-brand-ivory text-center">
+        <div className="site-container mx-auto">
+          <RevealOnScroll>
+            <Link
+              href="/sign-in"
+              className="bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[10px] tracking-[0.3em] uppercase font-bold py-4 px-8 rounded-lg shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span>Aceder ao HAXR Wedding Dashboard</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </RevealOnScroll>
+        </div>
+      </section>
+
       <EditorialNarrative narrative={areaClienteNarrative} />
 
       <section className="relative py-16 md:py-24 bg-black-soft">

@@ -11,53 +11,81 @@ export type MarketingPillar = {
 export const marketingPillars: MarketingPillar[] = [
   {
     num: "01",
-    title: "Assessoria de Eventos",
-    desc: "Direcção estratégica e operacional — para que alguém cuide de tudo por si, com discrição e precisão.",
+    title: "Assessoria de Casamento",
+    desc: "Acompanhamento completo, parcial e coordenação operacional para garantir tranquilidade e perfeição.",
     href: "/assessoria-eventos",
   },
   {
     num: "02",
-    title: "Convites & Identidade Visual",
-    desc: "A primeira impressão do evento — antes de ele existir fisicamente. Curadoria estética com intenção.",
+    title: "Convites Digitais",
+    desc: "Experiências digitais imersivas e personalizadas para anunciar o vosso grande dia aos convidados.",
     href: "/convites-identidade-visual",
   },
   {
     num: "03",
-    title: "Gestão de Convidados",
-    desc: "Controlo e clareza — quem confirmou, quem falta, onde cada pessoa ficará e como será recebida.",
-    href: "/gestao-convidados",
+    title: "Save the Date",
+    desc: "O primeiro gesto editorial. Comunique a vossa data com elegância, expectativa e design exclusivo.",
+    href: "/convites-identidade-visual",
   },
   {
     num: "04",
-    title: "Plataforma HAXR",
-    desc: "Organização integral nos bastidores — eventos, convidados, fornecedores e documentos numa só operação.",
-    href: "/plataforma-eventos",
+    title: "RSVP",
+    desc: "Confirmação de presença digitalizada e intuitiva, mantendo a vossa lista organizada e sob controlo.",
+    href: "/gestao-convidados",
+  },
+  {
+    num: "05",
+    title: "Websites de Casamento",
+    desc: "Presença online integrada com lista de presentes, mapas, cronograma e toda a informação para os vossos convidados.",
+    href: "/convites-identidade-visual",
+  },
+  {
+    num: "06",
+    title: "Identidade Visual para Eventos",
+    desc: "Direcção de arte completa, paletas de cores, tipografia e monogramas com uma linguagem contemporânea.",
+    href: "/convites-identidade-visual",
   },
 ];
 
 export const homeHowWeWork = [
   {
-    phase: "Antes",
+    phase: "01 · Conversa inicial",
     items: [
-      "Planeamento com estratégia e orçamento",
-      "Curadoria de fornecedores e contratos",
-      "Cronograma com margem e intenção",
+      "Escuta atenta da vossa visão e expectativas",
+      "Alinhamento do perfil e propósito do evento",
+      "Definição do nível de assessoria ideal",
     ],
   },
   {
-    phase: "Durante",
+    phase: "02 · Planeamento",
     items: [
-      "Coordenação e gestão operacional",
-      "Supervisão discreta da equipa",
-      "Cerimonial com elegância",
+      "Desenho de conceito estético e direcional",
+      "Controlo de orçamento inicial transparente",
+      "Cronograma detalhado com prazos e etapas",
     ],
   },
   {
-    phase: "Depois",
+    phase: "03 · Organização",
     items: [
-      "Encerramento com rigor",
-      "Relatórios e avaliação",
-      "Memória do que foi vivido",
+      "Curadoria rigorosa de fornecedores e parceiros",
+      "Negociação, análise de contratos e segurança",
+      "Selecção e desenvolvimento de convites digitais",
+    ],
+  },
+  {
+    phase: "04 · Coordenação",
+    items: [
+      "Alinhamento final operacional de todos os parceiros",
+      "Ensaios, confirmações finais de convidados",
+      "Cronograma minucioso de montagem e timings",
+    ],
+  },
+  {
+    phase: "05 · Execução no grande dia",
+    items: [
+      "Supervisão cirúrgica de montagem e montras",
+      "Presença invisível para resolução de imprevistos",
+      "Coordenação de protocolo e timings para o casal",
     ],
   },
 ] as const;

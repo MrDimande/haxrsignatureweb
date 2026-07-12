@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { AlertTriangle, Bell, Loader2 } from "lucide-react";
+import { sendPaymentReminderAction } from "@/lib/admin/actions/documents.actions";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/admin/constants";
 import { formatCurrency } from "@/lib/calculations";
 import type { CashAnalytics } from "@/lib/finance/types";
@@ -13,6 +16,38 @@ type OverdueAlertsPanelProps = {
 export default function OverdueAlertsPanel({
   analytics,
 }: OverdueAlertsPanelProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    id: string;
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  function handleReminder(documentId: string) {
+    setFeedback(null);
+    setActiveId(documentId);
+    startTransition(async () => {
+      const result = await sendPaymentReminderAction(documentId);
+      setActiveId(null);
+      if (!result.success) {
+        setFeedback({
+          id: documentId,
+          type: "error",
+          message: result.error,
+        });
+        return;
+      }
+      setFeedback({
+        id: documentId,
+        type: "success",
+        message: "Lembrete enviado por email.",
+      });
+      router.refresh();
+    });
+  }
+
   if (analytics.overdueAlerts.length === 0) {
     return (
       <section className="admin-card p-6 border-emerald-500/15 bg-emerald-500/5">
@@ -47,11 +82,11 @@ export default function OverdueAlertsPanel({
       <ul className="space-y-3">
         {analytics.overdueAlerts.slice(0, 8).map((alert) => (
           <li key={alert.documentId}>
-            <Link
-              href={`/admin/documents/${alert.documentId}`}
-              className="flex flex-wrap items-center justify-between gap-3 p-3 border border-amber-500/15 hover:border-amber-500/30 transition-colors"
-            >
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 border border-amber-500/15 hover:border-amber-500/30 transition-colors">
+              <Link
+                href={`/admin/documents/${alert.documentId}`}
+                className="flex-1 min-w-[200px]"
+              >
                 <p className="text-sm text-white/85 font-mono">
                   {alert.documentNumber}
                 </p>
@@ -59,16 +94,43 @@ export default function OverdueAlertsPanel({
                   {alert.clientName} ·{" "}
                   {DOCUMENT_TYPE_LABELS[alert.documentType]}
                 </p>
+              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-right">
+                  <p className="font-serif text-base text-white/90">
+                    {formatCurrency(alert.amount, alert.currency)}
+                  </p>
+                  <p className="text-[10px] text-amber-300/80 font-mono uppercase tracking-[0.15em] mt-1">
+                    +{alert.daysOverdue} dias
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleReminder(alert.documentId)}
+                  disabled={isPending && activeId === alert.documentId}
+                  className="admin-btn-secondary text-[10px] tracking-[0.2em] uppercase"
+                  title="Enviar lembrete de cobrança por email"
+                >
+                  {isPending && activeId === alert.documentId ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Bell className="w-4 h-4" />
+                  )}
+                  Lembrete
+                </button>
               </div>
-              <div className="text-right">
-                <p className="font-serif text-base text-white/90">
-                  {formatCurrency(alert.amount, alert.currency)}
-                </p>
-                <p className="text-[10px] text-amber-300/80 font-mono uppercase tracking-[0.15em] mt-1">
-                  +{alert.daysOverdue} dias
-                </p>
-              </div>
-            </Link>
+            </div>
+            {feedback?.id === alert.documentId ? (
+              <p
+                className={`text-xs mt-2 px-3 ${
+                  feedback.type === "success"
+                    ? "text-emerald-300/80"
+                    : "text-red-400/80"
+                }`}
+              >
+                {feedback.message}
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>

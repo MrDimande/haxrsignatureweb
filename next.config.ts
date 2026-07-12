@@ -3,6 +3,7 @@ import { seoRedirectSources } from "./src/lib/seo/redirects";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["pdf-parse"],
   async redirects() {
     return seoRedirectSources.map((route) => ({
       source: route.source,

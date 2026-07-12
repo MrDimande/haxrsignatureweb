@@ -1,21 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Clock } from "lucide-react";
+import { IconInstagram, IconFacebook, IconWhatsApp, IconMail, IconMapPin } from "@/components/ui/FooterIcons";
 import BrandLogo from "@/components/ui/BrandLogo";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
+import NewsletterSignupForm from "@/components/marketing/forms/NewsletterSignupForm";
+import SignaturePad from "@/components/ui/SignaturePad";
 import { footerLinkGroups } from "@/lib/marketing/navigation";
 import { portfolioCopy, siteContact } from "@/lib/site-config";
 
 const legalTabs = ["condicoes", "termos", "privacidade"] as const;
 type LegalTab = (typeof legalTabs)[number];
 
+const ambientQuotes = {
+  casamento: {
+    quote: "“A harmonia indissolúvel entre o eterno e o contemporâneo.”",
+    cta: "Solicitar Proposta de Casamento",
+    href: "/contacto?tipo=casamento",
+    glowClass: "from-brand-gold/10 via-transparent to-transparent",
+    label: "Casamentos & Lobolos",
+  },
+  corporativo: {
+    quote: "“Prestígio institucional desenhado com rigor, segurança e precisão milimétrica.”",
+    cta: "Solicitar Proposta Corporativa",
+    href: "/contacto?tipo=corporativo",
+    glowClass: "from-brand-champagne/10 via-transparent to-transparent",
+    label: "Corporativo & Galas",
+  },
+  exclusivo: {
+    quote: "“Experiências singulares que desafiam o convencional, desenhadas sob medida.”",
+    cta: "Solicitar Proposta Personalizada",
+    href: "/contacto?tipo=experiencias",
+    glowClass: "from-brand-gold-light/10 via-transparent to-transparent",
+    label: "Experiências Especiais",
+  },
+} as const;
+
 export default function Footer() {
   const year = new Date().getFullYear();
   const [activeTab, setActiveTab] = useState<LegalTab | null>(null);
+  const [ambientTheme, setAmbientTheme] = useState<keyof typeof ambientQuotes>("casamento");
+  const [time, setTime] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+
   const { footer } = portfolioCopy;
+  const letters = "HAXR SIGNATURE".split("");
+
+  useEffect(() => {
+    setMounted(true);
+    const updateClock = () => {
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: "Africa/Maputo",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      };
+      setTime(new Date().toLocaleTimeString("pt-PT", options));
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const legalLabel = (tab: LegalTab) =>
     tab === "condicoes"
@@ -25,96 +74,211 @@ export default function Footer() {
         : portfolioCopy.politicaPrivacidade.label;
 
   return (
-    <footer className="relative border-t border-grey-dark/70 bg-black">
-      <div className="site-container py-24 md:py-32 lg:py-36">
-        <RevealOnScroll>
-          <div className="line-gold mb-20 md:mb-24 opacity-70" />
+    <footer className="relative border-t border-grey-dark/15 bg-black text-white overflow-hidden z-20">
+      {/* Glow de fundo dinâmico */}
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-black via-black-soft/50 to-black pointer-events-none z-0"
+        style={{ transition: "background 1.5s ease" }}
+      />
+      <div
+        className={`absolute -top-44 left-1/2 -translate-x-1/2 w-full h-96 rounded-full blur-[140px] transition-all duration-1000 pointer-events-none opacity-40 bg-gradient-to-b ${ambientQuotes[ambientTheme].glowClass}`}
+      />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12 xl:gap-16">
-            {/* Assinatura da marca */}
-            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-10 md:gap-12">
+      <div className="site-container-wide relative py-20 md:py-28 lg:py-32 z-10">
+        <RevealOnScroll>
+          {/* TOPO: Sintonizador de Ambiente e Citações Editoriais */}
+          <div className="border-b border-white/10 pb-12 mb-16 md:mb-20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.35em] uppercase text-white/40 mb-3">
+                  Sintonizar Inspiração
+                </p>
+                <div className="flex flex-wrap gap-x-6 gap-y-3">
+                  {(Object.keys(ambientQuotes) as Array<keyof typeof ambientQuotes>).map((key) => (
+                    <button
+                      key={key}
+                      onClick={() => setAmbientTheme(key)}
+                      className={`font-mono text-[10px] tracking-[0.25em] uppercase pb-1.5 transition-all duration-500 border-b cursor-pointer ${
+                        ambientTheme === key
+                          ? "text-gold border-gold"
+                          : "text-white/40 border-transparent hover:text-white/80"
+                      }`}
+                    >
+                      {ambientQuotes[key].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="max-w-xl md:text-right">
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={ambientTheme}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.6, ease: "easeInOut" }}
+                    className="font-serif text-lg md:text-xl font-light italic text-white/85 leading-relaxed"
+                  >
+                    {ambientQuotes[ambientTheme].quote}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          {/* MEIO: Grelha Principal */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12 xl:gap-20">
+
+            {/* Coluna 1: Logo & Signature Canvas (4 cols) */}
+            <div className="lg:col-span-4 flex flex-col gap-8">
               <Link href="/" aria-label="HAXR Signature — início" className="inline-block w-fit">
-                <BrandLogo variant="footer" className="h-28 md:h-36" />
+                <BrandLogo variant="footer" className="h-20 md:h-24" />
               </Link>
 
-              <div className="space-y-6 max-w-md">
-                <p className="type-manifesto">{footer.manifesto}</p>
-                <p className="font-sans text-sm text-grey/70 leading-relaxed">
+              <div className="space-y-4">
+                <p className="type-manifesto text-white/70">{footer.manifesto}</p>
+                <p className="font-sans text-xs text-white/50 leading-relaxed max-w-sm">
                   {footer.commitment}
                 </p>
               </div>
 
-              <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-gold/40">
-                Elegância · Precisão · Exclusividade
-              </p>
-            </div>
-
-            {/* Contacto em destaque */}
-            <div className="lg:col-span-4 xl:col-span-3 lg:border-l lg:border-grey-dark/50 lg:pl-12 xl:pl-14">
-              <p className="section-label mb-8 md:mb-10">Contacto</p>
-
-              <div className="space-y-8 md:space-y-10">
-                <div>
-                  <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/45 mb-3">
-                    Email
-                  </p>
-                  <a
-                    href={`mailto:${siteContact.email}`}
-                    className="font-serif text-xl md:text-2xl font-light text-white/90 hover:text-gold transition-colors duration-500 break-all"
-                  >
-                    {siteContact.email}
-                  </a>
-                </div>
-
-                <div>
-                  <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/45 mb-3">
-                    WhatsApp
-                  </p>
-                  <a
-                    href={siteContact.whatsapp.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-serif text-xl md:text-2xl font-light text-white/90 hover:text-gold transition-colors duration-500"
-                  >
-                    {siteContact.whatsapp.display}
-                  </a>
-                </div>
-
-                <div>
-                  <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/45 mb-3">
-                    Cidade
-                  </p>
-                  <a
-                    href={siteContact.mapsHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-sans text-sm md:text-base text-grey/80 hover:text-gold/80 transition-colors duration-500 leading-relaxed"
-                  >
-                    {siteContact.shortLocation}
-                  </a>
-                </div>
-
-                <Link
-                  href="/contacto"
-                  className="btn-editorial btn-editorial--outline !min-w-0 !px-6 !py-3 inline-flex"
-                >
-                  Iniciar conversa
-                </Link>
+              {/* Signature Canvas Box */}
+              <div className="space-y-3">
+                <p className="font-mono text-[9px] tracking-[0.28em] uppercase text-white/40">
+                  Assinatura do Visitante
+                </p>
+                <SignaturePad />
+                <p className="font-sans text-[10px] text-white/30 italic">
+                  Deixe a sua assinatura digital como testemunho da sua passagem.
+                </p>
               </div>
             </div>
 
-            {/* Links por categoria */}
-            <div className="lg:col-span-3 xl:col-span-5 lg:border-l lg:border-grey-dark/50 lg:pl-12 xl:pl-14">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 sm:gap-8">
+            {/* Coluna 2: Contacto & Concierge (3 cols) */}
+            <div className="lg:col-span-3 flex flex-col gap-10">
+              <div>
+                <div className="relative mb-6">
+                  <p className="font-serif text-lg font-light tracking-wide text-white/95 uppercase">Contacto & Concierge</p>
+                  <p className="font-signature text-2xl text-gold/60 -mt-2.5 ml-8 pointer-events-none select-none">Signature Experience</p>
+                </div>
+
+                <div className="space-y-6">
+                  {/* EMAIL */}
+                  <div className="group py-0.5">
+                    <p className="font-serif text-[11px] italic text-gold/60 mb-1">
+                      Conversar por email
+                    </p>
+                    <a
+                      href={`mailto:${siteContact.email}`}
+                      className="font-serif text-md text-white/85 group-hover:text-gold transition-colors duration-500 break-all flex items-center gap-2"
+                    >
+                      <IconMail className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0" />
+                      <span>{siteContact.email}</span>
+                    </a>
+                  </div>
+
+                  {/* WHATSAPP & PHONE */}
+                  <div className="group py-0.5">
+                    <p className="font-serif text-[11px] italic text-gold/60 mb-1">
+                      Linhas directas de contacto
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={siteContact.whatsapp.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-serif text-md text-white/85 group-hover:text-gold transition-colors duration-500 flex items-center gap-2"
+                      >
+                        <IconWhatsApp className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0" />
+                        <span>{siteContact.whatsapp.display} (WhatsApp)</span>
+                      </a>
+                      <a
+                        href="tel:+258820883428"
+                        className="font-serif text-md text-white/85 group-hover:text-gold transition-colors duration-500 flex items-center gap-2"
+                      >
+                        <IconWhatsApp className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0 opacity-0 pointer-events-none" />
+                        <span>+258 82 088 3428 (Chamadas)</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* REDES SOCIAIS */}
+                  <div className="group py-0.5">
+                    <p className="font-serif text-[11px] italic text-gold/60 mb-1">
+                      Universo digital
+                    </p>
+                    <div className="flex flex-row flex-wrap gap-x-5 gap-y-2 mt-1">
+                      <a
+                        href="https://www.instagram.com/haxrsignature/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-serif text-sm text-white/80 hover:text-gold transition-colors duration-500 flex items-center gap-1.5 group"
+                      >
+                        <IconInstagram className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0" />
+                        <span>Instagram</span>
+                      </a>
+                      <a
+                        href="https://www.facebook.com/profile.php?id=61591714832967"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-serif text-sm text-white/80 hover:text-gold transition-colors duration-500 flex items-center gap-1.5 group"
+                      >
+                        <IconFacebook className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0" />
+                        <span>Facebook</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Sede & Relógio */}
+                  <div className="group py-0.5">
+                    <p className="font-serif text-[11px] italic text-gold/60 mb-1">
+                      Sede física em Maputo
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={siteContact.mapsHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-sans text-xs text-white/60 group-hover:text-gold/80 transition-colors duration-500 leading-relaxed flex items-start gap-2"
+                      >
+                        <IconMapPin className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0 mt-0.5" />
+                        <span>{siteContact.shortLocation}</span>
+                      </a>
+
+                      <div className="flex items-center gap-2 bg-white/5 border border-white/5 rounded-xs p-2 max-w-fit mt-1">
+                        <Clock className="w-3.5 h-3.5 stroke-[1.25] text-gold animate-pulse shrink-0" />
+                        <span className="font-mono text-[9px] text-gold/85 font-medium tracking-wider">
+                          {mounted ? time : "--:--:--"} GMT+2
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            {/* Coluna 3: Links & Newsletter (5 cols) */}
+            <div className="lg:col-span-5 flex flex-col gap-12">
+              <div>
+                <p className="section-label section-label--light mb-6">Newsletter</p>
+                <p className="font-sans text-xs text-white/55 leading-relaxed mb-6 max-w-sm">
+                  Subscreva a nossa newsletter editorial para inspiração, eventos e novidades exclusivas da HAXR Signature.
+                </p>
+                <NewsletterSignupForm variant="footer" className="max-w-md" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/5">
                 {footerLinkGroups.map((group) => (
-                  <nav key={group.title} aria-label={group.title}>
-                    <p className="section-label mb-6 md:mb-8">{group.title}</p>
-                    <ul className="space-y-4">
+                  <nav key={group.title} aria-label={group.title} className="space-y-4">
+                    <p className="font-mono text-[9px] tracking-[0.25em] uppercase text-white/60 font-semibold">{group.title}</p>
+                    <ul className="space-y-2.5">
                       {group.links.map((link) => (
                         <li key={link.href}>
                           <Link
                             href={link.href}
-                            className="font-sans text-[11px] tracking-[0.22em] uppercase text-grey/60 hover:text-gold/85 transition-colors duration-500"
+                            className="font-sans text-[10px] tracking-[0.15em] uppercase text-white/40 hover:text-gold transition-colors duration-300 block"
                           >
                             {link.label}
                           </Link>
@@ -127,16 +291,27 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="line-gold mt-20 md:mt-28 mb-10 opacity-35" />
+          {/* Destaque Artístico HAXR Signature — Efeito Assinatura Própria */}
+          <div className="mt-20 md:mt-28 relative group select-none flex flex-col items-center justify-center py-8 text-center cursor-default">
+            {/* Texto de Fundo Editorial */}
+            <span className="font-serif text-4xl sm:text-6xl md:text-8xl lg:text-[7rem] xl:text-[8.5rem] font-bold tracking-[0.38em] text-white/5 uppercase select-none leading-none transition-all duration-1000 group-hover:text-white/10">
+              HAXR
+            </span>
+            {/* Assinatura por Cima com Rotação */}
+            <span className="font-signature text-5xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[7.5rem] text-gold/90 capitalize select-none leading-none -mt-4 sm:-mt-8 md:-mt-12 lg:-mt-16 xl:-mt-20 -rotate-3 transition-all duration-700 ease-luxury group-hover:text-brand-gold-light group-hover:scale-105 filter drop-shadow-[0_2px_10px_rgba(184,138,42,0.15)]">
+              Signature
+            </span>
+          </div>
 
-          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+          {/* BASE: Rodapé Inferior */}
+          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between mt-12">
             <div className="flex flex-wrap gap-x-8 gap-y-3">
               {legalTabs.map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className="font-mono text-[9px] tracking-[0.28em] uppercase text-grey/40 hover:text-gold/70 transition-colors duration-500 cursor-pointer"
+                  className="font-mono text-[9px] tracking-[0.28em] uppercase text-white/45 hover:text-gold/80 transition-colors duration-500 cursor-pointer"
                 >
                   {legalLabel(tab)}
                 </button>
@@ -144,17 +319,18 @@ export default function Footer() {
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8 text-left sm:text-right">
-              <p className="font-mono text-[9px] tracking-[0.32em] text-grey/45">
+              <p className="font-mono text-[9px] tracking-[0.32em] text-white/45">
                 © {year} HAXR Signature
               </p>
-              <p className="font-mono text-[8px] tracking-[0.38em] uppercase text-grey/35">
-                Curadoria de eventos exclusivos
+              <p className="font-mono text-[8px] tracking-[0.38em] uppercase text-white/35">
+                Curadoria de Eventos & Identidades Exclusivas
               </p>
             </div>
           </div>
         </RevealOnScroll>
       </div>
 
+      {/* MODAL DAS TABS LEGAIS */}
       <AnimatePresence>
         {activeTab && (
           <motion.div

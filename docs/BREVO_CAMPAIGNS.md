@@ -23,23 +23,40 @@ A HAXR Signature usa **duas camadas** no Brevo, com propósitos distintos.
 
 ---
 
-## Camada 2 — Campanhas bulk (painel Brevo)
+## Camada 2 — Campanhas bulk (código + painel Brevo)
 
-**O quê:** campanhas criadas no painel Brevo (ou via MCP) para envio a listas segmentadas.
+**O quê:** campanhas definidas em `src/lib/email/marketing/marketing-campaigns.ts`, renderizadas com templates premium e criadas como rascunho no Brevo via API.
 
 **Quando:**
-- Newsletters editoriais (Insights)
-- Anúncios sazonais
+- Piloto de marketing outbound (serviços, concierge, fornecedores, corporativo)
+- Newsletters editoriais futuras
 - Reativação manual de segmentos
-- Testes A/B de assunto
 
-**Listas configuradas:**
-| ID | Nome | Uso |
-|----|------|-----|
-| 5 | Leads Website | Todos os pedidos de contacto |
-| 6 | Newsletter | Opt-in marketing |
+**Guia do piloto:** [MARKETING_PILOT_LAUNCH.md](./MARKETING_PILOT_LAUNCH.md)
 
-**Rascunhos MCP (referência):** IDs 1–4 no painel — boas-vindas, portfólio, experiências, última chamada. O **site não depende** destes rascunhos; o funil activo é transaccional em código.
+**Comandos:**
+```bash
+npm run email:pilot          # checklist + campanhas (sem envio)
+npm run email:test -- haxr_services_intro
+npm run email:draft -- campaign_services_intro
+```
+
+**Listas configuradas (env):**
+| Variável | Uso |
+|----------|-----|
+| `BREVO_LIST_LEADS` | Leads website |
+| `BREVO_LIST_NEWSLETTER` | Newsletter opt-in |
+| `BREVO_MARKETING_LIST_ID` | Marketing geral / contactos seleccionados |
+| `BREVO_SUPPLIERS_LIST_ID` | Fornecedores |
+| `BREVO_CLIENTS_LIST_ID` | Clientes / corporativo |
+
+**Gates:** `EMAIL_SEND_MODE` + confirmação `SEND_HAXR_MARKETING` para envio bulk.
+
+---
+
+## Camada 2 (legado) — Rascunhos MCP no painel
+
+**Referência histórica:** IDs 1–4 no painel — boas-vindas, portfólio, experiências, última chamada. O funil activo em código é transaccional (`src/lib/brevo/templates.ts`).
 
 ---
 
@@ -78,9 +95,24 @@ Nunca misturar: RSVP e confirmações de evento **sempre Resend**; nutrição co
 
 ```bash
 npm run verify:brevo      # API, listas, atributos
+npm run brevo:ensure-lists # criar/confirmar listas HAXR (sem emails)
 npm run brevo:funnel      # testar funil (dev server)
 npm run brevo:funnel:direct
 ```
+
+### `npm run brevo:ensure-lists`
+
+Confirma ou cria listas para captura de contactos:
+
+| Lista Brevo | Variável env |
+|-------------|--------------|
+| Leads HAXR | `BREVO_LIST_LEADS` |
+| Newsletter HAXR | `BREVO_LIST_NEWSLETTER` |
+| Fornecedores HAXR | `BREVO_SUPPLIERS_LIST_ID` |
+| Clientes HAXR | `BREVO_CLIENTS_LIST_ID` |
+| Marketing HAXR | `BREVO_MARKETING_LIST_ID` |
+
+Não envia emails, não cria campanhas, não altera `.env.local`. Copiar o bloco impresso manualmente.
 
 ## Variáveis
 

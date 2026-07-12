@@ -1,7 +1,7 @@
 # PR.3 — Decisão GO / NO-GO (produção 036–043)
 
-**Modo:** janela executada — migrations 036–043 aplicadas em produção  
-**Data fecho:** 2026-07-12  
+**Modo:** janela executada — migrations 036–043 aplicadas em produção
+**Data fecho:** 2026-07-12
 **Produção:** `oxsrdmydlqyvnueedgtl` · **tocada** (`productionTouched = true`)
 
 ---
@@ -19,7 +19,8 @@
 | `productionHttpSmokesPass` | **true** |
 | `postWindowHousekeepingComplete` | **true** |
 | `smokeArtifactsRemoved` | **true** |
-| `passwordRotationCompleted` | **false** |
+| `passwordRotationCompleted` | **true** |
+| `postRotationPreflight` | **PASS** |
 
 ---
 
@@ -41,8 +42,8 @@ Apply 036–043 em produção: PASS
 Deploy + smokes HTTP: PASS
 Housekeeping pós-janela: PASS
 Restore destrutivo: NÃO executado (conforme GO)
-Password DB rotation: PENDENTE (deferred_by_owner)
-PR.3: FECHADA (operacional)
+Password DB rotation: PASS
+PR.3: FECHADA (operacional + segurança)
 ```
 
 Ver relatório completo: `docs/PR3_OPERATIONAL_READINESS_FINAL_REPORT.md`

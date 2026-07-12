@@ -1,10 +1,15 @@
 import { mapCsvToGuestRows } from "@/lib/events/sheets/parse-csv";
 import { findGuestMatch } from "@/lib/events/sheets/match";
+import {
+  createEmptyIdempotentStats,
+  createSyncBatchId,
+  mergeIdempotentStats,
+  processImportRowWithLedger,
+  type IdempotentImportContext,
+} from "@/lib/events/sheets/idempotent-import";
 import * as groupsRepo from "@/lib/events/repositories/guest-groups.repository";
 import * as guestsRepo from "@/lib/events/repositories/guests.repository";
-import {
-  validateSheetRow,
-} from "@/lib/events/services/guest-validation.service";
+import { validateSheetRow } from "@/lib/events/services/guest-validation.service";
 import type { SheetSyncResult } from "@/lib/events/types";
 
 async function resolveGroupId(
@@ -39,13 +44,27 @@ async function resolveGroupId(
 
 export async function importGuestsFromCsv(
   eventId: string,
-  csvText: string
+  csvText: string,
+  sourceFileName?: string
 ): Promise<SheetSyncResult> {
   const rows = mapCsvToGuestRows(csvText);
   const existingGuests = await guestsRepo.listGuestsByEvent(eventId);
   const groupCache = new Map<string, string>();
 
   const usedIds = new Set<string>();
+  const syncBatchId = createSyncBatchId();
+  const ledgerStats = createEmptyIdempotentStats();
+
+  const importCtx: IdempotentImportContext = {
+    eventId,
+    source: "csv_upload",
+    syncBatchId,
+    syncMode: "master",
+    sourceFileName: sourceFileName ?? null,
+    existingGuests,
+    usedIds,
+  };
+
   const result: SheetSyncResult = {
     created: 0,
     updated: 0,
@@ -57,6 +76,7 @@ export async function importGuestsFromCsv(
     confirmedFromSheet: 0,
     pendingGuests: 0,
     declined: 0,
+    syncBatchId,
   };
 
   for (const row of rows) {
@@ -95,16 +115,16 @@ export async function importGuestsFromCsv(
       const groupId = await resolveGroupId(eventId, row.groupName, groupCache);
       const enrichedRow = { ...row, groupId };
 
-      const match = findGuestMatch(existingGuests, enrichedRow, usedIds);
+      const outcome = await processImportRowWithLedger(importCtx, enrichedRow);
+      mergeIdempotentStats(ledgerStats, outcome);
 
-      if (match) {
-        usedIds.add(match.id);
-        await guestsRepo.updateGuestFromSheet(match.id, enrichedRow);
+      if (outcome.kind === "created") {
+        result.created++;
+      } else if (outcome.kind === "updated") {
         result.updated++;
       } else {
-        const created = await guestsRepo.createGuestFromSheet(eventId, enrichedRow);
-        existingGuests.push(created);
-        result.created++;
+        result.skipped++;
+        result.errors.push(`Linha ${row.rowNumber}: ${outcome.reason}`);
       }
     } catch (err) {
       result.skipped++;
@@ -116,6 +136,10 @@ export async function importGuestsFromCsv(
 
   const refreshed = await guestsRepo.listGuestsByEvent(eventId);
   result.pendingGuests = refreshed.filter((g) => g.status === "invited").length;
+  result.importRowsSeen = ledgerStats.importRowsSeen;
+  result.fingerprintsCreated = ledgerStats.fingerprintsCreated;
+  result.ledgerMatched = ledgerStats.ledgerMatched;
+  result.ledgerSkipped = ledgerStats.ledgerSkipped;
 
   return result;
 }

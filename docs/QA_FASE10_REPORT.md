@@ -1,7 +1,7 @@
 # HAXR Signature — Relatório QA Final (Fase 10)
 
-**Data:** Junho 2026  
-**Ambiente auditado:** código local + `.env.local` de desenvolvimento  
+**Data:** Junho 2026
+**Ambiente auditado:** código local + `.env.local` de desenvolvimento
 **Produção:** `https://www.haxrsignature.com`
 
 ---

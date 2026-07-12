@@ -22,4 +22,21 @@ export async function updateInquiryStatusAction(
   return result;
 }
 
+export async function convertLeadAction(inquiryId: string) {
+  const result = await runAction(async () => {
+    const { convertLeadToClientAndEvent } = await import(
+      "@/lib/admin/services/convert-lead.service"
+    );
+    return convertLeadToClientAndEvent(inquiryId);
+  });
+  if (result.success) {
+    revalidatePath("/admin/leads");
+    revalidatePath("/admin/clients");
+    revalidatePath("/admin/events");
+    revalidatePath(`/admin/clients/${result.data.client.id}`);
+    revalidatePath(`/admin/events/${result.data.event.id}`);
+  }
+  return result;
+}
+
 export type { ContactInquiry, InquiryStatus };

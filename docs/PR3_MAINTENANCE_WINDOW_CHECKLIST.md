@@ -1,6 +1,6 @@
 # PR.3 — Checklist janela de manutenção (036–043)
 
-**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone:** `rkkxfrwtmsqzpnbkshnd`  
+**Produção:** `oxsrdmydlqyvnueedgtl` · **Clone:** `rkkxfrwtmsqzpnbkshnd`
 **Branch:** `main` · **PR:** #3 — **MERGED** (`e51e973`)
 
 ---
@@ -88,5 +88,5 @@
 | productionTouched | **true** |
 | Monitorização T+30 | **PASS** |
 | Smoke cleanup | **DONE** |
-| Password DB rotation | **PENDENTE** (proprietário) |
+| Password DB rotation | **PASS** (2026-07-12) |
 | Restore executado | **Não** |

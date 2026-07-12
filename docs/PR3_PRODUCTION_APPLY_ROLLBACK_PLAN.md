@@ -1,8 +1,8 @@
 # PR.3 — Plano de apply e rollback em produção (036–043)
 
-**Modo:** janela executada — apply 036–043 concluído  
-**Estado:** **PASS** — smokes HTTP PASS, restore integral não executado  
-**Produção:** `oxsrdmydlqyvnueedgtl` · **tocada**  
+**Modo:** janela executada — apply 036–043 concluído
+**Estado:** **PASS** — smokes HTTP PASS, restore integral não executado
+**Produção:** `oxsrdmydlqyvnueedgtl` · **tocada**
 **Reavaliação:** 2026-07-12 (pós-janela)
 
 ---

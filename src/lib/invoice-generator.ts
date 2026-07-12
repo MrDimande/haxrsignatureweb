@@ -136,6 +136,7 @@ export function buildClient(data: ClientFormData, existing?: Client): Client {
   return {
     id: existing?.id ?? createId(),
     ...data,
+    portalToken: data.portalToken ?? existing?.portalToken ?? null,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   };
@@ -183,6 +184,12 @@ export function buildInvoiceDocument(
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     pdfGeneratedAt: existing?.pdfGeneratedAt ?? null,
+    convertedFromDocumentId: existing?.convertedFromDocumentId ?? null,
+    emailSentAt: existing?.emailSentAt ?? null,
+    whatsappSharedAt: existing?.whatsappSharedAt ?? null,
+    clientApprovalStatus: existing?.clientApprovalStatus ?? null,
+    clientApprovedAt: existing?.clientApprovedAt ?? null,
+    clientApprovalNote: existing?.clientApprovalNote ?? null,
   };
 }
 

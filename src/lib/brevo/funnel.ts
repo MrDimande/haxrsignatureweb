@@ -6,6 +6,7 @@ import {
 import { brevoFetch, brevoReady } from "@/lib/brevo/client";
 import { splitName } from "@/lib/brevo/names";
 import { sendFunnelEmail } from "@/lib/brevo/transactional";
+import { isEmailSendingAllowed } from "@/lib/email/email-config";
 import {
   getInquiriesDueForExperiences,
   getInquiriesDueForLastCall,
@@ -50,6 +51,10 @@ async function sendToInquiry(
     params: { firstName },
   });
 
+  if ("mock" in result && result.mock) {
+    return { sent: false, skipped: result.reason };
+  }
+
   if (!result.ok) {
     return { sent: false, error: result.error };
   }
@@ -69,6 +74,15 @@ export async function triggerLeadFunnelOnSync(
     };
   }
 
+  if (!isEmailSendingAllowed()) {
+    return {
+      leadWelcome: {
+        sent: false,
+        skipped: "EMAIL_SEND_MODE=disabled — funil não envia emails",
+      },
+    };
+  }
+
   const output: FunnelOnSyncResult = {};
   const { firstName } = splitName(inquiry.name);
 
@@ -79,7 +93,9 @@ export async function triggerLeadFunnelOnSync(
     params: { firstName },
   });
 
-  if (welcome.ok) {
+  if ("mock" in welcome && welcome.mock) {
+    output.leadWelcome = { sent: false, skipped: welcome.reason };
+  } else if (welcome.ok) {
     await markBrevoFunnelSent(inquiry.id, "brevo_lead_welcome_at");
     output.leadWelcome = { sent: true };
     await trackBrevoLeadEvent(inquiry);
@@ -95,7 +111,9 @@ export async function triggerLeadFunnelOnSync(
       params: { firstName },
     });
 
-    if (newsletter.ok) {
+    if ("mock" in newsletter && newsletter.mock) {
+      output.newsletterWelcome = { sent: false, skipped: newsletter.reason };
+    } else if (newsletter.ok) {
       await markBrevoFunnelSent(inquiry.id, "brevo_newsletter_welcome_at");
       output.newsletterWelcome = { sent: true };
     } else {
@@ -136,7 +154,7 @@ export async function processScheduledFunnelEmails(): Promise<FunnelBatchResult>
     lastCall: { sent: 0, failed: 0 },
   };
 
-  if (!isBrevoFunnelEnabled()) {
+  if (!isBrevoFunnelEnabled() || !isEmailSendingAllowed()) {
     return result;
   }
 

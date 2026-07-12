@@ -1,4 +1,5 @@
 import type { BusinessId, ClientType, EventType } from "@/lib/admin/types";
+import type { PartyParseResult } from "@/lib/events/party-parser";
 
 export type GuestStatus = "invited" | "confirmed" | "checked_in" | "declined";
 
@@ -12,7 +13,7 @@ export type GuestLabel =
 
 export type SheetsSyncMode = "master" | "rsvp";
 
-export type GuestSource = "manual" | "sheet_master" | "sheet_rsvp";
+export type GuestSource = "manual" | "sheet_master" | "sheet_rsvp" | "edition_rsvp";
 
 export interface ManagedEvent {
   id: string;
@@ -31,6 +32,10 @@ export interface ManagedEvent {
   sheetsSyncSummary: string;
   sheetsSyncMode: SheetsSyncMode;
   findSeatCode: string;
+  /** Chave do catálogo Edition (presentes) — vazio se não aplicável */
+  editionRegistryKey: string;
+  postEventReportSentAt: string | null;
+  dateHoldUntil: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -263,6 +268,12 @@ export interface SheetSyncResult {
   confirmedFromSheet: number;
   pendingGuests: number;
   declined: number;
+  /** Opcional — Phase 2 ledger (UI pode ignorar). */
+  syncBatchId?: string;
+  importRowsSeen?: number;
+  fingerprintsCreated?: number;
+  ledgerMatched?: number;
+  ledgerSkipped?: number;
 }
 
 export interface FindSeatSearchResponse {
@@ -270,4 +281,55 @@ export interface FindSeatSearchResponse {
   error?: string;
   event?: EventPublicInfo;
   results?: FindSeatResult[];
+}
+
+export type ReviewQueueItemType =
+  | "missing_guest"
+  | "ignored_import_row"
+  | "duplicate_needs_review"
+  | "primary_guest_missing"
+  | "possible_duplicate"
+  | "sync_error"
+  | "party_needs_review";
+
+export type ReviewQueueItemSource =
+  | "ledger"
+  | "duplicate_resolution"
+  | "deduplication"
+  | "party_parser";
+
+export interface ReviewQueueItem {
+  id: string;
+  eventId: string;
+  type: ReviewQueueItemType;
+  source: ReviewQueueItemSource;
+  sourceId: string;
+  guestId?: string | null;
+  primaryGuestId?: string | null;
+  rowFingerprint?: string | null;
+  displayName: string;
+  normalizedName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  reason?: string | null;
+  action?: string | null;
+  sourceSystem?: string | null;
+  rowPayload?: Record<string, unknown> | null;
+  partyParse?: PartyParseResult | null;
+  lastSeenAt?: string | null;
+  createdAt?: string | null;
+}
+
+export interface ReviewQueueSummary {
+  toReview: number;
+  ignored: number;
+  missingGuest: number;
+  possibleDuplicates: number;
+  syncErrors: number;
+  total: number;
+}
+
+export interface ReviewQueueResult {
+  items: ReviewQueueItem[];
+  summary: ReviewQueueSummary;
 }

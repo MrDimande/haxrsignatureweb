@@ -1,6 +1,11 @@
+import { parseEventLookup } from "@/lib/events/services/lookup-parser";
+import {
+  getGuestByEventAndToken,
+  safeSyncGuestContactProfile,
+  upsertEventContactProfile,
+} from "@/lib/events/repositories/event-contact-profiles.repository";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { CheckinLookup, RsvpSubmitInput } from "@/lib/events/types";
-import { parseEventLookup } from "@/lib/events/services/lookup-parser";
 
 function getClient() {
   return createAdminClient();
@@ -21,7 +26,30 @@ export async function performRsvp(input: RsvpSubmitInput): Promise<CheckinLookup
   } as never);
 
   if (error) throw new Error(error.message);
-  return parseEventLookup(data);
+  const result = parseEventLookup(data);
+
+  if (result.ok) {
+    const guest = await getGuestByEventAndToken(input.eventId, input.token);
+    if (guest) {
+      await safeSyncGuestContactProfile({
+        eventId: input.eventId,
+        guest,
+        source: "rsvp",
+      });
+    } else {
+      await upsertEventContactProfile({
+        eventId: input.eventId,
+        fullName: input.name,
+        email: input.email,
+        phone: input.phone,
+        source: "rsvp",
+      }).catch((syncError) => {
+        console.error("[rsvp] contact profile sync failed:", syncError);
+      });
+    }
+  }
+
+  return result;
 }
 
 export { lookupCheckin } from "@/lib/events/services/checkin.service";
