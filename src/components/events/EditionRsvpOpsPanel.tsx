@@ -121,7 +121,7 @@ export default function EditionRsvpOpsPanel({
 
       {inviteUrl ? (
         <p className="text-xs text-grey/50">
-          Convite:{" "}
+          Convite (mesmo link do cartão Edition):{" "}
           <a
             href={inviteUrl}
             target="_blank"
@@ -130,6 +130,11 @@ export default function EditionRsvpOpsPanel({
           >
             {inviteUrl}
           </a>
+        </p>
+      ) : registryKey ? (
+        <p className="text-xs text-amber-200/80">
+          Registry key «{registryKey}» sem URL Edition no catálogo — sem
+          fallback.
         </p>
       ) : null}
 
