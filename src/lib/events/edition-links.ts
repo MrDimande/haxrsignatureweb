@@ -1,25 +1,28 @@
 import type { EventGuest, ManagedEvent } from "@/lib/events/types";
+import {
+  buildEditionInviteUrl,
+  EDITION_INVITE_CATALOG,
+} from "@/lib/edition/invite-catalog";
 
-/** Slug Edition público por chave de catálogo (admin ↔ convite digital) */
-export const EDITION_INVITE_SLUG_BY_REGISTRY: Record<string, string> = {
-  "rose-elegance": "jessicachadelingerie",
-};
+export {
+  buildEditionInviteUrl,
+  resolveEditionInviteSlug,
+  getEditionInviteRef,
+  resolveEditionInviteAssociation,
+  isAuthorizedEditionInviteUrl,
+  getAuthorizedEditionOrigin,
+} from "@/lib/edition/invite-catalog";
 
-const EDITION_BASE_URL =
-  process.env.NEXT_PUBLIC_EDITION_SITE_URL?.trim() ||
-  "https://edition.haxrsignature.com";
-
-export function resolveEditionInviteSlug(
-  registryKey: string
-): string | null {
-  return EDITION_INVITE_SLUG_BY_REGISTRY[registryKey.trim()] ?? null;
-}
-
-export function buildEditionInviteUrl(registryKey: string): string | null {
-  const slug = resolveEditionInviteSlug(registryKey);
-  if (!slug) return null;
-  return `${EDITION_BASE_URL.replace(/\/$/, "")}/${slug}`;
-}
+/**
+ * @deprecated Prefer EDITION_INVITE_CATALOG / resolveEditionInviteSlug.
+ * Mantido para compatibilidade com imports existentes.
+ */
+export const EDITION_INVITE_SLUG_BY_REGISTRY: Record<string, string> =
+  Object.fromEntries(
+    Object.values(EDITION_INVITE_CATALOG)
+      .filter((ref) => ref.status !== "draft")
+      .map((ref) => [ref.registryKey, ref.inviteSlug])
+  );
 
 export function buildEditionOpenRsvpReminderMessage(
   event: ManagedEvent,
