@@ -15,6 +15,8 @@ export const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
   jessicakhulaya: "jessicakulaya",
   "jessica-samuel-traditional": "traditional-wedding",
   "jessica-traditional-wedding": "traditional-wedding",
+  /** Slug público Edition do piloto Jessica & Samuel (≠ registry key). */
+  jessicaesamueltraditionalwedding: "traditional-wedding",
   chadelingerie: "cha-de-lingerie",
   "jessica-cha-de-lingerie": "cha-de-lingerie",
   chadepanela: "cha-de-panela",
@@ -22,6 +24,8 @@ export const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
   "jessica-bride-to-be": "cha-de-panela",
   "despedida-de-solteira": "jessicachadelingerie",
   "jessica-farewell": "jessicachadelingerie",
+  /** rose-elegance é registry key de Admin; canonical RSVP binding = farewell. */
+  "rose-elegance": "jessicachadelingerie",
   jessicasamuelwedding: "jessica-samuel",
 };
 
@@ -114,8 +118,10 @@ export function isEditionPersistenceConfigured(slug?: string): boolean {
   return Boolean(getEditionEventBinding(slug));
 }
 
+import { getAuthorizedEditionOrigin } from "@/lib/edition/invite-catalog";
+
+/** Origem Edition autorizada (sem host arbitrário). */
 export const EDITION_SITE_URL =
-  process.env.NEXT_PUBLIC_EDITION_SITE_URL?.trim() ||
-  "https://edition.haxrsignature.com";
+  getAuthorizedEditionOrigin() ?? "https://edition.haxrsignature.com";
 
 export const FAREWELL_SLUG = "jessicachadelingerie";
