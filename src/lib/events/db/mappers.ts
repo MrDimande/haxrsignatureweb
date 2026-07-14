@@ -45,6 +45,9 @@ import { generateFindSeatCode, normalizeFindSeatCode } from "@/lib/events/find-s
 
 export function eventToDbInsert(data: EventFormData, id?: string) {
   const trimmedCode = data.findSeatCode?.trim();
+  // Create: gera código. Update: só grava se o formulário enviar código
+  // (não regenera automaticamente para não invalidar links já partilhados).
+  // Eventos com find_seat_code vazio usam ensureFindSeatCodeForEvent.
   const findSeatCode = trimmedCode
     ? normalizeFindSeatCode(trimmedCode)
     : id
