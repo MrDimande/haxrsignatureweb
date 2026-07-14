@@ -1,7 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import { eventToDbInsert, mapEvent } from "@/lib/events/db/mappers";
-import { normalizeFindSeatCode } from "@/lib/events/find-seat-code";
+import {
+  generateFindSeatCode,
+  normalizeFindSeatCode,
+} from "@/lib/events/find-seat-code";
 import type { EventFormData, EventPublicInfo, ManagedEvent, SheetsSyncMode } from "@/lib/events/types";
 import type { EventType } from "@/lib/admin/types";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -85,6 +88,46 @@ export async function getEventById(id: string): Promise<ManagedEvent | null> {
   if (!row) return null;
   const [event] = await enrichEventsWithClientNames([row]);
   return event ?? null;
+}
+
+/**
+ * Garante find_seat_code no fluxo oficial Admin.
+ * Não preenche ad hoc em produção via SQL — use esta função (autorizada).
+ * Idempotente: se já existir código válido, devolve sem alterar.
+ */
+export async function ensureFindSeatCodeForEvent(
+  eventId: string
+): Promise<ManagedEvent> {
+  const existing = await getEventById(eventId);
+  if (!existing) throw new Error("Evento não encontrado.");
+
+  const current = normalizeFindSeatCode(existing.findSeatCode ?? "");
+  if (current) return existing;
+
+  const generated = generateFindSeatCode(existing.name);
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("events")
+    .update({ find_seat_code: generated } as never)
+    .eq("id", eventId)
+    .eq("find_seat_code", "")
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+
+  if (!data) {
+    // Corrida: outro processo preencheu — releitura.
+    const refreshed = await getEventById(eventId);
+    if (!refreshed) throw new Error("Evento não encontrado.");
+    return refreshed;
+  }
+
+  const [event] = await enrichEventsWithClientNames([
+    asTableRow<"events">(data)!,
+  ]);
+  if (!event) throw new Error("Falha ao gravar código Find Your Seat.");
+  return event;
 }
 
 export async function createEvent(data: EventFormData): Promise<ManagedEvent> {
