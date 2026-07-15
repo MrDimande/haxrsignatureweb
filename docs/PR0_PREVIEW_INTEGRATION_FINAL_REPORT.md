@@ -1,4 +1,4 @@
-# PR0 Preview — Relatório final (Fases 1A → 1D)
+# PR0 Preview — Relatório final (Fases 1A → 1E)
 
 **Data:** 2026-07-15  
 **Âmbito:** Preview-only Core ↔ Edition · clone `rkkxfrwtmsqzpnbkshnd`  
@@ -7,78 +7,62 @@
 
 ---
 
-## Estado obrigatório (Fase 1D)
+## Fase 1E — Revisão humana assistida (GitHub)
 
-| Item | Estado |
-|------|--------|
-| Core PR #7 | **Ready for Review** · não merged · tip `03094a8` (audit code `0435be8` + docs 1D) |
-| Edition PR #5 (A) | **Ready for Review** · não merged · `12280fc` · base `main` |
-| Edition PR #6 (B) | **Ready for Review** · não merged · `10e61e9` · base `feature/edition-security-slugs` |
-| Edition PR #7 (C) | **Ready for Review** · não merged · `f5ba252` · base `feature/edition-security-slugs` |
-| Edition PR #4 | **CLOSED** superseded · branch preservada · tip `3830734` · não merged |
+| PR | Tip revisto | Base | Verdict | GitHub review | Blockers | Checks |
+|----|-------------|------|---------|---------------|----------|--------|
+| [Core #7](https://github.com/MrDimande/haxrsignatureweb/pull/7) | `d9070bb` | `main` | **APPROVAL RECOMMENDED** | COMMENT (autor=revisor; APPROVE formal impossível) | nenhum | lint + edition 74/74 + secret clean; tsc baseline=main |
+| [Edition #5](https://github.com/MrDimande/haxrsignature-edition-engine/pull/5) | `12280fc` | `main` | **APPROVAL RECOMMENDED** | COMMENT | nenhum | lint/tsc/test 56/build PASS |
+| [Edition #6](https://github.com/MrDimande/haxrsignature-edition-engine/pull/6) | `10e61e9` | `feature/edition-security-slugs` | **APPROVAL RECOMMENDED** | COMMENT | nenhum (1× **MINOR** residual) | lint/tsc/test 67/build PASS |
+| [Edition #7](https://github.com/MrDimande/haxrsignature-edition-engine/pull/7) | `bb8c454` | `feature/edition-security-slugs` | **APPROVAL RECOMMENDED** | COMMENT | nenhum | lint/tsc/test 56/build PASS; áudio mantido |
+| [Edition #4](https://github.com/MrDimande/haxrsignature-edition-engine/pull/4) | `3830734` | — | **CLOSED superseded** | — | — | branch preservada |
+
+**HEAD note:** Edition #7 esperado na spec 1E era `71c8295`; tip actual `bb8c454` = docs ASSET_LICENSES (owner-confirmed audio). Diff adicional revisto (docs only). Core tip = esperado `d9070bb`.
+
+### Achados
+
+| PR | Severidade | Nota |
+|----|------------|------|
+| #6 | MINOR | Manter `HAXR_PROXY_FALLBACK=false` quando o write gate Core é o controlo de escrita |
+| #7 | NIT | mp3 ~8.3MB — monitorizar peso Preview |
+| Core | NIT | `ensureFindSeatCodeForEvent` é Admin-triggered, não auto no RSVP Edition |
+
+### Ordem técnica recomendada (sem merge automático)
+
+1. Edition #5  
+2. Edition #6 (após #5; depois retarget base → `main`)  
+3. Edition #7 (após #5; depois retarget base → `main`)  
+4. Core #7  
+
+### Estado operacional
+
+| Campo | Valor |
+|-------|-------|
+| PRs Ready | Core #7, Edition #5/#6/#7 |
+| Merge | **nenhum** |
+| Migrations | **nenhuma** |
+| Clone writes | **nenhum** nesta fase |
+| guests / stray | **139** / **0** |
 | `WRITE_MODE` | **disabled** |
-| guests / events / stray | **139** / **7** / **0** |
-| Merge / migrations / RSVPs novos | **nenhum** |
 | `productionTouched` | **false** |
-
----
-
-## Links
-
-| PR | URL |
-|----|-----|
-| Core #7 | https://github.com/MrDimande/haxrsignatureweb/pull/7 |
-| Edition A #5 | https://github.com/MrDimande/haxrsignature-edition-engine/pull/5 |
-| Edition B #6 | https://github.com/MrDimande/haxrsignature-edition-engine/pull/6 |
-| Edition C #7 | https://github.com/MrDimande/haxrsignature-edition-engine/pull/7 |
-| Edition #4 (superseded) | https://github.com/MrDimande/haxrsignature-edition-engine/pull/4 |
 
 ---
 
 ## Áudio `famba-kwatsi.mp3`
 
-**Mantido** no Edition PR #7 (tema). Proprietário confirmou autorização de utilização; créditos apresentados na experiência.  
-Uso **exclusivo** do tema Primavera Lobolo; **sem redistribuição isolada** do ficheiro. Inventário: `docs/ASSET_LICENSES.md` no PR #7.
+**Mantido** no Edition PR #7. Proprietário confirmou autorização; créditos na UI (`PrimaveraLoboloSections`); uso exclusivo Primavera Lobolo; sem redistribuição isolada. Doc: `docs/ASSET_LICENSES.md` @ tip `bb8c454`.
 
 ---
 
-## Checks (worktrees limpos)
+## Fase 1D (resumo)
 
-| PR | lint | tsc | test | build | secret scan |
-|----|------|-----|------|-------|-------------|
-| Core #7 | ok (prévio 1C) | baseline 136=136 | edition 74 pass + npm 484 | Preview READY; local build precisa env | limpo |
-| Edition #5 | 0 | 0 | 56 pass | 0 | limpo |
-| Edition #6 | 0 | 0 | 67 pass | 0 | limpo |
-| Edition #7 | 0 | 0 | 56 pass | 0 | limpo |
+Split Edition #4 → #5/#6/#7; #4 closed superseded; Core marked Ready.
 
 ---
 
-## Matriz ficheiros Edition #4 → novos PRs
+## Fase 1B (resumo)
 
-| Ficheiro (tip `3830734`) | Destino |
-|--------------------------|---------|
-| `lib/invitations/allowlist.ts` (+ test) | **A #5** |
-| `lib/email/escape-html.ts` (+ test), brand-shell, templates | **A #5** |
-| `lib/gifts.ts`, `lib/gifts/public-gifts.test.ts` (PII only) | **A #5** |
-| `core/contracts/gifts.contract.ts`, `app/api/gifts/route.ts` | **A #5** |
-| `lib/rsvp/parse-attending.ts`, `validate-local*`, `events.ts`, `send-notification.ts` | **A #5** |
-| `lib/engine.ts` (allowlist wiring) | **A #5** (+ C restaura tests tema) |
-| `data/invitations.ts` getInvitation ALIAS | **A #5**; activação primavera | **C #7** |
-| `engines/.../rose-elegance/GiftRegistry.tsx` | **A #5** |
-| `package.json` test globs | **A #5** |
-| `lib/control-plane/*` proxy + bypass | **B #6** |
-| `app/api/rsvp/route.ts` limits + proxy path | **B #6** |
-| `.env.example` proxy envs | **B #6**; traditional event id | **C #7** |
-| `theme/*` primavera, `engines/.../primavera-lobolo/*` | **C #7** |
-| `TrueThemeEngine`, Ambient/Composition/FlowRouter | **C #7** |
-| `lib/jessica-samuel-traditional/event-details.ts`, `lib/rsvp/config.ts` traditional | **C #7** |
-| `app/globals.css` | **C #7** |
-| `public/audio/famba-kwatsi.mp3` | **C #7** (mantido) |
-| `public/images/traditional-wedding/jessica-samuel-hero.png` | **C #7** |
-| `docs/ASSET_LICENSES.md` | **C #7** (novo) |
-| Proxy fail-closed tests | **B #6** (`proxy-config-fail-closed.test.ts`) |
-
-Nada necessário ficou só no #4: cobertura completa via #5+#6+#7.
+Write gate `386ba78`; disabled→503; preview_clone `139→140→139`; restore disabled.
 
 ---
 
@@ -86,31 +70,21 @@ Nada necessário ficou só no #4: cobertura completa via #5+#6+#7.
 
 ```
 main
- └── PR A #5  feature/edition-security-slugs
-      ├── PR B #6  feature/edition-core-rsvp-proxy
-      └── PR C #7  feature/edition-primavera-lobolo-theme
+ └── Edition #5  feature/edition-security-slugs @ 12280fc
+      ├── Edition #6  feature/edition-core-rsvp-proxy @ 10e61e9
+      └── Edition #7  feature/edition-primavera-lobolo-theme @ bb8c454
 ```
 
-Após merge de #5: retarget #6 e #7 para `main`. Não mergear B/C antes de A.
+Core #7 @ `d9070bb` independente no repo Core.
 
 ---
 
-## Fase 1B (resumo)
+## Confirmações finais 1E
 
-Write gate `386ba78`; disabled → 503; preview_clone controlado `139→140→139`; restore disabled; cleanup stray.
-
----
-
-## Riscos residuais
-
-- Grants/candidata só no clone; 036–043 por reconciliar  
-- WRITE produção disabled  
-- Protection same-team mitigado pelo write gate  
-- Áudio: autorização confirmada pelo proprietário; créditos na UI; sem redistribuição isolada  
-- `productionTouched=false`
-
----
-
-## Conclusão 1D
-
-Preparação de review completa. **Nenhum merge.** Nenhum touch Production. PRs Ready conforme tabela acima.
+- nenhum merge  
+- nenhuma migration  
+- nenhuma alteração no clone nesta fase  
+- guests=139  
+- WRITE_MODE=disabled  
+- productionTouched=false  
+- aprovação técnica ≠ autorização de merge/produção  
