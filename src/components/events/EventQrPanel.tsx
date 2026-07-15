@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Download, Sparkles } from "lucide-react";
 import { AdminInput, AdminSelect } from "@/components/admin/AdminField";
 import { buildFindSeatUrl } from "@/lib/events/tokens";
 import { generateStyledQrDataUrl } from "@/lib/events/qr-client";
+import { ensureEventFindSeatCodeAction } from "@/lib/events/actions/events.actions";
 import {
   DEFAULT_QR_STYLE,
   QR_FRAME_LABELS,
@@ -35,8 +36,10 @@ const CENTER_MARKS: { id: QrCenterMark; label: string; hint: string }[] = [
 export default function EventQrPanel({
   eventId,
   eventName,
-  findSeatCode,
+  findSeatCode: initialFindSeatCode,
 }: EventQrPanelProps) {
+  const [findSeatCode, setFindSeatCode] = useState(initialFindSeatCode);
+  const [ensuringCode, startEnsure] = useTransition();
   const findSeatUrl = buildFindSeatUrl(eventId, findSeatCode);
   const [style, setStyle] = useState<QrStyleOptions>(DEFAULT_QR_STYLE);
   const [activePreset, setActivePreset] = useState("signature-noir");
@@ -62,6 +65,21 @@ export default function EventQrPanel({
       setLoading(false);
     }
   }, [findSeatUrl, style, eventName]);
+
+  useEffect(() => {
+    setFindSeatCode(initialFindSeatCode);
+  }, [initialFindSeatCode]);
+
+  useEffect(() => {
+    if (findSeatCode.trim()) return;
+    startEnsure(() => {
+      void ensureEventFindSeatCodeAction(eventId).then((result) => {
+        if (result.success && result.data?.findSeatCode) {
+          setFindSeatCode(result.data.findSeatCode);
+        }
+      });
+    });
+  }, [eventId, findSeatCode]);
 
   useEffect(() => {
     const timer = setTimeout(() => void generate(), 320);
@@ -385,7 +403,7 @@ export default function EventQrPanel({
               Código do evento
             </p>
             <p className="font-mono text-lg tracking-[0.25em] text-admin-gold">
-              {findSeatCode || "—"}
+              {findSeatCode || (ensuringCode ? "A gerar…" : "—")}
             </p>
             <p className="text-[10px] text-grey/45 leading-relaxed">
               Os convidados precisam deste código + o nome no convite para

@@ -43,8 +43,7 @@ export async function deleteEventAction(id: string) {
 
 export async function getEventFindSeatQrAction(eventId: string) {
   return runAction(async () => {
-    const event = await eventsRepo.getEventById(eventId);
-    if (!event) throw new Error("Evento não encontrado.");
+    const event = await eventsRepo.ensureFindSeatCodeForEvent(eventId);
     const dataUrl = await generateEventFindSeatQrDataUrl(eventId);
     return {
       dataUrl,
@@ -52,6 +51,16 @@ export async function getEventFindSeatQrAction(eventId: string) {
       code: event.findSeatCode,
     };
   });
+}
+
+export async function ensureEventFindSeatCodeAction(eventId: string) {
+  const result = await runAction(() =>
+    eventsRepo.ensureFindSeatCodeForEvent(eventId)
+  );
+  if (result.success) {
+    revalidatePath(`/admin/events/${eventId}`);
+  }
+  return result;
 }
 
 export type { ManagedEvent };

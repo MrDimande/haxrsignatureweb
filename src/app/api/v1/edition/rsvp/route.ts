@@ -2,9 +2,14 @@
 import { NextResponse } from "next/server";
 import {
   editionProxyUnauthorizedResponse,
+  validateEditionProxyJsonBody,
   validateEditionProxyRequest,
 } from "@/lib/edition/proxy-auth";
 import { processEditionRsvpSubmission } from "@/lib/edition/rsvp/service";
+import {
+  editionRsvpWritesDisabledResponse,
+  evaluateEditionRsvpWriteGate,
+} from "@/lib/edition/rsvp/write-gate";
 import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
 import {
   editionRateLimitResponse,
@@ -33,6 +38,25 @@ export async function POST(request: Request) {
       });
     }
 
+    // Fail-closed write gate: before rate-limit DB, body parse, or RSVP persist.
+    const writeGate = evaluateEditionRsvpWriteGate();
+    if (!writeGate.allowed) {
+      console.warn(
+        `[api/v1/edition/rsvp] writes blocked requestId=${requestId} reason=${writeGate.reason} mode=${writeGate.mode}`
+      );
+      return NextResponse.json(editionRsvpWritesDisabledResponse(), {
+        status: 503,
+      });
+    }
+
+    const bodyCheck = validateEditionProxyJsonBody(request);
+    if (!bodyCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: bodyCheck.error },
+        { status: bodyCheck.status }
+      );
+    }
+
     const ip = getRequestIp(request);
     const rateKey = `edition:rsvp:${ip}`;
     const rateResult = await persistentRateLimit(
@@ -48,7 +72,16 @@ export async function POST(request: Request) {
       return editionRateLimitResponse(rateResult);
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Payload inválido." },
+        { status: 400 }
+      );
+    }
+
     const result = await processEditionRsvpSubmission(body);
 
     console.info("[api/v1/edition/rsvp] Processed", {

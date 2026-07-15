@@ -14,6 +14,7 @@ import GuestHistoryPanel from "@/components/events/GuestHistoryPanel";
 import CheckInDashboard from "@/components/events/CheckInDashboard";
 import GuestReportPanel from "@/components/events/GuestReportPanel";
 import EditionGiftReservationsPanel from "@/components/events/EditionGiftReservationsPanel";
+import EditionInviteCard from "@/components/events/EditionInviteCard";
 import EditionRsvpOpsPanel from "@/components/events/EditionRsvpOpsPanel";
 import type { EditionGiftReservation } from "@/lib/events/repositories/edition-gifts.repository";
 import EventQrPanel from "@/components/events/EventQrPanel";
@@ -277,6 +278,11 @@ export default function EventDetailClient({
         event={event}
         documents={eventDocuments}
         clientPortalUrl={clientPortalUrl}
+      />
+
+      <EditionInviteCard
+        registryKey={event.editionRegistryKey}
+        eventName={event.name}
       />
 
       {event.editionRegistryKey ? (

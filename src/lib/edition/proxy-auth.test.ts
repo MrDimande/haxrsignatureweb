@@ -1,29 +1,75 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import {
   editionProxyUnauthorizedResponse,
+  isEditionProxyProductionRuntime,
+  validateEditionProxyJsonBody,
   validateEditionProxyRequest,
 } from "./proxy-auth";
 
+function restoreEnv(
+  keys: string[],
+  snapshot: Record<string, string | undefined>
+) {
+  for (const key of keys) {
+    const previous = snapshot[key];
+    if (previous === undefined) delete process.env[key];
+    else process.env[key] = previous;
+  }
+}
+
 describe("validateEditionProxyRequest", () => {
-  it("permite quando o segredo não está configurado", () => {
-    const prev = process.env.HAXR_EDITION_PROXY_SECRET;
+  const tracked = [
+    "HAXR_EDITION_PROXY_SECRET",
+    "HAXR_REQUIRE_EDITION_PROXY_AUTH",
+    "VERCEL_ENV",
+  ] as const;
+  let snapshot: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    snapshot = Object.fromEntries(
+      tracked.map((key) => [key, process.env[key]])
+    );
+    for (const key of tracked) delete process.env[key];
+  });
+
+  afterEach(() => {
+    restoreEnv([...tracked], snapshot);
+  });
+
+  it("permite skip quando secret ausente fora de produção (sem VERCEL_ENV production)", () => {
+    delete process.env.HAXR_EDITION_PROXY_SECRET;
+    delete process.env.VERCEL_ENV;
+
+    const result = validateEditionProxyRequest(
+      new Request("http://localhost/api/v1/edition/rsvp", { method: "POST" })
+    );
+
+    // Em CI/test NODE_ENV costuma ser "test" (não production) → skip permitido.
+    if (!isEditionProxyProductionRuntime()) {
+      assert.equal(result.ok, true);
+      if (result.ok) assert.equal(result.skipped, true);
+    } else {
+      assert.equal(result.ok, false);
+    }
+  });
+
+  it("fail-closed com VERCEL_ENV=production quando secret ausente", () => {
+    process.env.VERCEL_ENV = "production";
     delete process.env.HAXR_EDITION_PROXY_SECRET;
 
     const result = validateEditionProxyRequest(
       new Request("http://localhost/api/v1/edition/rsvp", { method: "POST" })
     );
 
-    assert.equal(result.ok, true);
-    if (result.ok) assert.equal(result.skipped, true);
-
-    if (prev) process.env.HAXR_EDITION_PROXY_SECRET = prev;
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.reason, "missing");
+    assert.equal(isEditionProxyProductionRuntime(), true);
   });
 
   it("rejeita quando auth é obrigatória mas secret não está configurado", () => {
-    const prevSecret = process.env.HAXR_EDITION_PROXY_SECRET;
-    const prevRequire = process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH;
     delete process.env.HAXR_EDITION_PROXY_SECRET;
+    delete process.env.VERCEL_ENV;
     process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH = "true";
 
     const result = validateEditionProxyRequest(
@@ -31,15 +77,9 @@ describe("validateEditionProxyRequest", () => {
     );
 
     assert.equal(result.ok, false);
-
-    if (prevSecret) process.env.HAXR_EDITION_PROXY_SECRET = prevSecret;
-    else delete process.env.HAXR_EDITION_PROXY_SECRET;
-    if (prevRequire) process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH = prevRequire;
-    else delete process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH;
   });
 
-  it("rejeita token inválido quando o segredo está configurado", () => {
-    const prev = process.env.HAXR_EDITION_PROXY_SECRET;
+  it("rejeita token inválido", () => {
     process.env.HAXR_EDITION_PROXY_SECRET = "test-secret-value-32chars!!!!";
 
     const result = validateEditionProxyRequest(
@@ -50,13 +90,21 @@ describe("validateEditionProxyRequest", () => {
     );
 
     assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.reason, "invalid");
+  });
 
-    if (prev) process.env.HAXR_EDITION_PROXY_SECRET = prev;
-    else delete process.env.HAXR_EDITION_PROXY_SECRET;
+  it("rejeita header ausente quando secret configurado", () => {
+    process.env.HAXR_EDITION_PROXY_SECRET = "test-secret-value-32chars!!!!";
+
+    const result = validateEditionProxyRequest(
+      new Request("http://localhost/api/v1/edition/rsvp", { method: "POST" })
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.reason, "missing");
   });
 
   it("aceita Bearer válido", () => {
-    const prev = process.env.HAXR_EDITION_PROXY_SECRET;
     const secret = "test-secret-value-32chars!!!!";
     process.env.HAXR_EDITION_PROXY_SECRET = secret;
 
@@ -69,16 +117,68 @@ describe("validateEditionProxyRequest", () => {
 
     assert.equal(result.ok, true);
     if (result.ok) assert.equal(result.skipped, false);
+  });
 
-    if (prev) process.env.HAXR_EDITION_PROXY_SECRET = prev;
-    else delete process.env.HAXR_EDITION_PROXY_SECRET;
+  it("aceita header x-haxr-edition-proxy", () => {
+    const secret = "test-secret-value-32chars!!!!";
+    process.env.HAXR_EDITION_PROXY_SECRET = secret;
+
+    const result = validateEditionProxyRequest(
+      new Request("http://localhost/api/v1/edition/rsvp", {
+        method: "POST",
+        headers: { "x-haxr-edition-proxy": secret },
+      })
+    );
+
+    assert.equal(result.ok, true);
+  });
+});
+
+describe("validateEditionProxyJsonBody", () => {
+  it("rejeita content-type inválido", () => {
+    const result = validateEditionProxyJsonBody(
+      new Request("http://localhost/api/v1/edition/rsvp", {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+      })
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.status, 415);
+  });
+
+  it("rejeita body demasiado grande", () => {
+    const result = validateEditionProxyJsonBody(
+      new Request("http://localhost/api/v1/edition/rsvp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "content-length": "999999",
+        },
+      })
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.status, 413);
+  });
+
+  it("aceita application/json válido", () => {
+    const result = validateEditionProxyJsonBody(
+      new Request("http://localhost/api/v1/edition/rsvp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "content-length": "120",
+        },
+      })
+    );
+    assert.equal(result.ok, true);
   });
 });
 
 describe("editionProxyUnauthorizedResponse", () => {
-  it("usa envelope success", () => {
+  it("não inclui secret nem detalhes internos", () => {
     const body = editionProxyUnauthorizedResponse();
     assert.equal(body.success, false);
     assert.equal(body.error, "Não autorizado.");
+    assert.equal(JSON.stringify(body).includes("HAXR"), false);
   });
 });

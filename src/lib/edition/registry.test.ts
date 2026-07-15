@@ -16,6 +16,21 @@ describe("Core Event Registry Alignment", () => {
     assert.equal(slug, "traditional-wedding");
   });
 
+  it("resolves public Edition invite slug to traditional-wedding binding", () => {
+    assert.equal(
+      resolveEditionSlug("jessicaesamueltraditionalwedding"),
+      "traditional-wedding"
+    );
+  });
+
+  it("does not resolve traditional-wedding to rose-elegance or farewell", () => {
+    assert.notEqual(resolveEditionSlug("traditional-wedding"), "rose-elegance");
+    assert.notEqual(
+      resolveEditionSlug("traditional-wedding"),
+      "jessicachadelingerie"
+    );
+  });
+
   it("resolves jessicachadelingerie to the farewell binding", () => {
     const slug = resolveEditionSlug("jessicachadelingerie");
     assert.equal(slug, "jessicachadelingerie");
