@@ -10,6 +10,7 @@ import {
   wouldRpcNameMatchWrongContact,
   type EditionGuestMatchCandidate,
 } from "@/lib/edition/rsvp/guest-match";
+import { evaluateEditionRsvpWriteGate } from "@/lib/edition/rsvp/write-gate";
 import { asTableRows } from "@/lib/supabase/helpers";
 import type { Tables } from "@/lib/supabase/database.types";
 import { generateQrToken } from "@/lib/events/tokens";
@@ -244,6 +245,18 @@ async function updateMatchedGuest(params: {
 export async function persistEditionRsvp(
   submission: EditionRsvpSubmission
 ): Promise<EditionRsvpPersistResult> {
+  const writeGate = evaluateEditionRsvpWriteGate();
+  if (!writeGate.allowed) {
+    console.warn(
+      `[edition/rsvp] persist blocked by write gate reason=${writeGate.reason} mode=${writeGate.mode}`
+    );
+    return {
+      ok: false,
+      error: "edition_rsvp_writes_disabled",
+      skipped: "write_gate",
+    };
+  }
+
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "supabase_not_configured", skipped: "supabase" };
   }
