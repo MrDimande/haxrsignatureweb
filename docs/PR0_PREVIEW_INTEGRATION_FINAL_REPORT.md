@@ -11,7 +11,7 @@
 
 | Item | Estado |
 |------|--------|
-| Core PR #7 | **Ready for Review** · não merged · tip `0435be8` |
+| Core PR #7 | **Ready for Review** · não merged · tip `03094a8` (audit code `0435be8` + docs 1D) |
 | Edition PR #5 (A) | **Ready for Review** · não merged · `12280fc` · base `main` |
 | Edition PR #6 (B) | **Ready for Review** · não merged · `10e61e9` · base `feature/edition-security-slugs` |
 | Edition PR #7 (C) | **Ready for Review** · não merged · `f5ba252` · base `feature/edition-security-slugs` |
@@ -37,8 +37,8 @@
 
 ## Áudio `famba-kwatsi.mp3`
 
-**Mantido** no PR C (#7 Edition) por instrução do proprietário (não remover automaticamente por falta de licença).  
-Credit/disclaimer no tema; **prova comercial in-repo não verificada**. Remoção apenas se o proprietário pedir. Inventário: `docs/ASSET_LICENSES.md` no PR C.
+**Mantido** no Edition PR #7 (tema). Proprietário confirmou autorização de utilização; créditos apresentados na experiência.  
+Uso **exclusivo** do tema Primavera Lobolo; **sem redistribuição isolada** do ficheiro. Inventário: `docs/ASSET_LICENSES.md` no PR #7.
 
 ---
 
@@ -106,7 +106,7 @@ Write gate `386ba78`; disabled → 503; preview_clone controlado `139→140→13
 - Grants/candidata só no clone; 036–043 por reconciliar  
 - WRITE produção disabled  
 - Protection same-team mitigado pelo write gate  
-- Áudio: rights confirmation pendente do proprietário  
+- Áudio: autorização confirmada pelo proprietário; créditos na UI; sem redistribuição isolada  
 - `productionTouched=false`
 
 ---
