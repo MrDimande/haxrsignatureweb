@@ -45,18 +45,74 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-export async function listGuestsByEvent(eventId: string): Promise<EventGuest[]> {
+export type ListGuestsOptions = {
+  includeDeleted?: boolean;
+  includeArchived?: boolean;
+};
+
+export async function listGuestsByEvent(
+  eventId: string,
+  options: ListGuestsOptions = {}
+): Promise<EventGuest[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("guests")
     .select(guestSelect)
     .eq("event_id", eventId)
     .order("name");
 
+  if (!options.includeDeleted) {
+    query = query.is("deleted_at", null);
+  }
+  if (!options.includeArchived) {
+    query = query.is("archived_at", null);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw new Error(error.message);
   const guests = asTableRows<"guests">(data).map(mapGuest);
   await backfillNameNormalized(eventId, guests);
   return guests;
+}
+
+export async function listGuestsByEventIncludingArchived(
+  eventId: string
+): Promise<EventGuest[]> {
+  return listGuestsByEvent(eventId, {
+    includeDeleted: false,
+    includeArchived: true,
+  });
+}
+
+export async function setGuestImportBatchId(
+  guestId: string,
+  eventId: string,
+  batchId: string
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("guests")
+    .update({ import_batch_id: batchId } as never)
+    .eq("id", guestId)
+    .eq("event_id", eventId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function markGuestInviteSent(
+  guestId: string,
+  eventId: string
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("guests")
+    .update({ invite_sent_at: new Date().toISOString() } as never)
+    .eq("id", guestId)
+    .eq("event_id", eventId)
+    .is("invite_sent_at", null);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function listGuestsPage(
@@ -271,20 +327,140 @@ export async function updateGuest(
   return guest;
 }
 
-export async function deleteGuest(id: string): Promise<void> {
+export async function softDeleteGuest(
+  id: string,
+  reason = "soft_remove"
+): Promise<void> {
   const guest = await getGuestById(id);
   if (!guest) return;
+
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("guests")
+    .update({
+      deleted_at: now,
+      archived_at: guest.archivedAt ?? now,
+      archive_reason: reason,
+    } as never)
+    .eq("id", id)
+    .eq("event_id", guest.eventId);
+
+  if (error) throw new Error(error.message);
 
   await logGuestAudit(
     guest.id,
     guest.eventId,
     guest.name,
-    "Convidado eliminado"
+    "Convidado removido (soft)",
+    reason
   );
+}
+
+export async function deleteGuest(id: string): Promise<void> {
+  // Soft-delete by default — hard delete is never silent.
+  await softDeleteGuest(id, "delete_guest_action");
+}
+
+export async function archiveGuest(
+  id: string,
+  reason = "archived"
+): Promise<EventGuest> {
+  const guest = await getGuestById(id);
+  if (!guest) throw new Error("Convidado não encontrado.");
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("guests").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("guests")
+    .update({
+      archived_at: new Date().toISOString(),
+      archive_reason: reason,
+    } as never)
+    .eq("id", id)
+    .eq("event_id", guest.eventId)
+    .select(guestSelect)
+    .single();
+
   if (error) throw new Error(error.message);
+  const row = asTableRow<"guests">(data);
+  if (!row) throw new Error("Falha ao arquivar convidado.");
+  await logGuestAudit(guest.id, guest.eventId, guest.name, "Convidado arquivado", reason);
+  return mapGuest(row);
+}
+
+export async function restoreGuest(id: string): Promise<EventGuest> {
+  const supabase = createAdminClient();
+  const existing = await getGuestById(id);
+  // Allow restoring archived/deleted by querying without filters
+  const { data: raw, error: loadError } = await supabase
+    .from("guests")
+    .select(guestSelect)
+    .eq("id", id)
+    .maybeSingle();
+  if (loadError) throw new Error(loadError.message);
+  const loaded = asTableRow<"guests">(raw);
+  if (!loaded) throw new Error("Convidado não encontrado.");
+
+  const { data, error } = await supabase
+    .from("guests")
+    .update({
+      archived_at: null,
+      archive_reason: "",
+      deleted_at: null,
+      is_incorrect: false,
+    } as never)
+    .eq("id", id)
+    .eq("event_id", loaded.event_id)
+    .select(guestSelect)
+    .single();
+
+  if (error) throw new Error(error.message);
+  const row = asTableRow<"guests">(data);
+  if (!row) throw new Error("Falha ao restaurar convidado.");
+  const guest = mapGuest(row);
+  await logGuestAudit(
+    guest.id,
+    guest.eventId,
+    guest.name,
+    "Convidado restaurado",
+    existing?.archiveReason || ""
+  );
+  return guest;
+}
+
+export async function markGuestIncorrect(
+  id: string,
+  incorrect = true
+): Promise<EventGuest> {
+  const guest = await getGuestById(id);
+  if (!guest) throw new Error("Convidado não encontrado.");
+
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("guests")
+    .update({
+      is_incorrect: incorrect,
+      archived_at: incorrect ? guest.archivedAt ?? now : guest.archivedAt,
+      archive_reason: incorrect
+        ? guest.archiveReason || "marked_incorrect"
+        : guest.archiveReason,
+    } as never)
+    .eq("id", id)
+    .eq("event_id", guest.eventId)
+    .select(guestSelect)
+    .single();
+
+  if (error) throw new Error(error.message);
+  const row = asTableRow<"guests">(data);
+  if (!row) throw new Error("Falha ao marcar convidado.");
+  await logGuestAudit(
+    guest.id,
+    guest.eventId,
+    guest.name,
+    incorrect ? "Marcado como incorrecto" : "Incorrecto removido"
+  );
+  return mapGuest(row);
 }
 
 async function removeGuestSilently(id: string): Promise<void> {
