@@ -75,9 +75,17 @@ export const EDITION_INVITE_CATALOG: Readonly<
     status: "active",
     experienceType: "invitation",
   },
+  "jessica-samuel-wedding": {
+    registryKey: "jessica-samuel-wedding",
+    inviteSlug: "jessicasamuelwedding",
+    label: "Edition · Casamento · Jessica & Samuel",
+    status: "active",
+    experienceType: "invitation",
+  },
+  /** Legacy Admin key — same public invite as jessica-samuel-wedding. */
   "jessica-samuel": {
     registryKey: "jessica-samuel",
-    inviteSlug: "jessica-samuel",
+    inviteSlug: "jessicasamuelwedding",
     label: "Edition · Casamento · Jessica & Samuel",
     status: "active",
     experienceType: "invitation",

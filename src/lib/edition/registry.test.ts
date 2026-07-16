@@ -3,12 +3,12 @@ import { describe, it } from "node:test";
 import { resolveEditionSlug, getEditionEventBinding } from "./registry";
 
 describe("Core Event Registry Alignment", () => {
-  it("resolves jessica-samuel to its own wedding binding", () => {
+  it("resolves jessica-samuel to jessica-samuel-wedding binding", () => {
     const slug = resolveEditionSlug("jessica-samuel");
-    assert.equal(slug, "jessica-samuel");
+    assert.equal(slug, "jessica-samuel-wedding");
 
     // Test case-insensitivity and trim
-    assert.equal(resolveEditionSlug("  Jessica-Samuel  "), "jessica-samuel");
+    assert.equal(resolveEditionSlug("  Jessica-Samuel  "), "jessica-samuel-wedding");
   });
 
   it("resolves traditional-wedding to its own traditional wedding binding", () => {
@@ -41,8 +41,8 @@ describe("Core Event Registry Alignment", () => {
     assert.equal(resolveEditionSlug("jessica-farewell"), "jessicachadelingerie");
   });
 
-  it("resolves jessicasamuelwedding to jessica-samuel", () => {
-    assert.equal(resolveEditionSlug("jessicasamuelwedding"), "jessica-samuel");
+  it("resolves jessicasamuelwedding to jessica-samuel-wedding", () => {
+    assert.equal(resolveEditionSlug("jessicasamuelwedding"), "jessica-samuel-wedding");
   });
 
   it("resolves lingerie aliases correctly", () => {
@@ -65,7 +65,7 @@ describe("Core Event Registry Alignment", () => {
 
   it("every active canonical slug maps to its intended environment variable binding", () => {
     const expectedVars: Record<string, string> = {
-      "jessica-samuel": "EDITION_EVENT_JESSICA_WEDDING_ID",
+      "jessica-samuel-wedding": "EDITION_EVENT_JESSICA_WEDDING_ID",
       "jessicakulaya": "EDITION_EVENT_JESSICA_KULAYA_ID",
       "cha-de-lingerie": "EDITION_EVENT_JESSICA_LINGERIE_ID",
       "cha-de-panela": "EDITION_EVENT_JESSICA_PANELA_ID",
