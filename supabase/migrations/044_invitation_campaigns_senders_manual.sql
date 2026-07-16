@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.sender_profiles (
   public_name TEXT NOT NULL,
   masked_number TEXT NOT NULL,
   provider TEXT NOT NULL DEFAULT 'none' CHECK (
-    provider IN ('none', 'meta_cloud_api', 'manual_wa_me')
+    provider IN ('none', 'meta_cloud_api', 'manual_wa_me', 'twilio_whatsapp')
   ),
   provider_phone_id TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK (
@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS public.invitation_campaigns (
       'ready',
       'scheduled',
       'sending_manual',
+      'sending_twilio',
       'paused',
       'completed',
       'cancelled'
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS public.invitation_campaigns (
   event_location TEXT NOT NULL DEFAULT '',
   idempotency_key TEXT,
   send_mode_snapshot TEXT NOT NULL DEFAULT 'disabled' CHECK (
-    send_mode_snapshot IN ('disabled', 'manual', 'preview_test', 'production')
+    send_mode_snapshot IN ('disabled', 'manual', 'twilio_sandbox', 'twilio_production')
   ),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -133,6 +134,10 @@ CREATE TABLE IF NOT EXISTS public.campaign_recipients (
       'copied',
       'opened',
       'marked_sent',
+      'queued',
+      'sent',
+      'delivered',
+      'read',
       'failed',
       'cancelled',
       'skipped'
@@ -140,6 +145,7 @@ CREATE TABLE IF NOT EXISTS public.campaign_recipients (
   ),
   batch_key TEXT NOT NULL DEFAULT 'default',
   last_action_at TIMESTAMPTZ,
+  provider_message_sid TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT campaign_recipients_guest_unique UNIQUE (campaign_id, guest_id)
@@ -179,7 +185,11 @@ CREATE TABLE IF NOT EXISTS public.delivery_attempts (
       'preview',
       'provider_blocked',
       'webhook_ignored',
-      'export'
+      'export',
+      'twilio_enqueue',
+      'twilio_send',
+      'twilio_status',
+      'twilio_retry'
     )
   ),
   outcome TEXT NOT NULL CHECK (

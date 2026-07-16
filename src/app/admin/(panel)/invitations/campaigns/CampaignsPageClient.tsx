@@ -15,6 +15,7 @@ const STATUS_LABELS: Record<string, string> = {
   ready: "Pronta",
   scheduled: "Agendada",
   sending_manual: "Envio manual",
+  sending_twilio: "Envio Twilio",
   paused: "Pausada",
   completed: "Concluída",
   cancelled: "Cancelada",

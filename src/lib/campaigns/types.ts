@@ -6,8 +6,8 @@
 export const HAXR_WHATSAPP_SEND_MODES = [
   "disabled",
   "manual",
-  "preview_test",
-  "production",
+  "twilio_sandbox",
+  "twilio_production",
 ] as const;
 
 export type HaxrWhatsappSendMode = (typeof HAXR_WHATSAPP_SEND_MODES)[number];
@@ -38,6 +38,7 @@ export const SENDER_PROVIDERS = [
   "none",
   "meta_cloud_api",
   "manual_wa_me",
+  "twilio_whatsapp",
 ] as const;
 
 export type SenderProvider = (typeof SENDER_PROVIDERS)[number];
@@ -56,6 +57,7 @@ export const CAMPAIGN_STATUSES = [
   "ready",
   "scheduled",
   "sending_manual",
+  "sending_twilio",
   "paused",
   "completed",
   "cancelled",
@@ -63,18 +65,33 @@ export const CAMPAIGN_STATUSES = [
 
 export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number];
 
+/** Estados de entrega Twilio + operações manuais. */
 export const RECIPIENT_STATUSES = [
   "pending",
   "previewed",
   "copied",
   "opened",
   "marked_sent",
+  "queued",
+  "sent",
+  "delivered",
+  "read",
   "failed",
   "cancelled",
   "skipped",
 ] as const;
 
 export type RecipientStatus = (typeof RECIPIENT_STATUSES)[number];
+
+export const TWILIO_DELIVERY_STATUSES = [
+  "queued",
+  "sent",
+  "delivered",
+  "read",
+  "failed",
+] as const;
+
+export type TwilioDeliveryStatus = (typeof TWILIO_DELIVERY_STATUSES)[number];
 
 export const DELIVERY_ATTEMPT_KINDS = [
   "manual_copy",
@@ -84,6 +101,10 @@ export const DELIVERY_ATTEMPT_KINDS = [
   "provider_blocked",
   "webhook_ignored",
   "export",
+  "twilio_enqueue",
+  "twilio_send",
+  "twilio_status",
+  "twilio_retry",
 ] as const;
 
 export type DeliveryAttemptKind = (typeof DELIVERY_ATTEMPT_KINDS)[number];
@@ -139,6 +160,7 @@ export type CampaignRecipient = {
   status: RecipientStatus;
   batchKey: string;
   lastActionAt: string | null;
+  providerMessageSid: string | null;
   createdAt: string;
   updatedAt: string;
 };

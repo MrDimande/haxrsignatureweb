@@ -50,11 +50,13 @@ export default function InvitationsHubPage() {
           </p>
           <p className="mt-3 text-sm text-grey/65 leading-relaxed">
             {sendMode.manualAllowed
-              ? "Modo manual activo: copy/open/marcar enviado e export. Sem provider automático."
+              ? "Modo manual: sender HAXR Signature +258 87 088 3428 · wa.me + marcar enviado. Sem Twilio."
               : sendMode.automaticBlockReason}
           </p>
           <p className="mt-3 text-[10px] font-mono text-grey/40 uppercase tracking-[0.15em]">
-            Provider automático: bloqueado (fail-closed)
+            {sendMode.twilioSandboxReady
+              ? "Twilio Sandbox: gate aberto (LIVE_SEND controla API real)"
+              : "Provider automático: fail-closed até twilio_sandbox + secrets"}
           </p>
         </div>
       </section>
@@ -64,12 +66,13 @@ export default function InvitationsHubPage() {
           Senders permitidos
         </h2>
         <ul className="space-y-2 text-sm text-grey/75">
-          <li>• HAXR oficial</li>
+          <li>• HAXR Signature (+258 87 088 3428) — manual wa.me</li>
           <li>• Número empresarial verificado do cliente</li>
-          <li>• Manual WhatsApp autenticado</li>
+          <li>• Twilio Sandbox / número dedicado (automático)</li>
         </ul>
         <p className="mt-4 text-xs text-grey/45">
-          Nunca tokens plaintext. Nunca sender automático arbitrário livre.
+          Nunca tokens plaintext. Nunca registar +258 87 088 3428 na Twilio.
+          Production: segundo número dedicado.
         </p>
       </section>
     </AdminShell>

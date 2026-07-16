@@ -69,6 +69,7 @@ type RecipientRow = {
   status: string;
   batch_key: string;
   last_action_at: string | null;
+  provider_message_sid: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -129,6 +130,7 @@ function mapRecipient(row: RecipientRow): CampaignRecipient {
     status: row.status as RecipientStatus,
     batchKey: row.batch_key,
     lastActionAt: row.last_action_at,
+    providerMessageSid: row.provider_message_sid ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -317,6 +319,7 @@ export async function insertRecipients(
       status: r.status,
       batch_key: r.batchKey,
       last_action_at: r.lastActionAt,
+      provider_message_sid: r.providerMessageSid,
     })) as never
   );
   if (error) throw new Error(error.message);
@@ -345,6 +348,7 @@ export async function updateRecipient(
     renderedMessage: string;
     invitationUrl: string;
     lastActionAt: string | null;
+    providerMessageSid: string | null;
   }>
 ): Promise<CampaignRecipient> {
   const supabase = createAdminClient();
@@ -358,6 +362,9 @@ export async function updateRecipient(
   }
   if (patch.lastActionAt !== undefined) {
     payload.last_action_at = patch.lastActionAt;
+  }
+  if (patch.providerMessageSid !== undefined) {
+    payload.provider_message_sid = patch.providerMessageSid;
   }
 
   const { data, error } = await supabase

@@ -8,6 +8,13 @@ import {
   toManualRecipientOps,
   type ManualAction,
 } from "@/lib/campaigns/manual-ops";
+import { createTwilioMessagesClient } from "@/lib/campaigns/provider/twilio-client";
+import { resolveTwilioWhatsappConfig } from "@/lib/campaigns/provider/twilio-config";
+import {
+  AllowAllThrottler,
+  TwilioSandboxSendQueue,
+} from "@/lib/campaigns/provider/twilio-queue";
+import { handleTwilioWhatsappStatusCallback } from "@/lib/campaigns/provider/twilio-webhook";
 import {
   createFailClosedProviderStack,
   type CampaignIdempotencyStore,
@@ -22,6 +29,7 @@ import {
   getWhatsappSendMode,
   gateAutomaticProvider,
   isManualOpsAllowed,
+  isTwilioSandboxMode,
 } from "@/lib/campaigns/send-mode";
 import {
   buildEmptyTemplateContext,
@@ -35,6 +43,7 @@ import type {
   HaxrWhatsappSendMode,
   InvitationCampaign,
   ManualRecipientOps,
+  RecipientStatus,
   SenderKind,
   SenderProfile,
 } from "@/lib/campaigns/types";
@@ -117,7 +126,9 @@ export class InvitationCampaignService {
       senderKind: kind,
       publicName,
       maskedNumber: maskPhoneNumber(input.phone),
-      provider: defaultProviderForKind(kind),
+      provider: defaultProviderForKind(kind, {
+        twilioSandbox: isTwilioSandboxMode(this.modeReader()),
+      }),
       providerPhoneId: input.providerPhoneId?.trim() || null,
       status: "active",
       isDefault: Boolean(input.isDefault),
@@ -188,22 +199,24 @@ export class InvitationCampaignService {
       assertEventIsolation(sender.eventId, input.eventId, "sender_profile");
     } else {
       const defaultSender = this.store.senders.find(
-        (s) => s.eventId === input.eventId && s.isDefault && s.status === "active"
+        (s) =>
+          s.eventId === input.eventId && s.isDefault && s.status === "active"
       );
       senderProfileId = defaultSender?.id ?? null;
     }
 
+    const now = nowIso();
+    const batchKey = input.batchKey?.trim() || "default";
     const campaign: InvitationCampaign = {
       id: randomUUID(),
       eventId: input.eventId,
       senderProfileId,
-      name: input.name.trim() || "Campanha de convites",
-      invitationRegistryKey: input.invitationRegistryKey.trim(),
+      name: input.name.trim(),
+      invitationRegistryKey: input.invitationRegistryKey,
       recipientsSelection: input.recipientsSelection ?? {
         mode: "selected_guests",
-        count: input.guests.length,
       },
-      batchKey: input.batchKey?.trim() || "default",
+      batchKey,
       messageTemplate: input.messageTemplate,
       status: "draft",
       scheduledAt: input.scheduledAt ?? null,
@@ -216,29 +229,46 @@ export class InvitationCampaignService {
       eventLocation: input.eventLocation,
       idempotencyKey: input.idempotencyKey?.trim() || null,
       sendModeSnapshot: mode,
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     this.store.campaigns.push(campaign);
-
-    const batchKey = campaign.batchKey;
     for (const guest of input.guests) {
       this.addRecipient(campaign, input, guest, batchKey);
     }
-
     return campaign;
   }
 
-  updateMessageTemplate(
+  getCampaign(eventId: string, campaignId: string): InvitationCampaign | null {
+    const campaign = this.store.campaigns.find((c) => c.id === campaignId);
+    if (!campaign) return null;
+    if (campaign.eventId !== eventId) return null;
+    return campaign;
+  }
+
+  listCampaigns(eventId: string): InvitationCampaign[] {
+    return this.store.campaigns.filter((c) => c.eventId === eventId);
+  }
+
+  listRecipients(eventId: string, campaignId: string): CampaignRecipient[] {
+    this.requireCampaign(eventId, campaignId);
+    return this.store.recipients.filter(
+      (r) => r.eventId === eventId && r.campaignId === campaignId
+    );
+  }
+
+  listManualOps(eventId: string, campaignId: string): ManualRecipientOps[] {
+    return this.listRecipients(eventId, campaignId).map(toManualRecipientOps);
+  }
+
+  editCampaignMessage(
     eventId: string,
     campaignId: string,
     messageTemplate: string
   ): InvitationCampaign {
     const validation = validateTemplateVariables(messageTemplate);
-    if (!validation.ok) {
-      throw new Error(validation.message);
-    }
+    if (!validation.ok) throw new Error(validation.message);
     const campaign = this.requireCampaign(eventId, campaignId);
     campaign.messageTemplate = messageTemplate;
     campaign.updatedAt = nowIso();
@@ -252,52 +282,30 @@ export class InvitationCampaignService {
     limit?: number
   ): ManualRecipientOps[] {
     const campaign = this.requireCampaign(eventId, campaignId);
-    const recipients = this.store.recipients.filter(
-      (r) => r.campaignId === campaign.id && r.eventId === eventId
-    );
-    const sliced = typeof limit === "number" ? recipients.slice(0, limit) : recipients;
-
-    for (const recipient of sliced) {
-      recipient.status =
-        recipient.status === "pending" ? "previewed" : recipient.status;
-      recipient.lastActionAt = nowIso();
-      this.store.attempts.push({
-        id: randomUUID(),
-        eventId,
-        campaignId,
-        recipientId: recipient.id,
-        attemptKind: "preview",
-        outcome: "success",
-        detail: "Preview personalizado",
-        providerRef: null,
-        actor: "admin",
-        createdAt: nowIso(),
-      });
+    const cap = Math.min(limit ?? campaign.previewLimit, campaign.previewLimit);
+    const ops = this.listManualOps(eventId, campaignId).slice(0, cap);
+    for (const op of ops) {
+      const recipient = this.store.recipients.find(
+        (r) => r.id === op.recipientId
+      );
+      if (recipient && recipient.status === "pending") {
+        recipient.status = "previewed";
+        recipient.updatedAt = nowIso();
+      }
     }
-
-    return sliced.map(toManualRecipientOps);
-  }
-
-  listCampaigns(eventId: string): InvitationCampaign[] {
-    return this.store.campaigns.filter((c) => c.eventId === eventId);
-  }
-
-  getCampaign(
-    eventId: string,
-    campaignId: string
-  ): InvitationCampaign | null {
-    return (
-      this.store.campaigns.find(
-        (c) => c.id === campaignId && c.eventId === eventId
-      ) ?? null
-    );
-  }
-
-  listRecipients(eventId: string, campaignId: string): CampaignRecipient[] {
-    this.requireCampaign(eventId, campaignId);
-    return this.store.recipients.filter(
-      (r) => r.campaignId === campaignId && r.eventId === eventId
-    );
+    this.store.attempts.push({
+      id: randomUUID(),
+      eventId,
+      campaignId,
+      recipientId: ops[0]?.recipientId ?? randomUUID(),
+      attemptKind: "preview",
+      outcome: "success",
+      detail: `Preview ${ops.length} destinatário(s)`,
+      providerRef: null,
+      actor: "admin",
+      createdAt: nowIso(),
+    });
+    return ops;
   }
 
   performManualAction(
@@ -364,37 +372,267 @@ export class InvitationCampaignService {
     return exportCampaignCsv(buildCampaignExportRows(recipients));
   }
 
-  /** Qualquer tentativa de envio automático — sempre bloqueada neste MVP. */
-  attemptAutomaticSend(
+  /**
+   * Enfileira destinatários allowlisted no Twilio Sandbox.
+   * Sem HAXR_TWILIO_LIVE_SEND=true → dry-run (sem chamada API).
+   */
+  async enqueueTwilioSandbox(
     eventId: string,
     campaignId: string
-  ): { blocked: true; reason: string } {
-    this.requireCampaign(eventId, campaignId);
+  ): Promise<{
+    blocked: boolean;
+    reason?: string;
+    enqueued: number;
+    skipped: number;
+    dryRun: boolean;
+  }> {
     const mode = this.modeReader();
-    const stack = createFailClosedProviderStack(mode);
-    const gate = gateAutomaticProvider({
+    const campaign = this.requireCampaign(eventId, campaignId);
+    const gate = gateAutomaticProvider({ mode });
+    if (!gate.allowed) {
+      this.recordProviderBlocked(eventId, campaignId, gate.reason);
+      return {
+        blocked: true,
+        reason: gate.reason,
+        enqueued: 0,
+        skipped: 0,
+        dryRun: true,
+      };
+    }
+
+    const resolved = resolveTwilioWhatsappConfig(process.env, mode);
+    if (!resolved.ok) {
+      this.recordProviderBlocked(eventId, campaignId, resolved.reason);
+      return {
+        blocked: true,
+        reason: resolved.reason,
+        enqueued: 0,
+        skipped: 0,
+        dryRun: true,
+      };
+    }
+
+    const client = createTwilioMessagesClient(resolved.config);
+    const queue = new TwilioSandboxSendQueue(
       mode,
-      hasConfiguredProvider: false,
-      hasProviderCredentials: false,
+      resolved.config,
+      client,
+      async (job) => {
+        const recipient = this.store.recipients.find(
+          (r) => r.id === job.recipientId
+        );
+        if (!recipient) return null;
+        return {
+          phoneE164: recipient.phoneE164,
+          body: recipient.renderedMessage,
+        };
+      },
+      this.idempotency,
+      new AllowAllThrottler()
+    );
+
+    let enqueued = 0;
+    let skipped = 0;
+    let dryRun = !resolved.config.liveSendEnabled;
+
+    for (const recipient of this.listRecipients(eventId, campaignId)) {
+      const idempotencyKey = `twilio:${campaignId}:${recipient.id}`;
+      const result = await queue.enqueue({
+        campaignId,
+        eventId,
+        recipientId: recipient.id,
+        idempotencyKey,
+      });
+
+      if (!result.enqueued) {
+        skipped += 1;
+        recipient.status = "skipped";
+        recipient.updatedAt = nowIso();
+        this.store.attempts.push({
+          id: randomUUID(),
+          eventId,
+          campaignId,
+          recipientId: recipient.id,
+          attemptKind: "twilio_enqueue",
+          outcome: "blocked",
+          detail: result.reason,
+          providerRef: null,
+          actor: "system",
+          createdAt: nowIso(),
+        });
+        continue;
+      }
+
+      const sendResult = queue.getResult(idempotencyKey);
+      enqueued += 1;
+      dryRun = dryRun || Boolean(sendResult?.dryRun);
+      recipient.status = "queued";
+      recipient.providerMessageSid = sendResult?.sid ?? result.jobId;
+      recipient.lastActionAt = nowIso();
+      recipient.updatedAt = nowIso();
+      this.store.attempts.push({
+        id: randomUUID(),
+        eventId,
+        campaignId,
+        recipientId: recipient.id,
+        attemptKind: "twilio_enqueue",
+        outcome: "success",
+        detail: sendResult?.dryRun
+          ? `Dry-run enqueued (${sendResult.sid})`
+          : `Enqueued (${sendResult?.sid ?? result.jobId})`,
+        providerRef: sendResult?.sid ?? result.jobId,
+        actor: "system",
+        createdAt: nowIso(),
+      });
+    }
+
+    if (enqueued > 0) {
+      campaign.status = "sending_twilio";
+      campaign.updatedAt = nowIso();
+    }
+
+    return { blocked: false, enqueued, skipped, dryRun };
+  }
+
+  applyTwilioStatusWebhook(input: {
+    signatureHeader: string | null | undefined;
+    callbackUrl: string;
+    params: Record<string, string>;
+  }): {
+    accepted: boolean;
+    reason?: string;
+    recipientId?: string;
+    status?: RecipientStatus;
+  } {
+    const mode = this.modeReader();
+    const resolved = resolveTwilioWhatsappConfig(process.env, mode);
+    if (!resolved.ok) {
+      return { accepted: false, reason: resolved.reason };
+    }
+
+    const messageSid = input.params.MessageSid || input.params.SmsSid || "";
+    const recipient = this.store.recipients.find(
+      (r) => r.providerMessageSid === messageSid
+    );
+
+    const handled = handleTwilioWhatsappStatusCallback({
+      authToken: resolved.config.authToken,
+      signatureHeader: input.signatureHeader,
+      callbackUrl: input.callbackUrl,
+      params: input.params,
+      currentRecipientStatus: recipient?.status,
     });
 
+    if (!handled.accepted) {
+      this.store.attempts.push({
+        id: randomUUID(),
+        eventId: recipient?.eventId ?? "00000000-0000-0000-0000-000000000000",
+        campaignId:
+          recipient?.campaignId ?? "00000000-0000-0000-0000-000000000000",
+        recipientId: recipient?.id ?? randomUUID(),
+        attemptKind: "webhook_ignored",
+        outcome: "blocked",
+        detail: handled.reason,
+        providerRef: messageSid || null,
+        actor: "twilio_webhook",
+        createdAt: nowIso(),
+      });
+      return { accepted: false, reason: handled.reason };
+    }
+
+    if (!recipient) {
+      return {
+        accepted: true,
+        reason: "Callback aceite mas recipient desconhecido (sid sem match).",
+      };
+    }
+
+    if (handled.applied) {
+      recipient.status = handled.status;
+      recipient.updatedAt = nowIso();
+      recipient.lastActionAt = nowIso();
+    }
+
+    this.store.attempts.push({
+      id: randomUUID(),
+      eventId: recipient.eventId,
+      campaignId: recipient.campaignId,
+      recipientId: recipient.id,
+      attemptKind: "twilio_status",
+      outcome: "success",
+      detail: `Status ${handled.status}${
+        handled.applied ? "" : " (não aplicado — regressão)"
+      }`,
+      providerRef: handled.messageSid,
+      actor: "twilio_webhook",
+      createdAt: nowIso(),
+    });
+
+    return {
+      accepted: true,
+      recipientId: recipient.id,
+      status: recipient.status,
+    };
+  }
+
+  async attemptAutomaticSend(
+    eventId: string,
+    campaignId: string
+  ): Promise<{ blocked: boolean; reason: string }> {
+    const mode = this.modeReader();
+    if (isTwilioSandboxMode(mode)) {
+      const result = await this.enqueueTwilioSandbox(eventId, campaignId);
+      if (result.blocked) {
+        return { blocked: true, reason: result.reason ?? "blocked" };
+      }
+      return {
+        blocked: false,
+        reason: result.dryRun
+          ? `Sandbox dry-run: ${result.enqueued} enfileirado(s), ${result.skipped} ignorado(s).`
+          : `Sandbox: ${result.enqueued} enfileirado(s), ${result.skipped} ignorado(s).`,
+      };
+    }
+
+    this.requireCampaign(eventId, campaignId);
+    const stack = createFailClosedProviderStack(mode);
+    const gate = gateAutomaticProvider({ mode });
     void stack.queue.enqueue({
       campaignId,
       eventId,
       recipientId: "n/a",
       idempotencyKey: `auto:${campaignId}`,
     });
-
     const reason = gate.allowed
       ? "Provider automático não activado."
       : gate.reason;
+    this.recordProviderBlocked(eventId, campaignId, reason);
+    return { blocked: true, reason };
+  }
 
+  assertManualModeOrThrow(): void {
+    const mode = this.modeReader();
+    if (mode === "disabled") {
+      throw new Error("Envio desactivado (HAXR_WHATSAPP_SEND_MODE=disabled).");
+    }
+    if (!isManualOpsAllowed(mode)) {
+      throw new Error(
+        `Modo ${mode} não permite operações manuais wa.me. Use HAXR_WHATSAPP_SEND_MODE=manual.`
+      );
+    }
+  }
+
+  private recordProviderBlocked(
+    eventId: string,
+    campaignId: string,
+    reason: string
+  ): void {
     this.store.attempts.push({
       id: randomUUID(),
       eventId,
       campaignId,
-      recipientId: this.store.recipients.find((r) => r.campaignId === campaignId)
-        ?.id ?? randomUUID(),
+      recipientId:
+        this.store.recipients.find((r) => r.campaignId === campaignId)?.id ??
+        randomUUID(),
       attemptKind: "provider_blocked",
       outcome: "blocked",
       detail: reason,
@@ -402,18 +640,6 @@ export class InvitationCampaignService {
       actor: "system",
       createdAt: nowIso(),
     });
-
-    return { blocked: true, reason };
-  }
-
-  assertManualModeOrThrow(): void {
-    const mode = this.modeReader();
-    if (!isManualOpsAllowed(mode) && mode !== "disabled") {
-      // preview_test/production sem provider também não liberam auto; manual precisa de manual.
-    }
-    if (mode === "disabled") {
-      throw new Error("Envio desactivado (HAXR_WHATSAPP_SEND_MODE=disabled).");
-    }
   }
 
   private requireCampaign(
@@ -469,6 +695,7 @@ export class InvitationCampaignService {
       status: "pending",
       batchKey,
       lastActionAt: null,
+      providerMessageSid: null,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };

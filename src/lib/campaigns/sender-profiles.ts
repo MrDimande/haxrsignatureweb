@@ -1,3 +1,4 @@
+import { HAXR_MANUAL_WHATSAPP_SENDER } from "@/lib/campaigns/haxr-manual-sender";
 import {
   SENDER_KINDS,
   type SenderKind,
@@ -29,12 +30,15 @@ export function maskPhoneNumber(phone: string): string {
   return `${prefix}${"*".repeat(Math.max(2, digits.length - prefix.length - 4))}${visible}`;
 }
 
-export function defaultProviderForKind(kind: SenderKind): SenderProvider {
+export function defaultProviderForKind(
+  kind: SenderKind,
+  options?: { twilioSandbox?: boolean }
+): SenderProvider {
   switch (kind) {
     case "haxr_official":
-      return "none";
+      return options?.twilioSandbox ? "twilio_whatsapp" : "none";
     case "client_verified_business":
-      return "none";
+      return options?.twilioSandbox ? "twilio_whatsapp" : "none";
     case "manual_authenticated_whatsapp":
       return "manual_wa_me";
     default: {
@@ -42,6 +46,23 @@ export function defaultProviderForKind(kind: SenderKind): SenderProvider {
       return _exhaustive;
     }
   }
+}
+
+/** Perfil esperado para modo manual_whatsapp. */
+export function buildHaxrManualSenderDefaults(eventId: string): {
+  eventId: string;
+  senderKind: typeof HAXR_MANUAL_WHATSAPP_SENDER.kind;
+  publicName: string;
+  phone: string;
+  isDefault: true;
+} {
+  return {
+    eventId,
+    senderKind: HAXR_MANUAL_WHATSAPP_SENDER.kind,
+    publicName: HAXR_MANUAL_WHATSAPP_SENDER.publicName,
+    phone: HAXR_MANUAL_WHATSAPP_SENDER.phoneE164,
+    isDefault: true,
+  };
 }
 
 export function normalizeSenderStatus(status: string): SenderStatus {

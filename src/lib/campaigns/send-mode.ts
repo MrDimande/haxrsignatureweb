@@ -2,6 +2,10 @@ import {
   HAXR_WHATSAPP_SEND_MODES,
   type HaxrWhatsappSendMode,
 } from "@/lib/campaigns/types";
+import {
+  hasTwilioCredentials,
+  resolveTwilioWhatsappConfig,
+} from "@/lib/campaigns/provider/twilio-config";
 
 const DEFAULT_SEND_MODE: HaxrWhatsappSendMode = "disabled";
 
@@ -13,6 +17,10 @@ export function parseWhatsappSendMode(
     (HAXR_WHATSAPP_SEND_MODES as readonly string[]).includes(value)
   ) {
     return value as HaxrWhatsappSendMode;
+  }
+  // Valores legacy do MVP anterior → fail-closed
+  if (value === "preview_test" || value === "production") {
+    return DEFAULT_SEND_MODE;
   }
   return DEFAULT_SEND_MODE;
 }
@@ -27,11 +35,15 @@ export function getWhatsappSendMode(
 export function isAutomaticProviderAllowed(
   mode: HaxrWhatsappSendMode
 ): boolean {
-  return mode === "preview_test" || mode === "production";
+  return mode === "twilio_sandbox" || mode === "twilio_production";
 }
 
 export function isManualOpsAllowed(mode: HaxrWhatsappSendMode): boolean {
   return mode === "manual";
+}
+
+export function isTwilioSandboxMode(mode: HaxrWhatsappSendMode): boolean {
+  return mode === "twilio_sandbox";
 }
 
 export type ProviderGateResult =
@@ -39,15 +51,19 @@ export type ProviderGateResult =
   | { allowed: true; mode: HaxrWhatsappSendMode };
 
 /**
- * Gate fail-closed para qualquer envio automático.
- * Sem credenciais/provider configurados → sempre bloqueado.
+ * Gate fail-closed para envio automático Twilio.
+ * - disabled / manual → bloqueado
+ * - twilio_production → bloqueado neste PR (número dedicado ainda não activado)
+ * - twilio_sandbox → só com config completa + allowlist
  */
 export function gateAutomaticProvider(input: {
   mode?: HaxrWhatsappSendMode;
   hasProviderCredentials?: boolean;
   hasConfiguredProvider?: boolean;
+  env?: NodeJS.ProcessEnv;
 }): ProviderGateResult {
-  const mode = input.mode ?? getWhatsappSendMode();
+  const env = input.env ?? process.env;
+  const mode = input.mode ?? getWhatsappSendMode(env);
 
   if (mode === "disabled") {
     return {
@@ -61,34 +77,45 @@ export function gateAutomaticProvider(input: {
     return {
       allowed: false,
       reason:
-        "Modo manual activo — apenas wa.me/copy/marcar enviado; sem provider automático.",
+        "Modo manual activo — apenas wa.me/copy/marcar enviado (sender HAXR Signature +258 87 088 3428); sem Twilio.",
       mode,
     };
   }
 
-  if (!input.hasConfiguredProvider) {
+  if (mode === "twilio_production") {
     return {
       allowed: false,
       reason:
-        "Provider WhatsApp não configurado — fail-closed (sem envio automático).",
+        "HAXR_WHATSAPP_SEND_MODE=twilio_production ainda não está activado. Prepare um número Twilio dedicado (nunca +258 87 088 3428) e peça GO explícito.",
       mode,
     };
   }
 
-  if (!input.hasProviderCredentials) {
+  // twilio_sandbox
+  const resolved = resolveTwilioWhatsappConfig(env, mode);
+  const credentialsOk =
+    input.hasProviderCredentials ??
+    (resolved.ok || hasTwilioCredentials(env));
+  const providerOk = input.hasConfiguredProvider ?? resolved.ok;
+
+  if (!providerOk || !resolved.ok) {
+    return {
+      allowed: false,
+      reason: resolved.ok
+        ? "Provider Twilio não configurado — fail-closed."
+        : resolved.reason,
+      mode,
+    };
+  }
+
+  if (!credentialsOk) {
     return {
       allowed: false,
       reason:
-        "Credenciais de provider ausentes — fail-closed (sem inventar tokens).",
+        "Credenciais Twilio ausentes — fail-closed (sem inventar tokens).",
       mode,
     };
   }
 
-  // MVP: mesmo com preview_test/production, não activamos provider real.
-  return {
-    allowed: false,
-    reason:
-      "Provider automático não activado neste MVP — fail-closed até integração explícita.",
-    mode,
-  };
+  return { allowed: true, mode };
 }
