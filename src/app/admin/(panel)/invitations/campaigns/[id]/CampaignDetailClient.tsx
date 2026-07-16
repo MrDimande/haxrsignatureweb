@@ -20,8 +20,9 @@ import { Copy, ExternalLink, Check } from "lucide-react";
 type SendModeStatus = {
   mode: string;
   manualAllowed: boolean;
-  automaticBlocked: true;
+  automaticBlocked: boolean;
   automaticBlockReason: string;
+  twilioSandboxReady?: boolean;
 };
 
 type Props = {

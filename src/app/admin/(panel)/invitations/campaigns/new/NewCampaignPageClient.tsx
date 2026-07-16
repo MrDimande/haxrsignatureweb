@@ -33,8 +33,9 @@ type InviteOption = {
 type SendModeStatus = {
   mode: string;
   manualAllowed: boolean;
-  automaticBlocked: true;
+  automaticBlocked: boolean;
   automaticBlockReason: string;
+  twilioSandboxReady?: boolean;
 };
 
 const DEFAULT_TEMPLATE = `Olá {{guest_name}}!

@@ -7,7 +7,6 @@ import type {
   QueueJob,
 } from "@/lib/campaigns/provider/fail-closed";
 import {
-  FailClosedRetryPolicy,
   FailClosedThrottler,
   InMemoryIdempotencyStore,
 } from "@/lib/campaigns/provider/fail-closed";
