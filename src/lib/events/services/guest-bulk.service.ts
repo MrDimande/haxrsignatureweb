@@ -4,7 +4,8 @@ export type GuestProtectionFlag =
   | "rsvp"
   | "seat"
   | "check_in"
-  | "invite_sent";
+  /** Convite/campanha já enviada (`invite_sent_at`). */
+  | "campaign";
 
 export type GuestBulkImpact = {
   total: number;
@@ -15,6 +16,14 @@ export type GuestBulkImpact = {
   unprotectedGuestIds: string[];
   canHardDelete: boolean;
   recommendedAction: "soft_archive" | "block_hard_delete";
+};
+
+/** Plano transaccional em memória: validar tudo antes de mutar. */
+export type BulkMutationPlan = {
+  guestIds: string[];
+  impact: GuestBulkImpact;
+  allowed: boolean;
+  blockReason?: string;
 };
 
 export function getGuestProtectionFlags(guest: EventGuest): GuestProtectionFlag[] {
@@ -31,9 +40,32 @@ export function getGuestProtectionFlags(guest: EventGuest): GuestProtectionFlag[
 
   if (guest.seatId) flags.push("seat");
   if (guest.status === "checked_in" || guest.checkedInAt) flags.push("check_in");
-  if (guest.inviteSentAt) flags.push("invite_sent");
+  if (guest.inviteSentAt) flags.push("campaign");
 
   return flags;
+}
+
+/**
+ * Valida o conjunto completo antes de qualquer escrita.
+ * Soft archive/remove só avança se `allowed`; hard delete nunca quando há protegidos.
+ */
+export function planBulkSoftMutation(
+  guests: EventGuest[],
+  options?: { forceSoftArchiveProtected?: boolean }
+): BulkMutationPlan {
+  const impact = assessBulkImpact(guests);
+  const guestIds = guests.map((guest) => guest.id);
+
+  if (impact.protectedCount > 0 && !options?.forceSoftArchiveProtected) {
+    return {
+      guestIds,
+      impact,
+      allowed: false,
+      blockReason: `Impacto: ${formatBulkImpactMessage(impact)}. Confirme arquivo suave dos protegidos (RSVP/lugar/check-in/campanha) — hard delete bloqueado.`,
+    };
+  }
+
+  return { guestIds, impact, allowed: true };
 }
 
 export function assertGuestsScopedToEvent(
@@ -66,7 +98,7 @@ export function assessBulkImpact(guests: EventGuest[]): GuestBulkImpact {
     rsvp: 0,
     seat: 0,
     check_in: 0,
-    invite_sent: 0,
+    campaign: 0,
   };
 
   const protectedGuestIds: string[] = [];
@@ -100,8 +132,29 @@ export function formatBulkImpactMessage(impact: GuestBulkImpact): string {
   if (!impact.total) return "Nenhum convidado seleccionado.";
   const parts = [
     `${impact.total} seleccionado${impact.total === 1 ? "" : "s"}`,
-    `${impact.protectedCount} com protecção (RSVP/lugar/check-in/convite)`,
+    `${impact.protectedCount} com protecção (RSVP/lugar/check-in/campanha)`,
     `${impact.unprotectedCount} sem protecção`,
   ];
   return parts.join(" · ");
+}
+
+/** Snapshot para undo — contrato estável do audit. */
+export function buildBulkUndoPayload(guests: EventGuest[]): {
+  guests: Array<{
+    id: string;
+    archivedAt: string | null;
+    archiveReason: string;
+    deletedAt: string | null;
+    isIncorrect: boolean;
+  }>;
+} {
+  return {
+    guests: guests.map((guest) => ({
+      id: guest.id,
+      archivedAt: guest.archivedAt,
+      archiveReason: guest.archiveReason,
+      deletedAt: guest.deletedAt,
+      isIncorrect: guest.isIncorrect,
+    })),
+  };
 }

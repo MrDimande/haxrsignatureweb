@@ -9,7 +9,9 @@ import {
   assessBulkImpact,
   assertGuestsScopedToBatch,
   assertGuestsScopedToEvent,
+  buildBulkUndoPayload,
   formatBulkImpactMessage,
+  planBulkSoftMutation,
 } from "@/lib/events/services/guest-bulk.service";
 import type { EventGuest } from "@/lib/events/types";
 
@@ -71,16 +73,9 @@ export async function bulkArchiveGuestsAction(
   const result = await runAction(async () => {
     const selected = await loadScopedGuests(eventId, guestIds);
     const impact = assessBulkImpact(selected);
-    const undoPayload = {
-      guests: selected.map((guest) => ({
-        id: guest.id,
-        archivedAt: guest.archivedAt,
-        archiveReason: guest.archiveReason,
-        deletedAt: guest.deletedAt,
-        isIncorrect: guest.isIncorrect,
-      })),
-    };
+    const undoPayload = buildBulkUndoPayload(selected);
 
+    // Plano completo validado antes de mutações sequenciais (fail-closed).
     for (const guest of selected) {
       await guestsRepo.archiveGuest(guest.id, reason);
     }
@@ -114,15 +109,7 @@ export async function bulkRestoreGuestsAction(
     const selected = await loadScopedGuests(eventId, guestIds, {
       includeArchived: true,
     });
-    const undoPayload = {
-      guests: selected.map((guest) => ({
-        id: guest.id,
-        archivedAt: guest.archivedAt,
-        archiveReason: guest.archiveReason,
-        deletedAt: guest.deletedAt,
-        isIncorrect: guest.isIncorrect,
-      })),
-    };
+    const undoPayload = buildBulkUndoPayload(selected);
 
     for (const guest of selected) {
       await guestsRepo.restoreGuest(guest.id);
@@ -174,30 +161,16 @@ export async function bulkSoftRemoveGuestsAction(
 ) {
   const result = await runAction(async () => {
     const selected = await loadScopedGuests(eventId, guestIds);
-    const impact = assessBulkImpact(selected);
-
-    if (impact.protectedCount > 0 && !options?.forceSoftArchiveProtected) {
-      throw new Error(
-        `Impacto: ${formatBulkImpactMessage(impact)}. Confirme arquivo suave dos protegidos (RSVP/lugar/check-in/convite) — hard delete bloqueado.`
-      );
+    const plan = planBulkSoftMutation(selected, options);
+    if (!plan.allowed) {
+      throw new Error(plan.blockReason ?? "Operação em massa bloqueada.");
     }
 
-    const undoPayload = {
-      guests: selected.map((guest) => ({
-        id: guest.id,
-        archivedAt: guest.archivedAt,
-        archiveReason: guest.archiveReason,
-        deletedAt: guest.deletedAt,
-        isIncorrect: guest.isIncorrect,
-      })),
-    };
+    const impact = plan.impact;
+    const undoPayload = buildBulkUndoPayload(selected);
 
     for (const guest of selected) {
-      if (getGuestNeedsSoftOnly(guest) || options?.forceSoftArchiveProtected) {
-        await guestsRepo.softDeleteGuest(guest.id, "bulk_soft_remove");
-      } else {
-        await guestsRepo.softDeleteGuest(guest.id, "bulk_soft_remove");
-      }
+      await guestsRepo.softDeleteGuest(guest.id, "bulk_soft_remove");
     }
 
     const auditId = await batchesRepo.insertBulkAudit({
@@ -219,17 +192,6 @@ export async function bulkSoftRemoveGuestsAction(
 
   if (result.success) revalidateEvent(eventId);
   return result;
-}
-
-function getGuestNeedsSoftOnly(guest: EventGuest): boolean {
-  return Boolean(
-    guest.seatId ||
-      guest.inviteSentAt ||
-      guest.checkedInAt ||
-      guest.status === "confirmed" ||
-      guest.status === "checked_in" ||
-      guest.status === "declined"
-  );
 }
 
 export async function bulkMoveGuestsToGroupAction(
@@ -289,12 +251,15 @@ export async function removeImportBatchAction(
     assertGuestsScopedToEvent(eventId, batchGuests);
     assertGuestsScopedToBatch(batchId, batchGuests);
 
-    const impact = assessBulkImpact(batchGuests);
-    if (impact.protectedCount > 0 && !options?.forceSoftArchiveProtected) {
+    const plan = planBulkSoftMutation(batchGuests, options);
+    if (!plan.allowed) {
       throw new Error(
-        `Remover lote: ${formatBulkImpactMessage(impact)}. Confirme arquivo suave — hard delete bloqueado para protegidos.`
+        `Remover lote: ${plan.blockReason ?? formatBulkImpactMessage(plan.impact)}`
       );
     }
+
+    const impact = plan.impact;
+    const undoPayload = buildBulkUndoPayload(batchGuests);
 
     for (const guest of batchGuests) {
       await guestsRepo.softDeleteGuest(guest.id, `remove_batch:${batchId}`);
@@ -312,15 +277,7 @@ export async function removeImportBatchAction(
       guestIds: batchGuests.map((guest) => guest.id),
       operatorEmail: getOperatorEmail(),
       impact: impact as unknown as Record<string, unknown>,
-      undoPayload: {
-        guests: batchGuests.map((guest) => ({
-          id: guest.id,
-          archivedAt: guest.archivedAt,
-          archiveReason: guest.archiveReason,
-          deletedAt: guest.deletedAt,
-          isIncorrect: guest.isIncorrect,
-        })),
-      },
+      undoPayload,
     });
 
     return {

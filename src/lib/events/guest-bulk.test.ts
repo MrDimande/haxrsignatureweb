@@ -63,7 +63,7 @@ describe("guest bulk protections", () => {
       getGuestProtectionFlags(
         guest({ id: "4", name: "D", inviteSentAt: "2026-01-01T00:00:00Z" })
       ),
-      ["invite_sent"]
+      ["campaign"]
     );
   });
 
