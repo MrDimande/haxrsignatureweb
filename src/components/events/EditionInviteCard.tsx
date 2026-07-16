@@ -7,10 +7,13 @@ import {
   resolveEditionInviteAssociation,
   type EditionAssociationState,
 } from "@/lib/edition/invite-catalog";
+import EditionPublishHealthPanel from "@/components/events/EditionPublishHealthPanel";
 
 type EditionInviteCardProps = {
   registryKey: string | null | undefined;
   eventName?: string;
+  /** Admin managed event id — used by the publish health gate. */
+  adminEventId?: string;
 };
 
 function stateLabel(state: EditionAssociationState): string {
@@ -34,6 +37,7 @@ function stateLabel(state: EditionAssociationState): string {
 
 export default function EditionInviteCard({
   registryKey,
+  adminEventId,
 }: EditionInviteCardProps) {
   const previewTitleId = useId();
   const association = resolveEditionInviteAssociation(registryKey);
@@ -217,6 +221,13 @@ export default function EditionInviteCard({
           Preview em iframe indisponível neste ambiente. Abra o convite numa
           nova aba.
         </p>
+      ) : null}
+
+      {adminEventId && association.registryKey ? (
+        <EditionPublishHealthPanel
+          adminEventId={adminEventId}
+          registryKey={association.registryKey}
+        />
       ) : null}
     </section>
   );

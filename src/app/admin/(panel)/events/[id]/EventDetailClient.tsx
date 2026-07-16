@@ -283,6 +283,7 @@ export default function EventDetailClient({
       <EditionInviteCard
         registryKey={event.editionRegistryKey}
         eventName={event.name}
+        adminEventId={event.id}
       />
 
       {event.editionRegistryKey ? (
