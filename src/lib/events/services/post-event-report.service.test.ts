@@ -8,7 +8,7 @@ import type { ManagedEvent } from "@/lib/events/types";
 
 const sampleEvent: ManagedEvent = {
   id: "evt-1",
-  businessId: "haxr",
+  businessId: "haxr-signature",
   clientId: "client-1",
   clientName: "Maria Silva",
   name: "Casamento Silva",
@@ -25,6 +25,7 @@ const sampleEvent: ManagedEvent = {
   findSeatCode: "ABC123",
   editionRegistryKey: "",
   postEventReportSentAt: null,
+  dateHoldUntil: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };

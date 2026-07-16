@@ -232,14 +232,22 @@ function createMockDeps(state: MockState): CreateClientEventDeps {
   };
 }
 
+function setProcessEnv(key: string, value: string | undefined): void {
+  const env = process.env as Record<string, string | undefined>;
+  if (value === undefined) {
+    delete env[key];
+  } else {
+    env[key] = value;
+  }
+}
+
 const originalNodeEnv = process.env.NODE_ENV;
 const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const originalSupabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const originalServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function restoreEnv(): void {
-  if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = originalNodeEnv;
+  setProcessEnv("NODE_ENV", originalNodeEnv);
 
   if (originalSupabaseUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
   else process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
@@ -591,7 +599,7 @@ describe("client-app env guards for POST /api/events", () => {
   });
 
   it("blocks production Supabase URL in development", () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${SUPABASE_PRODUCTION_PROJECT_REF}.supabase.co`;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
 
@@ -600,7 +608,7 @@ describe("client-app env guards for POST /api/events", () => {
   });
 
   it("allows preview Supabase URL in development", () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
 
@@ -609,7 +617,7 @@ describe("client-app env guards for POST /api/events", () => {
   });
 
   it("requires service role key for snapshot writes", () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -619,7 +627,7 @@ describe("client-app env guards for POST /api/events", () => {
   });
 
   it("rejects production service role when URL points to preview", () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
     process.env.SUPABASE_SERVICE_ROLE_KEY =
@@ -633,7 +641,7 @@ describe("client-app env guards for POST /api/events", () => {
   });
 
   it("rejects preview anon key in the service role slot", () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
     process.env.SUPABASE_SERVICE_ROLE_KEY = createFakeSupabaseJwt({

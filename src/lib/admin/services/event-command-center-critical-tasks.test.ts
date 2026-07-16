@@ -8,7 +8,7 @@ import type { EventStats } from "@/lib/events/types";
 
 const event: ManagedEvent = {
   id: "event-1",
-  businessId: "haxr",
+  businessId: "haxr-signature",
   clientId: "client-1",
   clientName: "Cliente",
   name: "Casamento",

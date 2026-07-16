@@ -10,7 +10,7 @@ import {
 
 const event: ManagedEvent = {
   id: "event-1",
-  businessId: "haxr",
+  businessId: "haxr-signature",
   name: "Casamento Ana",
   type: "wedding",
   date: "2026-06-01",
@@ -54,11 +54,11 @@ const guestStats: EventStats = {
 function baseDocument(
   overrides: Partial<InvoiceDocument> = {}
 ): InvoiceDocument {
-  return {
+    return {
     id: "doc-1",
     documentType: "proforma",
     documentNumber: "PF-2026-001",
-    businessId: "haxr",
+    businessId: "haxr-signature",
     status: "sent",
     currency: "MZN",
     clientId: "client-1",
@@ -69,27 +69,29 @@ function baseDocument(
     clientPhone: "",
     clientNuit: "",
     clientAddress: "",
-    eventId: "event-1",
-    eventName: "Casamento Ana",
-    eventType: "wedding",
-    eventDate: "2026-06-01",
-    eventLocation: "Maputo",
+    event: {
+      eventId: "event-1",
+      eventType: "wedding",
+      eventName: "Casamento Ana",
+      eventDate: "2026-06-01",
+      eventLocation: "Maputo",
+    },
     issueDate: "2026-01-10",
-    dueDate: null,
-    validityDate: "2026-02-10",
+    expiryDate: "2026-02-10",
     notes: "",
-    terms: "",
-    includeVat: true,
     lineItems: [],
     totals: {
       subtotal: 1000,
+      vatRate: 16,
       vatAmount: 160,
       grandTotal: 1160,
+      includeVat: true,
       currency: "MZN",
     },
+    issuerSignatureId: null,
     issuerName: "",
     issuerRole: "",
-    issuerSignatureImage: null,
+    issuerSignatureImage: "",
     createdAt: "2026-01-10T08:00:00.000Z",
     updatedAt: "2026-01-12T08:00:00.000Z",
     pdfGeneratedAt: null,
@@ -105,7 +107,7 @@ function baseDocument(
 
 const payment: PaymentRecord = {
   id: "pay-1",
-  businessId: "haxr",
+  businessId: "haxr-signature",
   amount: 500,
   currency: "MZN",
   paidAt: "2026-01-20T14:00:00.000Z",
@@ -117,7 +119,7 @@ const payment: PaymentRecord = {
   documentNumber: "PF-2026-001",
   sourceDocumentId: "doc-1",
   sourceDocumentNumber: "PF-2026-001",
-  paymentMethod: "transfer",
+  paymentMethod: "bank_transfer",
   reference: "TRX-001",
   notes: "",
   createdAt: "2026-01-20T14:00:00.000Z",

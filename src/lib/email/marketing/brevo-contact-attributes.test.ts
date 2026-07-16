@@ -12,6 +12,7 @@ const baseLead: HAXRLead = {
   email: "lead@example.com",
   firstName: "Ana",
   lastName: "Silva",
+  role: "couple",
   segment: "casais_noivos",
   source: "quote_request",
   consentStatus: "granted",

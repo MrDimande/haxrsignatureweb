@@ -17,7 +17,9 @@ const basePayload = {
   estimatedGuests: 150,
   budgetMin: 80000,
   budgetMax: 150000,
-  servicesInterested: ["convites_digitais", "rsvp"] as const,
+  servicesInterested: ["convites_digitais", "rsvp"] as Array<
+    "convites_digitais" | "rsvp"
+  >,
   phone: "+258840000000",
   source: "onboarding" as const,
 };

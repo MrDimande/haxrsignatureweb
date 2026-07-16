@@ -105,58 +105,54 @@ function createAuthClient(input: {
   event?: ClientEventRow | null;
   memberUserIds?: string[];
 }): ClientEventVendorsAuthClient {
-  return {
+  const client = {
     from(table: "client_events" | "event_members") {
       if (table === "client_events") {
         return {
-          select() {
-            return {
+          select(_columns: string) {
+            const filters: Record<string, string | boolean> = {};
+            const chain = {
               eq(column: string, value: string | boolean) {
-                if (column === "id" && value === EVENT_ID) {
-                  return {
-                    async maybeSingle() {
-                      return { data: input.event ?? null, error: null };
-                    },
-                  };
+                filters[column] = value;
+                return chain;
+              },
+              async maybeSingle() {
+                if (filters.id === EVENT_ID) {
+                  return { data: input.event ?? null, error: null };
                 }
-                return {
-                  async maybeSingle() {
-                    return { data: null, error: null };
-                  },
-                };
+                return { data: null, error: null };
               },
             };
+            return chain;
           },
         };
       }
 
       return {
-        select() {
-          return {
-            eq(column: string, value: string) {
-              const filters: Record<string, string> = { [column]: value };
+        select(_columns: string) {
+          const filters: Record<string, string | boolean> = {};
+          const chain = {
+            eq(column: string, value: string | boolean) {
+              filters[column] = value;
+              return chain;
+            },
+            async maybeSingle() {
+              const isMember =
+                filters.client_event_id === EVENT_ID &&
+                input.memberUserIds?.includes(String(filters.user_id ?? ""));
               return {
-                eq(nextColumn: string, nextValue: string) {
-                  filters[nextColumn] = nextValue;
-                  return {
-                    async maybeSingle() {
-                      const isMember =
-                        filters.client_event_id === EVENT_ID &&
-                        input.memberUserIds?.includes(filters.user_id ?? "");
-                      return {
-                        data: isMember ? { id: "member-1" } : null,
-                        error: null,
-                      };
-                    },
-                  };
-                },
+                data: isMember ? { id: "member-1" } : null,
+                error: null,
               };
             },
           };
+          return chain;
         },
       };
     },
   };
+
+  return client as ClientEventVendorsAuthClient;
 }
 
 function createRpcClient(payload: ClientEventVendorsRpcPayload | null, errorMessage?: string) {
@@ -327,7 +323,7 @@ describe("client-event-vendors-dashboard", () => {
 });
 
 describe("client-event-vendors-api", () => {
-  const okEnv = { ok: true as const, message: "" };
+  const okEnv = { ok: true as const, projectRef: "uxleigndoomoezwsxlan" };
   const authClient = createAuthClient({ event: baseEvent });
 
   it("returns 401 without session", async () => {
@@ -340,7 +336,14 @@ describe("client-event-vendors-api", () => {
       rpcClient: createRpcClient(sampleRpcPayload),
     });
     assert.equal(result.status, 401);
-    assert.equal(result.body.error, "unauthorized");
+
+    assert.equal(result.body.ok, false);
+
+    if (!result.body.ok) {
+
+      assert.equal(result.body.error, "unauthorized");
+
+    }
   });
 
   it("returns 404 for missing event", async () => {
@@ -353,7 +356,14 @@ describe("client-event-vendors-api", () => {
       rpcClient: createRpcClient(sampleRpcPayload),
     });
     assert.equal(result.status, 404);
-    assert.equal(result.body.error, "not_found");
+
+    assert.equal(result.body.ok, false);
+
+    if (!result.body.ok) {
+
+      assert.equal(result.body.error, "not_found");
+
+    }
   });
 
   it("returns 403 for foreign event", async () => {
@@ -366,7 +376,14 @@ describe("client-event-vendors-api", () => {
       rpcClient: createRpcClient(sampleRpcPayload),
     });
     assert.equal(result.status, 403);
-    assert.equal(result.body.error, "forbidden");
+
+    assert.equal(result.body.ok, false);
+
+    if (!result.body.ok) {
+
+      assert.equal(result.body.error, "forbidden");
+
+    }
   });
 
   it("returns 409 when operational event is not linked", async () => {
@@ -379,7 +396,14 @@ describe("client-event-vendors-api", () => {
       rpcClient: createRpcClient(sampleRpcPayload),
     });
     assert.equal(result.status, 409);
-    assert.equal(result.body.error, "operational_not_linked");
+
+    assert.equal(result.body.ok, false);
+
+    if (!result.body.ok) {
+
+      assert.equal(result.body.error, "operational_not_linked");
+
+    }
   });
 
   it("returns 200 with vendors for owner", async () => {
@@ -409,6 +433,13 @@ describe("client-event-vendors-api", () => {
       rpcClient: createRpcClient(null, "permission denied for table event_vendors"),
     });
     assert.equal(result.status, 503);
-    assert.equal(result.body.error, "unavailable");
+
+    assert.equal(result.body.ok, false);
+
+    if (!result.body.ok) {
+
+      assert.equal(result.body.error, "unavailable");
+
+    }
   });
 });

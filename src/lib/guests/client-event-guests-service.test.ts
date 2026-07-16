@@ -112,58 +112,54 @@ function createAuthClient(input: {
   event?: ClientEventRow | null;
   memberUserIds?: string[];
 }): ClientEventGuestsAuthClient {
-  return {
+  const client = {
     from(table: "client_events" | "event_members") {
       if (table === "client_events") {
         return {
-          select() {
-            return {
+          select(_columns: string) {
+            const filters: Record<string, string | boolean> = {};
+            const chain = {
               eq(column: string, value: string | boolean) {
-                if (column === "id" && value === EVENT_ID) {
-                  return {
-                    async maybeSingle() {
-                      return { data: input.event ?? null, error: null };
-                    },
-                  };
+                filters[column] = value;
+                return chain;
+              },
+              async maybeSingle() {
+                if (filters.id === EVENT_ID) {
+                  return { data: input.event ?? null, error: null };
                 }
-                return {
-                  async maybeSingle() {
-                    return { data: null, error: null };
-                  },
-                };
+                return { data: null, error: null };
               },
             };
+            return chain;
           },
         };
       }
 
       return {
-        select() {
-          return {
-            eq(column: string, value: string) {
-              const filters: Record<string, string> = { [column]: value };
+        select(_columns: string) {
+          const filters: Record<string, string | boolean> = {};
+          const chain = {
+            eq(column: string, value: string | boolean) {
+              filters[column] = value;
+              return chain;
+            },
+            async maybeSingle() {
+              const isMember =
+                filters.client_event_id === EVENT_ID &&
+                input.memberUserIds?.includes(String(filters.user_id ?? ""));
               return {
-                eq(nextColumn: string, nextValue: string) {
-                  filters[nextColumn] = nextValue;
-                  return {
-                    async maybeSingle() {
-                      const isMember =
-                        filters.client_event_id === EVENT_ID &&
-                        input.memberUserIds?.includes(filters.user_id ?? "");
-                      return {
-                        data: isMember ? { id: "member-1" } : null,
-                        error: null,
-                      };
-                    },
-                  };
-                },
+                data: isMember ? { id: "member-1" } : null,
+                error: null,
               };
             },
           };
+          return chain;
         },
       };
     },
   };
+
+  return client as ClientEventGuestsAuthClient;
 }
 
 function createRpcClient(input: {
@@ -191,7 +187,7 @@ function createRpcClient(input: {
   };
 }
 
-const okEnv = { ok: true as const };
+const okEnv = { ok: true as const, projectRef: "uxleigndoomoezwsxlan" };
 
 describe("client-event-guests-rpc", () => {
   it("parseClientEventGuestsRpcPayload normalizes guests and summary", () => {
