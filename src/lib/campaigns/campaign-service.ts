@@ -14,7 +14,11 @@ import {
   AllowAllThrottler,
   TwilioSandboxSendQueue,
 } from "@/lib/campaigns/provider/twilio-queue";
-import { handleTwilioWhatsappStatusCallback } from "@/lib/campaigns/provider/twilio-webhook";
+import { sanitizeAuditDetail } from "@/lib/campaigns/provider/twilio-sanitize";
+import {
+  handleTwilioWhatsappStatusCallback,
+  twilioReplayKey,
+} from "@/lib/campaigns/provider/twilio-webhook";
 import {
   createFailClosedProviderStack,
   type CampaignIdempotencyStore,
@@ -40,6 +44,7 @@ import type {
   CampaignRecipient,
   CreateCampaignInput,
   DeliveryAttempt,
+  DeliveryAttemptKind,
   HaxrWhatsappSendMode,
   InvitationCampaign,
   ManualRecipientOps,
@@ -82,6 +87,8 @@ function assertEventIsolation(
 
 export class InvitationCampaignService {
   private readonly idempotency: CampaignIdempotencyStore;
+  /** Replay protection: MessageSid:MessageStatus já processados. */
+  private readonly webhookReplays = new Set<string>();
 
   constructor(
     private readonly store: CampaignStore = createEmptyCampaignStore(),
@@ -323,16 +330,12 @@ export class InvitationCampaignService {
       throw new Error("Destinatário não pertence à campanha.");
     }
 
+    const previous = recipient.status;
     recipient.status = nextStatusAfterManualAction(recipient.status, action);
     recipient.lastActionAt = nowIso();
     recipient.updatedAt = nowIso();
 
-    const kind =
-      action === "copy"
-        ? "manual_copy"
-        : action === "open"
-          ? "manual_open"
-          : "manual_marked_sent";
+    const kind = manualAttemptKind(action);
 
     this.store.attempts.push({
       id: randomUUID(),
@@ -341,7 +344,9 @@ export class InvitationCampaignService {
       recipientId,
       attemptKind: kind,
       outcome: "success",
-      detail: `Acção manual: ${action}`,
+      detail: sanitizeAuditDetail(
+        `Acção manual: ${action} (${previous} → ${recipient.status})`
+      ),
       providerRef: null,
       actor: "admin",
       createdAt: nowIso(),
@@ -353,6 +358,78 @@ export class InvitationCampaignService {
     }
 
     return recipient;
+  }
+
+  /** Marca RSVP recebido — não é delivered Twilio. */
+  markRsvpReceived(
+    eventId: string,
+    campaignId: string,
+    recipientId: string
+  ): CampaignRecipient {
+    const campaign = this.requireCampaign(eventId, campaignId);
+    const recipient = this.store.recipients.find((r) => r.id === recipientId);
+    if (!recipient) throw new Error("Destinatário não encontrado.");
+    assertEventIsolation(recipient.eventId, eventId, "recipient");
+    if (recipient.campaignId !== campaign.id) {
+      throw new Error("Destinatário não pertence à campanha.");
+    }
+    recipient.status = "rsvp_received";
+    recipient.lastActionAt = nowIso();
+    recipient.updatedAt = nowIso();
+    this.store.attempts.push({
+      id: randomUUID(),
+      eventId,
+      campaignId,
+      recipientId,
+      attemptKind: "manual_rsvp_received",
+      outcome: "success",
+      detail: "RSVP recebido (não implica delivered Twilio)",
+      providerRef: null,
+      actor: "system",
+      createdAt: nowIso(),
+    });
+    return recipient;
+  }
+
+  /**
+   * Remove SIDs DRYRUN_* e repõe destinatários dry-run em pending.
+   * Cleanup exacto — sem chamar Twilio.
+   */
+  cleanupTwilioDryRun(
+    eventId: string,
+    campaignId: string
+  ): { cleaned: number } {
+    this.requireCampaign(eventId, campaignId);
+    let cleaned = 0;
+    for (const recipient of this.listRecipients(eventId, campaignId)) {
+      if (!recipient.providerMessageSid?.startsWith("DRYRUN_")) continue;
+      recipient.providerMessageSid = null;
+      if (
+        recipient.status === "queued" ||
+        recipient.status === "sent" ||
+        recipient.status === "delivered" ||
+        recipient.status === "read" ||
+        recipient.status === "failed" ||
+        recipient.status === "undelivered"
+      ) {
+        recipient.status = "pending";
+      }
+      recipient.updatedAt = nowIso();
+      cleaned += 1;
+      this.store.attempts.push({
+        id: randomUUID(),
+        eventId,
+        campaignId,
+        recipientId: recipient.id,
+        attemptKind: "twilio_dryrun_cleanup",
+        outcome: "success",
+        detail: "Cleanup dry-run DRYRUN_*",
+        providerRef: null,
+        actor: "system",
+        createdAt: nowIso(),
+      });
+    }
+    return { cleaned };
   }
 
   exportCampaign(eventId: string, campaignId: string): string {
@@ -498,11 +575,14 @@ export class InvitationCampaignService {
     signatureHeader: string | null | undefined;
     callbackUrl: string;
     params: Record<string, string>;
+    /** Opcional: restringir actualização a este event_id (cross-event isolation). */
+    expectedEventId?: string;
   }): {
     accepted: boolean;
     reason?: string;
     recipientId?: string;
     status?: RecipientStatus;
+    replay?: boolean;
   } {
     const mode = this.modeReader();
     const resolved = resolveTwilioWhatsappConfig(process.env, mode);
@@ -511,16 +591,22 @@ export class InvitationCampaignService {
     }
 
     const messageSid = input.params.MessageSid || input.params.SmsSid || "";
-    const recipient = this.store.recipients.find(
-      (r) => r.providerMessageSid === messageSid
-    );
+    const messageStatus = input.params.MessageStatus || "";
+    const replayKey = twilioReplayKey(messageSid, messageStatus);
+    const alreadyProcessed = this.webhookReplays.has(replayKey);
+
+    const recipient = messageSid
+      ? this.store.recipients.find((r) => r.providerMessageSid === messageSid)
+      : undefined;
 
     const handled = handleTwilioWhatsappStatusCallback({
       authToken: resolved.config.authToken,
+      expectedAccountSid: resolved.config.accountSid,
       signatureHeader: input.signatureHeader,
       callbackUrl: input.callbackUrl,
       params: input.params,
       currentRecipientStatus: recipient?.status,
+      alreadyProcessed,
     });
 
     if (!handled.accepted) {
@@ -532,7 +618,7 @@ export class InvitationCampaignService {
         recipientId: recipient?.id ?? randomUUID(),
         attemptKind: "webhook_ignored",
         outcome: "blocked",
-        detail: handled.reason,
+        detail: sanitizeAuditDetail(handled.reason),
         providerRef: messageSid || null,
         actor: "twilio_webhook",
         createdAt: nowIso(),
@@ -540,12 +626,49 @@ export class InvitationCampaignService {
       return { accepted: false, reason: handled.reason };
     }
 
+    // Rejeitar SID desconhecido — nunca aplicar estado fantasma.
     if (!recipient) {
+      this.store.attempts.push({
+        id: randomUUID(),
+        eventId: "00000000-0000-0000-0000-000000000000",
+        campaignId: "00000000-0000-0000-0000-000000000000",
+        recipientId: randomUUID(),
+        attemptKind: "webhook_ignored",
+        outcome: "blocked",
+        detail: sanitizeAuditDetail(
+          `SID desconhecido rejeitado: ${messageSid}`
+        ),
+        providerRef: messageSid || null,
+        actor: "twilio_webhook",
+        createdAt: nowIso(),
+      });
       return {
-        accepted: true,
-        reason: "Callback aceite mas recipient desconhecido (sid sem match).",
+        accepted: false,
+        reason: "Callback de mensagem inexistente (SID desconhecido).",
       };
     }
+
+    if (
+      input.expectedEventId &&
+      recipient.eventId !== input.expectedEventId
+    ) {
+      return {
+        accepted: false,
+        reason: "Isolamento de evento: callback cross-event rejeitado.",
+      };
+    }
+
+    if (handled.replay) {
+      return {
+        accepted: true,
+        reason: "Replay ignorado (já processado).",
+        recipientId: recipient.id,
+        status: recipient.status,
+        replay: true,
+      };
+    }
+
+    this.webhookReplays.add(replayKey);
 
     if (handled.applied) {
       recipient.status = handled.status;
@@ -559,10 +682,12 @@ export class InvitationCampaignService {
       campaignId: recipient.campaignId,
       recipientId: recipient.id,
       attemptKind: "twilio_status",
-      outcome: "success",
-      detail: `Status ${handled.status}${
-        handled.applied ? "" : " (não aplicado — regressão)"
-      }`,
+      outcome: handled.applied ? "success" : "noop",
+      detail: sanitizeAuditDetail(
+        `Status ${handled.status}${
+          handled.applied ? "" : " (não aplicado — regressão/inválido)"
+        }`
+      ),
       providerRef: handled.messageSid,
       actor: "twilio_webhook",
       createdAt: nowIso(),
@@ -572,6 +697,7 @@ export class InvitationCampaignService {
       accepted: true,
       recipientId: recipient.id,
       status: recipient.status,
+      replay: false,
     };
   }
 
@@ -682,17 +808,20 @@ export class InvitationCampaignService {
       sender_name: sender?.publicName ?? "HAXR Signature",
     };
 
+    const phoneDigits = guest.phone?.replace(/\D/g, "") || null;
+    const phoneValid = Boolean(phoneDigits && phoneDigits.length >= 8);
+
     const recipient: CampaignRecipient = {
       id: randomUUID(),
       campaignId: campaign.id,
       eventId: campaign.eventId,
       guestId: guest.guestId,
       guestName: guest.guestName,
-      phoneE164: guest.phone?.replace(/\D/g, "") || null,
+      phoneE164: phoneValid ? phoneDigits : phoneDigits,
       phoneMasked: guest.phone ? maskPhoneNumber(guest.phone) : "",
       invitationUrl: invite.url,
       renderedMessage: renderTemplate(campaign.messageTemplate, context),
-      status: "pending",
+      status: phoneValid ? "pending" : "invalid_phone",
       batchKey,
       lastActionAt: null,
       providerMessageSid: null,
@@ -734,6 +863,27 @@ export class InvitationCampaignService {
         context
       );
       recipient.updatedAt = nowIso();
+    }
+  }
+}
+
+function manualAttemptKind(action: ManualAction): DeliveryAttemptKind {
+  switch (action) {
+    case "copy":
+      return "manual_copy";
+    case "open":
+      return "manual_open";
+    case "mark_sent":
+      return "manual_marked_sent";
+    case "undo":
+      return "manual_undo";
+    case "skip":
+      return "manual_skip";
+    case "invalid_phone":
+      return "manual_invalid_phone";
+    default: {
+      const _exhaustive: never = action;
+      return _exhaustive;
     }
   }
 }
