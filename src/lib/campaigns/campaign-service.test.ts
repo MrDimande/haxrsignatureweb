@@ -458,7 +458,7 @@ describe("invitation campaigns domain", () => {
     assert.equal(bad.ok, false);
 
     assert.equal(mapTwilioMessageStatus("delivered"), "delivered");
-    assert.equal(mapTwilioMessageStatus("undelivered"), "failed");
+    assert.equal(mapTwilioMessageStatus("undelivered"), "undelivered");
     assert.equal(shouldApplyTwilioStatus("sent", "delivered"), true);
     assert.equal(shouldApplyTwilioStatus("delivered", "sent"), false);
   });
@@ -515,6 +515,7 @@ describe("invitation campaigns domain", () => {
     const params = {
       MessageSid: sid,
       MessageStatus: "delivered",
+      AccountSid: TWILIO_ENV.TWILIO_ACCOUNT_SID,
     };
     const signature = computeTwilioSignature(
       TWILIO_ENV.TWILIO_AUTH_TOKEN,
@@ -537,8 +538,35 @@ describe("invitation campaigns domain", () => {
     const rejected = service.applyTwilioStatusWebhook({
       signatureHeader: "nope",
       callbackUrl: TWILIO_ENV.TWILIO_STATUS_CALLBACK_URL,
-      params: { MessageSid: "SM1", MessageStatus: "sent" },
+      params: {
+        MessageSid: "SM1",
+        MessageStatus: "sent",
+        AccountSid: TWILIO_ENV.TWILIO_ACCOUNT_SID,
+      },
     });
     assert.equal(rejected.accepted, false);
+  });
+
+  it("rejects webhook with foreign AccountSid", async () => {
+    applyTwilioEnv();
+    process.env.HAXR_WHATSAPP_SEND_MODE = "twilio_sandbox";
+    const service = new InvitationCampaignService();
+    const params = {
+      MessageSid: "SMFOREIGN",
+      MessageStatus: "delivered",
+      AccountSid: "ACffffffffffffffffffffffffffffffff",
+    };
+    const signature = computeTwilioSignature(
+      TWILIO_ENV.TWILIO_AUTH_TOKEN,
+      TWILIO_ENV.TWILIO_STATUS_CALLBACK_URL,
+      params
+    );
+    const rejected = service.applyTwilioStatusWebhook({
+      signatureHeader: signature,
+      callbackUrl: TWILIO_ENV.TWILIO_STATUS_CALLBACK_URL,
+      params,
+    });
+    assert.equal(rejected.accepted, false);
+    assert.match(rejected.reason ?? "", /AccountSid/i);
   });
 });

@@ -1,4 +1,5 @@
 import { InvitationCampaignService } from "@/lib/campaigns/campaign-service";
+import { resolveSignatureCallbackUrl } from "@/lib/campaigns/provider/twilio-callback-url";
 import { resolveTwilioWhatsappConfig } from "@/lib/campaigns/provider/twilio-config";
 import { twilioParamsFromFormData } from "@/lib/campaigns/provider/twilio-webhook";
 import { getWhatsappSendMode } from "@/lib/campaigns/send-mode";
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * StatusCallback Twilio WhatsApp.
- * Validação obrigatória de X-Twilio-Signature.
+ * Validação obrigatória de X-Twilio-Signature na URL exacta (proxy-safe).
  * Não envia mensagens — só actualiza estados.
  */
 export async function POST(request: Request) {
@@ -26,12 +27,14 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const params = twilioParamsFromFormData(form);
 
-  // URL exacta configurada em TWILIO_STATUS_CALLBACK_URL (assinatura Twilio).
-  const callbackUrl = resolved.config.statusCallbackUrl;
+  const { url: callbackUrl, receivedUrl } = resolveSignatureCallbackUrl({
+    request,
+    configuredUrl: resolved.config.statusCallbackUrl,
+  });
 
   // Serviço in-memory não persiste entre requests em Production —
-  // a rota valida assinatura e devolve 200/403. Persistência Supabase
-  // liga-se quando a migration 044 estiver aplicada + repositório de SID.
+  // a rota valida assinatura + AccountSid e rejeita SID desconhecido.
+  // Persistência Supabase liga-se quando a migration 044 estiver aplicada.
   const service = new InvitationCampaignService();
   const result = service.applyTwilioStatusWebhook({
     signatureHeader: signature,
@@ -41,7 +44,11 @@ export async function POST(request: Request) {
 
   if (!result.accepted) {
     return Response.json(
-      { ok: false, error: result.reason ?? "webhook_rejected" },
+      {
+        ok: false,
+        error: result.reason ?? "webhook_rejected",
+        receivedUrl,
+      },
       { status: 403 }
     );
   }
@@ -50,6 +57,7 @@ export async function POST(request: Request) {
     ok: true,
     status: result.status ?? null,
     recipientId: result.recipientId ?? null,
+    replay: result.replay ?? false,
     detail: result.reason ?? null,
   });
 }

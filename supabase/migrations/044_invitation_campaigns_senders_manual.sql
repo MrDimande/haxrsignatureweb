@@ -133,12 +133,16 @@ CREATE TABLE IF NOT EXISTS public.campaign_recipients (
       'previewed',
       'copied',
       'opened',
+      'opened_whatsapp',
       'marked_sent',
+      'invalid_phone',
+      'rsvp_received',
       'queued',
       'sent',
       'delivered',
       'read',
       'failed',
+      'undelivered',
       'cancelled',
       'skipped'
     )

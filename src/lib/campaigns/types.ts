@@ -65,23 +65,44 @@ export const CAMPAIGN_STATUSES = [
 
 export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number];
 
-/** Estados de entrega Twilio + operações manuais. */
+/**
+ * Estados manuais canónicos + entrega Twilio.
+ * opened_whatsapp ≠ sent; marked_sent ≠ delivered.
+ */
 export const RECIPIENT_STATUSES = [
   "pending",
   "previewed",
   "copied",
+  /** @deprecated prefer opened_whatsapp */
   "opened",
+  "opened_whatsapp",
   "marked_sent",
+  "invalid_phone",
+  "rsvp_received",
   "queued",
   "sent",
   "delivered",
   "read",
   "failed",
+  "undelivered",
   "cancelled",
   "skipped",
 ] as const;
 
 export type RecipientStatus = (typeof RECIPIENT_STATUSES)[number];
+
+/** Estados manuais operacionais (sem provider). */
+export const MANUAL_RECIPIENT_STATUSES = [
+  "pending",
+  "opened_whatsapp",
+  "marked_sent",
+  "skipped",
+  "invalid_phone",
+  "rsvp_received",
+] as const;
+
+export type ManualRecipientStatus =
+  (typeof MANUAL_RECIPIENT_STATUSES)[number];
 
 export const TWILIO_DELIVERY_STATUSES = [
   "queued",
@@ -89,6 +110,7 @@ export const TWILIO_DELIVERY_STATUSES = [
   "delivered",
   "read",
   "failed",
+  "undelivered",
 ] as const;
 
 export type TwilioDeliveryStatus = (typeof TWILIO_DELIVERY_STATUSES)[number];
@@ -97,6 +119,10 @@ export const DELIVERY_ATTEMPT_KINDS = [
   "manual_copy",
   "manual_open",
   "manual_marked_sent",
+  "manual_undo",
+  "manual_skip",
+  "manual_invalid_phone",
+  "manual_rsvp_received",
   "preview",
   "provider_blocked",
   "webhook_ignored",
@@ -105,6 +131,7 @@ export const DELIVERY_ATTEMPT_KINDS = [
   "twilio_send",
   "twilio_status",
   "twilio_retry",
+  "twilio_dryrun_cleanup",
 ] as const;
 
 export type DeliveryAttemptKind = (typeof DELIVERY_ATTEMPT_KINDS)[number];
@@ -214,4 +241,16 @@ export type ManualRecipientOps = {
   waMeUrl: string | null;
   status: RecipientStatus;
   invitationUrl: string;
+};
+
+/** Contadores manuais — opened ≠ sent; marked ≠ delivered. */
+export type ManualCampaignCounters = {
+  pending: number;
+  openedWhatsapp: number;
+  markedSent: number;
+  skipped: number;
+  invalidPhone: number;
+  rsvpReceived: number;
+  /** Nunca inferir delivered a partir de marked_sent. */
+  deliveredClaimed: false;
 };
