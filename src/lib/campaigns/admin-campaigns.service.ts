@@ -59,16 +59,15 @@ export function listEditionInviteOptions() {
 
 export function getCampaignSendModeStatus() {
   const mode = getWhatsappSendMode();
-  const gate = gateAutomaticProvider({
-    mode,
-    hasConfiguredProvider: false,
-    hasProviderCredentials: false,
-  });
+  const gate = gateAutomaticProvider({ mode });
   return {
     mode,
     manualAllowed: isManualOpsAllowed(mode),
-    automaticBlocked: true as const,
-    automaticBlockReason: gate.allowed ? "MVP sem provider." : gate.reason,
+    automaticBlocked: !gate.allowed,
+    automaticBlockReason: gate.allowed
+      ? "Twilio Sandbox pronto (requer HAXR_TWILIO_LIVE_SEND=true para API real)."
+      : gate.reason,
+    twilioSandboxReady: gate.allowed && mode === "twilio_sandbox",
   };
 }
 
