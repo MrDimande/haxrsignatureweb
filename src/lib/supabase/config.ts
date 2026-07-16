@@ -1,10 +1,17 @@
-/** Preview/staging — client app auth validation (Fase B). */
+/** Legacy preview — client app auth validation (Fase B). Keep intact; do not target for new PR validation. */
 export const SUPABASE_PREVIEW_PROJECT_REF = "uxleigndoomoezwsxlan";
+
+/**
+ * New independent Staging — campaigns/imports validation.
+ * Prefer this for Preview/Staging of PRs #9/#10.
+ */
+export const SUPABASE_STAGING_PROJECT_REF = "rncvrdaaucbheeqvoetu";
 
 /** Production — Core + Edition RSVP. Never use for client app auth dev. */
 export const SUPABASE_PRODUCTION_PROJECT_REF = "oxsrdmydlqyvnueedgtl";
 
 export const SUPABASE_PREVIEW_URL = `https://${SUPABASE_PREVIEW_PROJECT_REF}.supabase.co`;
+export const SUPABASE_STAGING_URL = `https://${SUPABASE_STAGING_PROJECT_REF}.supabase.co`;
 
 export function getSupabaseProjectRef(url?: string): string | null {
   const value = url ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +19,76 @@ export function getSupabaseProjectRef(url?: string): string | null {
 
   const match = value.match(/https?:\/\/([^.]+)\.supabase\.co/);
   return match?.[1] ?? null;
+}
+
+/**
+ * Explicit project ref from env (preferred for Vercel Staging/Preview guards).
+ * Falls back to parsing NEXT_PUBLIC_SUPABASE_URL when unset.
+ */
+export function resolveConfiguredSupabaseProjectRef(): string | null {
+  const explicit = process.env.SUPABASE_PROJECT_REF?.trim();
+  if (explicit) return explicit;
+  return getSupabaseProjectRef();
+}
+
+export type SupabaseRuntimeEnvCheck =
+  | { ok: true; projectRef: string; vercelEnv: string }
+  | { ok: false; message: string; projectRef: string | null; vercelEnv: string };
+
+/**
+ * Fail-closed Supabase ↔ Vercel environment matrix.
+ *
+ * Preview/Development:
+ *   if SUPABASE_PROJECT_REF == production → block admin mutations.
+ * Production:
+ *   if SUPABASE_PROJECT_REF != production → block startup/configuration.
+ */
+export function validateSupabaseRuntimeEnvironment(
+  options?: { vercelEnv?: string | null; projectRef?: string | null },
+): SupabaseRuntimeEnvCheck {
+  const vercelEnv =
+    options?.vercelEnv ??
+    process.env.VERCEL_ENV ??
+    (process.env.NODE_ENV === "production" ? "production" : "development");
+  const projectRef =
+    options?.projectRef !== undefined
+      ? options.projectRef
+      : resolveConfiguredSupabaseProjectRef();
+
+  if (!projectRef) {
+    return {
+      ok: false,
+      message:
+        "SUPABASE_PROJECT_REF / NEXT_PUBLIC_SUPABASE_URL em falta. Defina o project ref explícito.",
+      projectRef: null,
+      vercelEnv,
+    };
+  }
+
+  const isVercelProduction = vercelEnv === "production";
+  const isProductionRef = projectRef === SUPABASE_PRODUCTION_PROJECT_REF;
+
+  if (!isVercelProduction && isProductionRef) {
+    return {
+      ok: false,
+      message:
+        "Ambiente não-production aponta para Supabase Production. Mutations administrativas bloqueadas. Use o Staging rncvrdaaucbheeqvoetu.",
+      projectRef,
+      vercelEnv,
+    };
+  }
+
+  if (isVercelProduction && !isProductionRef) {
+    return {
+      ok: false,
+      message:
+        "Deploy Production exige SUPABASE_PROJECT_REF=oxsrdmydlqyvnueedgtl. Ref não-production detectada — startup bloqueado.",
+      projectRef,
+      vercelEnv,
+    };
+  }
+
+  return { ok: true, projectRef, vercelEnv };
 }
 
 /** Reads the Supabase project ref embedded in a JWT without logging the token. */
