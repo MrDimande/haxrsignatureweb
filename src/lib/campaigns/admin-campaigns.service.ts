@@ -198,6 +198,7 @@ export async function createCampaignForEvent(
       status: "pending" as const,
       batchKey,
       lastActionAt: null,
+      providerMessageSid: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
