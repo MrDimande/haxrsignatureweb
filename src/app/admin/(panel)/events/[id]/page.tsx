@@ -12,6 +12,7 @@ import * as paymentsRepo from "@/lib/finance/repositories/payments.repository";
 import * as portalPremiumRepo from "@/lib/portal/repositories/portal-premium.repository";
 import EventsMigrationNotice from "@/components/admin/EventsMigrationNotice";
 import { listGuestAuditByEvent } from "@/lib/events/repositories/guest-audit.repository";
+import * as batchesRepo from "@/lib/events/repositories/guest-import-batches.repository";
 import { isEventsSchemaMissingError } from "@/lib/events/schema-guard";
 import { isConciergeSchemaMissingError } from "@/lib/concierge/types";
 import {
@@ -37,15 +38,25 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     const event = await eventsRepo.getEventById(id);
     if (!event) notFound();
 
-    const [guests, seats, stats, businesses, clients, auditEntries, groups] =
+    const [
+      guests,
+      seats,
+      stats,
+      businesses,
+      clients,
+      auditEntries,
+      groups,
+      importBatches,
+    ] =
       await Promise.all([
-      guestsRepo.listGuestsByEvent(id),
+      guestsRepo.listGuestsByEvent(id, { includeArchived: true }),
       seatsRepo.listSeatsByEvent(id),
       guestsRepo.getEventStats(id),
       businessesRepo.listBusinesses(),
       clientsRepo.listClients(),
       listGuestAuditByEvent(id).catch(() => []),
       groupsRepo.listGroupsByEvent(id).catch(() => []),
+      batchesRepo.listImportBatchesByEvent(id).catch(() => []),
     ]);
 
     const giftReservations = event.editionRegistryKey
@@ -143,6 +154,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <EventDetailClient
         event={event}
         initialGuests={guests}
+        importBatches={importBatches}
         initialSeats={seats}
         groups={groups}
         stats={stats}

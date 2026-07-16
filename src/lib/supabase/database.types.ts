@@ -903,6 +903,41 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["guest_groups"]["Insert"]>;
       };
+      guest_import_batches: {
+        Row: {
+          id: string;
+          event_id: string;
+          filename: string;
+          created_at: string;
+          updated_at: string;
+          operator_user_id: string;
+          operator_email: string;
+          total_rows: number;
+          valid_rows: number;
+          duplicate_rows: number;
+          invalid_rows: number;
+          removed_rows: number;
+          status: "preview" | "completed" | "partial" | "failed" | "removed";
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          filename?: string;
+          created_at?: string;
+          updated_at?: string;
+          operator_user_id?: string;
+          operator_email?: string;
+          total_rows?: number;
+          valid_rows?: number;
+          duplicate_rows?: number;
+          invalid_rows?: number;
+          removed_rows?: number;
+          status?: "preview" | "completed" | "partial" | "failed" | "removed";
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["guest_import_batches"]["Insert"]
+        >;
+      };
       guests: {
         Row: {
           id: string;
@@ -921,6 +956,12 @@ export interface Database {
           guest_notes: string;
           label: "none" | "vip" | "family" | "wedding_party" | "corporate" | "other";
           guest_source: "manual" | "sheet_master" | "sheet_rsvp" | "edition_rsvp";
+          import_batch_id: string | null;
+          archived_at: string | null;
+          archive_reason: string;
+          is_incorrect: boolean;
+          deleted_at: string | null;
+          invite_sent_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -941,10 +982,43 @@ export interface Database {
           guest_notes?: string;
           label?: "none" | "vip" | "family" | "wedding_party" | "corporate" | "other";
           guest_source?: "manual" | "sheet_master" | "sheet_rsvp" | "edition_rsvp";
+          import_batch_id?: string | null;
+          archived_at?: string | null;
+          archive_reason?: string;
+          is_incorrect?: boolean;
+          deleted_at?: string | null;
+          invite_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["guests"]["Insert"]>;
+      };
+      guest_bulk_audit: {
+        Row: {
+          id: string;
+          event_id: string;
+          batch_id: string | null;
+          action: string;
+          guest_ids: string[];
+          operator_email: string;
+          impact: Json;
+          undo_payload: Json | null;
+          undone_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          batch_id?: string | null;
+          action: string;
+          guest_ids?: string[];
+          operator_email?: string;
+          impact?: Json;
+          undo_payload?: Json | null;
+          undone_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["guest_bulk_audit"]["Insert"]>;
       };
       guest_audit_log: {
         Row: {
