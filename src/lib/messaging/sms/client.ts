@@ -114,7 +114,7 @@ export function createMockTwilioSmsClient(
   overrides?: Partial<TwilioSmsSendResult>
 ): TwilioSmsMessagesClient {
   return {
-    async sendSms(input) {
+    async sendSms(input): Promise<TwilioSmsSendResult> {
       if (overrides && "ok" in overrides && overrides.ok === false) {
         return {
           ok: false,
@@ -123,12 +123,17 @@ export function createMockTwilioSmsClient(
           code: overrides.code,
         };
       }
+
+      const successOverrides =
+        overrides && overrides.ok !== false
+          ? (overrides as Partial<Extract<TwilioSmsSendResult, { ok: true }>>)
+          : {};
+
       return {
         ok: true,
-        dryRun: true,
+        dryRun: successOverrides.dryRun ?? true,
         sid: `MOCK_SMS_${input.idempotencyKey.slice(0, 20)}`,
-        status: "queued",
-        ...(overrides && overrides.ok !== false ? overrides : {}),
+        status: successOverrides.status ?? "queued",
       };
     },
   };
