@@ -14,3 +14,9 @@
 - `guests.import_batch_id` is nullable â€” existing guests without a batch remain valid.
 - Soft archive / soft delete are the default destructive paths; hard delete is blocked when RSVP, seat, check-in or invite-sent protections apply.
 - RLS enabled on new tables with deny-by-default for Data API; admin uses service_role.
+
+
+## Rollback file location
+
+O ficheiro de rollback vive em supabase/rollbacks/ (não em migrations/), para o CLI nunca o aplicar como migration up.
+
