@@ -9,6 +9,7 @@ import {
   FileText,
   Inbox,
   LayoutDashboard,
+  Mail,
   Settings,
   User,
   Users,
@@ -42,6 +43,7 @@ const navSections: NavSection[] = [
     title: "Operacional",
     items: [
       { href: "/admin/events", label: "Eventos", icon: Calendar, hasSubmenu: true },
+      { href: "/admin/invitations", label: "Convites", icon: Mail, hasSubmenu: true },
       { href: "/admin/leads", label: "Leads", icon: Inbox },
       { href: "/admin/clients", label: "Clientes", icon: Users },
     ],
