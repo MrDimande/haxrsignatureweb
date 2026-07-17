@@ -159,6 +159,7 @@ export async function sendGuestInviteEmailAction(
       throw new Error(sent.error ?? "Falha ao enviar convite.");
     }
 
+    await guestsRepo.markGuestInviteSent(guest.id, eventId);
     await logGuestAudit(
       guest.id,
       eventId,
@@ -194,6 +195,7 @@ export async function bulkSendGuestInviteEmailsAction(
       const single = await sendGuestInviteEmail(event, guest);
       if (single.sent) {
         sent++;
+        await guestsRepo.markGuestInviteSent(guest.id, eventId);
         await logGuestAudit(
           guest.id,
           eventId,

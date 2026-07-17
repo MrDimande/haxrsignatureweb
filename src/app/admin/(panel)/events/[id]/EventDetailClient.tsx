@@ -52,6 +52,7 @@ import type {
   EventStats,
   GuestAuditEntry,
   GuestGroup,
+  GuestImportBatch,
   ManagedEvent,
   ReviewQueueResult,
 } from "@/lib/events/types";
@@ -75,6 +76,7 @@ type Tab =
 type EventDetailClientProps = {
   event: ManagedEvent;
   initialGuests: EventGuest[];
+  importBatches?: GuestImportBatch[];
   initialSeats: EventSeat[];
   groups: GuestGroup[];
   stats: EventStats;
@@ -116,6 +118,7 @@ function formatDate(date: string | null): string {
 export default function EventDetailClient({
   event: initialEvent,
   initialGuests,
+  importBatches = [],
   initialSeats,
   groups,
   stats: initialStats,
@@ -323,6 +326,7 @@ export default function EventDetailClient({
           guests={initialGuests}
           groups={groups}
           seats={initialSeats}
+          importBatches={importBatches}
           onChanged={handleRefresh}
         />
       ) : null}
