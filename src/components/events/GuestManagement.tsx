@@ -40,6 +40,9 @@ import GuestForm from "@/components/events/GuestForm";
 import type { EventGuest, EventSeat, GuestGroup, ManagedEvent } from "@/lib/events/types";
 
 const PAGE_SIZE = 50;
+const TABLE_CONTROL_FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-gold/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+const TABLE_CHECKBOX_STYLES = `h-4 w-4 cursor-pointer rounded-sm border border-grey-medium/40 bg-black-soft accent-admin-gold ${TABLE_CONTROL_FOCUS}`;
 
 type GuestManagementProps = {
   event: ManagedEvent;
@@ -558,22 +561,23 @@ export default function GuestManagement({
       ) : null}
 
       <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+        <div className="overflow-x-auto bg-black-soft/80">
+          <table className="w-full min-w-[900px] bg-black/30">
             <thead>
-              <tr className="border-b border-grey-dark/80 bg-black-soft">
+              <tr className="border-b border-brand-champagne/15 bg-black-soft">
                 <th className="px-4 py-3 w-10">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={toggleAll}
                     aria-label="Seleccionar todos"
+                    className={TABLE_CHECKBOX_STYLES}
                   />
                 </th>
                 {["Convidado", "Lugar", "Estado", "Acções"].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-3 text-left font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50"
+                    className="px-4 py-3 text-left font-mono text-[8px] font-medium tracking-[0.3em] uppercase text-grey-medium/70"
                   >
                     {h}
                   </th>
@@ -584,7 +588,11 @@ export default function GuestManagement({
               {visibleGuests.map((guest) => (
                 <tr
                   key={guest.id}
-                  className="border-b border-grey-dark/50 hover:bg-white/[0.02]"
+                  className={`border-b border-brand-champagne/10 transition-colors duration-200 focus-within:bg-brand-ivory/[0.045] ${
+                    selected.has(guest.id)
+                      ? "bg-admin-gold/[0.08] hover:bg-admin-gold/[0.11]"
+                      : "hover:bg-brand-ivory/[0.035]"
+                  }`}
                 >
                   <td className="px-4 py-3">
                     <input
@@ -592,14 +600,15 @@ export default function GuestManagement({
                       checked={selected.has(guest.id)}
                       onChange={() => toggleOne(guest.id)}
                       aria-label={`Seleccionar ${guest.name}`}
+                      className={TABLE_CHECKBOX_STYLES}
                     />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p>{guest.name}</p>
+                      <p className="font-medium text-brand-ivory">{guest.name}</p>
                       {isPossibleDuplicate(guest, guests) ? (
                         <span
-                          className="inline-flex items-center gap-1 text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm bg-amber-500/10 text-amber-300 border-amber-500/25"
+                          className="inline-flex items-center gap-1 text-[8px] font-mono font-medium tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm bg-amber-500/10 text-amber-300 border-amber-500/25"
                           title="Possível duplicado detectado"
                         >
                           <AlertTriangle className="w-3 h-3" />
@@ -608,41 +617,45 @@ export default function GuestManagement({
                       ) : null}
                       {guest.label !== "none" ? (
                         <span
-                          className={`text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${GUEST_LABEL_STYLES[guest.label]}`}
+                          className={`text-[8px] font-mono font-medium tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${GUEST_LABEL_STYLES[guest.label]}`}
                         >
                           {GUEST_LABEL_LABELS[guest.label]}
                         </span>
                       ) : null}
                       {guest.guestSource !== "manual" ? (
                         <span
-                          className={`text-[8px] font-mono tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${
+                          className={`text-[8px] font-mono font-medium tracking-[0.12em] uppercase px-2 py-0.5 border rounded-sm ${
                             guest.guestSource === "sheet_rsvp"
                               ? "bg-blue-500/10 text-blue-300 border-blue-500/25"
                               : guest.guestSource === "edition_rsvp"
                                 ? "bg-gold/10 text-gold border-gold/25"
-                                : "bg-grey/10 text-grey/60 border-grey/25"
+                                : "bg-grey-medium/10 text-grey-medium/75 border-grey-medium/25"
                           }`}
                         >
                           {GUEST_SOURCE_LABELS[guest.guestSource]}
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-xs text-grey/50">
+                    <p className="text-xs text-grey-medium/75">
                       {guestMeta(guest)}
                       {guest.groupName ? ` · Grupo: ${guest.groupName}` : ""}
                     </p>
                     {guest.email ? (
-                      <p className="text-[10px] text-grey/40 mt-0.5">{guest.email}</p>
+                      <p className="text-[10px] text-grey-medium/60 mt-0.5">{guest.email}</p>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 text-sm text-grey">
+                  <td className="px-4 py-3 text-sm text-grey-medium/80">
                     {guest.seat
                       ? `${guest.seat.tableName} · ${guest.seat.seatNumber}`
                       : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-block text-[9px] font-mono tracking-[0.15em] uppercase px-2 py-1 border rounded-sm ${GUEST_STATUS_STYLES[guest.status]}`}
+                      className={`inline-block text-[9px] font-mono font-medium tracking-[0.15em] uppercase px-2 py-1 border rounded-sm ${
+                        guest.status === "invited"
+                          ? "bg-grey-medium/10 text-grey-medium/80 border-grey-medium/25"
+                          : GUEST_STATUS_STYLES[guest.status]
+                      }`}
                     >
                       {GUEST_STATUS_LABELS[guest.status]}
                     </span>
@@ -654,7 +667,7 @@ export default function GuestManagement({
                           type="button"
                           onClick={() => handleConfirm(guest.id)}
                           disabled={busyId === guest.id}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-blue-300/80 hover:text-blue-200 border border-blue-500/20 px-2 py-1 rounded-sm"
+                          className={`inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-blue-300/90 hover:text-blue-200 border border-blue-500/30 bg-blue-500/[0.04] px-2 py-1 rounded-sm transition-colors ${TABLE_CONTROL_FOCUS}`}
                         >
                           <Check className="w-3 h-3" />
                           Confirmar
@@ -665,7 +678,7 @@ export default function GuestManagement({
                           type="button"
                           onClick={() => handleCheckIn(guest.id)}
                           disabled={busyId === guest.id}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-emerald-300/80 hover:text-emerald-200 border border-emerald-500/20 px-2 py-1 rounded-sm"
+                          className={`inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-emerald-300/90 hover:text-emerald-200 border border-emerald-500/30 bg-emerald-500/[0.04] px-2 py-1 rounded-sm transition-colors ${TABLE_CONTROL_FOCUS}`}
                         >
                           <UserCheck className="w-3 h-3" />
                           Check-in
@@ -674,7 +687,7 @@ export default function GuestManagement({
                       <button
                         type="button"
                         onClick={() => handleCopyLink(guest, "rsvp")}
-                        className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-grey/55 hover:text-admin-gold"
+                        className={`inline-flex items-center gap-1 rounded-sm text-[10px] font-mono tracking-[0.12em] uppercase text-grey-medium/75 hover:text-brand-gold-light transition-colors ${TABLE_CONTROL_FOCUS}`}
                       >
                         <Copy className="w-3 h-3" />
                         {copiedId === `${guest.id}-rsvp` ? "Copiado" : "Link"}
@@ -684,7 +697,7 @@ export default function GuestManagement({
                           type="button"
                           onClick={() => handleSendInviteEmail(guest.id)}
                           disabled={busyId === guest.id}
-                          className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-gold/70 hover:text-admin-gold border border-gold/20 px-2 py-1 rounded-sm"
+                          className={`inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-brand-gold-light/80 hover:text-brand-gold-light border border-admin-gold/30 bg-admin-gold/[0.04] px-2 py-1 rounded-sm transition-colors ${TABLE_CONTROL_FOCUS}`}
                         >
                           <Mail className="w-3 h-3" />
                           Email
@@ -693,7 +706,7 @@ export default function GuestManagement({
                       <button
                         type="button"
                         onClick={() => handleCopyLink(guest, "checkin")}
-                        className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.12em] uppercase text-grey/55 hover:text-admin-gold"
+                        className={`inline-flex items-center gap-1 rounded-sm text-[10px] font-mono tracking-[0.12em] uppercase text-grey-medium/75 hover:text-brand-gold-light transition-colors ${TABLE_CONTROL_FOCUS}`}
                       >
                         <Copy className="w-3 h-3" />
                         {copiedId === `${guest.id}-checkin` ? "Copiado" : "QR"}
@@ -704,14 +717,14 @@ export default function GuestManagement({
                           setEditing(guest);
                           setCreating(false);
                         }}
-                        className="text-xs text-grey hover:text-admin-gold"
+                        className={`rounded-sm text-xs text-grey-medium/80 hover:text-brand-gold-light transition-colors ${TABLE_CONTROL_FOCUS}`}
                       >
                         Editar
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(guest.id)}
-                        className="text-xs text-grey hover:text-red-400"
+                        className={`rounded-sm text-xs text-grey-medium/80 hover:text-red-300 transition-colors ${TABLE_CONTROL_FOCUS}`}
                       >
                         Eliminar
                       </button>
@@ -724,8 +737,8 @@ export default function GuestManagement({
         </div>
 
         {filteredGuests.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-grey-dark/60">
-            <p className="text-xs text-grey/50 font-mono tracking-[0.15em] uppercase">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-brand-champagne/10 bg-black-soft/70">
+            <p className="text-xs text-grey-medium/70 font-mono tracking-[0.15em] uppercase">
               Página {safePage} de {totalPages}
             </p>
             <div className="flex gap-2">
@@ -733,7 +746,7 @@ export default function GuestManagement({
                 type="button"
                 disabled={safePage <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="admin-btn-secondary text-xs px-3 py-2 disabled:opacity-40"
+                className={`admin-btn-secondary text-xs px-3 py-2 disabled:opacity-40 ${TABLE_CONTROL_FOCUS}`}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -741,7 +754,7 @@ export default function GuestManagement({
                 type="button"
                 disabled={safePage >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="admin-btn-secondary text-xs px-3 py-2 disabled:opacity-40"
+                className={`admin-btn-secondary text-xs px-3 py-2 disabled:opacity-40 ${TABLE_CONTROL_FOCUS}`}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
