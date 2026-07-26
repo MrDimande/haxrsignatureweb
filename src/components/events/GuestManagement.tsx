@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  AlertCircle,
   AlertTriangle,
   Archive,
   Check,
@@ -11,6 +12,7 @@ import {
   ChevronUp,
   Copy,
   FileSpreadsheet,
+  MailCheck,
   MessageCircle,
   Mail,
   Plus,
@@ -53,6 +55,8 @@ import { downloadCsvFile } from "@/lib/finance/export/csv";
 import { buildSelectedGuestsCsv } from "@/lib/events/sheets/export-csv";
 import { buildCheckinUrl, buildRsvpUrl } from "@/lib/events/tokens";
 import { buildWhatsAppLinksForGuests } from "@/lib/events/whatsapp";
+import { formatDateTimePtMZ } from "@/lib/formatters";
+import type { IncorrectFilter, InviteSentFilter } from "@/lib/events/bulk-selection";
 import GuestForm from "@/components/events/GuestForm";
 import type {
   EventGuest,
@@ -113,6 +117,8 @@ export default function GuestManagement({
   const [batchFilter, setBatchFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [incorrectFilter, setIncorrectFilter] = useState<IncorrectFilter>("all");
+  const [inviteSentFilter, setInviteSentFilter] = useState<InviteSentFilter>("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
@@ -166,6 +172,16 @@ export default function GuestManagement({
       rows = rows.filter((guest) => guest.status === statusFilter);
     }
 
+    if (incorrectFilter === "incorrect_only") {
+      rows = rows.filter((guest) => guest.isIncorrect);
+    }
+
+    if (inviteSentFilter === "sent") {
+      rows = rows.filter((guest) => Boolean(guest.inviteSentAt));
+    } else if (inviteSentFilter === "not_sent") {
+      rows = rows.filter((guest) => !guest.inviteSentAt);
+    }
+
     const trimmed = search.trim();
     if (trimmed) {
       rows = rows.filter((guest) => {
@@ -179,7 +195,7 @@ export default function GuestManagement({
     }
 
     return rows;
-  }, [guests, listFilter, search, batchFilter, sourceFilter, statusFilter]);
+  }, [guests, listFilter, search, batchFilter, sourceFilter, statusFilter, incorrectFilter, inviteSentFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredGuests.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -208,16 +224,6 @@ export default function GuestManagement({
     "unassigned",
     "archived",
   ].includes(listFilter);
-  const activeSecondaryFilterCount =
-    Number(secondaryListFilterActive) +
-    Number(batchFilter !== "all") +
-    Number(sourceFilter !== "all") +
-    Number(statusFilter !== "all");
-  const hasActiveFilters =
-    listFilter !== "all" ||
-    batchFilter !== "all" ||
-    sourceFilter !== "all" ||
-    statusFilter !== "all";
 
   const tables = useMemo(
     () => [...new Set(seats.map((seat) => seat.tableName))].sort(),
@@ -520,6 +526,21 @@ export default function GuestManagement({
     unassigned: "Sem mesa",
     archived: "Arquivados",
   };
+  const activeSecondaryFilterCount =
+    Number(secondaryListFilterActive) +
+    Number(batchFilter !== "all") +
+    Number(sourceFilter !== "all") +
+    Number(statusFilter !== "all") +
+    Number(incorrectFilter !== "all") +
+    Number(inviteSentFilter !== "all");
+  const hasActiveFilters =
+    listFilter !== "all" ||
+    batchFilter !== "all" ||
+    sourceFilter !== "all" ||
+    statusFilter !== "all" ||
+    incorrectFilter !== "all" ||
+    inviteSentFilter !== "all";
+
   const selectedBatch = importBatches.find((batch) => batch.id === batchFilter);
   const activeFilterLabels = [
     listFilter !== "all" ? listFilterLabels[listFilter] : null,
@@ -538,6 +559,12 @@ export default function GuestManagement({
           GUEST_STATUS_LABELS[statusFilter as keyof typeof GUEST_STATUS_LABELS] || statusFilter
         }`
       : null,
+    incorrectFilter === "incorrect_only" ? "Dados incorrectos" : null,
+    inviteSentFilter === "sent"
+      ? "Convite enviado"
+      : inviteSentFilter === "not_sent"
+        ? "Convite não enviado"
+        : null,
   ].filter((label): label is string => Boolean(label));
 
   function clearFilters() {
@@ -545,6 +572,8 @@ export default function GuestManagement({
     setBatchFilter("all");
     setSourceFilter("all");
     setStatusFilter("all");
+    setIncorrectFilter("all");
+    setInviteSentFilter("all");
     setPage(1);
   }
 
@@ -822,6 +851,41 @@ export default function GuestManagement({
                         {label}
                       </option>
                     ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-[8px] uppercase tracking-[0.25em] text-grey-medium/60">
+                    Informação
+                  </span>
+                  <select
+                    value={incorrectFilter}
+                    onChange={(event) => {
+                      setIncorrectFilter(event.target.value as IncorrectFilter);
+                      setPage(1);
+                    }}
+                    className={`admin-input w-full ${TOOLBAR_CONTROL_FOCUS}`}
+                  >
+                    <option value="all">Todos</option>
+                    <option value="incorrect_only">Dados incorrectos</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-[8px] uppercase tracking-[0.25em] text-grey-medium/60">
+                    Convite
+                  </span>
+                  <select
+                    value={inviteSentFilter}
+                    onChange={(event) => {
+                      setInviteSentFilter(event.target.value as InviteSentFilter);
+                      setPage(1);
+                    }}
+                    className={`admin-input w-full ${TOOLBAR_CONTROL_FOCUS}`}
+                  >
+                    <option value="all">Todos</option>
+                    <option value="sent">Convite enviado</option>
+                    <option value="not_sent">Convite não enviado</option>
                   </select>
                 </label>
               </div>
@@ -1164,6 +1228,26 @@ export default function GuestManagement({
                       {guest.importBatchId ? (
                         <span className="text-[9px] font-mono text-grey-medium/55">
                           lote {guest.importBatchId.slice(0, 8)}
+                        </span>
+                      ) : null}
+                      {guest.isIncorrect ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-[8px] font-mono font-medium tracking-[0.1em] uppercase px-2 py-0.5 border rounded-sm bg-amber-500/10 text-amber-300 border-amber-500/30"
+                          title="Dados assinalados como incorrectos"
+                          aria-label="Dados incorrectos"
+                        >
+                          <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" aria-hidden="true" />
+                          <span>Dados incorrectos</span>
+                        </span>
+                      ) : null}
+                      {guest.inviteSentAt ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-[8px] font-mono font-medium tracking-[0.1em] uppercase px-2 py-0.5 border rounded-sm bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                          title={`Convite enviado em ${formatDateTimePtMZ(guest.inviteSentAt)}`}
+                          aria-label={`Convite enviado: ${formatDateTimePtMZ(guest.inviteSentAt)}`}
+                        >
+                          <MailCheck className="w-3 h-3 text-emerald-400 shrink-0" aria-hidden="true" />
+                          <span>Convite enviado ({formatDateTimePtMZ(guest.inviteSentAt)})</span>
                         </span>
                       ) : null}
                     </div>

@@ -7,6 +7,9 @@ import type { EventGuest, GuestSource, GuestStatus } from "@/lib/events/types";
 
 export type BulkSelectionMode = "individual" | "page" | "all_results";
 
+export type IncorrectFilter = "all" | "incorrect_only";
+export type InviteSentFilter = "all" | "sent" | "not_sent";
+
 export type BulkGuestFilters = {
   /** Obrigatório — isolamento por evento */
   eventId: string;
@@ -16,6 +19,8 @@ export type BulkGuestFilters = {
   status?: GuestStatus | "all";
   includeArchived?: boolean;
   search?: string;
+  incorrectFilter?: IncorrectFilter;
+  inviteSentFilter?: InviteSentFilter;
 };
 
 export type BulkSelectionInput = {
@@ -30,7 +35,7 @@ export type BulkSelectionInput = {
 };
 
 /**
- * Filtra convidados com event_id obrigatório e filtros de lote/origem/estado.
+ * Filtra convidados com event_id obrigatório e filtros de lote/origem/estado/qualidade.
  * Lote A nunca inclui convidados do lote B.
  */
 export function filterGuestsForBulk(
@@ -61,6 +66,16 @@ export function filterGuestsForBulk(
 
   if (filters.status && filters.status !== "all") {
     rows = rows.filter((guest) => guest.status === filters.status);
+  }
+
+  if (filters.incorrectFilter === "incorrect_only") {
+    rows = rows.filter((guest) => guest.isIncorrect);
+  }
+
+  if (filters.inviteSentFilter === "sent") {
+    rows = rows.filter((guest) => Boolean(guest.inviteSentAt));
+  } else if (filters.inviteSentFilter === "not_sent") {
+    rows = rows.filter((guest) => !guest.inviteSentAt);
   }
 
   const search = filters.search?.trim().toLowerCase();
