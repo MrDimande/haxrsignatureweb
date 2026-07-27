@@ -236,6 +236,38 @@ export async function removeImportBatchAction(
   options?: { forceSoftArchiveProtected?: boolean }
 ) {
   const result = await runAction(async () => {
+    const operatorEmail = getOperatorEmail();
+
+    // Tentar executar via RPC atómico do PostgreSQL
+    try {
+      const atomicResult = await batchesRepo.removeImportBatchAtomic(
+        eventId,
+        batchId,
+        operatorEmail
+      );
+      return {
+        affected: atomicResult.removedGuestCount,
+        impact: {
+          removed: atomicResult.removedGuestCount,
+          alreadyRemoved: atomicResult.alreadyRemovedCount,
+          protected: atomicResult.protectedCount,
+        },
+        auditId: atomicResult.auditId,
+        message: `Lote removido com sucesso (${atomicResult.removedGuestCount} convidado(s) removidos).`,
+      };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      // Se for erro de função inexistente no Postgres, usar fallback legado
+      if (
+        !errMsg.includes("function") &&
+        !errMsg.includes("schema") &&
+        !errMsg.includes("does not exist")
+      ) {
+        throw new Error(errMsg);
+      }
+    }
+
+    // Fallback de aplicação (quando a migração RPC ainda não foi aplicada)
     const batch = await batchesRepo.getImportBatchById(batchId);
     if (!batch || batch.eventId !== eventId) {
       throw new Error("Lote não encontrado neste evento.");
@@ -297,10 +329,33 @@ export async function undoBulkGuestAction(
   auditId: string
 ) {
   const result = await runAction(async () => {
+    const operatorEmail = getOperatorEmail();
     const audit = await batchesRepo.getBulkAuditById(auditId, eventId);
     if (!audit) throw new Error("Registo de auditoria não encontrado.");
     if (audit.undone_at) throw new Error("Esta acção já foi desfeita.");
 
+    // Se for uma auditoria de remoção de lote, tentar o undo atómico por RPC
+    if (audit.action === "remove_import_batch") {
+      try {
+        const atomicUndo = await batchesRepo.undoImportBatchRemovalAtomic(
+          eventId,
+          auditId,
+          operatorEmail
+        );
+        return { restored: atomicUndo.restoredGuestCount };
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (
+          !errMsg.includes("function") &&
+          !errMsg.includes("schema") &&
+          !errMsg.includes("does not exist")
+        ) {
+          throw new Error(errMsg);
+        }
+      }
+    }
+
+    // Fallback legado para outras acções de bulk ou se o RPC não estiver disponível
     const payload = audit.undo_payload as {
       guests?: Array<{
         id: string;
