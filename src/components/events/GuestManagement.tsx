@@ -49,6 +49,7 @@ import { normalizeSearchQuery, rankNameMatch } from "@/lib/events/normalize";
 import GuestGroupPanel from "@/components/events/GuestGroupPanel";
 import GuestMergePanel from "@/components/events/GuestMergePanel";
 import GuestImportPanel from "@/components/events/GuestImportPanel";
+import GuestBatchDashboard from "@/components/events/GuestBatchDashboard";
 import { GUEST_LABEL_LABELS, GUEST_LABEL_STYLES, GUEST_STATUS_LABELS, GUEST_STATUS_STYLES } from "@/lib/events/constants";
 import { GUEST_SOURCE_LABELS } from "@/lib/events/sheets/detect-mode";
 import { downloadCsvFile } from "@/lib/finance/export/csv";
@@ -579,6 +580,16 @@ export default function GuestManagement({
 
   return (
     <div className="space-y-8">
+      {importBatches.length > 0 ? (
+        <GuestBatchDashboard
+          importBatches={importBatches}
+          activeBatchId={batchFilter}
+          onSelectBatch={(id) => {
+            setBatchFilter(id);
+            setPage(1);
+          }}
+        />
+      ) : null}
       <section
         className="admin-card overflow-hidden border-brand-champagne/15 bg-black-soft/80"
         aria-label="Ferramentas da lista de convidados"
