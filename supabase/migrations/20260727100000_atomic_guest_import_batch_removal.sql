@@ -1,7 +1,7 @@
--- Atomic Guest Import Batch Removal & Undo Functions
+-- Atomic Guest Import Batch Removal & Undo Functions (Hardened Security)
 -- Created via: 2026-07-27100000_atomic_guest_import_batch_removal.sql
 --
--- Security: SECURITY DEFINER with fixed search_path = public, pg_temp.
+-- Security: SECURITY DEFINER with fixed search_path = '' (fully qualified public. and pg_catalog. references).
 -- Grants: REVOKE FROM PUBLIC, anon, authenticated; GRANT TO service_role ONLY.
 -- Transactional integrity: Locks batch/audit rows FOR UPDATE, applies fail-closed validations,
 -- performs soft-delete on eligible guests, updates batch totals, and records audit in a single SQL transaction.
@@ -19,7 +19,7 @@ CREATE OR REPLACE FUNCTION public.remove_guest_import_batch_atomic(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
   v_batch RECORD;
@@ -47,25 +47,25 @@ BEGIN
   END IF;
 
   -- 2. Collect all guests associated with batch & event
-  SELECT array_agg(id) INTO v_guest_ids
+  SELECT pg_catalog.array_agg(id) INTO v_guest_ids
   FROM public.guests
   WHERE import_batch_id = p_batch_id AND event_id = p_event_id;
 
-  IF v_guest_ids IS NULL OR array_length(v_guest_ids, 1) IS NULL THEN
+  IF v_guest_ids IS NULL OR pg_catalog.array_length(v_guest_ids, 1) IS NULL THEN
     -- No guests found in batch, mark batch as removed gracefully
     UPDATE public.guest_import_batches
-    SET status = 'removed', updated_at = now()
+    SET status = 'removed'::public.guest_import_batch_status, updated_at = pg_catalog.now()
     WHERE id = p_batch_id AND event_id = p_event_id;
 
     INSERT INTO public.guest_bulk_audit (
       event_id, batch_id, action, guest_ids, operator_email, impact, undo_payload
     ) VALUES (
       p_event_id, p_batch_id, 'remove_import_batch', '{}', p_operator_email,
-      jsonb_build_object('removed', 0, 'reason', 'empty_batch'),
-      jsonb_build_object('batch_id', p_batch_id, 'previous_status', v_batch.status, 'previous_removed_rows', v_batch.removed_rows)
+      pg_catalog.jsonb_build_object('removed', 0, 'reason', 'empty_batch'),
+      pg_catalog.jsonb_build_object('batch_id', p_batch_id, 'previous_status', v_batch.status, 'previous_removed_rows', v_batch.removed_rows)
     ) RETURNING id INTO v_audit_id;
 
-    RETURN jsonb_build_object(
+    RETURN pg_catalog.jsonb_build_object(
       'success', true,
       'batchId', p_batch_id,
       'removedGuestCount', 0,
@@ -77,7 +77,7 @@ BEGIN
   END IF;
 
   -- 3. Check protected guests (RSVP confirmed/declined, seat assigned, checkin done, invite sent)
-  SELECT count(*) INTO v_protected_count
+  SELECT pg_catalog.count(*) INTO v_protected_count
   FROM public.guests
   WHERE id = ANY(v_guest_ids)
     AND (
@@ -92,22 +92,22 @@ BEGIN
   END IF;
 
   -- 4. Count already soft-deleted guests
-  SELECT count(*) INTO v_already_removed_count
+  SELECT pg_catalog.count(*) INTO v_already_removed_count
   FROM public.guests
   WHERE id = ANY(v_guest_ids) AND deleted_at IS NOT NULL;
 
   -- 5. Collect eligible guest IDs (active, not deleted)
-  SELECT array_agg(id) INTO v_eligible_ids
+  SELECT pg_catalog.array_agg(id) INTO v_eligible_ids
   FROM public.guests
   WHERE id = ANY(v_guest_ids) AND deleted_at IS NULL;
 
-  IF v_eligible_ids IS NOT NULL AND array_length(v_eligible_ids, 1) > 0 THEN
-    v_removed_count := array_length(v_eligible_ids, 1);
+  IF v_eligible_ids IS NOT NULL AND pg_catalog.array_length(v_eligible_ids, 1) > 0 THEN
+    v_removed_count := pg_catalog.array_length(v_eligible_ids, 1);
 
     -- Apply soft delete
     UPDATE public.guests
-    SET deleted_at = now(),
-        archive_reason = concat('remove_batch:', p_batch_id)
+    SET deleted_at = pg_catalog.now(),
+        archive_reason = pg_catalog.concat('remove_batch:', p_batch_id)
     WHERE id = ANY(v_eligible_ids);
   ELSE
     v_eligible_ids := '{}';
@@ -116,13 +116,13 @@ BEGIN
 
   -- 6. Update batch totals and status
   UPDATE public.guest_import_batches
-  SET status = 'removed',
+  SET status = 'removed'::public.guest_import_batch_status,
       removed_rows = v_batch.removed_rows + v_removed_count,
-      updated_at = now()
+      updated_at = pg_catalog.now()
   WHERE id = p_batch_id AND event_id = p_event_id;
 
   -- 7. Build undo payload & impact JSON
-  v_undo_payload := jsonb_build_object(
+  v_undo_payload := pg_catalog.jsonb_build_object(
     'batch_id', p_batch_id,
     'event_id', p_event_id,
     'affected_guest_ids', v_eligible_ids,
@@ -131,7 +131,7 @@ BEGIN
     'removed_guest_count', v_removed_count
   );
 
-  v_impact := jsonb_build_object(
+  v_impact := pg_catalog.jsonb_build_object(
     'removed', v_removed_count,
     'already_removed', v_already_removed_count,
     'filename', v_batch.filename
@@ -157,7 +157,7 @@ BEGIN
   ) RETURNING id INTO v_audit_id;
 
   -- 9. Return structured result
-  RETURN jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'success', true,
     'batchId', p_batch_id,
     'removedGuestCount', v_removed_count,
@@ -190,7 +190,7 @@ CREATE OR REPLACE FUNCTION public.undo_guest_import_batch_removal_atomic(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
   v_audit RECORD;
@@ -221,11 +221,11 @@ BEGIN
 
   -- 2. Extract payload variables
   v_batch_id := (v_audit.undo_payload->>'batch_id')::UUID;
-  v_prev_status := COALESCE(v_audit.undo_payload->>'previous_batch_status', 'completed');
-  v_prev_removed_rows := COALESCE((v_audit.undo_payload->>'previous_removed_rows')::INT, 0);
+  v_prev_status := pg_catalog.COALESCE(v_audit.undo_payload->>'previous_batch_status', 'completed');
+  v_prev_removed_rows := pg_catalog.COALESCE((v_audit.undo_payload->>'previous_removed_rows')::INT, 0);
 
   SELECT ARRAY(
-    SELECT jsonb_array_elements_text(v_audit.undo_payload->'affected_guest_ids')::UUID
+    SELECT (pg_catalog.jsonb_array_elements_text(v_audit.undo_payload->'affected_guest_ids'))::UUID
   ) INTO v_affected_ids;
 
   -- 3. Lock batch record
@@ -239,7 +239,7 @@ BEGIN
   END IF;
 
   -- 4. Restore guests deleted by this batch operation
-  IF v_affected_ids IS NOT NULL AND array_length(v_affected_ids, 1) > 0 THEN
+  IF v_affected_ids IS NOT NULL AND pg_catalog.array_length(v_affected_ids, 1) > 0 THEN
     UPDATE public.guests
     SET deleted_at = NULL,
         archive_reason = ''
@@ -250,14 +250,14 @@ BEGIN
 
   -- 5. Restore batch status and removed_rows count
   UPDATE public.guest_import_batches
-  SET status = v_prev_status::guest_import_batch_status,
+  SET status = v_prev_status::public.guest_import_batch_status,
       removed_rows = v_prev_removed_rows,
-      updated_at = now()
+      updated_at = pg_catalog.now()
   WHERE id = v_batch_id AND event_id = p_event_id;
 
   -- 6. Mark audit record as undone
   UPDATE public.guest_bulk_audit
-  SET undone_at = now()
+  SET undone_at = pg_catalog.now()
   WHERE id = p_audit_id AND event_id = p_event_id;
 
   -- 7. Insert audit record for the undo action itself
@@ -273,14 +273,14 @@ BEGIN
     p_event_id,
     v_batch_id,
     'undo_remove_import_batch',
-    COALESCE(v_affected_ids, '{}'),
+    pg_catalog.COALESCE(v_affected_ids, '{}'),
     p_operator_email,
-    jsonb_build_object('restored', v_restored_count, 'batch_id', v_batch_id),
-    jsonb_build_object('original_audit_id', p_audit_id)
+    pg_catalog.jsonb_build_object('restored', v_restored_count, 'batch_id', v_batch_id),
+    pg_catalog.jsonb_build_object('original_audit_id', p_audit_id)
   );
 
   -- 8. Return structured result
-  RETURN jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'success', true,
     'batchId', v_batch_id,
     'restoredGuestCount', v_restored_count,
