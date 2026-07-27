@@ -221,8 +221,8 @@ BEGIN
 
   -- 2. Extract payload variables
   v_batch_id := (v_audit.undo_payload->>'batch_id')::UUID;
-  v_prev_status := pg_catalog.COALESCE(v_audit.undo_payload->>'previous_batch_status', 'completed');
-  v_prev_removed_rows := pg_catalog.COALESCE((v_audit.undo_payload->>'previous_removed_rows')::INT, 0);
+  v_prev_status := COALESCE(v_audit.undo_payload->>'previous_batch_status', 'completed');
+  v_prev_removed_rows := COALESCE((v_audit.undo_payload->>'previous_removed_rows')::INT, 0);
 
   SELECT ARRAY(
     SELECT (pg_catalog.jsonb_array_elements_text(v_audit.undo_payload->'affected_guest_ids'))::UUID
@@ -273,7 +273,7 @@ BEGIN
     p_event_id,
     v_batch_id,
     'undo_remove_import_batch',
-    pg_catalog.COALESCE(v_affected_ids, '{}'),
+    COALESCE(v_affected_ids, '{}'),
     p_operator_email,
     pg_catalog.jsonb_build_object('restored', v_restored_count, 'batch_id', v_batch_id),
     pg_catalog.jsonb_build_object('original_audit_id', p_audit_id)
