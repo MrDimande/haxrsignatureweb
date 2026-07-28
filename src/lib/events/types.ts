@@ -89,6 +89,10 @@ export interface GuestImportBatch {
   invalidRows: number;
   removedRows: number;
   status: GuestImportBatchStatus;
+  latestReversibleRemoval?: {
+    auditId: string;
+    createdAt: string;
+  } | null;
 }
 
 export interface EventGuest {

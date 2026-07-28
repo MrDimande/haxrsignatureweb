@@ -106,7 +106,35 @@ export async function listImportBatchesByEvent(
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return asTableRows<"guest_import_batches">(data).map(mapBatch);
+
+  const batches = asTableRows<"guest_import_batches">(data).map(mapBatch);
+
+  // Fetch active removal audits to power the Undo functionality
+  const { data: auditData, error: auditError } = await supabase
+    .from("guest_bulk_audit")
+    .select("id, batch_id, created_at")
+    .eq("event_id", eventId)
+    .eq("action", "remove_import_batch")
+    .is("undone_at", null)
+    .order("created_at", { ascending: false });
+
+  if (auditError) {
+    console.error("Failed to fetch bulk audits for import batches:", auditError);
+  } else if (auditData) {
+    for (const batch of batches) {
+      if (batch.status === "removed") {
+        const audit = (auditData as { id: string; batch_id: string; created_at: string }[]).find(a => a.batch_id === batch.id);
+        if (audit) {
+          batch.latestReversibleRemoval = {
+            auditId: audit.id,
+            createdAt: audit.created_at,
+          };
+        }
+      }
+    }
+  }
+
+  return batches;
 }
 
 export async function getImportBatchById(

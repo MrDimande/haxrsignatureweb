@@ -415,25 +415,8 @@ export default function GuestManagement({
   }
 
   async function handleRemoveBatch(batchId: string) {
-    if (
-      !confirm(
-        "Remover lote completo (soft archive dos convidados do lote)?"
-      )
-    ) {
-      return;
-    }
     setBulkBusy(true);
-    let result = await removeImportBatchAction(eventId, batchId);
-    if (!result.success && result.error.includes("Confirme arquivo suave")) {
-      const force = confirm(
-        `${result.error}\n\nConfirmar arquivo suave dos protegidos?`
-      );
-      if (force) {
-        result = await removeImportBatchAction(eventId, batchId, {
-          forceSoftArchiveProtected: true,
-        });
-      }
-    }
+    const result = await removeImportBatchAction(eventId, batchId);
     setBulkBusy(false);
     if (result.success) {
       setBulkMessage(result.data.message);
@@ -442,6 +425,7 @@ export default function GuestManagement({
     } else {
       setBulkMessage(result.error);
     }
+    return result;
   }
 
   async function handleUndo() {
@@ -456,6 +440,19 @@ export default function GuestManagement({
     } else {
       setBulkMessage(result.error);
     }
+  }
+
+  async function handleUndoBatch(auditId: string) {
+    setBulkBusy(true);
+    const result = await undoBulkGuestAction(eventId, auditId);
+    setBulkBusy(false);
+    if (result.success) {
+      setBulkMessage(`Undo: ${result.data.restored} convidado(s) restaurados do lote.`);
+      onChanged();
+    } else {
+      setBulkMessage(result.error);
+    }
+    return result;
   }
 
   async function handleCopyLink(guest: EventGuest, type: "rsvp" | "checkin") {
@@ -588,6 +585,9 @@ export default function GuestManagement({
             setBatchFilter(id);
             setPage(1);
           }}
+          onRemoveBatch={handleRemoveBatch}
+          onUndoBatch={handleUndoBatch}
+          isBusy={bulkBusy}
         />
       ) : null}
       <section
