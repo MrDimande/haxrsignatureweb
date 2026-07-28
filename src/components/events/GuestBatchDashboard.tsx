@@ -18,12 +18,18 @@ import {
 import { formatDateTimePtMZ } from "@/lib/formatters";
 import type { GuestImportBatch, GuestImportBatchStatus } from "@/lib/events/types";
 import Modal from "@/components/ui/Modal";
+import {
+  getBatchActionVisibility,
+  mapSafeErrorMessage,
+} from "@/lib/events/guest-batch-ui";
 
 export type ActionReturnResult = {
   success: boolean;
   data?: unknown;
   error?: string;
 };
+
+export { mapSafeErrorMessage, getBatchActionVisibility };
 
 type GuestBatchDashboardProps = {
   importBatches: GuestImportBatch[];
@@ -33,32 +39,6 @@ type GuestBatchDashboardProps = {
   onUndoBatch?: (auditId: string) => Promise<ActionReturnResult> | void;
   isBusy?: boolean;
 };
-
-export function mapSafeErrorMessage(rawError?: string): string {
-  const err = (rawError || "").toLowerCase();
-  if (
-    err.includes("rsvp") ||
-    err.includes("checkin") ||
-    err.includes("check-in") ||
-    err.includes("lugar") ||
-    err.includes("seat") ||
-    err.includes("convite") ||
-    err.includes("protected") ||
-    err.includes("confirme arquivo suave")
-  ) {
-    return "Este lote não pode ser removido porque um ou mais convidados já possuem RSVP, check-in, lugar atribuído ou convite enviado.";
-  }
-  if (err.includes("já foi removido") || err.includes("already removed")) {
-    return "Este lote já foi removido.";
-  }
-  if (err.includes("já foi desfeita") || err.includes("already undone")) {
-    return "Esta remoção já foi desfeita.";
-  }
-  if (err.includes("não encontrado") || err.includes("not found")) {
-    return "Não foi possível encontrar o lote ou a operação solicitada.";
-  }
-  return "Não foi possível concluir a operação. Tente novamente.";
-}
 
 function renderStatusBadge(status: GuestImportBatchStatus | string) {
   switch (status) {
@@ -249,6 +229,10 @@ export default function GuestBatchDashboard({
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {sortedBatches.map((batch) => {
               const isSelected = batch.id === activeBatchId;
+              const actions = getBatchActionVisibility(batch, {
+                hasRemoveHandler: Boolean(onRemoveBatch),
+                hasUndoHandler: Boolean(onUndoBatch),
+              });
               return (
                 <div
                   key={batch.id}
@@ -336,7 +320,7 @@ export default function GuestBatchDashboard({
                       <span>{isSelected ? "Filtro activo (clique p/ remover)" : "Ver convidados"}</span>
                     </button>
 
-                    {batch.status === "completed" && onRemoveBatch ? (
+                    {actions.showRemove ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -352,7 +336,7 @@ export default function GuestBatchDashboard({
                       </button>
                     ) : null}
 
-                    {batch.status === "removed" && batch.latestReversibleRemoval && onUndoBatch ? (
+                    {actions.showUndo ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -398,7 +382,11 @@ export default function GuestBatchDashboard({
               </div>
               <div>
                 <span className="text-grey-medium/70">Convidados associados: </span>
-                <span className="font-mono font-medium text-brand-gold-light">{removeModalBatch.validRows}</span>
+                <span className="font-mono font-medium text-brand-gold-light">
+                  {removeModalBatch.validRows > 0
+                    ? removeModalBatch.validRows
+                    : removeModalBatch.totalRows}
+                </span>
               </div>
             </div>
 
@@ -411,7 +399,9 @@ export default function GuestBatchDashboard({
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setRemoveModalBatch(null)}
+                onClick={() => {
+                  if (!isSubmitting) setRemoveModalBatch(null);
+                }}
                 disabled={isSubmitting}
                 className="px-3 py-2 rounded text-xs text-grey-medium/80 hover:text-brand-ivory border border-grey-dark/50 disabled:opacity-50"
               >
@@ -460,7 +450,9 @@ export default function GuestBatchDashboard({
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setUndoModalBatch(null)}
+                onClick={() => {
+                  if (!isSubmitting) setUndoModalBatch(null);
+                }}
                 disabled={isSubmitting}
                 className="px-3 py-2 rounded text-xs text-grey-medium/80 hover:text-brand-ivory border border-grey-dark/50 disabled:opacity-50"
               >
