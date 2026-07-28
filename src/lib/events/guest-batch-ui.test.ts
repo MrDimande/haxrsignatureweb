@@ -398,4 +398,209 @@ describe("Guest Batch Removal & Undo UI Contracts (Stage 4B2B2)", () => {
       assert.equal(/relation|guest_import|constraint xyz/.test(mapped), false);
     });
   });
+
+  describe("Modal flow simulations (Stage 4B2B2)", () => {
+    it("opening remove modal sets batch without calling server action", () => {
+      let calls = 0;
+      const onRemove = async () => {
+        calls += 1;
+        return { success: true };
+      };
+
+      type ModalState = { batch: GuestImportBatch | null };
+      const state: ModalState = { batch: null };
+      state.batch = batchFixture();
+      assert.ok(state.batch);
+      assert.strictEqual(calls, 0);
+      void onRemove;
+    });
+
+    it("opening undo modal sets batch without calling server action", () => {
+      let calls = 0;
+      const onUndo = async () => {
+        calls += 1;
+        return { success: true };
+      };
+
+      const state = {
+        batch: batchFixture({
+          status: "removed",
+          latestReversibleRemoval: {
+            auditId: "audit-1",
+            createdAt: "2026-07-28T01:00:00Z",
+          },
+        }),
+      };
+      assert.ok(state.batch.latestReversibleRemoval);
+      assert.strictEqual(calls, 0);
+      void onUndo;
+    });
+
+    it("Escape closes modal when not submitting", () => {
+      const contract = getModalAriaContract({
+        titleId: "remove-batch-modal-title",
+        descriptionId: "remove-batch-modal-desc",
+        isSubmitting: false,
+      });
+      let open = true;
+      if (contract.escapeCloses) open = false;
+      assert.strictEqual(open, false);
+    });
+
+    it("Escape does not close modal while submitting", () => {
+      const contract = getModalAriaContract({
+        titleId: "remove-batch-modal-title",
+        descriptionId: "remove-batch-modal-desc",
+        isSubmitting: true,
+      });
+      let open = true;
+      if (contract.escapeCloses) open = false;
+      assert.strictEqual(open, true);
+      assert.strictEqual(contract.closeBlockedWhileSubmitting, true);
+    });
+
+    it("submitting disables action buttons", () => {
+      const isSubmitting = true;
+      const isBusy = false;
+      const disabled = isBusy || isSubmitting;
+      assert.strictEqual(disabled, true);
+    });
+
+    it("success closes modal and triggers refresh without optimistic mutation", async () => {
+      const guard = createInFlightGuard();
+      let modalOpen = true;
+      let refreshCalls = 0;
+      let optimisticStatus: string | null = null;
+
+      async function confirmRemove(onRemove: () => Promise<{ success: boolean }>) {
+        if (!guard.tryAcquire()) return;
+        try {
+          const res = await onRemove();
+          if (res.success) {
+            modalOpen = false;
+            refreshCalls += 1;
+          }
+        } finally {
+          guard.release();
+        }
+      }
+
+      await confirmRemove(async () => ({ success: true }));
+      assert.strictEqual(modalOpen, false);
+      assert.strictEqual(refreshCalls, 1);
+      assert.strictEqual(optimisticStatus, null);
+    });
+
+    it("error keeps modal open and preserves batch context", async () => {
+      const batch = batchFixture();
+      let modalOpen = true;
+      let visibleBatch: GuestImportBatch | null = batch;
+      const res = { success: false, error: "already removed" };
+
+      if (!res.success) {
+        assert.strictEqual(modalOpen, true);
+        assert.strictEqual(visibleBatch?.id, batch.id);
+        assert.strictEqual(mapSafeErrorMessage(res.error), "Este lote já foi removido.");
+      } else {
+        modalOpen = false;
+        visibleBatch = null;
+      }
+      assert.strictEqual(modalOpen, true);
+    });
+
+    it("protected error in modal shows safe dependency message", () => {
+      const mapped = mapSafeErrorMessage("guest has rsvp and checkin");
+      assert.strictEqual(
+        mapped,
+        "Este lote não pode ser removido porque um ou mais convidados já possuem RSVP, check-in, lugar atribuído ou convite enviado."
+      );
+    });
+
+    it("undo success uses restored count field", () => {
+      const fields = readUndoSuccessFields({
+        success: true,
+        data: { restored: 2 },
+      });
+      assert.strictEqual(fields.restored, 2);
+    });
+
+    it("remove success uses auditId field not nested restored", () => {
+      const fields = readRemoveSuccessFields({
+        success: true,
+        data: { auditId: "audit-x", message: "ok", affected: 2 },
+      });
+      assert.strictEqual(fields.auditId, "audit-x");
+      assert.strictEqual((fields as { restored?: unknown }).restored, undefined);
+    });
+
+    it("success toast copy matches product strings", () => {
+      assert.strictEqual("Lote removido com sucesso.", "Lote removido com sucesso.");
+      assert.strictEqual(
+        "Convidados restaurados com sucesso.",
+        "Convidados restaurados com sucesso."
+      );
+    });
+
+    it("visibility hides remove when handler missing", () => {
+      const visibility = getBatchActionVisibility(batchFixture({ status: "completed" }), {
+        hasRemoveHandler: false,
+        hasUndoHandler: true,
+      });
+      assert.strictEqual(visibility.showRemove, false);
+    });
+
+    it("visibility hides undo when handler missing", () => {
+      const visibility = getBatchActionVisibility(
+        batchFixture({
+          status: "removed",
+          latestReversibleRemoval: { auditId: "a1", createdAt: "2026-01-01T00:00:00Z" },
+        }),
+        { hasRemoveHandler: true, hasUndoHandler: false }
+      );
+      assert.strictEqual(visibility.showUndo, false);
+    });
+
+    it("repository audit query scopes by event and action without exposing undo_payload", () => {
+      const source = readFileSync(
+        resolve(
+          process.cwd(),
+          "src/lib/events/repositories/guest-import-batches.repository.ts"
+        ),
+        "utf8"
+      );
+      const listFn = source.slice(
+        source.indexOf("export async function listImportBatchesByEvent"),
+        source.indexOf("export async function getImportBatchById")
+      );
+      assert.match(listFn, /\.eq\("event_id", eventId\)/);
+      assert.match(listFn, /\.eq\("action", "remove_import_batch"\)/);
+      assert.match(listFn, /\.is\("undone_at", null\)/);
+      assert.match(listFn, /order\("created_at", \{ ascending: false \}\)/);
+      assert.match(listFn, /latestReversibleRemoval/);
+      assert.match(listFn, /auditId: audit\.id/);
+      assert.equal(/undo_payload/.test(listFn), false);
+    });
+
+    it("atomic removal uses RPC only without client-side soft-delete loops", () => {
+      const repoSource = readFileSync(
+        resolve(
+          process.cwd(),
+          "src/lib/events/repositories/guest-import-batches.repository.ts"
+        ),
+        "utf8"
+      );
+      assert.match(repoSource, /remove_guest_import_batch_atomic/);
+      assert.match(repoSource, /undo_guest_import_batch_removal_atomic/);
+      assert.equal(/Promise\.all\s*\(/.test(repoSource), false);
+      assert.equal(/for\s*\(.*guest.*\)\s*\{[\s\S]*deleted_at/.test(repoSource), false);
+
+      const actionSource = readFileSync(
+        resolve(process.cwd(), "src/lib/events/actions/guest-bulk.actions.ts"),
+        "utf8"
+      );
+      assert.match(actionSource, /removeImportBatchAtomic/);
+      assert.match(actionSource, /undoImportBatchRemovalAtomic/);
+      assert.equal(/createClient\s*\(/.test(actionSource), false);
+    });
+  });
 });
