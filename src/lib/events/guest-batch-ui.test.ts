@@ -470,7 +470,7 @@ describe("Guest Batch Removal & Undo UI Contracts (Stage 4B2B2)", () => {
       const guard = createInFlightGuard();
       let modalOpen = true;
       let refreshCalls = 0;
-      let optimisticStatus: string | null = null;
+      const optimisticStatus: string | null = null;
 
       async function confirmRemove(onRemove: () => Promise<{ success: boolean }>) {
         if (!guard.tryAcquire()) return;
