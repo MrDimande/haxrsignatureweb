@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/admin/actions/auth";
 import * as guestsRepo from "@/lib/events/repositories/guests.repository";
 import * as batchesRepo from "@/lib/events/repositories/guest-import-batches.repository";
-import { logGuestAudit } from "@/lib/events/repositories/guest-audit.repository";
 import {
   assessBulkImpact,
   assertGuestsScopedToBatch,
@@ -233,58 +232,28 @@ export async function bulkMoveGuestsToGroupAction(
 export async function removeImportBatchAction(
   eventId: string,
   batchId: string,
-  options?: { forceSoftArchiveProtected?: boolean }
+  _options?: { forceSoftArchiveProtected?: boolean }
 ) {
   const result = await runAction(async () => {
-    const batch = await batchesRepo.getImportBatchById(batchId);
-    if (!batch || batch.eventId !== eventId) {
-      throw new Error("Lote não encontrado neste evento.");
-    }
+    const operatorEmail = getOperatorEmail();
 
-    const guests = await guestsRepo.listGuestsByEvent(eventId, {
-      includeArchived: true,
-      includeDeleted: false,
-    });
-    const batchGuests = guests.filter(
-      (guest) => guest.importBatchId === batchId
-    );
-    assertGuestsScopedToEvent(eventId, batchGuests);
-    assertGuestsScopedToBatch(batchId, batchGuests);
-
-    const plan = planBulkSoftMutation(batchGuests, options);
-    if (!plan.allowed) {
-      throw new Error(
-        `Remover lote: ${plan.blockReason ?? formatBulkImpactMessage(plan.impact)}`
-      );
-    }
-
-    const impact = plan.impact;
-    const undoPayload = buildBulkUndoPayload(batchGuests);
-
-    for (const guest of batchGuests) {
-      await guestsRepo.softDeleteGuest(guest.id, `remove_batch:${batchId}`);
-    }
-
-    await batchesRepo.updateImportBatchTotals(batchId, eventId, {
-      removedRows: batch.removedRows + batchGuests.length,
-      status: "removed",
-    });
-
-    const auditId = await batchesRepo.insertBulkAudit({
+    // Execução estritamente atómica por RPC do PostgreSQL.
+    // Falha fail-closed sem qualquer escrita não-transaccional se a migração não existir.
+    const atomicResult = await batchesRepo.removeImportBatchAtomic(
       eventId,
       batchId,
-      action: "remove_import_batch",
-      guestIds: batchGuests.map((guest) => guest.id),
-      operatorEmail: getOperatorEmail(),
-      impact: impact as unknown as Record<string, unknown>,
-      undoPayload,
-    });
+      operatorEmail
+    );
 
     return {
-      affected: batchGuests.length,
-      impact,
-      auditId,
-      message: formatBulkImpactMessage(impact),
+      affected: atomicResult.removedGuestCount,
+      impact: {
+        removed: atomicResult.removedGuestCount,
+        alreadyRemoved: atomicResult.alreadyRemovedCount,
+        protected: atomicResult.protectedCount,
+      },
+      auditId: atomicResult.auditId,
+      message: `Lote removido com sucesso (${atomicResult.removedGuestCount} convidado(s) removidos).`,
     };
   });
 
@@ -297,60 +266,23 @@ export async function undoBulkGuestAction(
   auditId: string
 ) {
   const result = await runAction(async () => {
+    const operatorEmail = getOperatorEmail();
     const audit = await batchesRepo.getBulkAuditById(auditId, eventId);
     if (!audit) throw new Error("Registo de auditoria não encontrado.");
     if (audit.undone_at) throw new Error("Esta acção já foi desfeita.");
 
-    const payload = audit.undo_payload as {
-      guests?: Array<{
-        id: string;
-        archivedAt: string | null;
-        archiveReason: string;
-        deletedAt: string | null;
-        isIncorrect: boolean;
-      }>;
-    } | null;
-
-    if (!payload?.guests?.length) {
-      throw new Error("Esta acção não tem undo disponível.");
+    if (audit.action !== "remove_import_batch") {
+      throw new Error(`A acção de auditoria ${audit.action} não suporta undo atómico.`);
     }
 
-    const supabaseGuests = await guestsRepo.listGuestsByEvent(eventId, {
-      includeArchived: true,
-      includeDeleted: true,
-    });
+    // Execução estritamente atómica do undo via RPC PostgreSQL
+    const atomicUndo = await batchesRepo.undoImportBatchRemovalAtomic(
+      eventId,
+      auditId,
+      operatorEmail
+    );
 
-    let restored = 0;
-    for (const snapshot of payload.guests) {
-      const current = supabaseGuests.find((guest) => guest.id === snapshot.id);
-      if (!current || current.eventId !== eventId) continue;
-
-      if (
-        snapshot.archivedAt === null &&
-        snapshot.deletedAt === null &&
-        !snapshot.isIncorrect
-      ) {
-        await guestsRepo.restoreGuest(snapshot.id);
-        restored++;
-      } else if (snapshot.archivedAt) {
-        await guestsRepo.archiveGuest(
-          snapshot.id,
-          snapshot.archiveReason || "undo_restore_archive"
-        );
-        restored++;
-      }
-
-      await logGuestAudit(
-        snapshot.id,
-        eventId,
-        current.name,
-        "Undo acção em massa",
-        audit.action
-      );
-    }
-
-    await batchesRepo.markBulkAuditUndone(auditId, eventId);
-    return { restored };
+    return { restored: atomicUndo.restoredGuestCount };
   });
 
   if (result.success) revalidateEvent(eventId);

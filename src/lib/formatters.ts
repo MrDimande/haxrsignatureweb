@@ -20,6 +20,27 @@ export function formatDatePtMZ(date: string | Date): string {
   return DATE_FORMATTER.format(parsed);
 }
 
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("pt-MZ", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Africa/Maputo",
+});
+
+/** Formats a date and time for pt-MZ locale in Africa/Maputo timezone. Returns "—" for null/undefined/invalid. */
+export function formatDateTimePtMZ(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  const parsed = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(parsed.getTime())) return "—";
+  try {
+    return DATE_TIME_FORMATTER.format(parsed);
+  } catch {
+    return "—";
+  }
+}
+
 /** Formats a percentage value (0–100). */
 export function formatPercentage(value: number): string {
   return `${Math.round(value)}%`;

@@ -50,6 +50,24 @@ export type CreateImportBatchInput = {
   status?: GuestImportBatchStatus;
 };
 
+export type RemoveImportBatchResult = {
+  success: boolean;
+  batchId: string;
+  removedGuestCount: number;
+  alreadyRemovedCount: number;
+  protectedCount: number;
+  auditId: string;
+  status: "removed";
+};
+
+export type UndoImportBatchRemovalResult = {
+  success: boolean;
+  batchId: string;
+  restoredGuestCount: number;
+  auditId: string;
+  status: "completed";
+};
+
 export async function createImportBatch(
   input: CreateImportBatchInput
 ): Promise<GuestImportBatch> {
@@ -88,7 +106,35 @@ export async function listImportBatchesByEvent(
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return asTableRows<"guest_import_batches">(data).map(mapBatch);
+
+  const batches = asTableRows<"guest_import_batches">(data).map(mapBatch);
+
+  // Fetch active removal audits to power the Undo functionality
+  const { data: auditData, error: auditError } = await supabase
+    .from("guest_bulk_audit")
+    .select("id, batch_id, created_at")
+    .eq("event_id", eventId)
+    .eq("action", "remove_import_batch")
+    .is("undone_at", null)
+    .order("created_at", { ascending: false });
+
+  if (auditError) {
+    console.error("Failed to fetch bulk audits for import batches:", auditError);
+  } else if (auditData) {
+    for (const batch of batches) {
+      if (batch.status === "removed") {
+        const audit = (auditData as { id: string; batch_id: string; created_at: string }[]).find(a => a.batch_id === batch.id);
+        if (audit) {
+          batch.latestReversibleRemoval = {
+            auditId: audit.id,
+            createdAt: audit.created_at,
+          };
+        }
+      }
+    }
+  }
+
+  return batches;
 }
 
 export async function getImportBatchById(
@@ -190,4 +236,40 @@ export async function markBulkAuditUndone(
     .eq("event_id", eventId);
 
   if (error) throw new Error(error.message);
+}
+
+/** Atomic batch removal via PostgreSQL RPC. */
+export async function removeImportBatchAtomic(
+  eventId: string,
+  batchId: string,
+  operatorEmail: string
+): Promise<RemoveImportBatchResult> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("remove_guest_import_batch_atomic", {
+    p_event_id: eventId,
+    p_batch_id: batchId,
+    p_operator_user_id: operatorEmail,
+    p_operator_email: operatorEmail,
+  } as never);
+
+  if (error) throw new Error(error.message);
+  return data as RemoveImportBatchResult;
+}
+
+/** Atomic batch removal undo via PostgreSQL RPC. */
+export async function undoImportBatchRemovalAtomic(
+  eventId: string,
+  auditId: string,
+  operatorEmail: string
+): Promise<UndoImportBatchRemovalResult> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("undo_guest_import_batch_removal_atomic", {
+    p_event_id: eventId,
+    p_audit_id: auditId,
+    p_operator_user_id: operatorEmail,
+    p_operator_email: operatorEmail,
+  } as never);
+
+  if (error) throw new Error(error.message);
+  return data as UndoImportBatchRemovalResult;
 }
