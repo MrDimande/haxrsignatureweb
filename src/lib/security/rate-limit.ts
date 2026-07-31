@@ -22,6 +22,7 @@ export const RATE_LIMITS = {
   adminLogin: { max: 5, windowMs: 15 * 60 * 1000 },
   findSeat: { max: 10, windowMs: 60 * 1000 },
   findSeatPerEvent: { max: 15, windowMs: 60 * 1000 },
+  findSeatPerCode: { max: 30, windowMs: 60 * 1000 },
   eventAction: { max: 30, windowMs: 60 * 1000 },
   /** Edition open RSVP — aligned with projecto_haxrsignature */
   editionRsvp: { max: 8, windowMs: 15 * 60 * 1000 },

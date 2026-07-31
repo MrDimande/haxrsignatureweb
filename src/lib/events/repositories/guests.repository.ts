@@ -14,6 +14,7 @@ import {
   FIND_SEAT_MAX_RESULTS,
   FIND_SEAT_MIN_NAME_LENGTH,
 } from "@/lib/events/find-seat-code";
+import { tableKeyFromName } from "@/lib/events/floor-plan/model";
 import { generateQrToken } from "@/lib/events/tokens";
 import { GUEST_LABEL_LABELS, GUEST_STATUS_LABELS } from "@/lib/events/constants";
 import { logGuestAudit } from "@/lib/events/repositories/guest-audit.repository";
@@ -696,6 +697,10 @@ async function loadGroupMemberNames(
     .select("id, name")
     .eq("event_id", eventId)
     .eq("group_id", groupId)
+    .is("deleted_at", null)
+    .is("archived_at", null)
+    .eq("is_incorrect", false)
+    .neq("status", "declined")
     .order("name");
 
   if (error) throw new Error(error.message);
@@ -789,7 +794,12 @@ export async function searchGuestsByName(
   return results;
 }
 
-/** Pesquisa restrita para Find Your Seat — anti-enumeração. */
+/**
+ * Pesquisa pública restrita para Find Your Seat.
+ *
+ * A correspondência é exacta sobre o nome normalizado. Não são aceites
+ * prefixos nem fragmentos, para impedir a enumeração incremental da lista.
+ */
 export async function searchGuestsForFindSeat(
   eventId: string,
   query: string
@@ -798,24 +808,24 @@ export async function searchGuestsForFindSeat(
   if (normalizedQuery.length < FIND_SEAT_MIN_NAME_LENGTH) return [];
 
   const supabase = createAdminClient();
-  const escaped = escapeIlike(query.trim());
-  const escapedNormalized = escapeIlike(normalizedQuery);
 
   const { data, error } = await supabase
     .from("guests")
     .select("id, name, name_normalized, group_id, seats(table_name, seat_number, label)")
     .eq("event_id", eventId)
-    .or(
-      `name.ilike.%${escaped}%,name_normalized.ilike.%${escapedNormalized}%`
-    )
-    .limit(40);
+    .eq("name_normalized", normalizedQuery)
+    .is("deleted_at", null)
+    .is("archived_at", null)
+    .eq("is_incorrect", false)
+    .neq("status", "declined")
+    .limit(FIND_SEAT_MAX_RESULTS + 1);
 
   if (error) throw new Error(error.message);
 
-  const ranked = asTableRows<"guests">(data)
+  const exactMatches = asTableRows<"guests">(data)
     .map((row) => {
       const rank = rankNameMatch(row.name, query);
-      if (!rank || rank.score < 80) return null;
+      if (!rank || rank.kind !== "exact") return null;
       const seatRow = firstRelation(
         (row as { seats?: Tables<"seats"> | Tables<"seats">[] | null }).seats
       );
@@ -826,50 +836,25 @@ export async function searchGuestsForFindSeat(
         seat: seatRow
           ? {
               tableName: seatRow.table_name,
+              tableKey: tableKeyFromName(seatRow.table_name),
               seatNumber: seatRow.seat_number,
               label: seatRow.label,
             }
           : null,
-        score: rank.score,
-        matchKind: rank.kind,
+        matchKind: "exact" as const,
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "pt"))
-    .slice(0, FIND_SEAT_MAX_RESULTS);
+    .sort((a, b) => a.name.localeCompare(b.name, "pt"));
 
-  const groupCache = new Map<string, string[]>();
-  const results: FindSeatResult[] = [];
+  // Uma quantidade anormal de homónimos não deve gerar uma resposta parcial.
+  if (exactMatches.length > FIND_SEAT_MAX_RESULTS) return [];
 
-  for (const item of ranked) {
-    let groupMembers: string[] | undefined;
-    if (item.groupId && item.matchKind === "exact") {
-      const cached = groupCache.get(item.groupId);
-      if (cached) {
-        groupMembers = cached;
-      } else {
-        const members = await loadGroupMemberNames(
-          eventId,
-          item.groupId,
-          item.guestId
-        );
-        const allMembers = [item.name, ...members].sort((a, b) =>
-          a.localeCompare(b, "pt")
-        );
-        groupCache.set(item.groupId, allMembers);
-        groupMembers = allMembers;
-      }
-    }
-
-    results.push({
-      name: item.name,
-      seat: item.seat,
-      groupMembers,
-      matchKind: item.matchKind,
-    });
-  }
-
-  return results;
+  return exactMatches.map((item) => ({
+    name: item.name,
+    seat: item.seat,
+    matchKind: item.matchKind,
+  }));
 }
 
 export async function getEventStats(eventId: string): Promise<EventStats> {

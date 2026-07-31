@@ -5,14 +5,28 @@ import {
   isValidFindSeatCode,
   normalizeFindSeatCode,
 } from "@/lib/events/find-seat-code";
+import { getPublicEventFloorPlan } from "@/lib/events/floor-plan/repository";
 import type { FindSeatSearchResponse } from "@/lib/events/types";
 
 const MAX_QUERY_LENGTH = 80;
 
+export type FindSeatServiceDependencies = {
+  verifyAccess: typeof eventsRepo.verifyFindSeatAccess;
+  searchGuests: typeof guestsRepo.searchGuestsForFindSeat;
+  getPublicFloorPlan: typeof getPublicEventFloorPlan;
+};
+
+const DEFAULT_DEPENDENCIES: FindSeatServiceDependencies = {
+  verifyAccess: eventsRepo.verifyFindSeatAccess,
+  searchGuests: guestsRepo.searchGuestsForFindSeat,
+  getPublicFloorPlan: getPublicEventFloorPlan,
+};
+
 export async function searchFindSeat(
   eventId: string,
   query: string,
-  accessCode: string
+  accessCode: string,
+  dependencies: FindSeatServiceDependencies = DEFAULT_DEPENDENCIES
 ): Promise<FindSeatSearchResponse> {
   const normalizedQuery = query.trim();
   const normalizedCode = normalizeFindSeatCode(accessCode);
@@ -29,12 +43,12 @@ export async function searchFindSeat(
     return { ok: false, error: "query_too_long" };
   }
 
-  const event = await eventsRepo.verifyFindSeatAccess(eventId, normalizedCode);
+  const event = await dependencies.verifyAccess(eventId, normalizedCode);
   if (!event) {
     return { ok: false, error: "invalid_access" };
   }
 
-  const results = await guestsRepo.searchGuestsForFindSeat(
+  const results = await dependencies.searchGuests(
     eventId,
     normalizedQuery
   );
@@ -43,9 +57,12 @@ export async function searchFindSeat(
     return { ok: false, error: "not_found" };
   }
 
+  const floorPlan = await dependencies.getPublicFloorPlan(eventId);
+
   return {
     ok: true,
     event,
     results,
+    floorPlan,
   };
 }

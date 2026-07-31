@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import { eventToDbInsert, mapEvent } from "@/lib/events/db/mappers";
@@ -8,6 +9,24 @@ import {
 import type { EventFormData, EventPublicInfo, ManagedEvent, SheetsSyncMode } from "@/lib/events/types";
 import type { EventType } from "@/lib/admin/types";
 import type { Tables } from "@/lib/supabase/database.types";
+
+function accessCodesMatch(left: string, right: string): boolean {
+  const leftDigest = createHash("sha256").update(left, "utf8").digest();
+  const rightDigest = createHash("sha256").update(right, "utf8").digest();
+  return timingSafeEqual(leftDigest, rightDigest);
+}
+
+export function isFindSeatCompatibilitySchemaError(error: {
+  code?: string;
+  message?: string;
+}): boolean {
+  const message = error.message ?? "";
+  return (
+    error.code === "42703" ||
+    message.includes("find_seat_previous_code") ||
+    message.includes("find_seat_previous_code_valid_until")
+  );
+}
 
 async function enrichEventsWithClientNames(
   rows: Tables<"events">[]
@@ -174,19 +193,48 @@ export async function verifyFindSeatAccess(
   if (normalizedCode.length < 4) return null;
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("events")
-    .select("id, name, type, date, location, find_seat_code")
+    .select(
+      "id, name, type, date, location, find_seat_code, find_seat_previous_code, find_seat_previous_code_valid_until"
+    )
     .eq("id", eventId)
     .eq("is_active", true)
     .maybeSingle();
+
+  if (error && isFindSeatCompatibilitySchemaError(error)) {
+    const fallback = await supabase
+      .from("events")
+      .select("id, name, type, date, location, find_seat_code")
+      .eq("id", eventId)
+      .eq("is_active", true)
+      .maybeSingle();
+    data = fallback.data as typeof data;
+    error = fallback.error;
+  }
 
   if (error) throw new Error(error.message);
   const row = asTableRow<"events">(data);
   if (!row) return null;
 
   const storedCode = normalizeFindSeatCode(row.find_seat_code ?? "");
-  if (!storedCode || storedCode !== normalizedCode) return null;
+  const previousCode = normalizeFindSeatCode(
+    ("find_seat_previous_code" in row
+      ? row.find_seat_previous_code
+      : null) ?? ""
+  );
+  const previousStillValid =
+    Boolean(previousCode) &&
+    "find_seat_previous_code_valid_until" in row &&
+    Boolean(row.find_seat_previous_code_valid_until) &&
+    new Date(row.find_seat_previous_code_valid_until ?? "").getTime() >
+      Date.now();
+  const currentMatches =
+    Boolean(storedCode) && accessCodesMatch(storedCode, normalizedCode);
+  const previousMatches =
+    previousStillValid && accessCodesMatch(previousCode, normalizedCode);
+
+  if (!currentMatches && !previousMatches) return null;
 
   return {
     id: row.id,

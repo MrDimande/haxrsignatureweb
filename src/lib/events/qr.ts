@@ -4,9 +4,10 @@ import type { QrStyleOptions } from "@/lib/events/qr-styles";
 
 export async function generateEventFindSeatQrDataUrl(
   eventId: string,
+  accessCode: string,
   options?: Partial<QrStyleOptions>
 ): Promise<string> {
-  const url = buildFindSeatUrl(eventId);
+  const url = buildFindSeatUrl(eventId, accessCode);
   const useCenter = options?.centerMark && options.centerMark !== "none";
   return QRCode.toDataURL(url, {
     errorCorrectionLevel: useCenter ? "H" : "M",
@@ -20,9 +21,10 @@ export async function generateEventFindSeatQrDataUrl(
 }
 
 export async function generateEventFindSeatQrBuffer(
-  eventId: string
+  eventId: string,
+  accessCode: string
 ): Promise<Buffer> {
-  const url = buildFindSeatUrl(eventId);
+  const url = buildFindSeatUrl(eventId, accessCode);
   return QRCode.toBuffer(url, {
     type: "png",
     errorCorrectionLevel: "M",

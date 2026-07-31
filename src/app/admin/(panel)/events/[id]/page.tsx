@@ -26,6 +26,27 @@ import { buildGuestReviewQueue } from "@/lib/events/services/guest-review-queue.
 import { listEventContactProfiles } from "@/lib/events/repositories/event-contact-profiles.repository";
 import EventDetailClient from "./EventDetailClient";
 import { getClientPortalUrl } from "@/lib/portal/services/client-portal.service";
+import {
+  createEmptyFloorPlan,
+  getEventFloorPlan,
+  isFloorPlanSchemaMissingError,
+} from "@/lib/events/floor-plan/repository";
+
+async function loadFloorPlan(eventId: string) {
+  try {
+    return {
+      plan:
+        (await getEventFloorPlan(eventId)) ?? createEmptyFloorPlan(eventId),
+      schemaAvailable: true,
+    };
+  } catch (error) {
+    if (!isFloorPlanSchemaMissingError(error)) throw error;
+    return {
+      plan: createEmptyFloorPlan(eventId),
+      schemaAvailable: false,
+    };
+  }
+}
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -47,6 +68,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       auditEntries,
       groups,
       importBatches,
+      floorPlanState,
     ] =
       await Promise.all([
       guestsRepo.listGuestsByEvent(id, { includeArchived: true }),
@@ -57,6 +79,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       listGuestAuditByEvent(id).catch(() => []),
       groupsRepo.listGroupsByEvent(id).catch(() => []),
       batchesRepo.listImportBatchesByEvent(id).catch(() => []),
+      loadFloorPlan(id),
     ]);
 
     const giftReservations = event.editionRegistryKey
@@ -180,6 +203,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         portalApprovals={portalApprovals}
         portalContracts={portalContracts}
         clientPhone={linkedClient?.phone ?? null}
+        initialFloorPlan={floorPlanState.plan}
+        floorPlanSchemaAvailable={floorPlanState.schemaAvailable}
       />
     );
   } catch (error) {
