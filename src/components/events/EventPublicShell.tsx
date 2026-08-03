@@ -10,6 +10,7 @@ type EventPublicShellProps = {
   eventDate?: string | null;
   eventLocation?: string;
   footer?: string;
+  wide?: boolean;
   children: ReactNode;
 };
 
@@ -32,11 +33,12 @@ export default function EventPublicShell({
   eventDate,
   eventLocation,
   footer = "HAXR Signature · Maputo, Moçambique",
+  wide = false,
   children,
 }: EventPublicShellProps) {
   return (
     <main className="min-h-screen bg-black flex items-center justify-center px-5 py-12 sm:px-6 sm:py-16">
-      <div className="w-full max-w-lg">
+      <div className={`w-full ${wide ? "max-w-3xl" : "max-w-lg"}`}>
         <div className="border border-grey-dark/80 bg-black-soft/50 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
           <header className="px-7 sm:px-8 pt-10 pb-8 border-b border-grey-dark/60 text-center">
             <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-gold/50 mb-5">

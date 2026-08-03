@@ -44,7 +44,10 @@ export async function deleteEventAction(id: string) {
 export async function getEventFindSeatQrAction(eventId: string) {
   return runAction(async () => {
     const event = await eventsRepo.ensureFindSeatCodeForEvent(eventId);
-    const dataUrl = await generateEventFindSeatQrDataUrl(eventId);
+    const dataUrl = await generateEventFindSeatQrDataUrl(
+      eventId,
+      event.findSeatCode
+    );
     return {
       dataUrl,
       url: buildFindSeatUrl(eventId, event.findSeatCode),

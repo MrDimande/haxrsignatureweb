@@ -9,14 +9,8 @@ type FindSeatPageProps = {
   searchParams: Promise<{ code?: string }>;
 };
 
-export async function generateMetadata({
-  params,
-}: FindSeatPageProps): Promise<Metadata> {
-  const { eventId } = await params;
-  const event = await eventsRepo.getEventPublicInfo(eventId);
-  return buildPrivateEventMetadata(
-    event ? `Find Your Seat · ${event.name}` : "Find Your Seat · HAXR Signature"
-  );
+export function generateMetadata(): Metadata {
+  return buildPrivateEventMetadata("Find Your Seat · HAXR Signature");
 }
 
 export default async function FindSeatPage({
@@ -29,6 +23,9 @@ export default async function FindSeatPage({
   if (!event) notFound();
 
   return (
-    <FindSeatPublicView event={event} initialAccessCode={code?.trim() ?? ""} />
+    <FindSeatPublicView
+      eventId={event.id}
+      initialAccessCode={code?.trim() ?? ""}
+    />
   );
 }
