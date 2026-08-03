@@ -15,7 +15,12 @@ ALTER TABLE public.events
 
 UPDATE public.events
 SET
-  find_seat_previous_code = nullif(find_seat_code, ''),
+  -- Mirror the application's access-code normalization so legacy QR values
+  -- remain compatible even when historical rows contain lowercase letters.
+  find_seat_previous_code = nullif(
+    upper(regexp_replace(btrim(find_seat_code), '[[:space:]]+', '', 'g')),
+    ''
+  ),
   find_seat_previous_code_valid_until = CASE
     WHEN find_seat_code <> '' THEN now() + INTERVAL '30 days'
     ELSE NULL
