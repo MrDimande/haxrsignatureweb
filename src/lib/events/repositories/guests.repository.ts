@@ -9,6 +9,7 @@ import {
   normalizeSearchQuery,
   rankNameMatch,
   parseGuestNameInput,
+  stripPlusSuffix,
 } from "@/lib/events/normalize";
 import {
   FIND_SEAT_MAX_RESULTS,
@@ -808,10 +809,12 @@ export async function searchGuestsForFindSeat(
   if (normalizedQuery.length < FIND_SEAT_MIN_NAME_LENGTH) return [];
 
   const supabase = createAdminClient();
+  const activeGuestColumns =
+    "id, name, name_normalized, group_id, seats(table_name, seat_number, label)";
 
-  const { data, error } = await supabase
+  const normalizedResult = await supabase
     .from("guests")
-    .select("id, name, name_normalized, group_id, seats(table_name, seat_number, label)")
+    .select(activeGuestColumns)
     .eq("event_id", eventId)
     .eq("name_normalized", normalizedQuery)
     .is("deleted_at", null)
@@ -820,9 +823,34 @@ export async function searchGuestsForFindSeat(
     .neq("status", "declined")
     .limit(FIND_SEAT_MAX_RESULTS + 1);
 
-  if (error) throw new Error(error.message);
+  if (normalizedResult.error) throw new Error(normalizedResult.error.message);
 
-  const exactMatches = asTableRows<"guests">(data)
+  // Compatibilidade limitada para registos legados cujo name_normalized ficou
+  // vazio ou desactualizado. O ILIKE não usa wildcards: continua a ser uma
+  // correspondência exacta, e a verificação normalizada abaixo é definitiva.
+  const legacyResult = await supabase
+    .from("guests")
+    .select(activeGuestColumns)
+    .eq("event_id", eventId)
+    .ilike("name", escapeIlike(stripPlusSuffix(query.trim())))
+    .is("deleted_at", null)
+    .is("archived_at", null)
+    .eq("is_incorrect", false)
+    .neq("status", "declined")
+    .limit(FIND_SEAT_MAX_RESULTS + 1);
+
+  if (legacyResult.error) throw new Error(legacyResult.error.message);
+
+  const candidateRows = Array.from(
+    new Map(
+      [
+        ...asTableRows<"guests">(normalizedResult.data),
+        ...asTableRows<"guests">(legacyResult.data),
+      ].map((row) => [row.id, row])
+    ).values()
+  );
+
+  const exactMatches = candidateRows
     .map((row) => {
       const rank = rankNameMatch(row.name, query);
       if (!rank || rank.kind !== "exact") return null;

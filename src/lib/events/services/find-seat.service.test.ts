@@ -149,4 +149,21 @@ describe("searchFindSeat", () => {
     assert.deepEqual(result.floorPlan, floorPlan);
     assert.equal(result.results?.[0]?.matchKind, "exact");
   });
+
+  it("mantém o resultado do lugar quando o Croqui está indisponível", async () => {
+    const result = await searchFindSeat(
+      EVENT_ID,
+      "Ana Silva",
+      CODE,
+      dependencies({
+        getPublicFloorPlan: async () => {
+          throw new Error("floor plan unavailable");
+        },
+      })
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.results?.[0]?.name, "Ana Silva");
+    assert.equal(result.floorPlan, null);
+  });
 });

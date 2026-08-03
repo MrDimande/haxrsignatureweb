@@ -31,11 +31,17 @@ type SuccessfulFindSeatResponse = {
 const GENERIC_ERROR =
   "Código ou nome incorrectos. Verifique os dados ou dirija-se à recepção.";
 
-function SeatJourney({ complete }: { complete: boolean }) {
+function SeatJourney({
+  searched,
+  seated,
+}: {
+  searched: boolean;
+  seated: boolean;
+}) {
   const steps = [
     { label: "Digitalizar", icon: QrCode, complete: true },
-    { label: "Pesquisar", icon: Search, complete },
-    { label: "Sentar", icon: Check, complete },
+    { label: "Pesquisar", icon: Search, complete: searched },
+    { label: "Sentar", icon: Check, complete: seated },
   ];
 
   return (
@@ -236,7 +242,10 @@ export default function FindSeatPublicView({
       footer="Find Your Seat · HAXR Signature"
       wide
     >
-      <SeatJourney complete={Boolean(selected)} />
+      <SeatJourney
+        searched={Boolean(results || selected)}
+        seated={Boolean(selected)}
+      />
 
       {!selected ? (
         <div className="space-y-6">

@@ -30,6 +30,7 @@ export async function searchFindSeat(
   dependencies: FindSeatServiceDependencies = DEFAULT_DEPENDENCIES
 ): Promise<FindSeatSearchResponse> {
   const normalizedQuery = normalizeSearchQuery(query);
+  const searchQuery = query.trim();
   const normalizedCode = normalizeFindSeatCode(accessCode);
 
   if (!isValidFindSeatCode(normalizedCode)) {
@@ -51,14 +52,20 @@ export async function searchFindSeat(
 
   const results = await dependencies.searchGuests(
     eventId,
-    normalizedQuery
+    searchQuery
   );
 
   if (!results.length) {
     return { ok: false, error: "not_found" };
   }
 
-  const floorPlan = await dependencies.getPublicFloorPlan(eventId);
+  let floorPlan = null;
+  try {
+    floorPlan = await dependencies.getPublicFloorPlan(eventId);
+  } catch {
+    // O Croqui é enriquecimento opcional. Uma falha nunca deve ocultar um
+    // lugar que já foi autenticado e encontrado com sucesso.
+  }
 
   return {
     ok: true,

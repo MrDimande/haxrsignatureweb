@@ -56,6 +56,59 @@ type FloorPlanEditorProps = {
   schemaAvailable: boolean;
 };
 
+type BoundedNumberInputProps = {
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  className: string;
+  onCommit: (value: number) => void;
+};
+
+function BoundedNumberInput({
+  value,
+  min,
+  max,
+  step,
+  className,
+  onCommit,
+}: BoundedNumberInputProps) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  function commitDraft() {
+    const parsed = Number(draft);
+    if (draft.trim() === "" || !Number.isFinite(parsed) || parsed < min || parsed > max) {
+      setDraft(String(value));
+      return;
+    }
+    onCommit(parsed);
+  }
+
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      step={step}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commitDraft}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.key === "Escape") {
+          setDraft(String(value));
+          event.currentTarget.blur();
+        }
+      }}
+      className={className}
+    />
+  );
+}
+
 const ELEMENTS: { kind: FloorPlanElementKind; label: string; width: number; height: number }[] = [
   { kind: "entrance", label: "Entrada", width: 2, height: 0.7 },
   { kind: "exit", label: "Saída", width: 2, height: 0.7 },
@@ -625,13 +678,13 @@ export default function FloorPlanEditor({
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <label className="text-xs text-grey/65">Largura (m)
-                <input type="number" min={4} max={200} value={present.room.width} onChange={(e) => commit({ ...present, room: { ...present.room, width: Number(e.target.value) } })} className={propertyInput} />
+                <BoundedNumberInput min={4} max={200} value={present.room.width} onCommit={(width) => commit({ ...present, room: { ...present.room, width } })} className={propertyInput} />
               </label>
               <label className="text-xs text-grey/65">Comprimento (m)
-                <input type="number" min={4} max={200} value={present.room.length} onChange={(e) => commit({ ...present, room: { ...present.room, length: Number(e.target.value) } })} className={propertyInput} />
+                <BoundedNumberInput min={4} max={200} value={present.room.length} onCommit={(length) => commit({ ...present, room: { ...present.room, length } })} className={propertyInput} />
               </label>
               <label className="col-span-2 text-xs text-grey/65">Grelha (m)
-                <input type="number" min={0.1} max={5} step={0.1} value={present.room.gridSize} onChange={(e) => commit({ ...present, room: { ...present.room, gridSize: Number(e.target.value) } })} className={propertyInput} />
+                <BoundedNumberInput min={0.1} max={5} step={0.1} value={present.room.gridSize} onCommit={(gridSize) => commit({ ...present, room: { ...present.room, gridSize } })} className={propertyInput} />
               </label>
             </div>
           </section>
