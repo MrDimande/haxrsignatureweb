@@ -5,6 +5,7 @@ import {
   isValidFindSeatCode,
   normalizeFindSeatCode,
 } from "@/lib/events/find-seat-code";
+import { normalizeSearchQuery } from "@/lib/events/normalize";
 import { getPublicEventFloorPlan } from "@/lib/events/floor-plan/repository";
 import type { FindSeatSearchResponse } from "@/lib/events/types";
 
@@ -28,7 +29,7 @@ export async function searchFindSeat(
   accessCode: string,
   dependencies: FindSeatServiceDependencies = DEFAULT_DEPENDENCIES
 ): Promise<FindSeatSearchResponse> {
-  const normalizedQuery = query.trim();
+  const normalizedQuery = normalizeSearchQuery(query);
   const normalizedCode = normalizeFindSeatCode(accessCode);
 
   if (!isValidFindSeatCode(normalizedCode)) {

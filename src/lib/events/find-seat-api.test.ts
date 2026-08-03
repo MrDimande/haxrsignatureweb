@@ -106,6 +106,28 @@ describe("Find Your Seat public API", () => {
     assert.equal(response.status, 413);
   });
 
+  it("limita o corpo real quando Content-Length está ausente ou subestimado", async () => {
+    let searched = false;
+    const handler = createFindSeatPostHandler(
+      dependencies({ search: async () => ((searched = true), { ok: false }) })
+    );
+    const oversizedBody = {
+      eventId: EVENT_ID,
+      query: "Ana Silva",
+      accessCode: CODE,
+      padding: "x".repeat(3_000),
+    };
+
+    const withoutLength = await handler(request(oversizedBody));
+    const understatedLength = await handler(
+      request(oversizedBody, { "content-length": "128" })
+    );
+
+    assert.equal(withoutLength.status, 413);
+    assert.equal(understatedLength.status, 413);
+    assert.equal(searched, false);
+  });
+
   it("aplica os três buckets sem guardar o código em claro", async () => {
     const keys: string[] = [];
     const handler = createFindSeatPostHandler(

@@ -71,6 +71,30 @@ describe("searchFindSeat", () => {
     assert.equal(verified, false);
   });
 
+  it("valida o comprimento depois de normalizar sufixos de acompanhante", async () => {
+    let verified = false;
+    let searched = false;
+    const result = await searchFindSeat(
+      EVENT_ID,
+      "Jo (+1)",
+      CODE,
+      dependencies({
+        verifyAccess: async () => {
+          verified = true;
+          return null;
+        },
+        searchGuests: async () => {
+          searched = true;
+          return [];
+        },
+      })
+    );
+
+    assert.deepEqual(result, { ok: false, error: "query_too_short" });
+    assert.equal(verified, false);
+    assert.equal(searched, false);
+  });
+
   it("não pesquisa convidados quando o acesso falha", async () => {
     let searched = false;
     const result = await searchFindSeat(

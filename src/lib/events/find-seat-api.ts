@@ -78,41 +78,83 @@ function opaqueCodeBucket(accessCode: string): string {
     .slice(0, 32);
 }
 
+type BodyReadResult =
+  | { ok: true; value: unknown }
+  | { ok: false; status: 400 | 413 };
+
+async function readJsonBodyWithinLimit(
+  request: Request
+): Promise<BodyReadResult> {
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength !== null) {
+    const trimmedLength = declaredLength.trim();
+    if (!/^\d+$/.test(trimmedLength) || Number(trimmedLength) > MAX_BODY_BYTES) {
+      return { ok: false, status: 413 };
+    }
+  }
+
+  if (!request.body) {
+    return { ok: false, status: 400 };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_BODY_BYTES) {
+        await reader.cancel();
+        return { ok: false, status: 413 };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false, status: 400 };
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return { ok: true, value: JSON.parse(new TextDecoder().decode(bytes)) };
+  } catch {
+    return { ok: false, status: 400 };
+  }
+}
+
 export function createFindSeatPostHandler(
   dependencies: FindSeatApiDependencies
 ): (request: Request) => Promise<Response> {
   return async function findSeatPost(request: Request): Promise<Response> {
     try {
-      const contentLength = Number(request.headers.get("content-length") ?? "0");
-      if (
-        !Number.isFinite(contentLength) ||
-        contentLength < 0 ||
-        contentLength > MAX_BODY_BYTES
-      ) {
-        return jsonResponse(FIND_SEAT_GENERIC_ERROR, 413);
+      const ip = dependencies.getIp(request);
+      const ipLimit = await dependencies.rateLimit(
+        `find-seat:ip:${ip}`,
+        dependencies.limits.ip
+      );
+      if (!ipLimit.allowed) return rateLimited(ipLimit);
+
+      const body = await readJsonBodyWithinLimit(request);
+      if (!body.ok) {
+        return jsonResponse(FIND_SEAT_GENERIC_ERROR, body.status);
       }
 
-      let raw: unknown;
-      try {
-        raw = await request.json();
-      } catch {
-        return jsonResponse(FIND_SEAT_GENERIC_ERROR, 400);
-      }
-
-      const parsed = requestSchema.safeParse(raw);
+      const parsed = requestSchema.safeParse(body.value);
       if (!parsed.success) {
         return jsonResponse(FIND_SEAT_GENERIC_ERROR, 400);
       }
 
       const { eventId, query, accessCode } = parsed.data;
       const normalizedCode = normalizeFindSeatCode(accessCode);
-      const ip = dependencies.getIp(request);
-
-      const ipLimit = await dependencies.rateLimit(
-        `find-seat:ip:${ip}`,
-        dependencies.limits.ip
-      );
-      if (!ipLimit.allowed) return rateLimited(ipLimit);
 
       const eventLimit = await dependencies.rateLimit(
         `find-seat:event:${eventId}:${ip}`,
