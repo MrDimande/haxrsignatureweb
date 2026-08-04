@@ -63,6 +63,13 @@ describe("Core Event Registry Alignment", () => {
     assert.equal(resolveEditionSlug("jessicakhulaya"), "jessicakulaya");
   });
 
+  it("resolves stanturns5 and Stan aliases", () => {
+    assert.equal(resolveEditionSlug("stanturns5"), "stanturns5");
+    assert.equal(resolveEditionSlug("stan"), "stanturns5");
+    assert.equal(resolveEditionSlug("convite-stan"), "stanturns5");
+    assert.equal(resolveEditionSlug("stan-5-anos"), "stanturns5");
+  });
+
   it("every active canonical slug maps to its intended environment variable binding", () => {
     const expectedVars: Record<string, string> = {
       "jessica-samuel-wedding": "EDITION_EVENT_JESSICA_WEDDING_ID",
@@ -70,6 +77,7 @@ describe("Core Event Registry Alignment", () => {
       "cha-de-lingerie": "EDITION_EVENT_JESSICA_LINGERIE_ID",
       "cha-de-panela": "EDITION_EVENT_JESSICA_PANELA_ID",
       "jessicachadelingerie": "EDITION_EVENT_JESSICA_FAREWELL_ID",
+      stanturns5: "EDITION_EVENT_STAN_ID",
     };
 
     for (const [slug, envVar] of Object.entries(expectedVars)) {

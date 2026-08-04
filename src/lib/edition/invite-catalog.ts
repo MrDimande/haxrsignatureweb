@@ -90,6 +90,13 @@ export const EDITION_INVITE_CATALOG: Readonly<
     status: "active",
     experienceType: "invitation",
   },
+  "stan-real-madrid": {
+    registryKey: "stan-real-madrid",
+    inviteSlug: "stanturns5",
+    label: "Edition · Aniversário · Stan",
+    status: "active",
+    experienceType: "invitation",
+  },
 };
 
 export type EditionAssociationState =
