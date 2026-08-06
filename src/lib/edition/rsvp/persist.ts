@@ -243,9 +243,13 @@ async function updateMatchedGuest(params: {
 }
 
 export async function persistEditionRsvp(
-  submission: EditionRsvpSubmission
+  submission: EditionRsvpSubmission,
+  options?: { presentedProxySecret?: string }
 ): Promise<EditionRsvpPersistResult> {
-  const writeGate = evaluateEditionRsvpWriteGate();
+  const writeGate = evaluateEditionRsvpWriteGate({
+    resolvedSlug: submission.slug,
+    presentedProxySecret: options?.presentedProxySecret,
+  });
   if (!writeGate.allowed) {
     console.warn(
       `[edition/rsvp] persist blocked by write gate reason=${writeGate.reason} mode=${writeGate.mode}`
