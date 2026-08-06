@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "@/lib/security/timing-safe";
 import {
   getSupabaseJwtProjectRef,
   getSupabaseProjectRef,
@@ -7,21 +8,31 @@ import {
 export const EDITION_RSVP_WRITES_DISABLED_CODE =
   "edition_rsvp_writes_disabled" as const;
 
-export type EditionRsvpWriteMode = "disabled" | "preview_clone";
+export type EditionRsvpWriteMode =
+  | "disabled"
+  | "preview_clone"
+  | "production";
 
 export type EditionRsvpWriteGateReason =
   | "mode_disabled"
   | "mode_unknown"
   | "production_runtime"
   | "not_preview"
+  | "not_production"
   | "url_unresolved"
   | "production_ref"
   | "allowed_ref_unset"
   | "ref_mismatch"
-  | "service_role_ref_mismatch";
+  | "service_role_ref_mismatch"
+  | "proxy_secret_unset"
+  | "proxy_secret_missing"
+  | "proxy_secret_invalid"
+  | "production_allowlist_unset"
+  | "production_slug_required"
+  | "production_slug_denied";
 
 export type EditionRsvpWriteGateDecision =
-  | { allowed: true; mode: "preview_clone" }
+  | { allowed: true; mode: "preview_clone" | "production" }
   | {
       allowed: false;
       mode: EditionRsvpWriteMode | "unknown";
@@ -39,6 +50,7 @@ export function resolveEditionRsvpWriteMode(
   const value = raw?.trim().toLowerCase();
   if (!value || value === "disabled") return "disabled";
   if (value === "preview_clone") return "preview_clone";
+  if (value === "production") return "production";
   return "unknown";
 }
 
@@ -71,6 +83,118 @@ function readAllowedSupabaseRef(
 }
 
 /**
+ * Parse Production RSVP slug allowlist (comma-separated).
+ * Empty / whitespace-only input → empty list (caller must deny).
+ */
+export function parseProductionAllowedSlugs(
+  raw: string | undefined = process.env
+    .HAXR_EDITION_RSVP_PRODUCTION_ALLOWED_SLUGS
+): string[] {
+  if (raw === undefined || raw === null) return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  return trimmed
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length > 0);
+}
+
+function readConfiguredProxySecret(
+  raw: string | undefined = process.env.HAXR_EDITION_PROXY_SECRET
+): string | null {
+  const value = raw?.trim();
+  return value ? value : null;
+}
+
+function evaluateProductionWriteGate(options?: {
+  vercelEnv?: string | undefined;
+  configuredProxySecret?: string | undefined;
+  presentedProxySecret?: string | undefined;
+  productionAllowedSlugs?: string | undefined;
+  resolvedSlug?: string | null | undefined;
+}): EditionRsvpWriteGateDecision {
+  const vercelEnv = (
+    options?.vercelEnv ?? process.env.VERCEL_ENV
+  )?.trim().toLowerCase();
+
+  if (vercelEnv !== "production") {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "not_production",
+    };
+  }
+
+  const configured = readConfiguredProxySecret(options?.configuredProxySecret);
+  if (!configured) {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "proxy_secret_unset",
+    };
+  }
+
+  const presented = options?.presentedProxySecret?.trim() ?? "";
+  if (!presented) {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "proxy_secret_missing",
+    };
+  }
+
+  if (!timingSafeEqual(presented, configured)) {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "proxy_secret_invalid",
+    };
+  }
+
+  const hasAllowlistOption =
+    options !== undefined &&
+    Object.prototype.hasOwnProperty.call(options, "productionAllowedSlugs");
+  const allowlistRaw = hasAllowlistOption
+    ? options.productionAllowedSlugs
+    : process.env.HAXR_EDITION_RSVP_PRODUCTION_ALLOWED_SLUGS;
+  if (allowlistRaw === undefined || allowlistRaw === null) {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "production_allowlist_unset",
+    };
+  }
+
+  const allowlist = parseProductionAllowedSlugs(allowlistRaw);
+  if (allowlist.length === 0) {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "production_allowlist_unset",
+    };
+  }
+
+  const resolved = options?.resolvedSlug?.trim().toLowerCase() ?? "";
+  if (!resolved) {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "production_slug_required",
+    };
+  }
+
+  if (!allowlist.includes(resolved)) {
+    return {
+      allowed: false,
+      mode: "production",
+      reason: "production_slug_denied",
+    };
+  }
+
+  return { allowed: true, mode: "production" };
+}
+
+/**
  * Fail-closed gate for Edition RSVP persistence.
  * Must run after Bearer auth and before any guests SELECT/INSERT/UPDATE/RPC.
  */
@@ -81,6 +205,11 @@ export function evaluateEditionRsvpWriteGate(options?: {
   serviceRoleKey?: string | undefined;
   vercelEnv?: string | undefined;
   nodeEnv?: string | undefined;
+  configuredProxySecret?: string | undefined;
+  presentedProxySecret?: string | undefined;
+  productionAllowedSlugs?: string | undefined;
+  /** Canonical Edition slug (already resolved). Never the raw payload alias alone. */
+  resolvedSlug?: string | null | undefined;
 }): EditionRsvpWriteGateDecision {
   const mode = resolveEditionRsvpWriteMode(options?.writeMode);
 
@@ -90,6 +219,10 @@ export function evaluateEditionRsvpWriteGate(options?: {
 
   if (mode === "unknown") {
     return { allowed: false, mode: "unknown", reason: "mode_unknown" };
+  }
+
+  if (mode === "production") {
+    return evaluateProductionWriteGate(options);
   }
 
   // mode === preview_clone

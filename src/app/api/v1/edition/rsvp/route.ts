@@ -5,6 +5,7 @@ import {
   validateEditionProxyJsonBody,
   validateEditionProxyRequest,
 } from "@/lib/edition/proxy-auth";
+import { resolveEditionSlug } from "@/lib/edition/registry";
 import { processEditionRsvpSubmission } from "@/lib/edition/rsvp/service";
 import {
   editionRsvpWritesDisabledResponse,
@@ -24,6 +25,14 @@ function getRequestId(request: Request): string {
   return request.headers.get("x-request-id")?.trim() || randomUUID();
 }
 
+function readPresentedProxySecret(request: Request): string {
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  if (authorization.toLowerCase().startsWith("bearer ")) {
+    return authorization.slice(7).trim();
+  }
+  return request.headers.get("x-haxr-edition-proxy")?.trim() ?? "";
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -38,8 +47,38 @@ export async function POST(request: Request) {
       });
     }
 
-    // Fail-closed write gate: before rate-limit DB, body parse, or RSVP persist.
-    const writeGate = evaluateEditionRsvpWriteGate();
+    const bodyCheck = validateEditionProxyJsonBody(request);
+    if (!bodyCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: bodyCheck.error },
+        { status: bodyCheck.status }
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Payload inválido." },
+        { status: 400 }
+      );
+    }
+
+    const rawSlug =
+      body &&
+      typeof body === "object" &&
+      typeof (body as Record<string, unknown>).slug === "string"
+        ? ((body as Record<string, unknown>).slug as string)
+        : undefined;
+    const resolvedSlug = resolveEditionSlug(rawSlug);
+    const presentedProxySecret = readPresentedProxySecret(request);
+
+    // Fail-closed write gate: after proxy auth + body parse, before rate-limit DB / persist.
+    const writeGate = evaluateEditionRsvpWriteGate({
+      presentedProxySecret,
+      resolvedSlug,
+    });
     if (!writeGate.allowed) {
       console.warn(
         `[api/v1/edition/rsvp] writes blocked requestId=${requestId} reason=${writeGate.reason} mode=${writeGate.mode}`
@@ -47,14 +86,6 @@ export async function POST(request: Request) {
       return NextResponse.json(editionRsvpWritesDisabledResponse(), {
         status: 503,
       });
-    }
-
-    const bodyCheck = validateEditionProxyJsonBody(request);
-    if (!bodyCheck.ok) {
-      return NextResponse.json(
-        { success: false, error: bodyCheck.error },
-        { status: bodyCheck.status }
-      );
     }
 
     const ip = getRequestIp(request);
@@ -72,17 +103,9 @@ export async function POST(request: Request) {
       return editionRateLimitResponse(rateResult);
     }
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Payload inválido." },
-        { status: 400 }
-      );
-    }
-
-    const result = await processEditionRsvpSubmission(body);
+    const result = await processEditionRsvpSubmission(body, {
+      presentedProxySecret,
+    });
 
     console.info("[api/v1/edition/rsvp] Processed", {
       requestId,
