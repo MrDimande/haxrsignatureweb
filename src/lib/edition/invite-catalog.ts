@@ -97,6 +97,13 @@ export const EDITION_INVITE_CATALOG: Readonly<
     status: "active",
     experienceType: "invitation",
   },
+  "nian-night-of-the-web": {
+    registryKey: "nian-night-of-the-web",
+    inviteSlug: "nianwebnight",
+    label: "Edition · Aniversário · Nian",
+    status: "active",
+    experienceType: "invitation",
+  },
 };
 
 export type EditionAssociationState =
