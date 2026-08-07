@@ -1,4 +1,5 @@
 -- Sprint Admin V2: histórico comercial, conversões e portal cliente
+-- Canonical legacy version 0280 preserves execution order before migration 0281.
 -- Idempotente
 
 ALTER TABLE documents

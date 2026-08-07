@@ -85,7 +85,7 @@ export default function HaxrConciergeSetupPage() {
         ...prev,
         "[2/4] Classificação inteligente de campos...",
         `Ficheiro reconhecido: ${name.endsWith(".png") || name.endsWith(".jpg") ? "Imagem de Recibo" : "Proposta de Orçamento"}`,
-        `Extraído: ${name.includes("M-Pesa") || name.includes("mpesa") ? "Sinal Decoração - 42.500 MT" : "Maresia Catering - 446.600 MT"}`,
+        `Extraído: ${name.includes("M-Pesa") || name.includes("mpesa") ? "Sinal sem fornecedor associado - 42.500 MT" : "Proposta sem fornecedor associado - 446.600 MT"}`,
       ]);
 
       setTimeout(() => {
@@ -210,7 +210,7 @@ export default function HaxrConciergeSetupPage() {
                         <span>M-PESA</span>
                       </div>
                       <p className="font-serif text-[11px] font-light text-brand-text-dark">
-                        Sinal de Decoração — Elegance Decor
+                        Sinal de decoração — fornecedor não associado
                       </p>
                       <div className="h-1 w-full bg-zinc-100 rounded-full overflow-hidden">
                         <motion.div
@@ -223,7 +223,7 @@ export default function HaxrConciergeSetupPage() {
 
                     <div className="p-3 bg-brand-black text-white rounded-2xl border border-brand-gold/20 space-y-1 text-[9px] font-mono leading-relaxed">
                       <p className="text-brand-gold">✦ EXTRAÇÃO HAXR AI:</p>
-                      <p className="text-white/80">• Beneficiário: Elegance Decor</p>
+                      <p className="text-white/80">• Beneficiário: por associar</p>
                       <p className="text-white/80">• Valor: 42.500 MT</p>
                       <p className="text-white/80">• Estado: Aguarda Revisão Humana</p>
                     </div>
@@ -310,7 +310,7 @@ export default function HaxrConciergeSetupPage() {
                   Guarde. Organize.<br />Planeie.
                 </h2>
                 <p className="font-sans text-xs md:text-sm text-brand-text-dark/70 leading-relaxed font-light">
-                  Esqueça a gestão dispersa de emails e mensagens do WhatsApp. Encaminhe propostas de decoração do Zambi, faturas de som do Southern Sun ou comprovativos. O Concierge lê, classifica e organiza tudo nas ferramentas certas do vosso ecossistema de casamento.
+                  Esqueça a gestão dispersa de emails e mensagens do WhatsApp. Encaminhe propostas, facturas ou comprovativos. O Concierge lê, classifica e organiza tudo, sem associar fornecedores até existir validação.
                 </p>
               </RevealOnScroll>
               <RevealOnScroll className="pt-2">
@@ -431,7 +431,7 @@ export default function HaxrConciergeSetupPage() {
 
                         {/* Row 1 */}
                         <tr className="border-b border-brand-champagne/15">
-                          <td className="py-3 font-medium text-brand-text-dark">Proposta_Catering_Zambi.pdf</td>
+                          <td className="py-3 font-medium text-brand-text-dark">Proposta_Sem_Fornecedor.pdf</td>
                           <td className="py-3 text-zinc-500">Proposta</td>
                           <td className="py-3 text-right font-serif font-bold text-brand-text-dark">580.000 MT</td>
                           <td className="py-3 text-center">
@@ -496,7 +496,7 @@ export default function HaxrConciergeSetupPage() {
                             <span className="text-[7px] text-zinc-400">Pela Equipa HAXR</span>
                           </div>
                           <p className="font-sans text-[10px] text-brand-text-dark/80 leading-relaxed font-light">
-                            IA detectou catering para <strong>180 convidados</strong> com buffet de frutos do mar. Deseja associar ao Zambi Catering e registar os 50% de sinal no módulo financeiro?
+                            IA detectou uma proposta para <strong>180 convidados</strong>. Confirme primeiro o fornecedor antes de registar o sinal no módulo financeiro.
                           </p>
                           <div className="flex gap-2 justify-end">
                             <button className="border border-brand-champagne px-3 py-1 font-mono text-[7px] tracking-wider uppercase rounded-xs cursor-pointer text-brand-text-dark hover:bg-zinc-50">
@@ -520,7 +520,7 @@ export default function HaxrConciergeSetupPage() {
                             <span className="text-[7px] text-zinc-400">ID: MP260612847391</span>
                           </div>
                           <p className="font-sans text-[10px] text-white/80 leading-relaxed font-light">
-                            Recibo M-Pesa de <strong>42.500 MT</strong> extraído com sucesso. Associado à factura pendente de Decoração da <em>Elegance Decor</em>.
+                            Recibo M-Pesa de <strong>42.500 MT</strong> extraído. Aguarda validação e associação manual a um fornecedor real.
                           </p>
                           <div className="flex gap-2 justify-end">
                             <button className="bg-brand-gold text-brand-black px-3 py-1 font-mono text-[7px] tracking-wider uppercase font-bold rounded-xs cursor-pointer hover:bg-brand-gold-light">

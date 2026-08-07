@@ -20,3 +20,8 @@ export function asGenericRows<T>(data: unknown): T[] {
 export function asGenericRow<T>(data: unknown): T | null {
   return (data ?? null) as T | null;
 }
+
+export function isSupabasePermissionDeniedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes("permission denied");
+}

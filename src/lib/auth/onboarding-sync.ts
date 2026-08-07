@@ -5,7 +5,11 @@ import {
   type OnboardingStorageReader,
 } from "@/lib/auth/onboarding-storage";
 import { isOnboardingComplete, POST_LOGIN_DASHBOARD } from "@/lib/auth/onboarding-status";
-import { CLIENT_SIGN_IN_PATH } from "@/lib/auth/client-app-middleware";
+import {
+  CLIENT_SIGN_IN_PATH,
+  isSafeClientReturnPath,
+  readStashedPostAuthReturn,
+} from "@/lib/auth/client-app-middleware";
 import type { CreateClientEventInput } from "@/lib/events/create-event-validation";
 import {
   buildStableOnboardingFingerprintMaterial,
@@ -125,7 +129,6 @@ export function writeOnboardingSyncState(
     }
   }
 }
-
 export function mapOnboardingRoleToEventType(
   role: OnboardingRawData["role"],
 ): CreateClientEventInput["eventType"] {
@@ -158,11 +161,17 @@ export function buildOnboardingEventPayload(
 }
 
 export function resolvePostOnboardingCompletionRedirect(isAuthenticated: boolean): string {
+  const stashedReturn = readStashedPostAuthReturn();
+  const returnPath =
+    stashedReturn && isSafeClientReturnPath(stashedReturn)
+      ? stashedReturn
+      : POST_LOGIN_DASHBOARD;
+
   if (isAuthenticated) {
-    return POST_LOGIN_DASHBOARD;
+    return returnPath;
   }
 
-  return `${CLIENT_SIGN_IN_PATH}?from=${encodeURIComponent(POST_LOGIN_DASHBOARD)}`;
+  return `${CLIENT_SIGN_IN_PATH}?from=${encodeURIComponent(returnPath)}`;
 }
 
 export function shouldAttemptOnboardingSync(input: {
@@ -286,7 +295,6 @@ function clearSyncingStatus(
     store.removeItem(ONBOARDING_SYNC_KEYS.syncStatus);
   }
 }
-
 export async function performOnboardingSync(
   deps: OnboardingSyncDeps = {},
 ): Promise<OnboardingSyncResult> {

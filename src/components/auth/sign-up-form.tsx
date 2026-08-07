@@ -5,35 +5,38 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
-  buildSignUpPath,
+  buildSignInPath,
   resolvePostLoginRedirectWithReturnPath,
   stashPostAuthReturn,
   STYLE_QUIZ_PATH,
 } from "@/lib/auth/client-app-middleware";
-import { isOnboardingComplete, POST_LOGIN_DASHBOARD } from "@/lib/auth/onboarding-status";
+import { isOnboardingComplete } from "@/lib/auth/onboarding-status";
 import {
-  hasSignInFieldErrors,
-  signInWithEmailPassword,
-  validateSignInCredentials,
-} from "@/lib/auth/sign-in-auth";
+  hasSignUpFieldErrors,
+  signUpWithEmailPassword,
+  validateSignUpCredentials,
+} from "@/lib/auth/sign-up-auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-
-type FieldErrors = {
-  email?: string;
-  password?: string;
-};
-
 import GoogleAuthButton from "@/components/auth/google-auth-button";
 
-export default function SignInForm() {
+type FieldErrors = {
+  fullName?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  termsAccepted?: string;
+};
+
+export default function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromParam = searchParams?.get("from") ?? null;
   const isStyleQuizGate = fromParam === STYLE_QUIZ_PATH;
-  const isDashboardGate =
-    fromParam === POST_LOGIN_DASHBOARD || fromParam === "/dashboard";
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -42,21 +45,18 @@ export default function SignInForm() {
     stashPostAuthReturn(fromParam);
   }, [fromParam]);
 
-  useEffect(() => {
-    const authError = searchParams?.get("error");
-    if (authError === "auth_callback") {
-      setFormError(
-        "Não foi possível concluir o início de sessão. Tente novamente ou use email.",
-      );
-    }
-  }, [searchParams]);
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormError(null);
 
-    const validationErrors = validateSignInCredentials(email, password);
-    if (hasSignInFieldErrors(validationErrors)) {
+    const validationErrors = validateSignUpCredentials({
+      fullName,
+      email,
+      password,
+      confirmPassword,
+      termsAccepted,
+    });
+    if (hasSignUpFieldErrors(validationErrors)) {
       setFieldErrors(validationErrors);
       return;
     }
@@ -66,7 +66,13 @@ export default function SignInForm() {
 
     try {
       const supabase = createSupabaseBrowserClient();
-      const result = await signInWithEmailPassword(supabase, email, password);
+      const result = await signUpWithEmailPassword(supabase, {
+        fullName,
+        email,
+        password,
+        confirmPassword,
+        termsAccepted,
+      });
 
       if (!result.ok) {
         if (result.fieldErrors) {
@@ -76,12 +82,19 @@ export default function SignInForm() {
         return;
       }
 
+      if (!result.sessionCreated) {
+        setFormError(
+          "Conta criada. Confirme o email enviado e depois inicie sessão.",
+        );
+        return;
+      }
+
       router.push(
         resolvePostLoginRedirectWithReturnPath(fromParam, isOnboardingComplete()),
       );
       router.refresh();
     } catch {
-      setFormError("Não foi possível iniciar sessão. Tente novamente.");
+      setFormError("Não foi possível criar a conta. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -90,20 +103,18 @@ export default function SignInForm() {
   const inputClass =
     "w-full rounded-xl border bg-white px-4 py-3 font-sans text-sm font-light text-brand-text-dark placeholder:text-zinc-400 transition-all focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
 
-  const signUpHref = buildSignUpPath(fromParam);
+  const signInHref = buildSignInPath(fromParam);
 
   return (
     <div className="rounded-2xl border border-brand-champagne/40 bg-white/80 p-6 shadow-[0_12px_40px_rgba(28,26,23,0.06)] backdrop-blur-sm sm:p-8">
       <header className="mb-8 space-y-2 text-left">
         <h1 className="font-serif text-2xl font-light text-brand-text-dark md:text-3xl">
-          Bem-vindo de volta
+          O vosso casamento começa aqui
         </h1>
         <p className="font-sans text-sm font-light leading-relaxed text-brand-text-dark/70">
           {isStyleQuizGate
-            ? "Entre na sua conta gratuita para aceder ao Style Quiz e descobrir o estilo editorial do vosso casamento."
-            : isDashboardGate
-              ? "Entre para aceder ao vosso painel de casamento gratuito."
-              : "Entre para aceder ao vosso Painel de Casamento Exclusivo e Inteligente."}
+            ? "Crie a vossa conta gratuita para aceder ao Style Quiz, guardar inspiração e organizar tudo num só painel."
+            : "Crie a vossa conta gratuita para desbloquear o painel de casamento, ferramentas e recomendações personalizadas."}
         </p>
       </header>
 
@@ -119,13 +130,50 @@ export default function SignInForm() {
 
         <div className="space-y-1.5">
           <label
-            htmlFor="sign-in-email"
+            htmlFor="sign-up-name"
+            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
+          >
+            Nome completo
+          </label>
+          <input
+            id="sign-up-name"
+            name="fullName"
+            type="text"
+            autoComplete="name"
+            required
+            value={fullName}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              if (fieldErrors.fullName) {
+                setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+              }
+              if (formError) setFormError(null);
+            }}
+            aria-invalid={fieldErrors.fullName ? true : undefined}
+            placeholder="Ex: Jessica Silva"
+            disabled={loading}
+            className={`${inputClass} ${
+              fieldErrors.fullName
+                ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
+                : "border-brand-champagne/45 focus:border-brand-gold focus:ring-brand-gold/25"
+            }`}
+          />
+          {fieldErrors.fullName ? (
+            <p className="pl-1 text-xs font-light text-red-600" role="alert">
+              {fieldErrors.fullName}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <label
+            htmlFor="sign-up-email"
             className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
           >
             Email
           </label>
           <input
-            id="sign-in-email"
+            id="sign-up-email"
             name="email"
             type="email"
             autoComplete="email"
@@ -138,7 +186,6 @@ export default function SignInForm() {
               if (formError) setFormError(null);
             }}
             aria-invalid={fieldErrors.email ? true : undefined}
-            aria-describedby={fieldErrors.email ? "sign-in-email-error" : undefined}
             placeholder="nome@exemplo.com"
             disabled={loading}
             className={`${inputClass} ${
@@ -148,42 +195,35 @@ export default function SignInForm() {
             }`}
           />
           {fieldErrors.email ? (
-            <p id="sign-in-email-error" className="pl-1 text-xs font-light text-red-600" role="alert">
+            <p className="pl-1 text-xs font-light text-red-600" role="alert">
               {fieldErrors.email}
             </p>
           ) : null}
         </div>
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-3 px-1">
-            <label
-              htmlFor="sign-in-password"
-              className="font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
-            >
-              Palavra-passe
-            </label>
-            <Link
-              href="/forgot-password"
-              className="font-mono text-[9px] font-bold uppercase tracking-wider text-brand-gold transition-colors hover:text-brand-gold-light hover:underline"
-            >
-              Esqueceu a palavra-passe?
-            </Link>
-          </div>
+          <label
+            htmlFor="sign-up-password"
+            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
+          >
+            Palavra-passe
+          </label>
           <input
-            id="sign-in-password"
+            id="sign-up-password"
             name="password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              if (fieldErrors.password) {
+                setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }
               if (formError) setFormError(null);
             }}
             aria-invalid={fieldErrors.password ? true : undefined}
-            aria-describedby={fieldErrors.password ? "sign-in-password-error" : undefined}
-            placeholder="••••••••••••"
+            placeholder="Mínimo 8 caracteres"
             disabled={loading}
             className={`${inputClass} ${
               fieldErrors.password
@@ -192,11 +232,73 @@ export default function SignInForm() {
             }`}
           />
           {fieldErrors.password ? (
-            <p id="sign-in-password-error" className="pl-1 text-xs font-light text-red-600" role="alert">
+            <p className="pl-1 text-xs font-light text-red-600" role="alert">
               {fieldErrors.password}
             </p>
           ) : null}
         </div>
+
+        <div className="space-y-1.5">
+          <label
+            htmlFor="sign-up-confirm-password"
+            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
+          >
+            Confirmar palavra-passe
+          </label>
+          <input
+            id="sign-up-confirm-password"
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              if (fieldErrors.confirmPassword) {
+                setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+              }
+              if (formError) setFormError(null);
+            }}
+            aria-invalid={fieldErrors.confirmPassword ? true : undefined}
+            placeholder="Repita a palavra-passe"
+            disabled={loading}
+            className={`${inputClass} ${
+              fieldErrors.confirmPassword
+                ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
+                : "border-brand-champagne/45 focus:border-brand-gold focus:ring-brand-gold/25"
+            }`}
+          />
+          {fieldErrors.confirmPassword ? (
+            <p className="pl-1 text-xs font-light text-red-600" role="alert">
+              {fieldErrors.confirmPassword}
+            </p>
+          ) : null}
+        </div>
+
+        <label className="flex items-start gap-3 rounded-xl border border-brand-champagne/35 bg-brand-ivory/40 px-4 py-3 text-left">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => {
+              setTermsAccepted(e.target.checked);
+              if (fieldErrors.termsAccepted) {
+                setFieldErrors((prev) => ({ ...prev, termsAccepted: undefined }));
+              }
+              if (formError) setFormError(null);
+            }}
+            disabled={loading}
+            className="mt-0.5 h-4 w-4 rounded border-brand-champagne/60 text-brand-gold focus:ring-brand-gold/30"
+          />
+          <span className="font-sans text-xs font-light leading-relaxed text-brand-text-dark/75">
+            Ao criar a conta, aceito os termos de utilização e a política de privacidade da
+            HAXR Signature.
+          </span>
+        </label>
+        {fieldErrors.termsAccepted ? (
+          <p className="pl-1 text-xs font-light text-red-600" role="alert">
+            {fieldErrors.termsAccepted}
+          </p>
+        ) : null}
 
         <button
           type="submit"
@@ -206,10 +308,10 @@ export default function SignInForm() {
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              <span>A entrar...</span>
+              <span>A criar conta...</span>
             </>
           ) : (
-            <span>Entrar</span>
+            <span>Começar agora</span>
           )}
         </button>
       </form>
@@ -230,12 +332,12 @@ export default function SignInForm() {
 
       <div className="mt-8 space-y-4 text-center">
         <p className="font-sans text-xs font-light text-brand-text-dark/65">
-          Ainda não tem conta?{" "}
+          Já tem conta?{" "}
           <Link
-            href={signUpHref}
+            href={signInHref}
             className="font-semibold text-brand-gold transition-colors hover:text-brand-gold-light hover:underline"
           >
-            {isStyleQuizGate || isDashboardGate ? "Criar conta gratuita" : "Começar agora"}
+            Iniciar sessão
           </Link>
         </p>
         <p className="font-sans text-xs font-light text-brand-text-dark/55">

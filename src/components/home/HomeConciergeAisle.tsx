@@ -234,7 +234,7 @@ export default function HomeConciergeAisle() {
                           <div className="text-right space-y-0.5">
                             <p className="text-zinc-400 uppercase font-mono text-[3.8px] tracking-wider">Fatura / ID:</p>
                             <p className="font-bold text-[#2d2a29]">Invoice: 2026 - 184A</p>
-                            <p className="text-zinc-500 font-light">Catering & Decoração Premium</p>
+                            <p className="text-zinc-500 font-light">Fornecedor por associar</p>
                             <p className="text-zinc-500 font-light">18 de Outubro</p>
                           </div>
                         </div>
@@ -262,7 +262,7 @@ export default function HomeConciergeAisle() {
                               <div className="col-span-2 text-right">180.000 MT</div>
                             </div>
                             <div className="grid grid-cols-12 py-1.5">
-                              <div className="col-span-6 text-left font-medium">Catering Gourmet Seleção HAXR</div>
+                              <div className="col-span-6 text-left font-medium">Sem fornecedor associado</div>
                               <div className="col-span-2 text-right">2.500 MT</div>
                               <div className="col-span-2 text-center">120</div>
                               <div className="col-span-2 text-right">300.000 MT</div>

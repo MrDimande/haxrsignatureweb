@@ -75,36 +75,7 @@ export type VendorCardData = {
   href: string;
 };
 
-/** Dados de exemplo — substituir por fornecedores reais na V2 do marketplace */
-export const portalVendorSamples: readonly VendorCardData[] = [
-  {
-    id: "decor",
-    name: "Elegance Decor",
-    category: "Decoração",
-    location: "Maputo",
-    styleTags: ["Editorial", "Flores naturais"],
-    imageGradient: "from-brand-champagne/80 to-brand-gold/40",
-    href: "/contacto",
-  },
-  {
-    id: "photo",
-    name: "Studio Lumina",
-    category: "Fotografia",
-    location: "Maputo · Costa do Sol",
-    styleTags: ["Documental", "Premium"],
-    imageGradient: "from-brand-text-dark/30 to-brand-champagne/50",
-    href: "/contacto",
-  },
-  {
-    id: "venue",
-    name: "Salão Signature",
-    category: "Salão & Catering",
-    location: "Maputo",
-    styleTags: ["Casamento", "Corporativo"],
-    imageGradient: "from-brand-gold/25 to-brand-ivory",
-    href: "/contacto",
-  },
-] as const;
+export const portalVendorSamples: readonly VendorCardData[] = [];
 
 export const assistantPromoContent = {
   label: "HAXR Concierge",
