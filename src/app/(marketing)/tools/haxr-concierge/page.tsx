@@ -5,7 +5,6 @@ import {
   Mail,
   Send,
   Upload,
-  Copy,
   Check,
   Loader2,
   ArrowRight,
@@ -16,11 +15,8 @@ import {
   Briefcase,
   Smartphone,
   CheckCircle,
-  FileSpreadsheet,
   ArrowUpRight,
-  Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import StructuredData from "@/components/seo/StructuredData";
 import { homeConciergeSection } from "@/lib/marketing/home-content";
