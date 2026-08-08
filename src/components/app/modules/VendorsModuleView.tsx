@@ -11,6 +11,7 @@ import {
   ModuleShell,
   ModuleStatGrid,
 } from "@/components/app/modules/ModuleShell";
+import VendorSuggestionsPanel from "@/components/app/modules/VendorSuggestionsPanel";
 
 export default function VendorsModuleView({ data }: { data: VendorModuleData }) {
   const { summary, vendors, context } = data;
@@ -113,6 +114,8 @@ export default function VendorsModuleView({ data }: { data: VendorModuleData }) 
           </ModulePanel>
         </>
       )}
+
+      <VendorSuggestionsPanel />
     </ModuleShell>
   );
 }

@@ -60,9 +60,9 @@ function buildJessicaSamuelDashboard(): DashboardData {
       {
         id: "vendors-active",
         label: "Fornecedores activos",
-        value: 8,
+        value: 0,
         valueType: "number",
-        detail: "3 em validação",
+        detail: "sem fornecedores registados",
       },
       {
         id: "tasks-open",
@@ -276,14 +276,13 @@ function buildJessicaSamuelDashboard(): DashboardData {
     financeSnapshot: {
       currency: "MT",
       budgetEstimated: 250_000,
-      budgetRegistered: 85_000,
-      paidAmount: 30_000,
-      pendingAmount: 55_000,
+      budgetRegistered: 0,
+      paidAmount: 0,
+      pendingAmount: 0,
       nextPayment: {
-        vendorName: "Decoração (Elegance Decor)",
-        dueDate: "20 Agosto 2026",
-        dueDateIso: "2026-08-20",
-        amount: 42_500,
+        vendorName: "—",
+        dueDate: "—",
+        amount: 0,
       },
     },
     guestSnapshot: {
@@ -295,32 +294,7 @@ function buildJessicaSamuelDashboard(): DashboardData {
       tablesAssigned: 12,
       tablesTotal: 24,
     },
-    vendorSnapshot: [
-      {
-        id: "vendor-elegance-decor",
-        name: "Elegance Decor",
-        service: "Design de Interiores & Flores",
-        status: "Em revisão",
-      },
-      {
-        id: "vendor-royal-catering",
-        name: "Royal Catering",
-        service: "Serviço de Banquetes & Bebidas",
-        status: "Pendente",
-      },
-      {
-        id: "vendor-lens-studio",
-        name: "Lens Studio",
-        service: "Fotografia Editorial",
-        status: "Assinado",
-      },
-      {
-        id: "vendor-dj-mavie",
-        name: "DJ Mavie",
-        service: "Sonorização & Entretenimento",
-        status: "Aguardando",
-      },
-    ],
+    vendorSnapshot: [],
     checklistSnapshot: [
       {
         id: "tsk-1",
@@ -329,28 +303,21 @@ function buildJessicaSamuelDashboard(): DashboardData {
         priority: "alta",
         status: "em_curso",
       },
-      {
-        id: "tsk-2",
-        title: "Confirmar proposta da decoração",
-        dueDate: "Amanhã",
-        priority: "alta",
-        status: "aberta",
-      },
     ],
     documentSnapshot: [
       {
-        id: "doc-1",
-        title: "Proposta_Decoracao_Elegance.pdf",
+        id: "doc-4",
+        title: "Lista_Convidados_v3.xlsx",
         source: "concierge_portal",
-        status: "por_validar",
-        uploadedLabel: "Há 3 h",
+        status: "validado",
+        uploadedLabel: "Ontem",
       },
       {
-        id: "doc-2",
-        title: "Contrato_Lens_Studio.pdf",
-        source: "commercial_document",
+        id: "doc-5",
+        title: "Paleta_Champagne_Dourado.png",
+        source: "concierge_portal",
         status: "validado",
-        uploadedLabel: "10 Mai 2026",
+        uploadedLabel: "Há 3 dias",
       },
     ],
     recentActivity: [
@@ -361,22 +328,6 @@ function buildJessicaSamuelDashboard(): DashboardData {
         timestamp: new Date(Date.now() - 12 * 60_000).toISOString(),
         relativeLabel: "Há 12 min",
         type: "guests",
-      },
-      {
-        id: "activity-2",
-        title: "Comprovativo de pagamento carregado",
-        description: "Comprovativo de pagamento da decoração carregado",
-        timestamp: new Date(Date.now() - 60 * 60_000).toISOString(),
-        relativeLabel: "Há 1 h",
-        type: "finance",
-      },
-      {
-        id: "activity-3",
-        title: "Proposta da decoração recebida",
-        description: "Proposta da decoração recebida no Concierge",
-        timestamp: new Date(Date.now() - 3 * 60 * 60_000).toISOString(),
-        relativeLabel: "Há 3 h",
-        type: "vendor",
       },
       {
         id: "activity-4",

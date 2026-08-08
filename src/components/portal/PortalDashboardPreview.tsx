@@ -64,11 +64,19 @@ export default function PortalDashboardPreview() {
                     Exemplo ilustrativo
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {portalVendorSamples.map((vendor) => (
-                    <VendorCard key={vendor.id} vendor={vendor} />
-                  ))}
-                </div>
+                {portalVendorSamples.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {portalVendorSamples.map((vendor) => (
+                      <VendorCard key={vendor.id} vendor={vendor} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-sm border border-dashed border-brand-champagne bg-white px-5 py-8 text-center">
+                    <p className="font-sans text-sm font-light text-brand-text-dark/60">
+                      Sem fornecedores sugeridos. Apenas perfis reais e aprovados serão apresentados aqui.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

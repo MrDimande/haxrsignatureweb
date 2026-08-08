@@ -2,14 +2,19 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  CLIENT_DASHBOARD_ALIAS,
+  CLIENT_SIGN_UP_PATH,
   evaluateClientAppAuthMiddleware,
   isAppProtectedPath,
+  isClientGatedToolPath,
   isClientSignInPath,
   isSafeAppReturnPath,
+  isSafeClientReturnPath,
   resolveAuthenticatedSignInRedirect,
   resolvePostLoginRedirectWithReturnPath,
   resolveUnauthenticatedAppRedirect,
   shouldHandleClientAppAuth,
+  STYLE_QUIZ_PATH,
 } from "./client-app-middleware";
 
 const BASE_URL = "http://localhost:3000";
@@ -45,11 +50,91 @@ describe("client-app-middleware", () => {
     assert.equal(isClientSignInPath("/signin"), false);
   });
 
-  it("shouldHandleClientAppAuth covers app and sign-in routes", () => {
+  it("shouldHandleClientAppAuth covers app, sign-in and gated tools", () => {
     assert.equal(shouldHandleClientAppAuth("/app/dashboard"), true);
     assert.equal(shouldHandleClientAppAuth("/sign-in"), true);
+    assert.equal(shouldHandleClientAppAuth(STYLE_QUIZ_PATH), true);
     assert.equal(shouldHandleClientAppAuth("/"), false);
     assert.equal(shouldHandleClientAppAuth("/tools/guest-list"), false);
+  });
+
+  it("isClientGatedToolPath matches style quiz only", () => {
+    assert.equal(isClientGatedToolPath(STYLE_QUIZ_PATH), true);
+    assert.equal(isClientGatedToolPath("/tools/guest-list"), false);
+  });
+
+  it("evaluateClientAppAuthMiddleware redirects unauthenticated style quiz to sign-in", () => {
+    const request = new NextRequest(`${BASE_URL}${STYLE_QUIZ_PATH}`);
+    const decision = evaluateClientAppAuthMiddleware({
+      pathname: STYLE_QUIZ_PATH,
+      requestUrl: request.url,
+      user: null,
+      sessionResponse: sessionResponse(request),
+    });
+
+    assert.equal(decision.action, "redirect");
+    assert.equal(
+      decision.response.headers.get("location"),
+      `${BASE_URL}/sign-in?from=%2Fstyle-quiz`,
+    );
+  });
+
+  it("resolveAuthenticatedSignInRedirect honours style quiz from param", () => {
+    const url = resolveAuthenticatedSignInRedirect(BASE_URL, STYLE_QUIZ_PATH);
+    assert.equal(url.pathname, STYLE_QUIZ_PATH);
+  });
+
+  it("resolvePostLoginRedirectWithReturnPath honours style quiz from param", () => {
+    assert.equal(
+      resolvePostLoginRedirectWithReturnPath(STYLE_QUIZ_PATH, false),
+      STYLE_QUIZ_PATH,
+    );
+  });
+
+  it("shouldHandleClientAppAuth covers dashboard alias", () => {
+    assert.equal(shouldHandleClientAppAuth(CLIENT_DASHBOARD_ALIAS), true);
+    assert.equal(shouldHandleClientAppAuth(CLIENT_SIGN_UP_PATH), true);
+  });
+
+  it("evaluateClientAppAuthMiddleware redirects unauthenticated /dashboard to sign-in", () => {
+    const request = new NextRequest(`${BASE_URL}${CLIENT_DASHBOARD_ALIAS}`);
+    const decision = evaluateClientAppAuthMiddleware({
+      pathname: CLIENT_DASHBOARD_ALIAS,
+      requestUrl: request.url,
+      user: null,
+      sessionResponse: sessionResponse(request),
+    });
+
+    assert.equal(decision.action, "redirect");
+    assert.equal(
+      decision.response.headers.get("location"),
+      `${BASE_URL}/sign-in?from=%2Fapp%2Fdashboard`,
+    );
+  });
+
+  it("evaluateClientAppAuthMiddleware redirects authenticated /dashboard to app dashboard", () => {
+    const request = new NextRequest(`${BASE_URL}${CLIENT_DASHBOARD_ALIAS}`);
+    const decision = evaluateClientAppAuthMiddleware({
+      pathname: CLIENT_DASHBOARD_ALIAS,
+      requestUrl: request.url,
+      user: mockUser(),
+      sessionResponse: sessionResponse(request),
+    });
+
+    assert.equal(decision.action, "redirect");
+    assert.equal(decision.response.headers.get("location"), `${BASE_URL}/app/dashboard`);
+  });
+
+  it("evaluateClientAppAuthMiddleware allows unauthenticated /sign-up", () => {
+    const request = new NextRequest(`${BASE_URL}${CLIENT_SIGN_UP_PATH}`);
+    const decision = evaluateClientAppAuthMiddleware({
+      pathname: CLIENT_SIGN_UP_PATH,
+      requestUrl: request.url,
+      user: null,
+      sessionResponse: sessionResponse(request),
+    });
+
+    assert.equal(decision.action, "continue");
   });
 
   it("resolveUnauthenticatedAppRedirect sends /app/dashboard to sign-in with from", () => {
@@ -133,9 +218,21 @@ describe("client-app-middleware", () => {
     assert.equal(resolvePostLoginRedirectWithReturnPath(null, false), "/onboarding");
   });
 
+  it("isSafeClientReturnPath allows style quiz and blocks open redirects", () => {
+    assert.equal(isSafeClientReturnPath(STYLE_QUIZ_PATH), true);
+    assert.equal(isSafeClientReturnPath("//evil.test"), false);
+  });
+
   it("isSafeAppReturnPath blocks open redirects", () => {
     assert.equal(isSafeAppReturnPath("/app/dashboard"), true);
     assert.equal(isSafeAppReturnPath("//evil.test"), false);
     assert.equal(isSafeAppReturnPath("https://evil.test"), false);
+  });
+
+  it("allows only explicit public post-auth destinations", () => {
+    assert.equal(isSafeClientReturnPath("/for-pros"), true);
+    assert.equal(isSafeClientReturnPath("/fornecedores"), true);
+    assert.equal(isSafeClientReturnPath("/contacto"), false);
+    assert.equal(isSafeClientReturnPath("//evil.test/for-pros"), false);
   });
 });

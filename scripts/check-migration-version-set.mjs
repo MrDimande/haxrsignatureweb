@@ -65,6 +65,8 @@ const LEGACY_VERSION_ALLOWLIST = new Set([
   "042",
   "043",
   "044",
+  "045",
+  "046",
 ]);
 
 /** Full UTC timestamp versions: YYYYMMDDHHmmss (14 digits). */
@@ -111,7 +113,7 @@ function main() {
 
     if (!isAllowedVersion(version)) {
       errors.push(
-        `rejected version "${version}" in ${name}: new migrations must use a 14-digit UTC timestamp (YYYYMMDDHHmmss); short names like 045/046 are not allowed (legacy allowlist only)`,
+        `rejected version "${version}" in ${name}: new migrations must use a 14-digit UTC timestamp (YYYYMMDDHHmmss); short legacy-style versions require an explicit allowlist entry`,
       );
     }
   }

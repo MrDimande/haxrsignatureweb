@@ -1,79 +1,69 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight } from "lucide-react";
+import { Search, ArrowRight, Building2 } from "lucide-react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
+import {
+  SUPPLIER_CATEGORIES,
+  type PublicSupplierProfile,
+  type SupplierCategoryId,
+} from "@/lib/vendors/marketplace";
+
+type DirectoryResponse = {
+  ok: boolean;
+  suppliers?: PublicSupplierProfile[];
+};
 
 export default function HomeVendorCategories() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [suppliers, setSuppliers] = useState<PublicSupplierProfile[]>([]);
+  const [directoryState, setDirectoryState] = useState<"loading" | "ready" | "unavailable">("loading");
   const router = useRouter();
 
-  const categories = [
-    {
-      id: "venues",
-      label: "Espaços de Casamento",
-      englishLabel: "Wedding Venue",
-      image: "/images/categories/venue.png",
-      href: "/fornecedores?category=venues"
-    },
-    {
-      id: "photographers",
-      label: "Fotógrafos de Casamento",
-      englishLabel: "Wedding Photographer",
-      image: "/images/categories/photographer.png",
-      href: "/fornecedores?category=photographers"
-    },
-    {
-      id: "florists",
-      label: "Floristas e Decoração",
-      englishLabel: "Wedding Florist",
-      image: "/images/categories/florist.png",
-      href: "/fornecedores?category=florists"
-    },
-    {
-      id: "planners",
-      label: "Assessores de Casamento",
-      englishLabel: "Wedding Planner",
-      image: "/images/categories/planner.png",
-      href: "/fornecedores?category=planners"
-    },
-    {
-      id: "videographers",
-      label: "Videógrafos de Casamento",
-      englishLabel: "Videographer",
-      image: "/images/categories/videographer.png",
-      href: "/fornecedores?category=videographers"
-    },
-    {
-      id: "caterers",
-      label: "Serviço de Catering",
-      englishLabel: "Caterer",
-      image: "/images/categories/caterer.png",
-      href: "/fornecedores?category=caterers"
-    },
-    {
-      id: "cakes",
-      label: "Bolos e Doces Finos",
-      englishLabel: "Wedding Cake and Dessert",
-      image: "/images/categories/cake.png",
-      href: "/fornecedores?category=cakes"
-    },
-    {
-      id: "stationery",
-      label: "Estacionário e Convites",
-      englishLabel: "Stationery",
-      image: "/images/categories/stationery.png",
-      href: "/fornecedores?category=stationery"
-    }
-  ];
+  useEffect(() => {
+    let active = true;
 
-  // Filter categories dynamically based on query
-  const filteredCategories = categories.filter((cat) =>
-    cat.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.englishLabel.toLowerCase().includes(searchQuery.toLowerCase())
+    async function loadPublishedSuppliers() {
+      try {
+        const response = await fetch("/api/vendors/directory", {
+          headers: { Accept: "application/json" },
+        });
+        const body = (await response.json()) as DirectoryResponse;
+        if (!active) return;
+        if (!response.ok || !body.ok) {
+          setDirectoryState("unavailable");
+          return;
+        }
+        setSuppliers(body.suppliers ?? []);
+        setDirectoryState("ready");
+      } catch {
+        if (active) setDirectoryState("unavailable");
+      }
+    }
+
+    void loadPublishedSuppliers();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const categories = useMemo(() => {
+    const counts = new Map<SupplierCategoryId, number>();
+    for (const supplier of suppliers) {
+      counts.set(supplier.category, (counts.get(supplier.category) ?? 0) + 1);
+    }
+
+    return SUPPLIER_CATEGORIES.flatMap((category) => {
+      const count = counts.get(category.id) ?? 0;
+      return count > 0 ? [{ ...category, count }] : [];
+    });
+  }, [suppliers]);
+
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase("pt-PT");
+  const filteredCategories = categories.filter((category) =>
+    category.label.toLocaleLowerCase("pt-PT").includes(normalizedSearch),
   );
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -103,7 +93,7 @@ export default function HomeVendorCategories() {
           </h2>
 
           <p className="font-sans text-sm md:text-base text-brand-text-dark/70 leading-relaxed font-light">
-            Procura os melhores profissionais de casamentos? Explore a nossa seleção com curadoria dos melhores fornecedores e empresas em Moçambique.
+            Consulte apenas profissionais com candidatura revista e perfil publicado pela equipa HAXR.
           </p>
         </RevealOnScroll>
 
@@ -122,23 +112,36 @@ export default function HomeVendorCategories() {
           </form>
         </RevealOnScroll>
 
-        {/* Grid Categories Layout */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+        {directoryState === "loading" ? (
+          <div className="rounded-3xl border border-brand-champagne/35 bg-white/60 px-6 py-14 text-sm text-brand-text-dark/55" role="status">
+            A validar os fornecedores publicados…
+          </div>
+        ) : directoryState === "unavailable" ? (
+          <div className="rounded-3xl border border-amber-200/70 bg-amber-50/70 px-6 py-14 text-sm text-brand-text-dark/65">
+            O directório está temporariamente indisponível. Não mostramos perfis ou categorias sem validação.
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="rounded-3xl border border-brand-champagne/45 bg-white px-6 py-14 shadow-[0_18px_60px_rgba(28,26,23,0.05)]">
+            <Building2 className="mx-auto h-7 w-7 text-brand-gold/70" aria-hidden />
+            <h3 className="mt-5 font-serif text-2xl font-light text-brand-text-dark">
+              Ainda não existem fornecedores publicados
+            </h3>
+            <p className="mx-auto mt-3 max-w-xl text-sm font-light leading-7 text-brand-text-dark/65">
+              As categorias permanecem vazias até existir pelo menos um profissional aprovado. Não apresentamos fornecedores de exemplo.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
           {filteredCategories.length > 0 ? (
             filteredCategories.map((cat, index) => (
               <RevealOnScroll key={cat.id} delay={index * 0.04}>
-                <Link href={cat.href} className="group block text-left">
+                <Link href={`/fornecedores?category=${cat.id}`} className="group block text-left">
 
-                  {/* Category Image Container */}
-                  <div className="relative aspect-square rounded-[1.5rem] md:rounded-[2rem] overflow-hidden shadow-[0_12px_28px_rgba(8,7,6,0.06)] group-hover:shadow-[0_18px_40px_rgba(8,7,6,0.12)] hover:-translate-y-0.5 transition-all duration-500 bg-zinc-100 border border-brand-champagne/15">
-                    <Image
-                      src={cat.image}
-                      alt={cat.label}
-                      fill
-                      className="object-cover object-center group-hover:scale-102 transition-transform duration-750"
-                      quality={90}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[1.5rem] border border-brand-champagne/20 bg-[radial-gradient(circle_at_top_left,rgba(191,155,82,0.28),transparent_58%),linear-gradient(145deg,#191512,#0d0b0a)] shadow-[0_12px_28px_rgba(8,7,6,0.08)] transition-all duration-500 group-hover:-translate-y-0.5 group-hover:shadow-[0_18px_40px_rgba(8,7,6,0.14)] md:rounded-[2rem]">
+                    <Building2 className="h-9 w-9 text-brand-champagne/80" aria-hidden />
+                    <span className="absolute bottom-4 right-4 rounded-full bg-white/95 px-3 py-1 font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-brand-text-dark">
+                      {cat.count}
+                    </span>
                   </div>
 
                   {/* Serif Category Label */}
@@ -153,7 +156,8 @@ export default function HomeVendorCategories() {
               Nenhuma categoria de fornecedores encontrada para &quot;{searchQuery}&quot;.
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         {/* See All CTA Button */}
         <RevealOnScroll delay={0.1} className="mt-16">
