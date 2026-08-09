@@ -179,7 +179,9 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
             <div className="relative flex items-center gap-2">
               <div className="flex cursor-pointer select-none items-center gap-2 rounded-full border border-brand-champagne/20 bg-white/5 py-1.5 pl-3.5 pr-2.5 text-[11px] text-white transition-colors hover:border-brand-gold/50 md:text-xs">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-gold" />
-                <span className="font-serif font-medium">{activeEvent}</span>
+                <span className="max-w-[7rem] truncate font-serif font-medium sm:max-w-none">
+                  {activeEvent}
+                </span>
                 <ChevronDown className="h-3 w-3 text-zinc-400" />
               </div>
 
@@ -210,10 +212,11 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
 
             <Link
               href="/app/concierge"
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand-gold px-4 py-2 font-mono text-[9px] font-bold uppercase tracking-widest text-white shadow-md shadow-brand-gold/10 transition-colors hover:bg-brand-gold-light md:text-[10px]"
+              aria-label="Adicionar ficheiro"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand-gold p-2 font-mono text-[9px] font-bold uppercase tracking-widest text-white shadow-md shadow-brand-gold/10 transition-colors hover:bg-brand-gold-light sm:px-4 sm:py-2 md:text-[10px]"
             >
-              <Plus className="h-3 w-3" />
-              <span>Adicionar Ficheiro</span>
+              <Plus className="h-4 w-4 sm:h-3 sm:w-3" aria-hidden />
+              <span className="hidden sm:inline">Adicionar Ficheiro</span>
             </Link>
           </div>
         </header>
