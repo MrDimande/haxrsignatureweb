@@ -22,6 +22,12 @@ type AppEventState = {
   isDemoFallback: boolean;
 };
 
+const INITIAL_APP_EVENT_STATE: AppEventState = {
+  eventName: "O seu evento",
+  eventId: DEFAULT_EVENT_ID,
+  isDemoFallback: false,
+};
+
 function readCachedActiveEventName(): string | null {
   if (typeof window === "undefined") return null;
   return sessionStorage.getItem(ACTIVE_EVENT_NAME_KEY)?.trim() || null;
@@ -29,11 +35,7 @@ function readCachedActiveEventName(): string | null {
 
 function resolveAppEvent(): AppEventState {
   if (typeof window === "undefined") {
-    return {
-      eventName: "O seu evento",
-      eventId: DEFAULT_EVENT_ID,
-      isDemoFallback: false,
-    };
+    return INITIAL_APP_EVENT_STATE;
   }
 
   const params = new URLSearchParams(window.location.search);
@@ -77,7 +79,9 @@ function resolveAppEvent(): AppEventState {
 
 /** Resolves active event label + id for the app shell from real event, onboarding or demo mode. */
 export function useAppEvent(): AppEventState {
-  const [state, setState] = useState<AppEventState>(() => resolveAppEvent());
+  // Keep the server and the first browser render identical. Browser-backed
+  // event data is applied after hydration to avoid a React text mismatch.
+  const [state, setState] = useState<AppEventState>(INITIAL_APP_EVENT_STATE);
 
   useEffect(() => {
     setState(resolveAppEvent());
