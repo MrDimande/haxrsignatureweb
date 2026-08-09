@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { DashboardConciergeSummary } from "@/lib/dashboard/types";
-import { Sparkles } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 type ConciergeSummaryCardProps = {
   summary: DashboardConciergeSummary;
@@ -13,7 +13,7 @@ export default function ConciergeSummaryCard({ summary }: ConciergeSummaryCardPr
 
       <div className="relative z-10 max-w-xl space-y-4 text-left">
         <div className="flex items-center gap-2 text-brand-gold">
-          <Sparkles className="h-4 w-4 shrink-0" />
+          <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
           <span className="font-mono text-[9px] font-bold uppercase tracking-widest">
             HAXR Concierge™
           </span>

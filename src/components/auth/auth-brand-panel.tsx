@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Sparkles } from "lucide-react";
+import { Fingerprint } from "lucide-react";
 import HaxrLogo from "@/components/brand/HaxrLogo";
 
 const EXPERIENCE_STEPS = [
@@ -47,7 +47,7 @@ export default function AuthBrandPanel() {
           className="items-start"
         />
         <span className="hidden items-center gap-2 border border-white/12 bg-black/25 px-3 py-2 font-mono text-[8px] uppercase tracking-[0.24em] text-white/70 backdrop-blur-sm sm:inline-flex">
-          <Sparkles className="h-3 w-3 text-brand-gold" aria-hidden />
+          <Fingerprint className="h-3 w-3 text-brand-gold" aria-hidden />
           Signature Experience
         </span>
       </div>

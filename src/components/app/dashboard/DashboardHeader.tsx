@@ -1,5 +1,5 @@
 import type { DashboardMeta } from "@/lib/dashboard/types";
-import { Sparkles } from "lucide-react";
+import { Compass } from "lucide-react";
 
 type DashboardHeaderProps = {
   meta: DashboardMeta;
@@ -15,7 +15,7 @@ export default function DashboardHeader({ meta }: DashboardHeaderProps) {
         <div>
           <div className="mb-4 inline-flex items-center gap-3 text-brand-gold">
             <span className="h-px w-8 bg-brand-gold/70" />
-            <Sparkles className="h-3.5 w-3.5" />
+            <Compass className="h-3.5 w-3.5" aria-hidden />
             <span className="font-mono text-[9px] font-bold uppercase tracking-widest">
               Private Planning Command Suite
             </span>

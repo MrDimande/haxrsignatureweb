@@ -48,7 +48,7 @@ export function buildAppNavigation(eventId: string = DEFAULT_EVENT_ID): AppNavGr
       items: [
         { label: "Dashboard", href: "/app/dashboard", iconName: "layers", ready: true },
         { label: "Eventos", href: "/app/events", iconName: "calendar", ready: false },
-        { label: "HAXR Concierge", href: "/app/concierge", iconName: "sparkles", ready: true },
+        { label: "HAXR Concierge", href: "/app/concierge", iconName: "concierge", ready: true },
       ],
     },
     {
