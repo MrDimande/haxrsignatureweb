@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { DashboardConciergeSummary } from "@/lib/dashboard/types";
-import { Sparkles } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 type ConciergeSummaryCardProps = {
   summary: DashboardConciergeSummary;
@@ -8,12 +8,12 @@ type ConciergeSummaryCardProps = {
 
 export default function ConciergeSummaryCard({ summary }: ConciergeSummaryCardProps) {
   return (
-    <div className="relative flex flex-col items-start justify-between gap-6 overflow-hidden rounded-3xl border border-brand-gold/30 bg-gradient-to-r from-brand-black via-[#1c1412] to-brand-black p-6 shadow-xl md:flex-row md:items-center md:p-8">
+    <div className="haxr-dashboard-card relative flex flex-col items-start justify-between gap-6 overflow-hidden rounded-3xl border border-brand-gold/30 bg-gradient-to-r from-brand-black via-[#1c1412] to-brand-black p-6 shadow-xl md:flex-row md:items-center md:p-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(184,138,42,0.15),transparent)] opacity-15" />
 
       <div className="relative z-10 max-w-xl space-y-4 text-left">
         <div className="flex items-center gap-2 text-brand-gold">
-          <Sparkles className="h-4 w-4 shrink-0" />
+          <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
           <span className="font-mono text-[9px] font-bold uppercase tracking-widest">
             HAXR Concierge™
           </span>

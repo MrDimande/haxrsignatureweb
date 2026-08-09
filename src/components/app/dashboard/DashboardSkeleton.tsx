@@ -4,7 +4,7 @@ export default function DashboardSkeleton() {
   return (
     <DashboardShell>
       <div className="animate-pulse space-y-10">
-        <div className="flex flex-col justify-between gap-4 border-b border-brand-champagne/10 pb-6 md:flex-row">
+        <div className="haxr-dashboard-card flex flex-col justify-between gap-4 rounded-[2rem] border border-brand-champagne/10 p-8 md:flex-row">
           <div className="space-y-3">
             <div className="h-3 w-40 rounded bg-white/10" />
             <div className="h-9 w-72 max-w-full rounded bg-white/10" />

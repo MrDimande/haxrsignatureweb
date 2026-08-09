@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { resolveOnboardingFirstStepPath } from "@/lib/auth/onboarding-entry";
 
-/** Server redirect — avoids 404 on /onboarding after sign-in on clean Vercel checkouts. */
+/** Server redirect to the first step of the private onboarding experience. */
 export default function OnboardingPage() {
   redirect(resolveOnboardingFirstStepPath());
 }

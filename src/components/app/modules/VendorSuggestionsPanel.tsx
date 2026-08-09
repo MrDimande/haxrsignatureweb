@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Heart, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, Heart } from "lucide-react";
 import { buildSupplierInitials, type PublicSupplierProfile } from "@/lib/vendors/marketplace";
 import { ModulePanel } from "@/components/app/modules/ModuleShell";
 
@@ -104,7 +104,7 @@ export default function VendorSuggestionsPanel() {
 
       {suppliers.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/10 px-5 py-8 text-center">
-          <Sparkles className="mx-auto h-5 w-5 text-brand-gold/55" />
+          <BadgeCheck className="mx-auto h-5 w-5 text-brand-gold/55" aria-hidden />
           <p className="mt-3 text-xs text-zinc-500">
             Ainda não existem fornecedores aprovados para sugerir.
           </p>

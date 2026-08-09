@@ -7,7 +7,7 @@ type GuestSnapshotProps = {
 
 export default function GuestSnapshotCard({ guests }: GuestSnapshotProps) {
   return (
-    <div className="mt-6 flex flex-1 flex-col justify-between rounded-3xl border border-brand-champagne/10 bg-white/5 p-6 lg:mt-0">
+    <div className="haxr-dashboard-card mt-6 flex flex-1 flex-col justify-between rounded-3xl border border-brand-champagne/10 bg-white/5 p-6 lg:mt-0">
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
         <h4 className="font-serif text-sm text-white">Convidados &amp; RSVP</h4>
         <Users className="h-4 w-4 text-brand-gold" />

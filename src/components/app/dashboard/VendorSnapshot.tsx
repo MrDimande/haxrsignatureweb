@@ -7,7 +7,7 @@ type VendorSnapshotProps = {
 
 export default function VendorSnapshot({ vendors }: VendorSnapshotProps) {
   return (
-    <div className="space-y-6 rounded-3xl border border-brand-champagne/10 bg-white/5 p-6 md:p-8">
+    <div className="haxr-dashboard-card space-y-6 rounded-3xl border border-brand-champagne/10 bg-white/5 p-6 md:p-8">
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <h3 className="font-serif text-lg font-light text-white">Fornecedores Adjudicados</h3>
         <span className="font-mono text-[9px] uppercase text-zinc-500">Estado Contratos</span>

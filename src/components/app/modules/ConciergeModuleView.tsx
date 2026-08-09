@@ -7,7 +7,7 @@ import {
   CONCIERGE_STATUS_LABELS,
   CONCIERGE_STATUS_STYLES,
 } from "@/lib/event-modules/presentation";
-import { Sparkles, Upload, ArrowLeft, Loader2, Check } from "lucide-react";
+import { FileSearch, Upload, ArrowLeft, Loader2, Check } from "lucide-react";
 import {
   ModuleHeader,
   ModulePanel,
@@ -111,7 +111,7 @@ export default function ConciergeModuleView({ data }: { data: ConciergeModuleDat
             <ModulePanel title="Fila de Classificação">
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-brand-gold">
-                  <Sparkles className="h-4 w-4" />
+                  <FileSearch className="h-4 w-4" aria-hidden />
                   <span className="font-mono text-[9px] uppercase tracking-widest">
                     Classificação assistida
                   </span>

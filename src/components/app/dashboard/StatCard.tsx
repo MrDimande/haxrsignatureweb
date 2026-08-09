@@ -15,7 +15,7 @@ function formatStatValue(stat: DashboardStatCard, currency: string): string | nu
 
 export default function StatCard({ stat, currency = "MT" }: StatCardProps) {
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-brand-champagne/10 bg-white/5 p-4 transition-colors duration-300 hover:border-brand-gold/30">
+    <div className="haxr-dashboard-card flex flex-col justify-between rounded-2xl border border-brand-champagne/10 bg-white/5 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-gold/35">
       <p className="font-sans text-[10px] leading-tight text-zinc-500">{stat.label}</p>
       <p className="my-2.5 font-serif text-xl font-light text-white sm:text-2xl">
         {formatStatValue(stat, currency)}

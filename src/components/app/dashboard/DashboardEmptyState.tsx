@@ -4,7 +4,7 @@ import DashboardShell from "@/components/app/dashboard/DashboardShell";
 export default function DashboardEmptyState() {
   return (
     <DashboardShell>
-      <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-3xl border border-brand-champagne/15 bg-white/5 px-6 py-16 text-center">
+      <div className="haxr-dashboard-card flex min-h-[50vh] flex-col items-center justify-center rounded-3xl border border-brand-champagne/15 bg-white/5 px-6 py-16 text-center">
         <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-brand-gold">
           Wedding Dashboard
         </p>

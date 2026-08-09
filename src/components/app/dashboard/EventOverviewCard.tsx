@@ -8,7 +8,7 @@ type EventOverviewCardProps = {
 
 export default function EventOverviewCard({ event }: EventOverviewCardProps) {
   return (
-    <div className="relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-3xl border border-brand-champagne/15 bg-[#120e0d] p-6 shadow-lg md:p-8">
+    <div className="haxr-dashboard-card relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-3xl border border-brand-champagne/15 bg-[#120e0d] p-6 shadow-lg md:p-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(184,138,42,0.15),transparent)] opacity-10" />
 
       <div className="relative z-10 space-y-4">
