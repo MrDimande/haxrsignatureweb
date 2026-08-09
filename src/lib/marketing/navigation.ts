@@ -102,7 +102,7 @@ export const navDirectLinks: readonly NavLink[] = [
 ];
 
 export const navCta: NavLink = {
-  href: "/contacto",
+  href: "/sign-up",
   label: "Get Started",
   accent: true,
 };
