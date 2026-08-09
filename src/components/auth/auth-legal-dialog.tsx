@@ -36,6 +36,20 @@ export default function AuthLegalDialog({
     }
   }, [documentId]);
 
+  useEffect(() => {
+    if (!documentId) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      onClose();
+    };
+
+    document.addEventListener("keydown", handleEscape, true);
+    return () => document.removeEventListener("keydown", handleEscape, true);
+  }, [documentId, onClose]);
+
   return (
     <dialog
       ref={dialogRef}
