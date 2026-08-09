@@ -10,6 +10,8 @@ import {
 import { signInWithGoogle } from "@/lib/auth/oauth-auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+const GOOGLE_OAUTH_NAVIGATION_TIMEOUT_MS = 15_000;
+
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -83,7 +85,19 @@ export default function GoogleAuthButton({
         return;
       }
 
+      const initialUrl = window.location.href;
       window.location.assign(result.redirectUrl);
+
+      window.setTimeout(() => {
+        if (window.location.href !== initialUrl) return;
+
+        window.stop();
+        onError?.(
+          "O redireccionamento para Google não respondeu. Tente novamente ou use email.",
+        );
+        setLoading(false);
+        onLoadingChange?.(false);
+      }, GOOGLE_OAUTH_NAVIGATION_TIMEOUT_MS);
     } catch {
       onError?.("Não foi possível continuar com Google. Tente novamente.");
       setLoading(false);
