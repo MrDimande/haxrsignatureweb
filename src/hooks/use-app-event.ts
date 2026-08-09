@@ -20,28 +20,37 @@ type AppEventState = {
   eventName: string;
   eventId: string;
   isDemoFallback: boolean;
+  isResolved: boolean;
 };
 
-const INITIAL_APP_EVENT_STATE: AppEventState = {
-  eventName: "O seu evento",
-  eventId: DEFAULT_EVENT_ID,
-  isDemoFallback: false,
-};
+function createInitialAppEventState(initialEventId?: string | null): AppEventState {
+  const normalizedEventId = initialEventId?.trim() ?? "";
+  const eventId = isRealClientEventId(normalizedEventId)
+    ? normalizedEventId
+    : DEFAULT_EVENT_ID;
+  return {
+    eventName: "O seu evento",
+    eventId,
+    isDemoFallback: false,
+    isResolved: eventId !== DEFAULT_EVENT_ID,
+  };
+}
 
 function readCachedActiveEventName(): string | null {
   if (typeof window === "undefined") return null;
   return sessionStorage.getItem(ACTIVE_EVENT_NAME_KEY)?.trim() || null;
 }
 
-function resolveAppEvent(): AppEventState {
+function resolveAppEvent(initialEventId?: string | null): AppEventState {
   if (typeof window === "undefined") {
-    return INITIAL_APP_EVENT_STATE;
+    return createInitialAppEventState(initialEventId);
   }
 
   const params = new URLSearchParams(window.location.search);
   const realEventId = resolvePreferredRealClientEventId({
     searchParams: params,
     store: localStorage,
+    profileActiveEventId: initialEventId,
   });
 
   if (realEventId && isRealClientEventId(realEventId)) {
@@ -51,6 +60,7 @@ function resolveAppEvent(): AppEventState {
       eventName: cachedName || onboardingName || "O seu evento",
       eventId: realEventId,
       isDemoFallback: false,
+      isResolved: true,
     };
   }
 
@@ -58,7 +68,7 @@ function resolveAppEvent(): AppEventState {
     const name = getOnboardingEventNameFromBrowser();
     const slug = getOnboardingEventSlugFromBrowser();
     if (name && slug) {
-      return { eventName: name, eventId: slug, isDemoFallback: false };
+      return { eventName: name, eventId: slug, isDemoFallback: false, isResolved: true };
     }
   }
 
@@ -67,6 +77,7 @@ function resolveAppEvent(): AppEventState {
       eventName: DEMO_EVENT_NAME,
       eventId: DEFAULT_DASHBOARD_EVENT_ID,
       isDemoFallback: true,
+      isResolved: true,
     };
   }
 
@@ -74,19 +85,22 @@ function resolveAppEvent(): AppEventState {
     eventName: "O seu evento",
     eventId: DEFAULT_EVENT_ID,
     isDemoFallback: false,
+    isResolved: false,
   };
 }
 
 /** Resolves active event label + id for the app shell from real event, onboarding or demo mode. */
-export function useAppEvent(): AppEventState {
+export function useAppEvent(initialEventId?: string | null): AppEventState {
   // Keep the server and the first browser render identical. Browser-backed
   // event data is applied after hydration to avoid a React text mismatch.
-  const [state, setState] = useState<AppEventState>(INITIAL_APP_EVENT_STATE);
+  const [state, setState] = useState<AppEventState>(() =>
+    createInitialAppEventState(initialEventId),
+  );
 
   useEffect(() => {
-    setState(resolveAppEvent());
+    setState(resolveAppEvent(initialEventId));
 
-    const refresh = () => setState(resolveAppEvent());
+    const refresh = () => setState(resolveAppEvent(initialEventId));
     window.addEventListener("storage", refresh);
     window.addEventListener("haxr:onboarding-updated", refresh);
 
@@ -94,7 +108,7 @@ export function useAppEvent(): AppEventState {
       window.removeEventListener("storage", refresh);
       window.removeEventListener("haxr:onboarding-updated", refresh);
     };
-  }, []);
+  }, [initialEventId]);
 
   return state;
 }

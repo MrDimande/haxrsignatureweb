@@ -12,5 +12,12 @@ export default async function AppLayout({
 }) {
   const session = await getCurrentAppSession();
 
-  return <AppShell userDisplay={session.display}>{children}</AppShell>;
+  return (
+    <AppShell
+      userDisplay={session.display}
+      initialEventId={session.profile?.active_client_event_id ?? null}
+    >
+      {children}
+    </AppShell>
+  );
 }

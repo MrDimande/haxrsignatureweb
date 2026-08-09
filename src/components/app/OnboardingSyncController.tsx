@@ -57,7 +57,7 @@ export default function OnboardingSyncController() {
   if (uiState.kind === "syncing") {
     return (
       <div
-        className="pointer-events-none fixed inset-x-0 top-16 z-50 flex justify-center px-4"
+        className="pointer-events-none fixed inset-x-0 top-[84px] z-50 flex justify-center px-4"
         role="status"
         aria-live="polite"
       >
@@ -71,7 +71,7 @@ export default function OnboardingSyncController() {
 
   if (uiState.kind === "error" && uiState.retryable) {
     return (
-      <div className="fixed inset-x-0 top-16 z-50 flex justify-center px-4" role="alert">
+      <div className="fixed inset-x-0 top-[84px] z-50 flex justify-center px-4" role="alert">
         <div className="max-w-md rounded-2xl border border-red-500/20 bg-[#120e0d]/95 p-4 text-xs text-zinc-200 shadow-lg backdrop-blur">
           <p className="text-red-300">{uiState.message}</p>
           <button

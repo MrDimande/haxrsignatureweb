@@ -26,6 +26,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 type AppShellProps = {
   children: ReactNode;
   userDisplay: AppUserDisplay;
+  initialEventId?: string | null;
 };
 
 function UserSummary({ userDisplay }: { userDisplay: AppUserDisplay }) {
@@ -44,15 +45,15 @@ function UserSummary({ userDisplay }: { userDisplay: AppUserDisplay }) {
   );
 }
 
-export default function AppShell({ children, userDisplay }: AppShellProps) {
+export default function AppShell({ children, userDisplay, initialEventId }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const { eventName: activeEvent, eventId } = useAppEvent();
+  const { eventName: activeEvent, eventId, isResolved: eventResolved } =
+    useAppEvent(initialEventId);
   const pathname = usePathname();
   const router = useRouter();
 
-  // TODO: Resolve eventId from authenticated profile once real event creation exists.
-  const navigationGroups = buildAppNavigation(eventId);
+  const navigationGroups = buildAppNavigation(eventResolved ? eventId : null);
 
   const handleLinkClick = () => {
     setMobileMenuOpen(false);
@@ -119,18 +120,32 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = resolveAppNavIcon(item.iconName);
+                  const isDisabled = item.disabled === true;
                   const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/app/dashboard" &&
-                      (pathname?.startsWith(`${item.href}/`) ?? false));
+                    !isDisabled &&
+                    (pathname === item.href ||
+                      (item.href !== "/app/dashboard" &&
+                        (pathname?.startsWith(`${item.href}/`) ?? false)));
 
                   return (
                     <li key={item.label}>
                       <Link
                         href={item.href}
+                        aria-disabled={isDisabled || undefined}
+                        tabIndex={isDisabled ? -1 : undefined}
+                        title={isDisabled ? "A preparar o evento..." : undefined}
+                        onClick={(event) => {
+                          if (isDisabled) {
+                            event.preventDefault();
+                            return;
+                          }
+                          handleLinkClick();
+                        }}
                         className={`flex items-center gap-3 rounded-lg px-3 py-2 font-sans text-xs transition-all duration-300 ${
                           isActive
                             ? "border border-brand-gold/35 bg-brand-gold/[0.12] font-medium text-brand-ivory shadow-[inset_3px_0_0_#b88a2a]"
+                            : isDisabled
+                              ? "cursor-wait text-zinc-600"
                             : item.ready
                               ? "text-zinc-400 hover:bg-white/5 hover:text-white"
                               : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
@@ -271,19 +286,32 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
                       <ul className="space-y-0.5">
                         {group.items.map((item) => {
                           const Icon = resolveAppNavIcon(item.iconName);
+                          const isDisabled = item.disabled === true;
                           const isActive =
-                            pathname === item.href ||
-                            (item.href !== "/app/dashboard" &&
-                              (pathname?.startsWith(`${item.href}/`) ?? false));
+                            !isDisabled &&
+                            (pathname === item.href ||
+                              (item.href !== "/app/dashboard" &&
+                                (pathname?.startsWith(`${item.href}/`) ?? false)));
 
                           return (
                             <li key={item.label}>
                               <Link
                                 href={item.href}
-                                onClick={handleLinkClick}
+                                aria-disabled={isDisabled || undefined}
+                                tabIndex={isDisabled ? -1 : undefined}
+                                title={isDisabled ? "A preparar o evento..." : undefined}
+                                onClick={(event) => {
+                                  if (isDisabled) {
+                                    event.preventDefault();
+                                    return;
+                                  }
+                                  handleLinkClick();
+                                }}
                                 className={`flex items-center gap-3 rounded-lg px-3 py-2 font-sans text-xs transition-all duration-300 ${
                                   isActive
                                     ? "border border-brand-gold/35 bg-brand-gold/[0.12] font-medium text-brand-ivory shadow-[inset_3px_0_0_#b88a2a]"
+                                    : isDisabled
+                                      ? "cursor-wait text-zinc-600"
                                     : "text-zinc-400 hover:bg-white/5 hover:text-white"
                                 }`}
                               >
