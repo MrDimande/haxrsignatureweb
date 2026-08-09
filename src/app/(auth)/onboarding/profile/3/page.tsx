@@ -21,9 +21,9 @@ export default function OnboardingStep3Page() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-ivory flex flex-col justify-between font-sans text-brand-text-dark select-none p-6 md:p-12 relative overflow-x-hidden">
+    <div className="haxr-onboarding-stage flex min-h-screen select-none flex-col justify-between overflow-x-hidden p-5 font-sans text-brand-text-dark sm:p-8 md:p-12">
 
-      <header className="max-w-3xl w-full mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-brand-champagne/30 text-left">
+      <header className="haxr-onboarding-header mx-auto flex w-full max-w-4xl flex-col justify-between gap-4 border-b pb-6 text-left sm:flex-row sm:items-center">
         <OnboardingBrandHeader />
 
         <div className="flex items-center gap-4 text-xs font-mono">
@@ -34,9 +34,9 @@ export default function OnboardingStep3Page() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center max-w-xl w-full mx-auto py-12 md:py-16">
+      <main className="haxr-onboarding-main mx-auto flex w-full max-w-2xl flex-1 items-center justify-center py-10 md:py-16">
 
-        <form onSubmit={handleContinue} className="w-full space-y-8 text-left">
+        <form onSubmit={handleContinue} className="haxr-onboarding-form w-full space-y-8 text-left">
 
           <div className="space-y-2">
             <span className="font-mono text-[8px] tracking-widest text-brand-gold uppercase font-bold">O Cenário</span>
@@ -84,7 +84,7 @@ export default function OnboardingStep3Page() {
 
       </main>
 
-      <footer className="max-w-3xl w-full mx-auto pt-6 border-t border-brand-champagne/30 text-center font-mono text-[9px] text-zinc-400">
+      <footer className="haxr-onboarding-footer mx-auto w-full max-w-4xl border-t pt-6 text-center font-mono text-[9px] text-zinc-400">
         <span>HAXR SIGNATURE · GESTÃO OPERACIONAL DE CASAMENTOS</span>
       </footer>
 

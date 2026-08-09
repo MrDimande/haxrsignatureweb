@@ -110,7 +110,7 @@ export default function GoogleAuthButton({
       type="button"
       onClick={handleGoogleAuth}
       disabled={disabled || loading}
-      className="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-brand-champagne/70 bg-white px-4 py-3.5 font-sans text-sm font-medium text-brand-text-dark shadow-[0_8px_24px_rgba(28,26,23,0.06)] transition-all hover:-translate-y-0.5 hover:border-brand-gold hover:shadow-[0_12px_30px_rgba(179,134,24,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+      className="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-brand-gold/35 bg-white px-4 py-3.5 font-sans text-sm font-medium text-brand-text-dark shadow-[0_10px_30px_rgba(28,26,23,0.07)] transition-all hover:-translate-y-0.5 hover:border-brand-gold hover:shadow-[0_16px_36px_rgba(179,134,24,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
     >
       {loading ? (
         <>

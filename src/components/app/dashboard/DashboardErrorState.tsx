@@ -13,7 +13,7 @@ export default function DashboardErrorState({
 }: DashboardErrorStateProps) {
   return (
     <DashboardShell>
-      <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-3xl border border-red-500/20 bg-red-500/5 px-6 py-16 text-center">
+      <div className="haxr-dashboard-card flex min-h-[50vh] flex-col items-center justify-center rounded-3xl border border-red-500/20 bg-red-500/5 px-6 py-16 text-center">
         <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-red-400/80">
           Erro de carregamento
         </p>

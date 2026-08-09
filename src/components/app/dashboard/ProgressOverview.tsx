@@ -7,7 +7,7 @@ type ProgressOverviewProps = {
 
 export default function ProgressOverview({ items }: ProgressOverviewProps) {
   return (
-    <div className="flex min-h-[220px] flex-col justify-between rounded-3xl border border-brand-champagne/15 bg-[#120e0d] p-6 shadow-lg md:p-8">
+    <div className="haxr-dashboard-card flex min-h-[220px] flex-col justify-between rounded-3xl border border-brand-champagne/15 bg-[#120e0d] p-6 shadow-lg md:p-8">
       <div className="space-y-3">
         <h3 className="font-serif text-lg font-light text-white">Progresso de Planeamento</h3>
         <p className="font-sans text-xs font-light text-zinc-400">

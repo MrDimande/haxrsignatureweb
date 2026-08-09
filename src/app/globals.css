@@ -614,3 +614,246 @@ p.text-sm {
   color: var(--color-admin-gold);
   border-bottom-color: var(--color-admin-gold);
 }
+
+/* HAXR private experience — auth, onboarding and client dashboard */
+.haxr-auth-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(184, 138, 42, 0.11), transparent 24rem),
+    var(--color-brand-black);
+}
+
+.haxr-auth-form-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(184, 138, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(184, 138, 42, 0.06) 1px, transparent 1px),
+    var(--color-brand-ivory);
+  background-size: 80px 80px;
+}
+
+.haxr-auth-form-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, rgba(247, 241, 232, 0.72), rgba(247, 241, 232, 0.97) 42%);
+  content: "";
+}
+
+.haxr-auth-form-stage::after {
+  position: absolute;
+  right: -3rem;
+  bottom: -6rem;
+  z-index: -1;
+  color: rgba(184, 138, 42, 0.055);
+  content: "HAXR";
+  font-family: var(--font-serif);
+  font-size: clamp(8rem, 19vw, 18rem);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.haxr-auth-card {
+  position: relative;
+  border: 1px solid rgba(184, 138, 42, 0.27);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 32px 90px rgba(41, 30, 16, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.haxr-auth-card::before {
+  position: absolute;
+  top: -1px;
+  left: 2rem;
+  width: 4.5rem;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-brand-gold), transparent);
+  content: "";
+}
+
+.haxr-auth-card::after {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-right: 1px solid rgba(184, 138, 42, 0.35);
+  border-bottom: 1px solid rgba(184, 138, 42, 0.35);
+  content: "";
+  pointer-events: none;
+}
+
+.haxr-onboarding-stage {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(184, 138, 42, 0.12), transparent 24rem),
+    linear-gradient(115deg, #090807 0%, #100d0a 42%, #f7f1e8 42%, #f7f1e8 100%);
+}
+
+.haxr-onboarding-stage::before {
+  position: fixed;
+  top: 25%;
+  left: 2.5%;
+  color: rgba(227, 196, 107, 0.06);
+  content: "SIGNATURE";
+  font-family: var(--font-serif);
+  font-size: clamp(4rem, 9vw, 9rem);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  pointer-events: none;
+  transform: rotate(-90deg) translateX(-50%);
+  transform-origin: left top;
+}
+
+.haxr-onboarding-header,
+.haxr-onboarding-footer {
+  position: relative;
+  z-index: 2;
+  border-color: rgba(184, 138, 42, 0.22);
+}
+
+.haxr-onboarding-main {
+  position: relative;
+  z-index: 1;
+}
+
+.haxr-onboarding-form {
+  position: relative;
+  border: 1px solid rgba(184, 138, 42, 0.24);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  box-shadow: 0 34px 90px rgba(50, 37, 20, 0.14);
+  backdrop-filter: blur(14px);
+}
+
+.haxr-onboarding-form::before {
+  position: absolute;
+  top: 0;
+  left: 2rem;
+  width: 5rem;
+  height: 2px;
+  background: var(--color-brand-gold);
+  content: "";
+}
+
+.haxr-onboarding-form input,
+.haxr-onboarding-form select,
+.haxr-onboarding-form textarea {
+  box-shadow: inset 0 0 0 1px rgba(184, 138, 42, 0.025);
+}
+
+.haxr-onboarding-form button[type="submit"] {
+  border: 1px solid rgba(227, 196, 107, 0.28);
+  background: linear-gradient(135deg, #0a0908, #1b1611);
+  box-shadow: 0 16px 34px rgba(21, 15, 8, 0.18);
+}
+
+.haxr-onboarding-form button[type="submit"]:hover {
+  border-color: rgba(184, 138, 42, 0.65);
+  box-shadow: 0 18px 42px rgba(21, 15, 8, 0.24);
+}
+
+.haxr-app-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 78% -10%, rgba(184, 138, 42, 0.12), transparent 34rem),
+    #0a0908;
+}
+
+.haxr-app-sidebar {
+  background:
+    linear-gradient(180deg, rgba(184, 138, 42, 0.055), transparent 12rem),
+    #080706;
+  box-shadow: 24px 0 80px rgba(0, 0, 0, 0.24);
+}
+
+.haxr-app-header {
+  background: rgba(10, 9, 8, 0.86);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.haxr-app-main {
+  position: relative;
+  background-image:
+    linear-gradient(rgba(184, 138, 42, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 138, 42, 0.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+.haxr-dashboard-shell {
+  position: relative;
+  isolation: isolate;
+  max-width: 96rem;
+  margin-inline: auto;
+}
+
+.haxr-dashboard-shell::before {
+  position: absolute;
+  top: 5rem;
+  right: -2rem;
+  z-index: -1;
+  color: rgba(184, 138, 42, 0.035);
+  content: "HAXR";
+  font-family: var(--font-serif);
+  font-size: clamp(7rem, 18vw, 16rem);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.haxr-dashboard-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(27, 23, 19, 0.86), rgba(13, 11, 9, 0.96));
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.haxr-dashboard-card::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-right: 1px solid rgba(184, 138, 42, 0.2);
+  border-bottom: 1px solid rgba(184, 138, 42, 0.2);
+  content: "";
+  pointer-events: none;
+}
+
+@media (max-width: 1023px) {
+  .haxr-onboarding-stage {
+    background:
+      radial-gradient(circle at 12% 0%, rgba(184, 138, 42, 0.09), transparent 24rem),
+      var(--color-brand-ivory);
+  }
+
+  .haxr-onboarding-stage::before {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .haxr-auth-shell *,
+  .haxr-onboarding-stage *,
+  .haxr-dashboard-shell * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,101 +1,91 @@
-import { CheckCircle2, QrCode, Sparkles, Users } from "lucide-react";
+import Image from "next/image";
+import { Sparkles } from "lucide-react";
 import HaxrLogo from "@/components/brand/HaxrLogo";
 
-const FEATURES = [
-  { label: "RSVP Digital", icon: CheckCircle2 },
-  { label: "HAXR Concierge", icon: Sparkles },
-  { label: "QR Check-in", icon: QrCode },
-  { label: "Gestão de Fornecedores", icon: Users },
+const EXPERIENCE_STEPS = [
+  { number: "01", label: "Imagine", detail: "Defina a intenção do vosso dia." },
+  { number: "02", label: "Curadoria", detail: "Organize cada escolha com clareza." },
+  { number: "03", label: "Celebre", detail: "Viva o momento, sem ruído." },
 ] as const;
 
 export default function AuthBrandPanel() {
   return (
-    <div className="relative flex h-full min-h-[280px] flex-col justify-between overflow-hidden rounded-2xl border border-brand-champagne/35 bg-brand-black p-8 text-white shadow-[0_24px_60px_rgba(8,7,6,0.18)] md:min-h-0 md:rounded-none md:border-0 md:shadow-none lg:p-12">
+    <div className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-brand-black p-7 text-white lg:p-12 xl:p-16">
+      <Image
+        src="/images/hero/wedding-editorial-couple.png"
+        alt="Casal HAXR a celebrar o início de uma nova história"
+        fill
+        priority
+        sizes="(min-width: 1024px) 58vw, 100vw"
+        className="object-cover object-center opacity-55 grayscale"
+      />
       <div
-        className="pointer-events-none absolute inset-0 opacity-90"
+        className="absolute inset-0 bg-[linear-gradient(115deg,rgba(8,7,6,0.97)_0%,rgba(8,7,6,0.82)_43%,rgba(8,7,6,0.38)_78%,rgba(8,7,6,0.72)_100%)]"
         aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 60% at 20% 0%, rgba(184,138,42,0.14), transparent 55%), radial-gradient(ellipse 60% 50% at 100% 100%, rgba(234,216,184,0.08), transparent 50%)",
-        }}
+      />
+      <div
+        className="absolute inset-5 border border-white/10 lg:inset-8"
+        aria-hidden
+      />
+      <div
+        className="absolute left-5 top-5 h-16 w-16 border-l border-t border-brand-gold/55 lg:left-8 lg:top-8"
+        aria-hidden
+      />
+      <div
+        className="absolute bottom-5 right-5 h-16 w-16 border-b border-r border-brand-gold/55 lg:bottom-8 lg:right-8"
+        aria-hidden
       />
 
-      <div className="relative z-10 space-y-10">
-        <div>
-          <HaxrLogo
-            variant="full"
-            tone="dark"
-            size="md"
-            subtitle="Wedding Dashboard"
-            link
-            href="/"
-            className="items-start"
-          />
-        </div>
-
-        <div className="max-w-md space-y-4 text-left">
-          <h2 className="font-serif text-2xl font-light leading-snug text-brand-ivory md:text-3xl lg:text-4xl">
-            O vosso casamento, organizado com elegância.
-          </h2>
-          <p className="font-sans text-sm font-light leading-relaxed text-white/72">
-            Acompanhe cada detalhe do evento num único espaço: convidados, RSVP,
-            orçamento, fornecedores, documentos e recomendações inteligentes.
-          </p>
-        </div>
-
-        <ul className="grid grid-cols-2 gap-3 text-left sm:max-w-md">
-          {FEATURES.map(({ label, icon: Icon }) => (
-            <li
-              key={label}
-              className="flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm"
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0 text-brand-gold" strokeWidth={1.5} />
-              <span className="font-mono text-[9px] font-semibold uppercase tracking-wider text-white/85">
-                {label}
-              </span>
-            </li>
-          ))}
-        </ul>
+      <div className="relative z-10 flex items-start justify-between gap-6">
+        <HaxrLogo
+          variant="full"
+          tone="dark"
+          size="md"
+          subtitle="Private Planning Atelier"
+          link
+          href="/"
+          className="items-start"
+        />
+        <span className="hidden items-center gap-2 border border-white/12 bg-black/25 px-3 py-2 font-mono text-[8px] uppercase tracking-[0.24em] text-white/70 backdrop-blur-sm sm:inline-flex">
+          <Sparkles className="h-3 w-3 text-brand-gold" aria-hidden />
+          Signature Experience
+        </span>
       </div>
 
-      <div className="relative z-10 mt-10 lg:mt-12">
-        <div
-          className="rounded-xl border border-white/12 bg-white/[0.06] p-4 backdrop-blur-md md:p-5"
-          aria-label="Pré-visualização do painel de casamento"
-        >
-          <div className="mb-3 flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-            <div>
-              <p className="font-mono text-[8px] font-bold uppercase tracking-widest text-brand-gold">
-                Painel activo
-              </p>
-              <p className="font-serif text-lg font-light text-white">Jessica &amp; Samuel</p>
-            </div>
-            <span className="rounded-full border border-brand-gold/35 bg-brand-gold/15 px-2.5 py-1 font-mono text-[8px] font-bold uppercase tracking-wider text-brand-gold-light">
-              72% concluído
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-left">
-            <div className="rounded-lg border border-white/8 bg-black/25 px-3 py-2.5">
-              <p className="font-mono text-[7px] uppercase tracking-wider text-white/45">Convidados</p>
-              <p className="mt-0.5 font-sans text-sm font-medium text-white">186 confirmados</p>
-            </div>
-            <div className="rounded-lg border border-white/8 bg-black/25 px-3 py-2.5">
-              <p className="font-mono text-[7px] uppercase tracking-wider text-white/45">Próximo passo</p>
-              <p className="mt-0.5 font-sans text-xs font-light leading-snug text-white/88">
-                Aprovar convite digital
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full w-[72%] rounded-full bg-brand-gold" />
-          </div>
-        </div>
-
-        <p className="mt-6 hidden font-mono text-[9px] uppercase tracking-widest text-white/35 lg:block">
-          © 2026 HAXR · Maputo
+      <div className="relative z-10 my-10 max-w-xl text-left lg:my-16">
+        <p className="mb-5 font-mono text-[9px] font-semibold uppercase tracking-[0.42em] text-brand-gold-light">
+          Precisão nos bastidores. Liberdade no momento.
         </p>
+        <h2 className="max-w-lg font-serif text-[clamp(2.4rem,5vw,5.4rem)] font-light leading-[0.98] tracking-[-0.035em] text-brand-ivory">
+          Onde a intenção ganha forma.
+        </h2>
+        <p className="mt-6 max-w-md font-sans text-sm font-light leading-7 text-white/72 lg:text-base">
+          Uma experiência privada para transformar decisões, detalhes e emoções num casamento
+          com assinatura própria.
+        </p>
+      </div>
+
+      <div className="relative z-10">
+        <div className="grid gap-px border border-white/12 bg-white/10 sm:grid-cols-3">
+          {EXPERIENCE_STEPS.map((step) => (
+            <div key={step.number} className="bg-black/55 px-4 py-4 text-left backdrop-blur-md lg:px-5">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[8px] font-semibold tracking-[0.2em] text-brand-gold">
+                  {step.number}
+                </span>
+                <span className="h-px w-6 bg-brand-gold/40" aria-hidden />
+                <span className="font-serif text-base font-light text-white">{step.label}</span>
+              </div>
+              <p className="mt-2 font-sans text-[11px] font-light leading-5 text-white/52">
+                {step.detail}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex items-center justify-between font-mono text-[8px] uppercase tracking-[0.28em] text-white/38">
+          <span>HAXR Signature · Maputo</span>
+          <span>Est. 2026</span>
+        </div>
       </div>
     </div>
   );

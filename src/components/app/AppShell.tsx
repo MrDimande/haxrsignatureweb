@@ -31,7 +31,7 @@ type AppShellProps = {
 function UserSummary({ userDisplay }: { userDisplay: AppUserDisplay }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-gold font-serif text-[10px] font-bold text-white">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-gold/60 bg-black font-serif text-[10px] font-bold text-brand-gold shadow-[0_0_0_3px_rgba(184,138,42,0.08)]">
         {userDisplay.initials}
       </div>
       <div className="min-w-0 text-left">
@@ -93,11 +93,11 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
   );
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-[#0c0a09] font-sans text-zinc-100 antialiased">
+    <div className="haxr-app-shell flex min-h-screen overflow-x-hidden bg-[#0c0a09] font-sans text-zinc-100 antialiased">
       <Suspense fallback={null}>
         <OnboardingSyncController />
       </Suspense>
-      <aside className="scrollbar-none sticky top-0 z-40 hidden h-screen w-[260px] shrink-0 select-none flex-col overflow-y-auto border-r border-brand-champagne/10 bg-[#0c0a09] lg:flex">
+      <aside className="haxr-app-sidebar scrollbar-none sticky top-0 z-40 hidden h-screen w-[272px] shrink-0 select-none flex-col overflow-y-auto border-r border-brand-champagne/10 bg-[#0c0a09] lg:flex">
         <div className="flex flex-col justify-center border-b border-brand-champagne/10 p-6">
           <HaxrLogo
             variant="full"
@@ -130,14 +130,14 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
                         href={item.href}
                         className={`flex items-center gap-3 rounded-lg px-3 py-2 font-sans text-xs transition-all duration-300 ${
                           isActive
-                            ? "bg-brand-gold font-medium text-white shadow-md shadow-brand-gold/10"
+                            ? "border border-brand-gold/35 bg-brand-gold/[0.12] font-medium text-brand-ivory shadow-[inset_3px_0_0_#b88a2a]"
                             : item.ready
                               ? "text-zinc-400 hover:bg-white/5 hover:text-white"
                               : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
                         }`}
                       >
                         <Icon
-                          className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-zinc-400/80"}`}
+                          className={`h-4 w-4 shrink-0 ${isActive ? "text-brand-gold" : "text-zinc-400/80"}`}
                           strokeWidth={1.5}
                         />
                         <span>{item.label}</span>
@@ -165,7 +165,7 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
       </aside>
 
       <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-35 flex h-16 items-center justify-between border-b border-brand-champagne/10 bg-[#0c0a09] bg-opacity-90 px-4 backdrop-blur-md sm:px-6 md:px-8">
+        <header className="haxr-app-header sticky top-0 z-35 flex h-[72px] items-center justify-between border-b border-brand-champagne/10 bg-[#0c0a09] bg-opacity-90 px-4 backdrop-blur-md sm:px-6 md:px-8">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -218,7 +218,7 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 md:p-8">{children}</main>
+        <main className="haxr-app-main flex-1 p-4 sm:p-6 md:p-8 xl:p-10">{children}</main>
       </div>
 
       <AnimatePresence>
@@ -280,7 +280,7 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
                                 onClick={handleLinkClick}
                                 className={`flex items-center gap-3 rounded-lg px-3 py-2 font-sans text-xs transition-all duration-300 ${
                                   isActive
-                                    ? "bg-brand-gold font-medium text-white"
+                                    ? "border border-brand-gold/35 bg-brand-gold/[0.12] font-medium text-brand-ivory shadow-[inset_3px_0_0_#b88a2a]"
                                     : "text-zinc-400 hover:bg-white/5 hover:text-white"
                                 }`}
                               >
