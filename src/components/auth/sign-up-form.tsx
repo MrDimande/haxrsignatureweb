@@ -17,7 +17,9 @@ import {
   validateSignUpCredentials,
 } from "@/lib/auth/sign-up-auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import AuthLegalDialog from "@/components/auth/auth-legal-dialog";
 import GoogleAuthButton from "@/components/auth/google-auth-button";
+import type { AuthLegalDocumentId } from "@/lib/auth/legal-documents";
 
 type FieldErrors = {
   fullName?: string;
@@ -41,6 +43,7 @@ export default function SignUpForm() {
   const [oauthLoading, setOauthLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [legalDocument, setLegalDocument] = useState<AuthLegalDocumentId | null>(null);
   const termsCheckboxRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -160,7 +163,7 @@ export default function SignUpForm() {
         </p>
       </div>
 
-      <label
+      <div
         className={`mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
           fieldErrors.termsAccepted
             ? "border-red-300 bg-red-50/70"
@@ -178,14 +181,37 @@ export default function SignUpForm() {
           }}
           disabled={authBusy}
           aria-invalid={fieldErrors.termsAccepted ? true : undefined}
+          aria-labelledby="sign-up-terms-label"
           aria-describedby={fieldErrors.termsAccepted ? "sign-up-terms-error" : undefined}
           className="mt-0.5 h-4 w-4 rounded border-brand-champagne/60 text-brand-gold focus:ring-brand-gold/30"
         />
-        <span className="font-sans text-xs font-light leading-relaxed text-brand-text-dark/75">
-          Aceito os termos de utilização e a política de privacidade da HAXR Signature para
-          criar a minha conta.
-        </span>
-      </label>
+        <p
+          id="sign-up-terms-label"
+          className="font-sans text-xs font-light leading-relaxed text-brand-text-dark/75"
+        >
+          <label htmlFor="sign-up-terms" className="cursor-pointer">
+            Aceito os{" "}
+          </label>
+          <button
+            type="button"
+            onClick={() => setLegalDocument("terms")}
+            className="rounded-sm font-medium text-brand-gold underline decoration-brand-gold/45 underline-offset-2 transition-colors hover:text-brand-gold-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
+          >
+            termos de utilização
+          </button>{" "}
+          e a{" "}
+          <button
+            type="button"
+            onClick={() => setLegalDocument("privacy")}
+            className="rounded-sm font-medium text-brand-gold underline decoration-brand-gold/45 underline-offset-2 transition-colors hover:text-brand-gold-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
+          >
+            política de privacidade
+          </button>{" "}
+          <label htmlFor="sign-up-terms" className="cursor-pointer">
+            da HAXR Signature para criar a minha conta.
+          </label>
+        </p>
+      </div>
       {fieldErrors.termsAccepted ? (
         <p
           id="sign-up-terms-error"
@@ -388,6 +414,12 @@ export default function SignUpForm() {
           </Link>
         </p>
       </div>
+
+      <AuthLegalDialog
+        documentId={legalDocument}
+        onSelect={setLegalDocument}
+        onClose={() => setLegalDocument(null)}
+      />
     </div>
   );
 }
