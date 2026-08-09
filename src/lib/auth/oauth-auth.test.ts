@@ -50,4 +50,48 @@ describe("oauth-auth", () => {
       assert.match(result.formError, /URL de retorno inválida/i);
     }
   });
+
+  it("signInWithGoogle returns the provider URL without navigating", async () => {
+    setProcessEnv("NODE_ENV", "development");
+    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+
+    const result = await signInWithGoogle(
+      {
+        auth: {
+          signInWithOAuth: async () => ({
+            data: { url: "https://accounts.google.com/o/oauth2/auth" },
+            error: null,
+          }),
+        },
+      },
+      "https://preview.example.com/auth/callback",
+    );
+
+    assert.deepEqual(result, {
+      ok: true,
+      redirectUrl: "https://accounts.google.com/o/oauth2/auth",
+    });
+  });
+
+  it("signInWithGoogle recovers when the provider does not respond", async () => {
+    setProcessEnv("NODE_ENV", "development");
+    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+
+    const result = await signInWithGoogle(
+      {
+        auth: {
+          signInWithOAuth: async () => new Promise(() => undefined),
+        },
+      },
+      "https://preview.example.com/auth/callback",
+      { timeoutMs: 1 },
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.match(result.formError, /demorou demasiado/i);
+    }
+  });
 });

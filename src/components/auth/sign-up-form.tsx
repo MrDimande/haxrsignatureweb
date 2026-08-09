@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -38,8 +38,10 @@ export default function SignUpForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const termsCheckboxRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     stashPostAuthReturn(fromParam);
@@ -104,6 +106,22 @@ export default function SignUpForm() {
     "w-full rounded-xl border bg-white px-4 py-3 font-sans text-sm font-light text-brand-text-dark placeholder:text-zinc-400 transition-all focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   const signInHref = buildSignInPath(fromParam);
+  const authBusy = loading || oauthLoading;
+
+  const clearConsentError = () => {
+    if (fieldErrors.termsAccepted) {
+      setFieldErrors((prev) => ({ ...prev, termsAccepted: undefined }));
+    }
+    if (formError) setFormError(null);
+  };
+
+  const requireConsent = () => {
+    setFieldErrors((prev) => ({
+      ...prev,
+      termsAccepted: "Aceite os termos para continuar com Google.",
+    }));
+    termsCheckboxRef.current?.focus();
+  };
 
   return (
     <div className="rounded-2xl border border-brand-champagne/40 bg-white/80 p-6 shadow-[0_12px_40px_rgba(28,26,23,0.06)] backdrop-blur-sm sm:p-8">
@@ -118,16 +136,75 @@ export default function SignUpForm() {
         </p>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {formError ? (
-          <p
-            className="rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-xs font-light text-red-700"
-            role="alert"
-          >
-            {formError}
-          </p>
-        ) : null}
+      {formError ? (
+        <p
+          className="mb-5 rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-xs font-light text-red-700"
+          role="alert"
+        >
+          {formError}
+        </p>
+      ) : null}
 
+      <div className="mb-5 space-y-3">
+        <GoogleAuthButton
+          fromParam={fromParam}
+          disabled={authBusy}
+          label="Criar conta com Google"
+          consentAccepted={termsAccepted}
+          onConsentRequired={requireConsent}
+          onError={(message) => setFormError(message || null)}
+          onLoadingChange={setOauthLoading}
+        />
+        <p className="text-center font-sans text-[11px] font-light text-brand-text-dark/55">
+          Registo rápido e seguro, sem criar uma nova palavra-passe.
+        </p>
+      </div>
+
+      <label
+        className={`mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+          fieldErrors.termsAccepted
+            ? "border-red-300 bg-red-50/70"
+            : "border-brand-champagne/35 bg-brand-ivory/40"
+        }`}
+      >
+        <input
+          ref={termsCheckboxRef}
+          id="sign-up-terms"
+          type="checkbox"
+          checked={termsAccepted}
+          onChange={(event) => {
+            setTermsAccepted(event.target.checked);
+            clearConsentError();
+          }}
+          disabled={authBusy}
+          aria-invalid={fieldErrors.termsAccepted ? true : undefined}
+          aria-describedby={fieldErrors.termsAccepted ? "sign-up-terms-error" : undefined}
+          className="mt-0.5 h-4 w-4 rounded border-brand-champagne/60 text-brand-gold focus:ring-brand-gold/30"
+        />
+        <span className="font-sans text-xs font-light leading-relaxed text-brand-text-dark/75">
+          Aceito os termos de utilização e a política de privacidade da HAXR Signature para
+          criar a minha conta.
+        </span>
+      </label>
+      {fieldErrors.termsAccepted ? (
+        <p
+          id="sign-up-terms-error"
+          className="mb-5 pl-1 text-xs font-light text-red-600"
+          role="alert"
+        >
+          {fieldErrors.termsAccepted}
+        </p>
+      ) : null}
+
+      <div className="relative mb-6 flex items-center">
+        <div className="grow border-t border-brand-champagne/35" />
+        <span className="mx-4 shrink-0 font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/45">
+          ou criar conta com email
+        </span>
+        <div className="grow border-t border-brand-champagne/35" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div className="space-y-1.5">
           <label
             htmlFor="sign-up-name"
@@ -151,7 +228,7 @@ export default function SignUpForm() {
             }}
             aria-invalid={fieldErrors.fullName ? true : undefined}
             placeholder="Ex: Jessica Silva"
-            disabled={loading}
+            disabled={authBusy}
             className={`${inputClass} ${
               fieldErrors.fullName
                 ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
@@ -187,7 +264,7 @@ export default function SignUpForm() {
             }}
             aria-invalid={fieldErrors.email ? true : undefined}
             placeholder="nome@exemplo.com"
-            disabled={loading}
+            disabled={authBusy}
             className={`${inputClass} ${
               fieldErrors.email
                 ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
@@ -224,7 +301,7 @@ export default function SignUpForm() {
             }}
             aria-invalid={fieldErrors.password ? true : undefined}
             placeholder="Mínimo 8 caracteres"
-            disabled={loading}
+            disabled={authBusy}
             className={`${inputClass} ${
               fieldErrors.password
                 ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
@@ -261,7 +338,7 @@ export default function SignUpForm() {
             }}
             aria-invalid={fieldErrors.confirmPassword ? true : undefined}
             placeholder="Repita a palavra-passe"
-            disabled={loading}
+            disabled={authBusy}
             className={`${inputClass} ${
               fieldErrors.confirmPassword
                 ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
@@ -275,34 +352,9 @@ export default function SignUpForm() {
           ) : null}
         </div>
 
-        <label className="flex items-start gap-3 rounded-xl border border-brand-champagne/35 bg-brand-ivory/40 px-4 py-3 text-left">
-          <input
-            type="checkbox"
-            checked={termsAccepted}
-            onChange={(e) => {
-              setTermsAccepted(e.target.checked);
-              if (fieldErrors.termsAccepted) {
-                setFieldErrors((prev) => ({ ...prev, termsAccepted: undefined }));
-              }
-              if (formError) setFormError(null);
-            }}
-            disabled={loading}
-            className="mt-0.5 h-4 w-4 rounded border-brand-champagne/60 text-brand-gold focus:ring-brand-gold/30"
-          />
-          <span className="font-sans text-xs font-light leading-relaxed text-brand-text-dark/75">
-            Ao criar a conta, aceito os termos de utilização e a política de privacidade da
-            HAXR Signature.
-          </span>
-        </label>
-        {fieldErrors.termsAccepted ? (
-          <p className="pl-1 text-xs font-light text-red-600" role="alert">
-            {fieldErrors.termsAccepted}
-          </p>
-        ) : null}
-
         <button
           type="submit"
-          disabled={loading}
+          disabled={authBusy}
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-black px-6 py-3.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white shadow-md transition-colors hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {loading ? (
@@ -315,20 +367,6 @@ export default function SignUpForm() {
           )}
         </button>
       </form>
-
-      <div className="relative my-7 flex items-center">
-        <div className="grow border-t border-brand-champagne/35" />
-        <span className="mx-4 shrink-0 font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/45">
-          ou
-        </span>
-        <div className="grow border-t border-brand-champagne/35" />
-      </div>
-
-      <GoogleAuthButton
-        fromParam={fromParam}
-        disabled={loading}
-        onError={(message) => setFormError(message)}
-      />
 
       <div className="mt-8 space-y-4 text-center">
         <p className="font-sans text-xs font-light text-brand-text-dark/65">
