@@ -7,6 +7,7 @@ export type GoogleOAuthClient = {
       options?: {
         redirectTo?: string;
         queryParams?: Record<string, string>;
+        skipBrowserRedirect?: boolean;
       };
     }) => Promise<{ data: { url: string | null }; error: { message: string } | null }>;
   };
@@ -62,6 +63,7 @@ export async function signInWithGoogle(
         provider: "google",
         options: {
           redirectTo,
+          skipBrowserRedirect: true,
           queryParams: {
             access_type: "offline",
             prompt: "consent",

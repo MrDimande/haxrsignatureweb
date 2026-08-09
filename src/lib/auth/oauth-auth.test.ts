@@ -56,13 +56,17 @@ describe("oauth-auth", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
+    let receivedSkipBrowserRedirect: boolean | undefined;
     const result = await signInWithGoogle(
       {
         auth: {
-          signInWithOAuth: async () => ({
-            data: { url: "https://accounts.google.com/o/oauth2/auth" },
-            error: null,
-          }),
+          signInWithOAuth: async (options) => {
+            receivedSkipBrowserRedirect = options.options?.skipBrowserRedirect;
+            return {
+              data: { url: "https://accounts.google.com/o/oauth2/auth" },
+              error: null,
+            };
+          },
         },
       },
       "https://preview.example.com/auth/callback",
@@ -72,6 +76,7 @@ describe("oauth-auth", () => {
       ok: true,
       redirectUrl: "https://accounts.google.com/o/oauth2/auth",
     });
+    assert.equal(receivedSkipBrowserRedirect, true);
   });
 
   it("signInWithGoogle recovers when the provider does not respond", async () => {
