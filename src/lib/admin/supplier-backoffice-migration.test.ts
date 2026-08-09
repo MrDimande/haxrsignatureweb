@@ -13,6 +13,16 @@ const migration = readFileSync(
   "utf8",
 );
 
+const correctiveGrantMigration = readFileSync(
+  join(
+    process.cwd(),
+    "supabase",
+    "migrations",
+    "20260808222727_restrict_supplier_moderation_audit_service_role_grants.sql",
+  ),
+  "utf8",
+);
+
 describe("supplier backoffice migration security contract", () => {
   it("uses invoker functions and removes every public execution path", () => {
     assert.doesNotMatch(migration, /security\s+definer/i);
@@ -36,6 +46,25 @@ describe("supplier backoffice migration security contract", () => {
     assert.match(
       migration,
       /grant\s+select,\s*insert\s+on\s+public\.supplier_moderation_events\s+to\s+service_role/i,
+    );
+  });
+
+  it("normalises the audit table grants to service-role SELECT and INSERT only", () => {
+    assert.match(
+      correctiveGrantMigration,
+      /revoke\s+all\s+privileges\s+on\s+table\s+public\.supplier_moderation_events\s+from\s+public,\s*anon,\s*authenticated,\s*service_role/i,
+    );
+    assert.match(
+      correctiveGrantMigration,
+      /grant\s+select,\s*insert\s+on\s+table\s+public\.supplier_moderation_events\s+to\s+service_role/i,
+    );
+    assert.doesNotMatch(
+      correctiveGrantMigration,
+      /grant\s+(?:all|delete|references|trigger|truncate|update)\b/i,
+    );
+    assert.doesNotMatch(
+      correctiveGrantMigration,
+      /\b(?:alter|create|drop|insert\s+into|update|delete\s+from|truncate)\b/i,
     );
   });
 
