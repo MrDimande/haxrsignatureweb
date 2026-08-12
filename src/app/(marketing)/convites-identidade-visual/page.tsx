@@ -102,56 +102,66 @@ export default function ConvitesIdentidadePage() {
           </div>
         </header>
 
-        <section aria-labelledby="real-work-heading" className="overflow-hidden bg-brand-black py-5 text-brand-ivory md:py-8">
+        <section aria-labelledby="real-work-heading" className="overflow-hidden bg-brand-black py-16 text-brand-ivory md:py-20">
           <h2 id="real-work-heading" className="sr-only">Convites reais criados pela HAXR</h2>
-          <div className="site-container-wide grid gap-5 lg:grid-cols-[1.36fr_0.64fr] lg:items-end">
+          <div className="site-container-wide">
+            <div className="mb-8 flex flex-col gap-4 border-b border-brand-ivory/12 pb-6 sm:flex-row sm:items-end sm:justify-between">
+              <EditorialLabel light>Arquivo vivo · Obras publicadas</EditorialLabel>
+              <p className="max-w-md text-xs leading-6 tracking-wide text-brand-ivory/42 sm:text-right">
+                Duas histórias reais. Duas linguagens irrepetíveis. Nenhum template.
+              </p>
+            </div>
+
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-8 xl:gap-12">
             <Link
               href={vania.publicPath}
-              className="group relative block min-h-[31rem] overflow-hidden bg-brand-black-soft focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold md:min-h-[44rem]"
+              className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold"
             >
-              <Image
-                src="/images/convite-mockup-vania-fabiao.png"
-                alt="Experiência de convite digital de Vânia e Fabião"
-                fill
-                priority
-                sizes="(max-width: 1023px) 100vw, 68vw"
-                className="object-cover object-center transition-transform duration-1000 ease-out group-hover:scale-[1.018]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-black/80 via-brand-black/5 to-transparent" aria-hidden="true" />
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 p-6 md:p-10">
+              <div className="flex h-[22rem] items-center justify-center border border-brand-ivory/10 bg-brand-black-soft p-4 sm:h-[28rem] md:h-[32rem] md:p-6 xl:h-[34rem]">
+                <Image
+                  src="/images/convite-mockup-vania-fabiao.png"
+                  alt="Experiência de convite digital de Vânia e Fabião"
+                  width={819}
+                  height={1024}
+                  priority
+                  quality={95}
+                  sizes="(max-width: 1023px) calc(100vw - 72px), 32rem"
+                  className="h-full w-auto max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.012]"
+                />
+              </div>
+              <div className="flex items-end justify-between gap-6 border-t border-brand-ivory/12 pt-5">
                 <div>
                   <EditorialLabel light>Peça 01 · Convite Signature</EditorialLabel>
-                  <p className="mt-3 font-serif text-3xl md:text-5xl">Vânia & Fabião</p>
+                  <p className="mt-3 font-serif text-2xl md:text-3xl">Vânia & Fabião</p>
                 </div>
-                <ArrowRight aria-hidden="true" className="mb-2 size-6 shrink-0 text-brand-gold-light transition-transform group-hover:translate-x-1" />
+                <ArrowRight aria-hidden="true" className="mb-1 size-5 shrink-0 text-brand-gold-light transition-transform group-hover:translate-x-1" />
               </div>
             </Link>
 
             <Link
               href={jessica.publicPath}
-              className="group relative block min-h-[28rem] overflow-hidden bg-brand-black-soft focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold md:min-h-[36rem] lg:mb-14"
+              className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold"
             >
-              <Image
-                src="/images/save-the-date-jessica-samuel-preview.png"
-                alt="Save the Date editorial de Jessica e Samuel"
-                fill
-                sizes="(max-width: 1023px) 100vw, 32vw"
-                className="object-cover transition-transform duration-1000 ease-out group-hover:scale-[1.022]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-black/88 via-brand-black/10 to-transparent" aria-hidden="true" />
-              <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
+              <div className="flex h-[22rem] items-center justify-center border border-brand-ivory/10 bg-brand-black-soft p-4 sm:h-[28rem] md:h-[32rem] md:p-6 xl:h-[34rem]">
+                <Image
+                  src="/images/save-the-date-jessica-samuel-preview.png"
+                  alt="Save the Date editorial de Jessica e Samuel"
+                  width={402}
+                  height={874}
+                  quality={95}
+                  sizes="(max-width: 1023px) 13rem, 12.5rem"
+                  className="h-auto max-h-[20rem] w-auto max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.012] sm:max-h-[25rem] md:max-h-[27rem]"
+                />
+              </div>
+              <div className="flex items-end justify-between gap-6 border-t border-brand-ivory/12 pt-5">
+                <div>
                 <EditorialLabel light>Peça 02 · Save the Date</EditorialLabel>
-                <div className="mt-3 flex items-end justify-between gap-5">
-                  <p className="font-serif text-3xl md:text-4xl">Jessica & Samuel</p>
-                  <ArrowRight aria-hidden="true" className="mb-1 size-5 shrink-0 text-brand-gold-light transition-transform group-hover:translate-x-1" />
+                  <p className="mt-3 font-serif text-2xl md:text-3xl">Jessica & Samuel</p>
                 </div>
+                <ArrowRight aria-hidden="true" className="mb-1 size-5 shrink-0 text-brand-gold-light transition-transform group-hover:translate-x-1" />
               </div>
             </Link>
-          </div>
-          <div className="site-container-wide flex justify-end py-5 md:py-8">
-            <p className="max-w-xl text-right text-xs leading-6 tracking-wide text-brand-ivory/42">
-              Duas histórias reais. Duas linguagens irrepetíveis. Nenhum template.
-            </p>
+            </div>
           </div>
         </section>
 
