@@ -75,12 +75,12 @@ export default function ConvitesIdentidadePage() {
               </span>
             </div>
 
-            <div className="grid gap-10 pt-10 lg:grid-cols-[1.35fr_0.65fr] lg:items-end lg:gap-20 lg:pt-14">
-              <h1 className="max-w-5xl font-serif text-[clamp(3rem,7.4vw,7.4rem)] font-light leading-[0.91] tracking-[-0.045em] text-brand-text-dark">
+            <div className="grid gap-10 pt-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-end lg:gap-20 lg:pt-14">
+              <h1 className="max-w-4xl font-serif text-[clamp(2.7rem,5.4vw,5.5rem)] font-light leading-[0.96] tracking-[-0.035em] text-brand-text-dark">
                 Vestimos histórias para o primeiro encontro.
               </h1>
               <div className="lg:pb-2">
-                <p className="font-serif text-xl leading-8 text-brand-text-dark/72 md:text-2xl">
+                <p className="max-w-md font-serif text-lg leading-8 text-brand-text-dark/72 md:text-xl">
                   Convites digitais e identidades visuais concebidos como uma peça de autor — únicos, úteis e impossíveis de confundir.
                 </p>
                 <div className="mt-7 flex items-center gap-7">
@@ -121,7 +121,7 @@ export default function ConvitesIdentidadePage() {
               <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 p-6 md:p-10">
                 <div>
                   <EditorialLabel light>Peça 01 · Convite Signature</EditorialLabel>
-                  <p className="mt-3 font-serif text-4xl md:text-6xl">Vânia & Fabião</p>
+                  <p className="mt-3 font-serif text-3xl md:text-5xl">Vânia & Fabião</p>
                 </div>
                 <ArrowRight aria-hidden="true" className="mb-2 size-6 shrink-0 text-brand-gold-light transition-transform group-hover:translate-x-1" />
               </div>
@@ -164,7 +164,7 @@ export default function ConvitesIdentidadePage() {
               </p>
             </div>
             <div>
-              <p className="font-serif text-[clamp(2.5rem,5.6vw,6rem)] font-light leading-[1.01] tracking-[-0.032em] text-brand-text-dark">
+              <p className="max-w-4xl font-serif text-[clamp(2.25rem,4vw,4.25rem)] font-light leading-[1.04] tracking-[-0.025em] text-brand-text-dark">
                 Não fazemos páginas de convite. Criamos a primeira atmosfera do evento.
               </p>
               <p className="mt-8 max-w-2xl text-base leading-8 text-brand-text-dark/62 md:text-lg">
@@ -188,7 +188,7 @@ export default function ConvitesIdentidadePage() {
             <div className="grid gap-9 lg:grid-cols-[0.72fr_1.28fr] lg:items-end lg:gap-20">
               <div>
                 <EditorialLabel>Colecções HAXR</EditorialLabel>
-                <h2 className="mt-6 font-serif text-[clamp(3rem,7vw,7rem)] font-light leading-[0.91] tracking-[-0.04em] text-brand-text-dark">
+                <h2 className="mt-6 max-w-2xl font-serif text-[clamp(2.5rem,4.6vw,4.8rem)] font-light leading-[0.98] tracking-[-0.03em] text-brand-text-dark">
                   Escolha a profundidade da experiência.
                 </h2>
               </div>
@@ -207,7 +207,7 @@ export default function ConvitesIdentidadePage() {
             <div className="grid gap-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
               <div>
                 <EditorialLabel light>Da tela para o espaço</EditorialLabel>
-                <h2 className="mt-6 font-serif text-[clamp(2.8rem,6vw,6rem)] font-light leading-[0.98] tracking-[-0.035em]">
+                <h2 className="mt-6 max-w-xl font-serif text-[clamp(2.4rem,4.3vw,4.5rem)] font-light leading-[1.02] tracking-[-0.028em]">
                   Uma identidade que continua depois do clique.
                 </h2>
                 <p className="mt-7 max-w-xl text-base leading-8 text-brand-ivory/58">
@@ -235,7 +235,7 @@ export default function ConvitesIdentidadePage() {
                 <div className="min-h-64 bg-brand-ivory p-7 text-brand-black sm:col-span-2 md:p-9">
                   <p className="text-[0.62rem] uppercase tracking-[0.25em] text-brand-gold">Voz visual</p>
                   <div className="mt-10 grid gap-6 md:grid-cols-[1.4fr_0.6fr] md:items-end">
-                    <p className="font-serif text-5xl leading-[0.98] md:text-7xl">Detalhe que se sente antes de se explicar.</p>
+                    <p className="max-w-3xl font-serif text-4xl leading-[1.02] md:text-5xl">Detalhe que se sente antes de se explicar.</p>
                     <p className="text-xs uppercase leading-6 tracking-[0.2em] text-brand-text-dark/48 md:text-right">Tipografia · Ritmo<br />Imagem · Presença</p>
                   </div>
                 </div>
@@ -249,7 +249,7 @@ export default function ConvitesIdentidadePage() {
             <div className="grid gap-12 border-b border-brand-text-dark/12 pb-14 lg:grid-cols-[1fr_1fr] lg:items-end lg:gap-20">
               <div>
                 <EditorialLabel>Beleza que trabalha</EditorialLabel>
-                <h2 className="mt-6 max-w-4xl font-serif text-[clamp(2.8rem,6vw,6rem)] font-light leading-[0.98] tracking-[-0.035em]">
+                <h2 className="mt-6 max-w-3xl font-serif text-[clamp(2.4rem,4.3vw,4.5rem)] font-light leading-[1.02] tracking-[-0.028em]">
                   O convite acolhe. A plataforma organiza.
                 </h2>
               </div>
@@ -263,7 +263,7 @@ export default function ConvitesIdentidadePage() {
                 <div className="flex items-start justify-between gap-6">
                   <div>
                     <EditorialLabel>HAXR Seating</EditorialLabel>
-                    <h3 className="mt-5 font-serif text-4xl md:text-5xl">Do nome ao lugar.</h3>
+                    <h3 className="mt-5 font-serif text-3xl md:text-4xl">Do nome ao lugar.</h3>
                   </div>
                   <LayoutGrid aria-hidden="true" className="size-8 text-brand-gold" strokeWidth={1.1} />
                 </div>
@@ -293,7 +293,7 @@ export default function ConvitesIdentidadePage() {
                 <div className="flex items-start justify-between gap-6">
                   <div>
                     <EditorialLabel>Projectos seleccionados</EditorialLabel>
-                    <h3 className="mt-5 font-serif text-4xl md:text-5xl">Memórias do Nosso Dia.</h3>
+                    <h3 className="mt-5 font-serif text-3xl md:text-4xl">Memórias do Nosso Dia.</h3>
                   </div>
                   <Images aria-hidden="true" className="size-8 text-brand-gold" strokeWidth={1.1} />
                 </div>
@@ -318,7 +318,7 @@ export default function ConvitesIdentidadePage() {
           <div className="site-container grid gap-14 lg:grid-cols-[0.62fr_1.38fr] lg:gap-24">
             <div>
               <EditorialLabel>O atelier</EditorialLabel>
-              <h2 className="mt-6 font-serif text-4xl leading-tight md:text-5xl">Quatro gestos. Uma assinatura.</h2>
+              <h2 className="mt-6 max-w-sm font-serif text-3xl leading-tight md:text-4xl">Quatro gestos. Uma assinatura.</h2>
             </div>
             <ol className="border-t border-brand-text-dark/14">
               {processSteps.map(([number, title, copy]) => (
@@ -336,7 +336,7 @@ export default function ConvitesIdentidadePage() {
           <div className="site-container grid gap-14 lg:grid-cols-[0.66fr_1.34fr] lg:gap-24">
             <div>
               <EditorialLabel>Antes de começarmos</EditorialLabel>
-              <h2 className="mt-6 font-serif text-4xl leading-tight md:text-5xl">Clareza também é luxo.</h2>
+              <h2 className="mt-6 max-w-sm font-serif text-3xl leading-tight md:text-4xl">Clareza também é luxo.</h2>
               <Link href="/contacto?tipo=convite-digital" className="mt-8 inline-flex min-h-12 items-center gap-4 border-b border-brand-gold py-3 text-[0.68rem] font-semibold uppercase tracking-[0.19em] transition-colors hover:text-brand-gold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold">
                 Falar com o atelier <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
@@ -359,7 +359,7 @@ export default function ConvitesIdentidadePage() {
           <div className="site-container grid gap-10 lg:grid-cols-[1.35fr_0.65fr] lg:items-end lg:gap-20">
             <div>
               <EditorialLabel>Comissione uma peça HAXR</EditorialLabel>
-              <h2 className="mt-6 max-w-5xl font-serif text-[clamp(2.8rem,6.4vw,6.5rem)] font-light leading-[0.94] tracking-[-0.04em]">
+              <h2 className="mt-6 max-w-4xl font-serif text-[clamp(2.4rem,4.5vw,4.75rem)] font-light leading-[1.01] tracking-[-0.03em]">
                 A próxima história não precisa de se parecer com nenhuma anterior.
               </h2>
             </div>

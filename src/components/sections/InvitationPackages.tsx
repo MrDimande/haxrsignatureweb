@@ -81,7 +81,7 @@ export default function InvitationPackages() {
       >
         <div className="grid gap-8 border-b border-brand-text-dark/14 pb-10 lg:grid-cols-[0.38fr_1fr] lg:gap-16">
           <p className="text-[0.62rem] font-semibold uppercase tracking-[0.27em] text-brand-gold">Curadoria da ocasião</p>
-          <p className="max-w-3xl font-serif text-2xl leading-relaxed text-brand-text-dark/76 md:text-3xl">{selectedOccasion.note}</p>
+          <p className="max-w-2xl font-serif text-xl leading-relaxed text-brand-text-dark/76 md:text-2xl">{selectedOccasion.note}</p>
         </div>
 
         <div className="border-b border-brand-text-dark/14">
@@ -101,14 +101,14 @@ export default function InvitationPackages() {
                   <p className={`text-[0.6rem] font-semibold uppercase tracking-[0.26em] ${packageItem.featured ? "text-brand-gold-light" : "text-brand-gold"}`}>
                     {packageItem.featured ? "Selecção HAXR" : `Colecção 0${index + 1}`}
                   </p>
-                  <h3 className="mt-5 font-serif text-5xl leading-none md:text-6xl">{packageItem.name}</h3>
+                  <h3 className="mt-5 font-serif text-4xl leading-[1.02] md:text-5xl">{packageItem.name}</h3>
                   <p className={`mt-4 text-[0.62rem] uppercase tracking-[0.2em] ${packageItem.featured ? "text-brand-ivory/42" : "text-brand-text-dark/42"}`}>
                     {packageItem.tier}
                   </p>
                 </div>
 
                 <div>
-                  <p className="font-serif text-2xl leading-9 md:text-3xl">{packageItem.subtitle}</p>
+                  <p className="max-w-xl font-serif text-xl leading-8 md:text-2xl">{packageItem.subtitle}</p>
                   <p className={`mt-5 text-sm leading-7 ${packageItem.featured ? "text-brand-ivory/62" : "text-brand-text-dark/62"}`}>
                     {packageItem.description}
                   </p>
