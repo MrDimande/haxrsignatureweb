@@ -2,7 +2,7 @@ import {
   invitationOccasions,
   invitationPackages,
 } from "@/lib/site-config";
-import type { BusinessId, ServiceCatalogItem, ServiceCategory } from "./types";
+import type { BusinessId, ServiceCatalogItem } from "./types";
 
 const occasionLabelById = Object.fromEntries(
   invitationOccasions.map((o) => [o.id, o.label])
@@ -11,24 +11,20 @@ const occasionLabelById = Object.fromEntries(
 /** Catálogo oficial derivado dos pacotes do site público */
 export function buildHaxrServiceCatalog(): ServiceCatalogItem[] {
   return invitationPackages
-    .filter((pkg) => pkg.price != null && !("isQuote" in pkg && pkg.isQuote))
+    .filter((pkg) => pkg.price != null)
     .map((pkg) => {
-      const occasionId = pkg.occasions[0];
+      const occasionId = pkg.occasion;
       const occasionLabel = occasionLabelById[occasionId] ?? occasionId;
 
       return {
         id: pkg.id,
         name: `${pkg.name} (${occasionLabel})`,
-        category: mapOccasionToCategory(occasionId),
-        description: `${pkg.subtitle} ${pkg.desc}`.trim(),
+        category: "invitations",
+        description: `${pkg.subtitle} ${pkg.description}`.trim(),
         basePrice: pkg.price as number,
         businessIds: ["haxr-signature"] as BusinessId[],
       };
     });
-}
-
-function mapOccasionToCategory(_occasionId: string): ServiceCategory {
-  return "invitations";
 }
 
 export const haxrSiteCatalog = buildHaxrServiceCatalog();

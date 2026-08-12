@@ -5,6 +5,8 @@
  * No external API needed — all responses are pre-built from real HAXR data.
  */
 
+import { invitationPackages } from "@/lib/marketing/invitation-offer";
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -34,6 +36,21 @@ export type AssistantMessage = {
 const WHATSAPP_NUMBER = "258870883428";
 const EMAIL = "info@haxrsignature.com";
 
+function invitationPackage(id: string) {
+  const packageItem = invitationPackages.find((item) => item.id === id);
+  if (!packageItem) throw new Error(`Missing invitation package: ${id}`);
+  return packageItem;
+}
+
+const prologo = invitationPackage("prologo");
+const elo = invitationPackage("elo");
+const legado = invitationPackage("legado");
+const promessa = invitationPackage("promessa");
+const oSim = invitationPackage("o-sim");
+const momento = invitationPackage("momento");
+const celebra = invitationPackage("celebra");
+const conquista = invitationPackage("conquista");
+
 /* ------------------------------------------------------------------ */
 /*  Knowledge Base — Intents                                           */
 /* ------------------------------------------------------------------ */
@@ -50,42 +67,42 @@ const intents: Intent[] = [
     id: "prices-overview",
     keywords: ["preco", "precos", "quanto", "custa", "custo", "valor", "valores", "orcamento", "cotacao", "pacote", "pacotes", "tabela"],
     response:
-      "Os nossos convites digitais para casamento estão organizados em 3 pacotes:\n\n✦ **Essencial** — 5.999 MT\nConvite elegante com RSVP, mapa, música e contagem regressiva.\n\n✦ **Signature** — 12.999 MT\nGaleria editorial, storytelling, cronograma e dashboard de RSVP.\n\n✦ **Royal** — 19.999 MT\nAbertura cinemática, QR Code, gestão de mesas e acompanhamento premium.\n\nTemos também pacotes para noivados (a partir de 5.999 MT), aniversários e eventos corporativos.",
-    quickReplies: ["Pacote Essencial", "Pacote Signature", "Pacote Royal", "Noivado", "Corporativo"],
+      `Os nossos convites digitais para casamento estão organizados em 3 experiências:\n\n✦ **${prologo.name}** — ${prologo.priceLabel}\nConvite de autor com RSVP, mapa, música e contagem decrescente.\n\n✦ **${elo.name}** — ${elo.priceLabel}\nGaleria editorial, narrativa e painel de convidados.\n\n✦ **${legado.name}** — ${legado.priceLabel}\nAbertura cinemática, QR Code, HAXR Seating e identidade visual.\n\nTemos também experiências para noivados a partir de ${promessa.priceLabel}, aniversários, graduações e eventos corporativos.`,
+    quickReplies: ["Experiência Prólogo", "Experiência Elo", "Experiência Legado", "Noivado", "Corporativo"],
   },
   {
     id: "package-essencial",
-    keywords: ["essencial", "basico", "simples", "5999", "5.999"],
+    keywords: ["prologo", "prólogo", "essencial", "basico", "simples", "7999", "7.999"],
     response:
-      "**Pacote Essencial — 5.999 MT**\n\nO minimalismo funcional para o vosso grande dia:\n\n• Página de convite digital de alta performance\n• Design de autor HAXR Signature\n• Integração com Google Maps\n• Curadoria musical para ambiente sonoro\n• Contagem decrescente dinâmica\n• Confirmação de presença (RSVP) integrada\n• Artefato digital para partilha via WhatsApp\n\nIdeal para casais que procuram sofisticação sem complicações.",
-    quickReplies: ["Comparar pacotes", "Pacote Signature", "Solicitar proposta", "Prazo de entrega"],
+      `**${prologo.name} — ${prologo.priceLabel}**\n\n${prologo.subtitle}\n\n${prologo.features.map((feature) => `• ${feature}`).join("\n")}\n\nIdeal para apresentar o evento com elegância, clareza e uma assinatura própria.`,
+    quickReplies: ["Comparar experiências", "Experiência Elo", "Solicitar proposta", "Prazo de entrega"],
   },
   {
     id: "package-signature",
-    keywords: ["signature", "intermedio", "medio", "12999", "12.999"],
+    keywords: ["elo", "signature", "intermedio", "medio", "15999", "15.999"],
     response:
-      "**Pacote Signature — 12.999 MT**\n\nA vossa narrativa visual elevada ao estado de arte. Inclui tudo do Essencial, mais:\n\n• Galeria editorial de memórias visuais\n• Módulo de storytelling do casal\n• Cronograma interativo do evento\n• Dashboard inteligente de RSVP\n• Lista de convidados digitalizada\n• Controlo preciso de acompanhantes\n• Direção de arte estendida\n\nPara quem concebe o evento como uma história.",
-    quickReplies: ["Comparar pacotes", "Pacote Royal", "Solicitar proposta", "Como funciona"],
+      `**${elo.name} — ${elo.priceLabel}**\n\n${elo.subtitle}\n\n${elo.features.map((feature) => `• ${feature}`).join("\n")}\n\nA escolha recomendada para unir narrativa, identidade e controlo de convidados.`,
+    quickReplies: ["Comparar experiências", "Experiência Legado", "Solicitar proposta", "Como funciona"],
   },
   {
     id: "package-royal",
-    keywords: ["royal", "premium", "completo", "exclusivo", "luxo", "19999", "19.999", "melhor"],
+    keywords: ["legado", "royal", "premium", "completo", "exclusivo", "luxo", "25000", "25.000", "melhor"],
     response:
-      "**Pacote Royal — 19.999 MT**\n\nA alta-costura do convite digital. Inclui tudo do Signature, mais:\n\n• Abertura cinemática e motion design\n• Credenciação por QR Code individual\n• Painel de controlo master de RSVP\n• Espaço curado para presentes e donativos\n• Gestão arquitetónica de mesas e setores\n• Acompanhamento premium HAXR até ao dia\n• Data & Analytics do perfil de convidados\n\nUma obra sob medida para eventos de grande escala.",
-    quickReplies: ["Comparar pacotes", "Solicitar proposta", "Assessoria de eventos", "Prazo de entrega"],
+      `**${legado.name} — ${legado.priceLabel}**\n\n${legado.subtitle}\n\n${legado.features.map((feature) => `• ${feature}`).join("\n")}\n\nUma obra digital completa para eventos que exigem identidade e operação no mesmo nível.`,
+    quickReplies: ["Comparar experiências", "Solicitar proposta", "Assessoria de eventos", "Prazo de entrega"],
   },
   {
     id: "compare-packages",
     keywords: ["comparar", "comparacao", "diferenca", "diferencas", "qual escolher", "qual melhor"],
     response:
-      "**Comparação rápida dos pacotes de casamento:**\n\n| | Essencial | Signature | Royal |\n|---|---|---|---|\n| Preço | 5.999 MT | 12.999 MT | 19.999 MT |\n| Galeria de fotos | Opcional | ✓ | ✓ |\n| Storytelling | — | ✓ | ✓ |\n| QR Code entrada | — | — | ✓ |\n| Gestão de mesas | — | — | ✓ |\n| Abertura cinemática | — | — | ✓ |\n| Alterações | 2 rondas | 4 rondas | Sob medida |\n\nCada pacote pode ser complementado com funcionalidades adicionais.",
-    quickReplies: ["Pacote Essencial", "Pacote Royal", "Solicitar proposta", "Falar com alguém"],
+      `**Comparação rápida das experiências de casamento:**\n\n| | ${prologo.name} | ${elo.name} | ${legado.name} |\n|---|---|---|---|\n| Preço | ${prologo.priceLabel} | ${elo.priceLabel} | ${legado.priceLabel} |\n| Galeria editorial | Opcional | ✓ | ✓ |\n| Narrativa do casal | Opcional | ✓ | ✓ |\n| QR Code entrada | — | Opcional | ✓ |\n| HAXR Seating | — | Opcional | ✓ |\n| Identidade visual | Opcional | Opcional | ✓ |\n| Alterações | 2 rondas | 4 rondas | Sob medida |\n\nVeja o comparativo completo na página Convites & Identidade Visual.`,
+    quickReplies: ["Experiência Prólogo", "Experiência Legado", "Solicitar proposta", "Falar com alguém"],
   },
   {
     id: "noivado",
-    keywords: ["noivado", "preludro", "transicao", "save the date", "savethedate"],
+    keywords: ["noivado", "promessa", "o sim", "save the date", "savethedate"],
     response:
-      "**Pacotes para Noivado:**\n\n✦ **O Prelúdio** — 5.999 MT\nAnúncio elegante com RSVP, cápsula fotográfica, música e mapa.\n\n✦ **A Transição** — 12.999 MT\nSave the Date integrado, galeria visual, módulo de presentes e timeline detalhada.\n\nAmbos os pacotes incluem design responsivo e ativo digital para WhatsApp.",
+      `**Experiências para Noivado:**\n\n✦ **${promessa.name}** — ${promessa.priceLabel}\nAnúncio elegante com RSVP, cápsula fotográfica, música e mapa.\n\n✦ **${oSim.name}** — ${oSim.priceLabel}\nSave the Date integrado, galeria, narrativa e painel de convidados.\n\nAmbas são desenhadas mobile-first e incluem uma peça digital para partilha.`,
     quickReplies: ["Preços casamento", "Solicitar proposta", "Prazo de entrega"],
   },
   {
@@ -134,7 +151,7 @@ const intents: Intent[] = [
     id: "alteracoes",
     keywords: ["alteracao", "alteracoes", "mudanca", "mudar", "revisao", "revisoes", "ronda"],
     response:
-      "Cada pacote inclui um número definido de rondas de alteração:\n\n• **Essencial** — até 2 rondas\n• **Signature** — até 4 rondas\n• **Royal** — rondas definidas conforme a complexidade\n\nAjustes adicionais para além das rondas incluídas podem ter custo extra.",
+      `Cada experiência inclui um número definido de rondas de alteração:\n\n• **${prologo.name}** — até 2 rondas\n• **${elo.name}** — até 4 rondas\n• **${legado.name}** — rondas definidas conforme a complexidade\n\nAjustes adicionais para além das rondas incluídas podem ter custo extra.`,
     quickReplies: ["Comparar pacotes", "Solicitar proposta", "Preços"],
   },
   {
@@ -155,8 +172,8 @@ const intents: Intent[] = [
     id: "rsvp",
     keywords: ["rsvp", "confirmacao", "presenca", "convidados", "lista", "convite"],
     response:
-      "Todos os nossos convites digitais incluem **confirmação de presença (RSVP) integrada**.\n\nOs pacotes Signature e Royal adicionam:\n• Dashboard inteligente de RSVP\n• Lista de convidados digitalizada\n• Controlo de acompanhantes\n• Relatório final de confirmações\n\nO pacote Royal acrescenta credenciação por QR Code individual e gestão de mesas.",
-    quickReplies: ["Comparar pacotes", "Pacote Royal", "Solicitar proposta"],
+      `Todos os nossos convites digitais publicados incluem **confirmação de presença (RSVP) integrada**.\n\nAs experiências ${elo.name} e ${legado.name} adicionam painel de convidados e controlo de acompanhantes. A ${legado.name} inclui credenciação por QR Code e HAXR Seating.`,
+    quickReplies: ["Comparar experiências", "Experiência Legado", "Solicitar proposta"],
   },
   {
     id: "eventos-tipos",
@@ -169,7 +186,7 @@ const intents: Intent[] = [
     id: "aniversario",
     keywords: ["aniversario", "anos", "celebracao", "festa"],
     response:
-      "**Pacotes para Aniversários e Celebrações:**\n\n✦ **A Celebração** — 5.999 MT\nConvite digital com RSVP, música, mapa e cápsula fotográfica.\n\n✦ **O Jubileu** — 10.999 MT\nAbertura em motion, galeria de 15 momentos, mural de dedicatórias e cronograma interativo.\n\n✦ **A Conquista** (Graduações) — 11.999 MT\nGestão multi-evento, mapas para múltiplos locais e módulo de tributo.",
+      `**Experiências para Aniversários:**\n\n✦ **${momento.name}** — ${momento.priceLabel}\nConvite digital com RSVP, música, mapa e galeria curta.\n\n✦ **${celebra.name}** — ${celebra.priceLabel}\nAbertura em motion, galeria, painel de convidados e mural de dedicatórias.\n\nPara graduações, a experiência **${conquista.name}** começa em ${conquista.priceLabel}.`,
     quickReplies: ["Solicitar proposta", "Preços casamento", "Falar com alguém"],
   },
   {
