@@ -44,7 +44,7 @@ export default function InvitationPackages() {
     <div>
       <div
         aria-label="Tipo de evento"
-        className="-mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 pb-3 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+        className="-mx-5 flex snap-x snap-mandatory overflow-x-auto border-y border-brand-text-dark/14 px-5 [scrollbar-width:none] md:mx-0 md:px-0"
         role="tablist"
       >
         {invitationOccasions.map((occasion, index) => {
@@ -61,13 +61,13 @@ export default function InvitationPackages() {
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveOccasion(occasion.id)}
               onKeyDown={(event) => handleTabKeyDown(event, index)}
-              className={`min-h-12 shrink-0 snap-start border px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold ${
-                isActive
-                  ? "border-brand-gold bg-brand-gold text-brand-black"
-                  : "border-brand-gold/22 bg-white/35 text-brand-text-dark/65 hover:border-brand-gold/55 hover:text-brand-text-dark"
+              className={`group relative min-h-24 min-w-[10.5rem] flex-1 snap-start px-5 py-5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-gold md:min-w-0 ${
+                isActive ? "bg-brand-black text-brand-ivory" : "text-brand-text-dark hover:bg-white/55"
               }`}
             >
-              {occasion.label}
+              <span className={`block text-[0.58rem] tracking-[0.24em] ${isActive ? "text-brand-gold-light" : "text-brand-gold"}`}>0{index + 1}</span>
+              <span className="mt-3 block font-serif text-lg leading-tight md:text-xl">{occasion.label}</span>
+              <span className={`absolute bottom-0 left-5 right-5 h-px origin-left transition-transform ${isActive ? "scale-x-100 bg-brand-gold" : "scale-x-0 bg-brand-gold group-hover:scale-x-100"}`} />
             </button>
           );
         })}
@@ -77,13 +77,14 @@ export default function InvitationPackages() {
         id={`occasion-panel-${activeOccasion}`}
         role="tabpanel"
         aria-labelledby={`occasion-tab-${activeOccasion}`}
-        className="pt-8 md:pt-10"
+        className="pt-10 md:pt-14"
       >
-        <p className="max-w-2xl font-serif text-xl leading-relaxed text-brand-text-dark/72 md:text-2xl">
-          {selectedOccasion.note}
-        </p>
+        <div className="grid gap-8 border-b border-brand-text-dark/14 pb-10 lg:grid-cols-[0.38fr_1fr] lg:gap-16">
+          <p className="text-[0.62rem] font-semibold uppercase tracking-[0.27em] text-brand-gold">Curadoria da ocasião</p>
+          <p className="max-w-3xl font-serif text-2xl leading-relaxed text-brand-text-dark/76 md:text-3xl">{selectedOccasion.note}</p>
+        </div>
 
-        <div className={`mt-10 grid gap-5 ${displayPackages.length === 1 ? "max-w-2xl" : displayPackages.length === 2 ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"}`}>
+        <div className="border-b border-brand-text-dark/14">
           {displayPackages.map((packageItem, index) => {
             const proposalHref = packageItem.price === null
               ? siteContact.whatsapp.href
@@ -92,57 +93,62 @@ export default function InvitationPackages() {
             return (
               <article
                 key={packageItem.id}
-                className={`relative flex min-h-full flex-col border p-6 transition-[border-color,transform,box-shadow] duration-300 md:p-8 ${
-                  packageItem.featured
-                    ? "border-brand-gold bg-brand-black text-brand-ivory shadow-[0_24px_60px_rgba(8,7,6,0.18)] md:-translate-y-2"
-                    : "border-brand-gold/20 bg-white/66 text-brand-text-dark hover:border-brand-gold/55"
+                className={`relative -mx-5 grid gap-8 border-t border-brand-text-dark/14 px-5 py-10 md:mx-0 md:px-7 md:py-14 lg:grid-cols-[0.56fr_0.95fr_0.54fr] lg:gap-14 ${
+                  packageItem.featured ? "bg-brand-black text-brand-ivory md:px-10" : "text-brand-text-dark"
                 }`}
               >
-                {packageItem.featured ? (
-                  <p className="mb-7 text-[0.65rem] font-semibold uppercase tracking-[0.26em] text-brand-gold-light">Escolha HAXR</p>
-                ) : (
-                  <p className="mb-7 text-[0.65rem] font-semibold uppercase tracking-[0.26em] text-brand-gold">0{index + 1} · {packageItem.tier}</p>
-                )}
+                <div>
+                  <p className={`text-[0.6rem] font-semibold uppercase tracking-[0.26em] ${packageItem.featured ? "text-brand-gold-light" : "text-brand-gold"}`}>
+                    {packageItem.featured ? "Selecção HAXR" : `Colecção 0${index + 1}`}
+                  </p>
+                  <h3 className="mt-5 font-serif text-5xl leading-none md:text-6xl">{packageItem.name}</h3>
+                  <p className={`mt-4 text-[0.62rem] uppercase tracking-[0.2em] ${packageItem.featured ? "text-brand-ivory/42" : "text-brand-text-dark/42"}`}>
+                    {packageItem.tier}
+                  </p>
+                </div>
 
-                <h3 className="font-serif text-4xl leading-none md:text-5xl">{packageItem.name}</h3>
-                <p className={`mt-4 text-sm leading-6 ${packageItem.featured ? "text-brand-ivory/68" : "text-brand-text-dark/62"}`}>
-                  {packageItem.subtitle}
-                </p>
-                <p className="mt-7 font-serif text-2xl">{packageItem.priceLabel}</p>
-                <p className={`mt-5 text-sm leading-6 ${packageItem.featured ? "text-brand-ivory/72" : "text-brand-text-dark/68"}`}>
-                  {packageItem.description}
-                </p>
-
-                <ul className="mt-7 flex-1 space-y-3" aria-label={`Principais elementos do pacote ${packageItem.name}`}>
-                  {packageItem.features.map((feature) => (
-                    <li key={feature} className={`flex items-start gap-3 text-sm leading-6 ${packageItem.featured ? "text-brand-ivory/78" : "text-brand-text-dark/74"}`}>
-                      <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-brand-gold" strokeWidth={1.8} />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <details className={`group mt-7 border-y py-1 ${packageItem.featured ? "border-brand-ivory/12" : "border-brand-gold/16"}`}>
-                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold">
-                    Ver todos os detalhes
-                    <ChevronDown aria-hidden="true" className="size-4 text-brand-gold transition-transform group-open:rotate-180" />
-                  </summary>
-                  <ul className={`space-y-3 pb-5 text-sm leading-6 ${packageItem.featured ? "text-brand-ivory/64" : "text-brand-text-dark/62"}`}>
-                    {packageItem.details.map((detail) => <li key={detail}>— {detail}</li>)}
+                <div>
+                  <p className="font-serif text-2xl leading-9 md:text-3xl">{packageItem.subtitle}</p>
+                  <p className={`mt-5 text-sm leading-7 ${packageItem.featured ? "text-brand-ivory/62" : "text-brand-text-dark/62"}`}>
+                    {packageItem.description}
+                  </p>
+                  <ul className="mt-7 grid gap-x-6 gap-y-3 sm:grid-cols-2" aria-label={`Principais elementos da colecção ${packageItem.name}`}>
+                    {packageItem.features.map((feature) => (
+                      <li key={feature} className={`flex items-start gap-3 text-sm leading-6 ${packageItem.featured ? "text-brand-ivory/72" : "text-brand-text-dark/68"}`}>
+                        <Check aria-hidden="true" className="mt-1 size-3.5 shrink-0 text-brand-gold" strokeWidth={1.8} />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
                   </ul>
-                </details>
 
-                <Link
-                  href={proposalHref}
-                  className={`mt-7 inline-flex min-h-12 items-center justify-between gap-4 border px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold ${
-                    packageItem.featured
-                      ? "border-brand-gold bg-brand-gold text-brand-black hover:bg-brand-gold-light"
-                      : "border-brand-text-dark bg-brand-text-dark text-brand-ivory hover:border-brand-gold hover:bg-brand-gold hover:text-brand-black"
-                  }`}
-                >
-                  {packageItem.price === null ? "Pedir proposta" : "Escolher experiência"}
-                  <ArrowRight aria-hidden="true" className="size-4" />
-                </Link>
+                  <details className={`group mt-7 border-t pt-1 ${packageItem.featured ? "border-brand-ivory/12" : "border-brand-text-dark/12"}`}>
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 py-3 text-[0.62rem] font-semibold uppercase tracking-[0.18em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold">
+                      Notas da colecção
+                      <ChevronDown aria-hidden="true" className="size-4 text-brand-gold transition-transform group-open:rotate-180" />
+                    </summary>
+                    <ul className={`space-y-3 pb-4 text-sm leading-6 ${packageItem.featured ? "text-brand-ivory/56" : "text-brand-text-dark/56"}`}>
+                      {packageItem.details.map((detail) => <li key={detail}>— {detail}</li>)}
+                    </ul>
+                  </details>
+                </div>
+
+                <div className="flex flex-col justify-between lg:border-l lg:border-current/12 lg:pl-8">
+                  <div>
+                    <p className={`text-[0.58rem] uppercase tracking-[0.22em] ${packageItem.featured ? "text-brand-ivory/38" : "text-brand-text-dark/38"}`}>Investimento base</p>
+                    <p className="mt-3 font-serif text-3xl md:text-4xl">{packageItem.priceLabel}</p>
+                  </div>
+                  <Link
+                    href={proposalHref}
+                    className={`mt-8 inline-flex min-h-13 items-center justify-between gap-5 border-b py-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold ${
+                      packageItem.featured
+                        ? "border-brand-gold text-brand-ivory hover:text-brand-gold-light"
+                        : "border-brand-text-dark text-brand-text-dark hover:border-brand-gold hover:text-brand-gold"
+                    }`}
+                  >
+                    {packageItem.price === null ? "Solicitar proposta" : "Comissionar colecção"}
+                    <ArrowRight aria-hidden="true" className="size-4" />
+                  </Link>
+                </div>
               </article>
             );
           })}
