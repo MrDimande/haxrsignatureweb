@@ -91,6 +91,22 @@ export const marketingPagesSeo = {
       "criação de convites digitais",
     ],
   },
+  plusMemories: {
+    path: "/plus-memories",
+    title: "Plus Memories — Álbum Colectivo para Casamentos e Eventos",
+    description:
+      "Plus Memories transforma convidados em participantes da memória do evento: QR Code, desafios interactivos, fotografias, vídeos e álbum colectivo HAXR Signature.",
+    keywords: [
+      "Plus Memories",
+      "álbum colectivo casamento",
+      "fotografias convidados casamento",
+      "vídeos convidados casamento",
+      "QR Code casamento",
+      "desafios casamento convidados",
+      "experiência digital eventos",
+      "HAXR Signature",
+    ],
+  },
   convidados: {
     path: "/gestao-convidados",
     title:
