@@ -21,6 +21,7 @@ import {
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import { brandAssets } from "@/lib/assets";
 import { siteContact } from "@/lib/site-config";
+import PlusMemoriesPackages from "./PlusMemoriesPackages";
 import styles from "./plus-memories.module.css";
 
 const DEMO_URL =
@@ -589,6 +590,8 @@ export default function PlusMemoriesExperience() {
           </div>
         </div>
       </section>
+
+      <PlusMemoriesPackages />
 
       <section className={styles.finalCta} aria-labelledby="final-cta-title">
         <div className={styles.finalCtaTexture} aria-hidden="true" />
