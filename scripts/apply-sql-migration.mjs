@@ -11,7 +11,10 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ENV_FILE = resolve(ROOT, ".env.local");
+const ENV_FILES = [
+  resolve(ROOT, ".env.development.local"),
+  resolve(ROOT, ".env.local"),
+];
 const sqlFile = process.argv[2];
 
 if (!sqlFile) {
@@ -27,19 +30,23 @@ if (!existsSync(absSql)) {
 
 function loadEnv() {
   const values = {};
-  for (const line of readFileSync(ENV_FILE, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const i = trimmed.indexOf("=");
-    if (i === -1) continue;
-    let v = trimmed.slice(i + 1).trim();
-    if (
-      (v.startsWith('"') && v.endsWith('"')) ||
-      (v.startsWith("'") && v.endsWith("'"))
-    ) {
-      v = v.slice(1, -1);
+  for (const envFile of ENV_FILES) {
+    if (!existsSync(envFile)) continue;
+    for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const i = trimmed.indexOf("=");
+      if (i === -1) continue;
+      let v = trimmed.slice(i + 1).trim();
+      if (
+        (v.startsWith('"') && v.endsWith('"')) ||
+        (v.startsWith("'") && v.endsWith("'"))
+      ) {
+        v = v.slice(1, -1);
+      }
+      const key = trimmed.slice(0, i).trim();
+      if (!values[key]) values[key] = v;
     }
-    values[trimmed.slice(0, i).trim()] = v;
   }
   return values;
 }
@@ -47,7 +54,7 @@ function loadEnv() {
 const dbUrl = loadEnv().SUPABASE_DB_URL;
 if (!dbUrl) {
   console.error(
-    "SUPABASE_DB_URL em falta no .env.local.\n" +
+    "SUPABASE_DB_URL em falta em .env.development.local ou .env.local.\n" +
       "Supabase → Project Settings → Database → Connection string (URI, Session mode)."
   );
   process.exit(1);

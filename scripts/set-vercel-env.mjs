@@ -10,8 +10,22 @@ const ENVIRONMENTS = ["production", "preview", "development"];
 const FORCE_SYNC_KEYS = new Set([
   "NEXT_PUBLIC_SITE_URL",
   "NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
   "CONTACT_NOTIFY_EMAIL",
   "RESEND_BRAND_DOMAIN",
+]);
+
+/** Public build-time vars must remain pullable (not encrypted-empty on env pull). */
+const PULLABLE_KEYS = new Set([
+  "NEXT_PUBLIC_SITE_URL",
+  "NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "CONTACT_NOTIFY_EMAIL",
+  "RESEND_BRAND_DOMAIN",
+  "RESEND_FROM_EMAIL",
 ]);
 
 const REQUIRED_KEYS = [
@@ -111,7 +125,11 @@ async function listEnvNames(environment) {
 }
 
 async function addEnv(name, value, environment) {
-  await runVercel(["env", "add", name, environment, "--force"], `${value}\n`);
+  const args = ["env", "add", name, environment, "--force", "--yes", "--value", value];
+  if (PULLABLE_KEYS.has(name)) {
+    args.push("--no-sensitive");
+  }
+  await runVercel(args);
   console.log(`✓ ${name} (${environment})`);
 }
 
@@ -144,6 +162,17 @@ async function main() {
   for (const environment of ENVIRONMENTS) {
     const existing = await listEnvNames(environment);
     for (const [name, value] of Object.entries(payload)) {
+      // Never push production Supabase credentials into Preview/Development.
+      if (
+        environment !== "production" &&
+        (name === "NEXT_PUBLIC_SUPABASE_URL" ||
+          name === "NEXT_PUBLIC_SUPABASE_ANON_KEY" ||
+          name === "SUPABASE_SERVICE_ROLE_KEY")
+      ) {
+        console.log(`• ${name} (${environment}) skipped — use preview Supabase separately`);
+        continue;
+      }
+
       const shouldForce = FORCE_SYNC_KEYS.has(name);
       if (existing.has(name) && name !== "ADMIN_SESSION_SECRET" && !shouldForce) {
         console.log(`• ${name} (${environment}) já existe`);
