@@ -6,6 +6,10 @@ import {
   validateEditionProxyRequest,
 } from "@/lib/edition/proxy-auth";
 import { processEditionRsvpSubmission } from "@/lib/edition/rsvp/service";
+import {
+  editionRsvpWritesDisabledResponse,
+  evaluateEditionRsvpWriteGate,
+} from "@/lib/edition/rsvp/write-gate";
 import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
 import {
   editionRateLimitResponse,
@@ -31,6 +35,17 @@ export async function POST(request: Request) {
       );
       return NextResponse.json(editionProxyUnauthorizedResponse(), {
         status: 401,
+      });
+    }
+
+    // Fail-closed write gate: before rate-limit DB, body parse, or RSVP persist.
+    const writeGate = evaluateEditionRsvpWriteGate();
+    if (!writeGate.allowed) {
+      console.warn(
+        `[api/v1/edition/rsvp] writes blocked requestId=${requestId} reason=${writeGate.reason} mode=${writeGate.mode}`
+      );
+      return NextResponse.json(editionRsvpWritesDisabledResponse(), {
+        status: 503,
       });
     }
 

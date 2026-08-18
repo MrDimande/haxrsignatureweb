@@ -1,9 +1,10 @@
+import { businesses as staticBusinesses } from "@/lib/admin/businesses";
 import { createAdminClient } from "@/lib/supabase/server";
-import { asTableRows } from "@/lib/supabase/helpers";
+import { asTableRows, isSupabasePermissionDeniedError } from "@/lib/supabase/helpers";
 import { mapBusiness } from "@/lib/admin/db/mappers";
 import type { Business, BusinessId } from "@/lib/admin/types";
 
-export async function listBusinesses(): Promise<Business[]> {
+async function listBusinessesFromDatabase(): Promise<Business[]> {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -34,6 +35,23 @@ export async function listBusinesses(): Promise<Business[]> {
       mobileRows.filter((m) => m.business_id === b.id)
     )
   );
+}
+
+export async function listBusinesses(): Promise<Business[]> {
+  try {
+    return await listBusinessesFromDatabase();
+  } catch (error) {
+    if (
+      process.env.NODE_ENV === "development" &&
+      isSupabasePermissionDeniedError(error)
+    ) {
+      console.warn(
+        "[admin] businesses: permission denied — a usar catálogo estático local. Verifique SUPABASE_SERVICE_ROLE_KEY e aplique supabase/migrations/045_admin_service_role_grants.sql no projecto Supabase."
+      );
+      return staticBusinesses;
+    }
+    throw error;
+  }
 }
 
 export async function getBusinessById(id: BusinessId): Promise<Business | null> {

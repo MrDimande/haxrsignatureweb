@@ -156,11 +156,21 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+# Hosted (preview/prod): prefer production site URL so recovery links open the live app.
+# Local redirects remain allowlisted below.
+site_url = "https://www.haxrsignature.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3000/auth/callback",
+  "http://localhost:3000",
+  "http://localhost:3000/auth/callback",
+  "https://www.haxrsignature.com",
+  "https://www.haxrsignature.com/auth/callback",
+  "https://haxrsignature.com/auth/callback",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -227,32 +237,37 @@ enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "1m0s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# SMTP Auth — mesmo Remetente Resend dos emails transaccionais (contacto, RSVP).
+# Local: define RESEND_API_KEY no ambiente antes de `supabase start`.
+# Hosted: configurar no Dashboard → Authentication → SMTP Settings (ver docs/AUTH_EMAIL_TEMPLATES.md).
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "hello@haxrsignature.com"
+sender_name = "HAXR Signature"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# HAXR Auth email templates (PT) — ver docs/AUTH_EMAIL_TEMPLATES.md
+[auth.email.template.recovery]
+subject = "Recuperar palavra-passe — HAXR Signature"
+content_path = "./templates/recovery.html"
 
-# Uncomment to customize notification email template
-# [auth.email.notification.password_changed]
-# enabled = true
-# subject = "Your password has been changed"
-# content_path = "./templates/password_changed_notification.html"
+[auth.email.template.confirmation]
+subject = "Confirme o vosso email — HAXR Signature"
+content_path = "./templates/confirmation.html"
+
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Palavra-passe actualizada — HAXR Signature"
+content_path = "./templates/password-changed.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.

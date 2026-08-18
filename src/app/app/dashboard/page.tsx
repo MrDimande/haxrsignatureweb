@@ -21,7 +21,7 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardP
   const session = await getCurrentAppSession();
 
   if (isDemo) {
-    return (
+            return (
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardDemoContent eventId={eventId} />
       </Suspense>
