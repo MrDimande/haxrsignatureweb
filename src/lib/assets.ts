@@ -13,11 +13,18 @@ export const brandAssets = {
 } as const;
 
 export const portfolioAssets = {
-  casamentoSignature: "/images/portfolio/casamento-signature.svg",
-  saveTheDate: "/images/portfolio/save-the-date-editorial.svg",
-  corporativo: "/images/portfolio/corporativo.svg",
-  celebracaoPrivada: "/images/portfolio/celebracao-privada.svg",
-  convitePreviewPortrait: "/images/portfolio/convite-preview-portrait.svg",
+  // Mosaico editorial real HAXR Signature
+  casamentoSignature: "/images/portfolio/mosaic-casal-painel-branco.webp",
+  salaoBranco: "/images/portfolio/mosaic-salao-branco-preparado.webp",
+  conviteJessicaSamuel: "/images/portfolio/mosaic-convite-jessica-samuel-dark.webp",
+  mesaDourada: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+  euEspioQr: "/images/portfolio/mosaic-eu-espio-qr.webp",
+
+  // Aliases canónicos para retrocompatibilidade
+  saveTheDate: "/images/portfolio/mosaic-convite-jessica-samuel-dark.webp",
+  corporativo: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+  celebracaoPrivada: "/images/portfolio/mosaic-salao-branco-preparado.webp",
+  convitePreviewPortrait: "/images/portfolio/mosaic-eu-espio-qr.webp",
 } as const;
 
 export const magazineAssets = {
