@@ -137,7 +137,7 @@ export const haxrStandardPillars = [
     title: "Direcção Criativa Autoral",
     subtitle: "Estética com Intenção",
     description:
-      "Cada casamento possui uma identidade singular. Desenhamos o conceito visual, a iluminação cenográfica, a acústica e a paleta de texturas como um projeto de alta-costura.",
+      "Cada casamento possui uma identidade singular. Desenhamos o conceito visual, a iluminação cenográfica, a acústica e a paleta de texturas como um projecto de alta-costura.",
   },
   {
     num: "03",
@@ -167,14 +167,14 @@ export const assessoriaScopes: AssessoriaScope[] = [
     nameEn: "Full-Service Planning & Creative Direction",
     badge: "Acompanhamento Integral",
     tagline:
-      "Para noivos que desejam delegação integral, curadoria de raiz e direção de arte do primeiro dia ao encerramento.",
+      "Para noivos que desejam delegação integral, curadoria de raiz e direcção de arte do primeiro dia ao encerramento.",
     deliverables: [
-      "Direção criativa & desenvolvimento de conceito visual exclusivo",
+      "Direcção criativa & desenvolvimento de conceito visual exclusivo",
       "Engenharia orçamental contínua com The Wedding Financial Book (.xlsx)",
       "Curadoria criteriosa, negociação e validação de prazos e entregáveis de fornecedores",
       "Planta cenográfica 2D/3D, paleta de texturas e styling floral",
       "Gestão completa de convidados, RSVP digital e mapa de lugares",
-      "Direção de ensaios de cerimónia e comando operacional no dia",
+      "Direcção de ensaios de cerimónia e comando operacional no dia",
     ],
     idealFor:
       "Celebrações onde o casal procura dedicação total, serenidade emocional e zero sobrecarga logística.",
@@ -186,9 +186,9 @@ export const assessoriaScopes: AssessoriaScope[] = [
     nameEn: "Creative Direction, Spatial Design & Production Management",
     badge: "Design & Produção Técnica",
     tagline:
-      "Para noivos que já possuem local ou parceiros base, mas exigem direção artística autoral, projeto floral e gestão técnica de fornecedores.",
+      "Para noivos que já possuem local ou parceiros base, mas exigem direcção artística autoral, projecto floral e gestão técnica de fornecedores.",
     deliverables: [
-      "Conceito cenográfico imersivo, iluminação arquitetural e paleta estética",
+      "Conceito cenográfico imersivo, iluminação arquitectural e paleta estética",
       "Curadoria de arte floral, mobiliário, toalharia e loiça de alta linha",
       "Validação técnica de riders de som, luz, estruturas e geradores",
       "Supervisão minuciosa de montagem, cronograma técnico e ensaios",
@@ -206,11 +206,11 @@ export const assessoriaScopes: AssessoriaScope[] = [
     tagline:
       "A HAXR assume a governação operacional na fase final definida após diagnóstico do evento.",
     deliverables: [
-      "Revisão executiva de contratos, entregáveis e cronograma mestre de timings",
+      "Revisão executiva de contractos, entregáveis e cronograma mestre de timings",
       "Reunião de alinhamento técnico com todos os fornecedores contratados",
       "Ensaio geral de cortejo, protocolo e alinhamento com celebrante",
       "Supervisão cirúrgica de montagem, recepção de convidados e cortejo",
-      "Equipa sênior de bastidores dedicada à tranquilidade dos noivos",
+      "Equipa sénior de bastidores dedicada à tranquilidade dos noivos",
     ],
     idealFor:
       "Noivos que organizaram o planeamento de forma autónoma e exigem comando experiente na reta final e no grande dia.",
@@ -232,14 +232,14 @@ export const signatureJourneyPhases = [
   },
   {
     phase: "Fase 02",
-    title: "Arquitetura Financeira",
+    title: "Arquitectura Financeira",
     titleEn: "Financial Architecture & Curating",
     description:
       "Fixação do teto orçamental, análise rigorosa de propostas e curadoria criteriosa dos melhores fornecedores de Moçambique.",
     items: [
       "The Wedding Financial Book (.xlsx)",
       "Análise e negociação de propostas",
-      "Análise de condições comerciais, prazos e entregáveis contratuais",
+      "Análise de condições comerciais, prazos e entregáveis contractuais",
     ],
   },
   {
@@ -261,7 +261,7 @@ export const signatureJourneyPhases = [
     description:
       "Gestão de confirmações em tempo real, acompanhamento de restrições alimentares, mapa de mesas e acolhimento com discrição.",
     items: [
-      "Live RSVP e controle de presenças",
+      "Live RSVP e controlo de presenças",
       "Gestão de lugares e restrições",
       "Protocolo de recepção e check-in",
     ],
@@ -288,16 +288,16 @@ export const caseStudies: CaseStudy[] = [
   {
     id: "casamento-vania-fabiao",
     title: "Vânia Luky & Fabião Dimande",
-    category: "Assessoria & Identidade Visual",
+    category: "Assessoria Completa · Identidade Visual · Convites",
     context:
-      "Casamento realizado no Salão de Eventos Evely, Maputo, integrando assessoria completa, identidade visual e experiência digital de convites.",
+      "Casamento realizado no Evelyn Eventos, Maputo, integrando assessoria completa, identidade visual e experiência digital de convites.",
     challenge:
-      "Articular a identidade visual e o conceito dos convites com a produção no espaço, alinhando fornecedores para assegurar uma condução serena e harmoniosa.",
+      "Articular a identidade visual e o conceito dos convites com a produção no espaço, alinhando parceiros para assegurar uma condução serena e harmoniosa.",
     solution:
-      "Assessoria completa HAXR com direção criativa contínua, criação de identidade visual, desenvolvimento de convite digital e coordenação de bastidores no Salão de Eventos Evely.",
+      "Assessoria completa HAXR com direcção criativa contínua, criação de identidade visual, desenvolvimento de convite digital e coordenação de bastidores no Evelyn Eventos.",
     result:
       "Celebração com linguagem estética contínua desde o primeiro convite até à recepção, proporcionando tranquilidade aos noivos e um acolhimento caloroso aos convidados.",
-    image: portfolioAssets.casamentoSignature,
+    image: "/images/archive-01.webp",
     href: getDemoById("casamento-vania-fabiao")?.publicPath,
     external: false,
   },

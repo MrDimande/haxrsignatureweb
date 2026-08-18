@@ -41,7 +41,7 @@ export default function AssessoriaScopeMatrix({
 
             <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light leading-relaxed">
               Cada celebração possui a sua própria complexidade, ambição e escala. Estruturamos a nossa
-              intervenção em três âmbitos de assessoria distintos, desenhados para garantir direção executiva
+              intervenção em três âmbitos de assessoria distintos, desenhados para garantir direcção executiva
               no formato ideal para o casal.
             </p>
           </div>
@@ -157,7 +157,7 @@ export default function AssessoriaScopeMatrix({
                           : "bg-brand-black text-brand-ivory hover:bg-brand-text-dark"
                       }`}
                     >
-                      <span>Selecionar para Diagnóstico</span>
+                      <span>Seleccionar para Diagnóstico</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>

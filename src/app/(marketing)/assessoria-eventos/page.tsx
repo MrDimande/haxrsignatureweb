@@ -153,7 +153,7 @@ export default function AssessoriaEventosPage() {
       <AssessoriaTechEcosystem />
 
       {/* ═══════════════════════════════════════════════════════════════════
-          06 · HISTÓRIAS REAIS & NARRATIVA — THE WORK SPEAKS
+          06 · PROJECTOS EM DESTAQUE — THE WORK SPEAKS
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="relative py-16 md:py-24 bg-brand-ivory">
         <div className="site-container mx-auto space-y-16">
@@ -162,7 +162,7 @@ export default function AssessoriaEventosPage() {
               <div className="flex items-center gap-3">
                 <span className="w-8 h-px bg-brand-gold" />
                 <span className="font-mono text-[9px] tracking-[0.4em] uppercase text-brand-gold font-bold">
-                  06 · Histórias Reais
+                  06 · Projectos em Destaque
                 </span>
               </div>
 
@@ -171,79 +171,116 @@ export default function AssessoriaEventosPage() {
               </h2>
 
               <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light leading-relaxed">
-                Cada projecto conduzido pela HAXR Signature é um testemunho de método, discrição e excelência estética.
+                Cada celebração conduzida pela HAXR Signature é um testemunho de método, discrição e excelência estética.
               </p>
             </div>
           </RevealOnScroll>
 
-          {/* Real Wedding Spotlight Card */}
+          {/* Luxury Editorial Feature Article: Casamento Vânia Luky & Fabião Dimande */}
           <RevealOnScroll delay={0.1}>
-            <div className="bg-white border border-brand-champagne/60 rounded-3xl p-8 md:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-              <div className="lg:col-span-5 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-[8.5px] font-mono tracking-wider uppercase font-semibold bg-brand-gold/10 text-brand-gold border border-brand-gold/20">
-                    {weddingCase.category}
+            <article className="bg-white border border-brand-champagne/60 rounded-3xl p-8 md:p-12 shadow-sm space-y-10">
+              {/* Feature Header */}
+              <div className="border-b border-brand-champagne/35 pb-6 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-brand-gold font-bold">
+                    CASAMENTO · MAPUTO, MOÇAMBIQUE
                   </span>
-                  <span className="text-xs font-mono text-brand-text-dark/40">• Salão de Eventos Evely, Maputo</span>
+                  <span className="text-[10px] font-mono text-brand-text-dark/50">
+                    Evelyn Eventos · Assessoria Completa · Identidade Visual · Convites
+                  </span>
                 </div>
-
-                <h3 className="font-serif text-2xl md:text-3xl font-light text-brand-text-dark">
-                  {weddingCase.title}
+                <h3 className="font-serif text-2xl md:text-4xl font-light text-brand-text-dark">
+                  Vânia Luky & Fabião Dimande
                 </h3>
+              </div>
 
-                <p className="font-sans text-xs md:text-sm text-brand-text-dark/75 font-light leading-relaxed">
-                  {weddingCase.context}
-                </p>
-
-                <div className="space-y-3 pt-3 border-t border-brand-champagne/30 text-xs font-sans">
-                  <div>
-                    <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
-                      Desafio & Complexidade:
-                    </span>
-                    <p className="text-brand-text-dark/70 font-light mt-0.5 leading-relaxed">
-                      {weddingCase.challenge}
+              {/* Grid: 2 Columns with Editorial Composition */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                {/* Left: Editorial Narrative */}
+                <div className="lg:col-span-6 space-y-6">
+                  <div className="space-y-3">
+                    <h4 className="font-serif text-lg md:text-xl font-light text-brand-text-dark italic">
+                      “A experiência digital definiu o tom de toda a celebração, prolongando-se com fluidez até ao grande dia.”
+                    </h4>
+                    <p className="font-sans text-xs md:text-sm text-brand-text-dark/75 font-light leading-relaxed">
+                      {weddingCase.context}
                     </p>
                   </div>
 
-                  <div>
-                    <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
-                      Solução HAXR:
-                    </span>
-                    <p className="text-brand-text-dark/70 font-light mt-0.5 leading-relaxed">
-                      {weddingCase.solution}
-                    </p>
+                  <div className="space-y-4 pt-4 border-t border-brand-champagne/30 text-xs font-sans">
+                    <div>
+                      <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
+                        Desafio & Concepção:
+                      </span>
+                      <p className="text-brand-text-dark/70 font-light mt-0.5 leading-relaxed">
+                        {weddingCase.challenge}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
+                        Direcção & Execução HAXR:
+                      </span>
+                      <p className="text-brand-text-dark/70 font-light mt-0.5 leading-relaxed">
+                        {weddingCase.solution}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
+                        Memória & Recepção:
+                      </span>
+                      <p className="text-brand-text-dark/90 font-medium mt-0.5 leading-relaxed">
+                        {weddingCase.result}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
-                      Resultado:
-                    </span>
-                    <p className="text-brand-text-dark/90 font-medium mt-0.5 leading-relaxed">
-                      {weddingCase.result}
-                    </p>
+                  <div className="pt-2 flex flex-wrap items-center gap-6">
+                    <Link
+                      href="/experiencias/casamento-vania-fabiao"
+                      className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider uppercase text-brand-gold font-bold hover:underline"
+                    >
+                      <span>Ver Convite Digital Signature</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </Link>
+                    <Link
+                      href="/portfolio"
+                      className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider uppercase text-brand-text-dark/50 hover:text-brand-text-dark"
+                    >
+                      <span>Arquivo de Portfólio</span>
+                    </Link>
                   </div>
                 </div>
 
-                <div className="pt-3">
-                  <Link
-                    href="/portfolio"
-                    className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider uppercase text-brand-gold font-bold hover:underline"
-                  >
-                    <span>Ver Arquivo de Portfólio</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </Link>
+                {/* Right: Dual Editorial Photo Composition */}
+                <div className="lg:col-span-6 grid grid-cols-12 gap-3 items-center">
+                  <div className="col-span-8 rounded-2xl overflow-hidden aspect-[4/5] bg-brand-champagne/10 relative border border-brand-champagne/30 shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/archive-01.webp"
+                      alt="Casamento Vânia Luky & Fabião Dimande no Evelyn Eventos"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-2 left-2 right-2 bg-brand-black/60 backdrop-blur-sm px-2.5 py-1 rounded-md text-[7px] font-mono text-brand-ivory/80">
+                      EVELYN EVENTOS · MAPUTO
+                    </div>
+                  </div>
+
+                  <div className="col-span-4 rounded-2xl overflow-hidden aspect-[3/4] bg-[#141210] p-2 relative border border-brand-champagne/20 flex flex-col justify-between shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/convite-mockup-vania-fabiao.png"
+                      alt="Convite Digital Vânia & Fabião"
+                      className="w-full h-auto object-contain mx-auto my-auto rounded-lg"
+                    />
+                    <span className="text-[6.5px] font-mono text-brand-gold text-center block pt-1">
+                      CONVITE & RSVP
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <div className="lg:col-span-7 rounded-2xl overflow-hidden aspect-[4/3] bg-brand-champagne/10 relative border border-brand-champagne/30">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={weddingCase.image}
-                  alt={weddingCase.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
+            </article>
           </RevealOnScroll>
 
           {/* Editorial Philosophy Blocks */}
@@ -291,7 +328,7 @@ export default function AssessoriaEventosPage() {
                   <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light leading-relaxed">
                     A primeira conversa é confidencial, estruturada e sem qualquer obrigação comercial.
                     Dedicamos esse momento para compreender a dimensão da vossa visão, mapear os principais
-                    desafios e apresentar a arquitetura de acompanhamento ideal para o vosso casamento.
+                    desafios e apresentar a arquitectura de acompanhamento ideal para o vosso casamento.
                   </p>
                 </div>
               </RevealOnScroll>
@@ -341,7 +378,6 @@ export default function AssessoriaEventosPage() {
               <StickyReservationCard
                 serviceTitle="Assessoria de Eventos Signature"
                 selectedScopeId={selectedScope}
-                basePrice="120.000 MT"
               />
             </div>
           </div>
@@ -353,7 +389,7 @@ export default function AssessoriaEventosPage() {
         headline="Pronto para conduzir o seu evento com tranquilidade?"
         description="Agende uma sessão privada de diagnóstico. Avaliamos juntos a complexidade e o nível de assessoria ideal para o seu dia."
         secondaryHref="/portfolio"
-        secondaryLabel="Explorar histórias reais"
+        secondaryLabel="Explorar arquivo de celebrações"
       />
     </>
   );

@@ -35,7 +35,7 @@ export default function AssessoriaTechEcosystem() {
       icon: Table,
       title: "The Wedding Financial Book (.xlsx)",
       description:
-        "Livro financeiro operacional gerado via motor ExcelJS com fórmulas nativas e 9 áreas financeiras especializadas. Transparência de cada metical contratado, liquidado e saldo a pagar.",
+        "Livro financeiro operacional gerado via motor ExcelJS com fórmulas nativas e 9 áreas financeiras especializadas. Transparência de cada metical contractado, liquidado e saldo a pagar.",
       highlight: "9 áreas financeiras especializadas · uma única fonte financeira canónica.",
     },
     {
@@ -45,7 +45,7 @@ export default function AssessoriaTechEcosystem() {
       icon: Users,
       title: "Live RSVP & Guest Concierge",
       description:
-        "Confirmação de presenças automatizada com recolha de restrições alimentares, alojamento e marcação de lugares interativa. A equipa sabe ao segundo quem confirmou e quem foi acolhido.",
+        "Confirmação de presenças automatizada com recolha de restrições alimentares, alojamento e marcação de lugares interactiva. A equipa sabe ao segundo quem confirmou e quem foi acolhido.",
       highlight: "Recepção fluida no grande dia sem filas ou constrangimentos.",
     },
   ] as const;
@@ -122,7 +122,7 @@ export default function AssessoriaTechEcosystem() {
           <div className="lg:col-span-5 space-y-6">
             <div className="space-y-2">
               <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-brand-gold font-bold">
-                Ativo do Ecossistema
+                Activo do Ecossistema
               </span>
               <h3 className="font-serif text-2xl md:text-3xl font-light text-brand-ivory">
                 {currentTab.title}
@@ -175,7 +175,7 @@ export default function AssessoriaTechEcosystem() {
                         <p className="text-[10px] font-serif font-light text-brand-ivory">1.200.000 MT</p>
                       </div>
                       <div>
-                        <p className="text-[5px] text-brand-ivory/50">Total Contratado</p>
+                        <p className="text-[5px] text-brand-ivory/50">Total Contractado</p>
                         <p className="text-[10px] font-serif font-light text-brand-gold">1.170.000 MT</p>
                       </div>
                       <div>
@@ -195,7 +195,7 @@ export default function AssessoriaTechEcosystem() {
                         </p>
                         <p className="flex items-center gap-1.5">
                           <span className="text-brand-gold">✓</span>
-                          <span className="line-through text-brand-ivory/40">Contratação de catering e espaço</span>
+                          <span className="line-through text-brand-ivory/40">Contractação de catering e espaço</span>
                         </p>
                         <p className="flex items-center gap-1.5">
                           <span className="text-brand-gold">⚡</span>
@@ -209,8 +209,8 @@ export default function AssessoriaTechEcosystem() {
                     </div>
 
                     <div className="bg-white/5 rounded-xl border border-white/5 px-3 py-1.5 flex justify-between items-center text-[6px] font-mono">
-                      <span className="text-brand-ivory/60">FORNECEDORES ATIVOS:</span>
-                      <span className="text-brand-gold font-bold">4 CONTRATOS REGISTADOS</span>
+                      <span className="text-brand-ivory/60">FORNECEDORES ACTIVOS:</span>
+                      <span className="text-brand-gold font-bold">4 CONTRACTOS REGISTADOS</span>
                     </div>
                   </div>
                 </div>
@@ -224,7 +224,7 @@ export default function AssessoriaTechEcosystem() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center py-2">
                     <div className="bg-white/5 p-2 rounded-lg">
-                      <p className="text-[5px] text-brand-ivory/50 font-mono">TOTAL CONTRATADO</p>
+                      <p className="text-[5px] text-brand-ivory/50 font-mono">TOTAL CONTRACTADO</p>
                       <p className="font-serif text-[10px] text-brand-gold">1.170.000 MT</p>
                     </div>
                     <div className="bg-white/5 p-2 rounded-lg">
@@ -232,7 +232,7 @@ export default function AssessoriaTechEcosystem() {
                       <p className="font-serif text-[10px] text-brand-ivory">525.000 MT</p>
                     </div>
                     <div className="bg-white/5 p-2 rounded-lg">
-                      <p className="text-[5px] text-brand-ivory/50 font-mono">SALDO CONTRATUAL</p>
+                      <p className="text-[5px] text-brand-ivory/50 font-mono">SALDO CONTRACTUAL</p>
                       <p className="font-serif text-[10px] text-brand-champagne">645.000 MT</p>
                     </div>
                   </div>
@@ -293,7 +293,7 @@ export default function AssessoriaTechEcosystem() {
                     </div>
                   </div>
                   <p className="text-[6px] font-mono text-brand-ivory/40 text-center">
-                    Seating plan automático e receção inteligente no dia do evento
+                    Seating plan automático e recepção inteligente no dia do evento
                   </p>
                 </div>
               )}

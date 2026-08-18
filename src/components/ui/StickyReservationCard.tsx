@@ -11,8 +11,8 @@ interface StickyReservationCardProps {
 }
 
 const SCOPES_OPTIONS = [
-  { id: "full-service", label: "Nível I · Assessoria Completa & Direção Criativa" },
-  { id: "spatial-design", label: "Nível II · Direção Criativa & Gestão de Produção" },
+  { id: "full-service", label: "Nível I · Assessoria Completa & Direcção Criativa" },
+  { id: "spatial-design", label: "Nível II · Direcção Criativa & Gestão de Produção" },
   { id: "run-of-show", label: "Nível III · Coordenação Executiva (Reta Final & Dia-D)" },
 ];
 
