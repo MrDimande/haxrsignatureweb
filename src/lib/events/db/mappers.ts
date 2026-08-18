@@ -117,6 +117,12 @@ export function mapGuest(row: GuestRow): EventGuest {
     guestNotes: row.guest_notes ?? "",
     label: (row.label ?? "none") as GuestLabel,
     guestSource: (row.guest_source ?? "manual") as GuestSource,
+    importBatchId: row.import_batch_id ?? null,
+    archivedAt: row.archived_at ?? null,
+    archiveReason: row.archive_reason ?? "",
+    isIncorrect: Boolean(row.is_incorrect),
+    deletedAt: row.deleted_at ?? null,
+    inviteSentAt: row.invite_sent_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     seat: seatRow

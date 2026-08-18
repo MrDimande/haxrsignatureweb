@@ -26,7 +26,9 @@ export const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
   "jessica-farewell": "jessicachadelingerie",
   /** rose-elegance é registry key de Admin; canonical RSVP binding = farewell. */
   "rose-elegance": "jessicachadelingerie",
-  jessicasamuelwedding: "jessica-samuel",
+  /** Public slug → binding key aligned with Admin edition_registry_key. */
+  jessicasamuelwedding: "jessica-samuel-wedding",
+  "jessica-samuel": "jessica-samuel-wedding",
 };
 
 export const ALIAS_INDEX: Record<string, string> = {};
@@ -72,8 +74,8 @@ const SLUG_BINDINGS: Record<string, EditionSlugBinding> = {
     envVar: "EDITION_EVENT_JESSICA_TRADITIONAL_ID",
     legacyEnvVar: "TRADITIONAL_WEDDING_EVENT_ID",
   },
-  "jessica-samuel": {
-    slug: "jessica-samuel",
+  "jessica-samuel-wedding": {
+    slug: "jessica-samuel-wedding",
     adminEventName: "Edition · Casamento · Jessica & Samuel",
     clientName: "Jessica & Samuel",
     envVar: "EDITION_EVENT_JESSICA_WEDDING_ID",

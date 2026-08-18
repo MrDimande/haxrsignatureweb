@@ -68,6 +68,33 @@ export interface SeatFormData {
   label: string;
 }
 
+export type GuestImportBatchStatus =
+  | "preview"
+  | "completed"
+  | "partial"
+  | "failed"
+  | "removed";
+
+export interface GuestImportBatch {
+  id: string;
+  eventId: string;
+  filename: string;
+  createdAt: string;
+  updatedAt: string;
+  operatorUserId: string;
+  operatorEmail: string;
+  totalRows: number;
+  validRows: number;
+  duplicateRows: number;
+  invalidRows: number;
+  removedRows: number;
+  status: GuestImportBatchStatus;
+  latestReversibleRemoval?: {
+    auditId: string;
+    createdAt: string;
+  } | null;
+}
+
 export interface EventGuest {
   id: string;
   eventId: string;
@@ -86,6 +113,12 @@ export interface EventGuest {
   guestNotes: string;
   label: GuestLabel;
   guestSource: GuestSource;
+  importBatchId: string | null;
+  archivedAt: string | null;
+  archiveReason: string;
+  isIncorrect: boolean;
+  deletedAt: string | null;
+  inviteSentAt: string | null;
   createdAt: string;
   updatedAt: string;
   seat: {

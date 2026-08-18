@@ -21,6 +21,20 @@ describe("Edition invite catalog", () => {
     process.env = { ...originalEnv };
   });
 
+  it("maps jessica-samuel-wedding to public slug jessicasamuelwedding", () => {
+    assert.equal(
+      resolveEditionInviteSlug("jessica-samuel-wedding"),
+      "jessicasamuelwedding"
+    );
+    assert.equal(
+      buildEditionInviteUrl("jessica-samuel-wedding"),
+      "https://edition.haxrsignature.com/jessicasamuelwedding"
+    );
+    assert.equal(
+      resolveEditionInviteSlug("jessica-samuel"),
+      "jessicasamuelwedding"
+    );
+  });
   it("maps traditional-wedding to jessicaesamueltraditionalwedding", () => {
     assert.equal(
       resolveEditionInviteSlug("traditional-wedding"),

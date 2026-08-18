@@ -20,7 +20,14 @@ import {
 const BASE_URL = "http://localhost:3000";
 
 function mockUser() {
-  return { id: "user-1", email: "staging-a@haxrsignature.test" } as const;
+  return {
+    id: "user-1",
+    email: "staging-a@haxrsignature.test",
+    app_metadata: {},
+    user_metadata: {},
+    aud: "authenticated",
+    created_at: "2026-01-01T00:00:00.000Z",
+  };
 }
 
 function sessionResponse(request: NextRequest): NextResponse {
