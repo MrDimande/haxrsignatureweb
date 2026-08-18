@@ -12,10 +12,10 @@ import {
   Images,
   Layers,
   Mail,
+  MessageCircle,
   Palette,
   QrCode,
   Settings,
-  Sparkles,
   Users,
   Wallet,
 } from "lucide-react";
@@ -23,7 +23,7 @@ import {
 const ICONS: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
   layers: Layers,
   calendar: Calendar,
-  sparkles: Sparkles,
+  concierge: MessageCircle,
   clipboard: ClipboardList,
   clock: Clock,
   palette: Palette,

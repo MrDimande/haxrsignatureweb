@@ -32,6 +32,7 @@ export interface AppNavItem {
   href: string;
   iconName: string;
   ready: boolean;
+  disabled?: boolean;
 }
 
 export interface AppNavGroup {
@@ -40,44 +41,59 @@ export interface AppNavGroup {
 }
 
 /** Build sidebar navigation for an event. TODO: filter by role when RBAC exists. */
-export function buildAppNavigation(eventId: string = DEFAULT_EVENT_ID): AppNavGroup[] {
-  const e = eventId;
+export function buildAppNavigation(eventId: string | null = DEFAULT_EVENT_ID): AppNavGroup[] {
+  const eventReady = Boolean(eventId?.trim());
+  const eventHref = (module: string) =>
+    eventReady ? eventModulePath(eventId as string, module) : "/app/dashboard";
+  const eventItem = (
+    label: string,
+    module: string,
+    iconName: string,
+    ready: boolean,
+  ): AppNavItem => ({
+    label,
+    href: eventHref(module),
+    iconName,
+    ready,
+    disabled: !eventReady,
+  });
+
   return [
     {
       groupName: "Overview",
       items: [
         { label: "Dashboard", href: "/app/dashboard", iconName: "layers", ready: true },
         { label: "Eventos", href: "/app/events", iconName: "calendar", ready: false },
-        { label: "HAXR Concierge", href: "/app/concierge", iconName: "sparkles", ready: true },
+        { label: "HAXR Concierge", href: "/app/concierge", iconName: "concierge", ready: true },
       ],
     },
     {
       groupName: "Planeamento",
       items: [
-        { label: "Checklist", href: eventModulePath(e, "checklist"), iconName: "clipboard", ready: true },
-        { label: "Timeline", href: eventModulePath(e, "timeline"), iconName: "clock", ready: false },
-        { label: "Moodboard", href: eventModulePath(e, "moodboard"), iconName: "palette", ready: false },
-        { label: "Documentos", href: eventModulePath(e, "documents"), iconName: "file", ready: true },
+        eventItem("Checklist", "checklist", "clipboard", true),
+        eventItem("Timeline", "timeline", "clock", false),
+        eventItem("Moodboard", "moodboard", "palette", false),
+        eventItem("Documentos", "documents", "file", true),
       ],
     },
     {
       groupName: "Experiência",
       items: [
-        { label: "Convidados", href: eventModulePath(e, "guests"), iconName: "users", ready: true },
-        { label: "RSVP", href: eventModulePath(e, "rsvp"), iconName: "check", ready: true },
-        { label: "Convites Digitais", href: eventModulePath(e, "invitations"), iconName: "mail", ready: false },
-        { label: "Seating", href: eventModulePath(e, "seating"), iconName: "briefcase", ready: false },
-        { label: "QR Check-in", href: eventModulePath(e, "check-in"), iconName: "qr", ready: false },
-        { label: "Photo Wall", href: eventModulePath(e, "photo-wall"), iconName: "images", ready: false },
+        eventItem("Convidados", "guests", "users", true),
+        eventItem("RSVP", "rsvp", "check", true),
+        eventItem("Convites Digitais", "invitations", "mail", false),
+        eventItem("Seating", "seating", "briefcase", false),
+        eventItem("QR Check-in", "check-in", "qr", false),
+        eventItem("Photo Wall", "photo-wall", "images", false),
       ],
     },
     {
       groupName: "Operação",
       items: [
-        { label: "Fornecedores", href: eventModulePath(e, "vendors"), iconName: "briefcase", ready: true },
-        { label: "Contratos", href: eventModulePath(e, "contracts"), iconName: "signature", ready: false },
-        { label: "Orçamento", href: eventModulePath(e, "budget"), iconName: "wallet", ready: true },
-        { label: "Pagamentos", href: eventModulePath(e, "payments"), iconName: "card", ready: false },
+        eventItem("Fornecedores", "vendors", "briefcase", true),
+        eventItem("Contratos", "contracts", "signature", false),
+        eventItem("Orçamento", "budget", "wallet", true),
+        eventItem("Pagamentos", "payments", "card", false),
       ],
     },
     {

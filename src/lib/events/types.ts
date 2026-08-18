@@ -254,6 +254,7 @@ export interface FindSeatResult {
   name: string;
   seat: {
     tableName: string;
+    tableKey?: string;
     seatNumber: number;
     label: string;
   } | null;
@@ -314,6 +315,17 @@ export interface FindSeatSearchResponse {
   error?: string;
   event?: EventPublicInfo;
   results?: FindSeatResult[];
+  floorPlan?: PublicFloorPlan | null;
+}
+
+export interface PublicFloorPlan {
+  room: {
+    width: number;
+    length: number;
+    gridSize: number;
+    unit: "m";
+  };
+  items: import("@/lib/events/floor-plan/types").FloorPlanItem[];
 }
 
 export type ReviewQueueItemType =

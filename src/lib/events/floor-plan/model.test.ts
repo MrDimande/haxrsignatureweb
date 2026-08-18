@@ -9,6 +9,7 @@ import {
   reconcileFloorPlanTables,
   redoHistory,
   snapValue,
+  seatPositionForTable,
   undoHistory,
   updateItemGeometry,
 } from "./model";
@@ -112,5 +113,35 @@ describe("floor-plan model", () => {
     const result = reconcileFloorPlanTables([], []);
     assert.deepEqual(result.unpositioned, []);
     assert.deepEqual(result.removed, []);
+  });
+});
+
+describe("seatPositionForTable", () => {
+  it("distribui lugares de mesas rectangulares pelo perímetro", () => {
+    const item = createTableItem(
+      {
+        tableKey: "mesa-imperial",
+        tableName: "Mesa Imperial",
+        seats: [],
+        capacity: 8,
+        occupied: 0,
+        available: 8,
+        guestNames: [],
+      },
+      0,
+      0
+    );
+    item.shape = "imperial";
+    item.width = 5;
+    item.height = 1.5;
+
+    const positions = Array.from({ length: 8 }, (_, index) =>
+      seatPositionForTable(item, index, 8)
+    );
+
+    assert.ok(positions.some((position) => position.y < 0));
+    assert.ok(positions.some((position) => position.y > item.height));
+    assert.ok(positions.some((position) => position.x < 0));
+    assert.ok(positions.some((position) => position.x > item.width));
   });
 });

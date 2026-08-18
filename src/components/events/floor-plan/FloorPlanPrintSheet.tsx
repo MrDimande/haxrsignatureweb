@@ -2,7 +2,6 @@
 
 import FloorPlanSvg from "@/components/events/floor-plan/FloorPlanSvg";
 import {
-  FLOOR_PLAN_GOLD,
   TEMPLATE_LABELS,
   formatOccupancy,
   themeForTemplate,

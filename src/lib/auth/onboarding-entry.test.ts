@@ -57,15 +57,15 @@ describe("onboarding-entry", () => {
     assert.match(resolveOnboardingFirstStepPath(), /^\/onboarding\/profile\/\d+$/);
   });
 
-  it("has app routes for onboarding entry and first wizard step", () => {
+  it("keeps onboarding entry and first step in the private auth layout", () => {
     const root = process.cwd();
     assert.equal(
-      existsSync(resolve(root, "src/app/(marketing)/onboarding/page.tsx")),
+      existsSync(resolve(root, "src/app/(auth)/onboarding/page.tsx")),
       true,
       "missing onboarding entry route",
     );
     assert.equal(
-      existsSync(resolve(root, "src/app/(marketing)/onboarding/profile/1/page.tsx")),
+      existsSync(resolve(root, "src/app/(auth)/onboarding/profile/1/page.tsx")),
       true,
       "missing first onboarding wizard step route",
     );
@@ -75,7 +75,7 @@ describe("onboarding-entry", () => {
     const root = process.cwd();
     for (const step of ["1", "2", "3", "4"]) {
       assert.equal(
-        existsSync(resolve(root, `src/app/(marketing)/onboarding/profile/${step}/page.tsx`)),
+        existsSync(resolve(root, `src/app/(auth)/onboarding/profile/${step}/page.tsx`)),
         true,
         `missing onboarding profile step ${step}`,
       );

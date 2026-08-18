@@ -10,7 +10,7 @@ export default function FinanceSnapshotCard({ finance }: FinanceSnapshotProps) {
   const { currency } = finance;
 
   return (
-    <div className="flex flex-1 flex-col justify-between rounded-3xl border border-brand-champagne/10 bg-white/5 p-6">
+    <div className="haxr-dashboard-card flex flex-1 flex-col justify-between rounded-3xl border border-brand-champagne/10 bg-white/5 p-6">
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
         <h4 className="font-serif text-sm text-white">Financeiro</h4>
         <Wallet className="h-4 w-4 text-brand-gold" />

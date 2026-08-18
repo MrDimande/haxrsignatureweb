@@ -59,4 +59,23 @@ describe("FloorPlanSvg", () => {
     );
     assert.match(markup, /viewBox="0 0 10 8"/);
   });
+
+  it("destaca a mesa pública sem expor convidados ou ocupação", () => {
+    const tables = buildFloorPlanTables(seats);
+    const item = createTableItem(tables[0], 2, 2);
+    const markup = renderToStaticMarkup(
+      React.createElement(FloorPlanSvg, {
+        room: { width: 20, length: 14, gridSize: 0.5 },
+        items: [item],
+        tables: [],
+        template: "client",
+        highlightedTableKey: item.tableKey,
+      })
+    );
+
+    assert.match(markup, /com a sua mesa destacada/);
+    assert.match(markup, /animate-pulse/);
+    assert.match(markup, /Mesa Imperial/);
+    assert.doesNotMatch(markup, /Ana Silva|1\/2|guest-1/);
+  });
 });

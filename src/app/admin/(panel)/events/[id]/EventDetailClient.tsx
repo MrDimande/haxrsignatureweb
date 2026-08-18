@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Archive, ArrowLeft, Trash2 } from "lucide-react";
@@ -57,12 +58,25 @@ import type {
   ReviewQueueResult,
 } from "@/lib/events/types";
 import type { EventContactProfileRow } from "@/lib/events/repositories/event-contact-profiles.repository";
+import type { EventFloorPlan } from "@/lib/events/floor-plan/types";
+
+const FloorPlanEditor = dynamic(
+  () => import("@/components/events/floor-plan/FloorPlanEditor"),
+  {
+    loading: () => (
+      <div className="admin-card p-6 text-sm text-grey/60">
+        A preparar o editor do Croqui…
+      </div>
+    ),
+  }
+);
 
 type Tab =
   | "guests"
   | "review"
   | "contacts"
   | "seats"
+  | "floor-plan"
   | "qr"
   | "sheets"
   | "checkin"
@@ -102,6 +116,8 @@ type EventDetailClientProps = {
   portalApprovals?: PortalCreativeApproval[];
   portalContracts?: PortalContract[];
   clientPhone?: string | null;
+  initialFloorPlan: EventFloorPlan;
+  floorPlanSchemaAvailable: boolean;
 };
 
 function formatDate(date: string | null): string {
@@ -144,6 +160,8 @@ export default function EventDetailClient({
   portalApprovals = [],
   portalContracts = [],
   clientPhone = null,
+  initialFloorPlan,
+  floorPlanSchemaAvailable,
 }: EventDetailClientProps) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
@@ -171,6 +189,7 @@ export default function EventDetailClient({
       ? [{ id: "gifts" as const, label: "Presentes" }]
       : []),
     { id: "seats", label: "Lugares" },
+    { id: "floor-plan", label: "Croqui" },
     { id: "qr", label: "Atelier QR" },
     { id: "sheets", label: "Sheets" },
     { id: "checkin", label: "Check-in" },
@@ -353,6 +372,15 @@ export default function EventDetailClient({
           seats={initialSeats}
           guests={initialGuests}
           onChanged={handleRefresh}
+        />
+      ) : null}
+
+      {tab === "floor-plan" ? (
+        <FloorPlanEditor
+          event={event}
+          seats={initialSeats}
+          initialPlan={initialFloorPlan}
+          schemaAvailable={floorPlanSchemaAvailable}
         />
       ) : null}
 

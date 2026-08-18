@@ -26,12 +26,13 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 type AppShellProps = {
   children: ReactNode;
   userDisplay: AppUserDisplay;
+  initialEventId?: string | null;
 };
 
 function UserSummary({ userDisplay }: { userDisplay: AppUserDisplay }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-gold font-serif text-[10px] font-bold text-white">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-gold/60 bg-black font-serif text-[10px] font-bold text-brand-gold shadow-[0_0_0_3px_rgba(184,138,42,0.08)]">
         {userDisplay.initials}
       </div>
       <div className="min-w-0 text-left">
@@ -44,15 +45,15 @@ function UserSummary({ userDisplay }: { userDisplay: AppUserDisplay }) {
   );
 }
 
-export default function AppShell({ children, userDisplay }: AppShellProps) {
+export default function AppShell({ children, userDisplay, initialEventId }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const { eventName: activeEvent, eventId } = useAppEvent();
+  const { eventName: activeEvent, eventId, isResolved: eventResolved } =
+    useAppEvent(initialEventId);
   const pathname = usePathname();
   const router = useRouter();
 
-  // TODO: Resolve eventId from authenticated profile once real event creation exists.
-  const navigationGroups = buildAppNavigation(eventId);
+  const navigationGroups = buildAppNavigation(eventResolved ? eventId : null);
 
   const handleLinkClick = () => {
     setMobileMenuOpen(false);
@@ -93,11 +94,11 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
   );
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-[#0c0a09] font-sans text-zinc-100 antialiased">
+    <div className="haxr-app-shell flex min-h-screen overflow-x-hidden bg-[#0c0a09] font-sans text-zinc-100 antialiased">
       <Suspense fallback={null}>
         <OnboardingSyncController />
       </Suspense>
-      <aside className="scrollbar-none sticky top-0 z-40 hidden h-screen w-[260px] shrink-0 select-none flex-col overflow-y-auto border-r border-brand-champagne/10 bg-[#0c0a09] lg:flex">
+      <aside className="haxr-app-sidebar scrollbar-none sticky top-0 z-40 hidden h-screen w-[272px] shrink-0 select-none flex-col overflow-y-auto border-r border-brand-champagne/10 bg-[#0c0a09] lg:flex">
         <div className="flex flex-col justify-center border-b border-brand-champagne/10 p-6">
           <HaxrLogo
             variant="full"
@@ -119,25 +120,39 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = resolveAppNavIcon(item.iconName);
+                  const isDisabled = item.disabled === true;
                   const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/app/dashboard" &&
-                      (pathname?.startsWith(`${item.href}/`) ?? false));
+                    !isDisabled &&
+                    (pathname === item.href ||
+                      (item.href !== "/app/dashboard" &&
+                        (pathname?.startsWith(`${item.href}/`) ?? false)));
 
                   return (
                     <li key={item.label}>
                       <Link
                         href={item.href}
+                        aria-disabled={isDisabled || undefined}
+                        tabIndex={isDisabled ? -1 : undefined}
+                        title={isDisabled ? "A preparar o evento..." : undefined}
+                        onClick={(event) => {
+                          if (isDisabled) {
+                            event.preventDefault();
+                            return;
+                          }
+                          handleLinkClick();
+                        }}
                         className={`flex items-center gap-3 rounded-lg px-3 py-2 font-sans text-xs transition-all duration-300 ${
                           isActive
-                            ? "bg-brand-gold font-medium text-white shadow-md shadow-brand-gold/10"
+                            ? "border border-brand-gold/35 bg-brand-gold/[0.12] font-medium text-brand-ivory shadow-[inset_3px_0_0_#b88a2a]"
+                            : isDisabled
+                              ? "cursor-wait text-zinc-600"
                             : item.ready
                               ? "text-zinc-400 hover:bg-white/5 hover:text-white"
                               : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
                         }`}
                       >
                         <Icon
-                          className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-zinc-400/80"}`}
+                          className={`h-4 w-4 shrink-0 ${isActive ? "text-brand-gold" : "text-zinc-400/80"}`}
                           strokeWidth={1.5}
                         />
                         <span>{item.label}</span>
@@ -165,7 +180,7 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
       </aside>
 
       <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-35 flex h-16 items-center justify-between border-b border-brand-champagne/10 bg-[#0c0a09] bg-opacity-90 px-4 backdrop-blur-md sm:px-6 md:px-8">
+        <header className="haxr-app-header sticky top-0 z-35 flex h-[72px] items-center justify-between border-b border-brand-champagne/10 bg-[#0c0a09] bg-opacity-90 px-4 backdrop-blur-md sm:px-6 md:px-8">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -179,7 +194,9 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
             <div className="relative flex items-center gap-2">
               <div className="flex cursor-pointer select-none items-center gap-2 rounded-full border border-brand-champagne/20 bg-white/5 py-1.5 pl-3.5 pr-2.5 text-[11px] text-white transition-colors hover:border-brand-gold/50 md:text-xs">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-gold" />
-                <span className="font-serif font-medium">{activeEvent}</span>
+                <span className="max-w-[7rem] truncate font-serif font-medium sm:max-w-none">
+                  {activeEvent}
+                </span>
                 <ChevronDown className="h-3 w-3 text-zinc-400" />
               </div>
 
@@ -210,15 +227,16 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
 
             <Link
               href="/app/concierge"
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand-gold px-4 py-2 font-mono text-[9px] font-bold uppercase tracking-widest text-white shadow-md shadow-brand-gold/10 transition-colors hover:bg-brand-gold-light md:text-[10px]"
+              aria-label="Adicionar ficheiro"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand-gold p-2 font-mono text-[9px] font-bold uppercase tracking-widest text-white shadow-md shadow-brand-gold/10 transition-colors hover:bg-brand-gold-light sm:px-4 sm:py-2 md:text-[10px]"
             >
-              <Plus className="h-3 w-3" />
-              <span>Adicionar Ficheiro</span>
+              <Plus className="h-4 w-4 sm:h-3 sm:w-3" aria-hidden />
+              <span className="hidden sm:inline">Adicionar Ficheiro</span>
             </Link>
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 md:p-8">{children}</main>
+        <main className="haxr-app-main flex-1 p-4 sm:p-6 md:p-8 xl:p-10">{children}</main>
       </div>
 
       <AnimatePresence>
@@ -268,19 +286,32 @@ export default function AppShell({ children, userDisplay }: AppShellProps) {
                       <ul className="space-y-0.5">
                         {group.items.map((item) => {
                           const Icon = resolveAppNavIcon(item.iconName);
+                          const isDisabled = item.disabled === true;
                           const isActive =
-                            pathname === item.href ||
-                            (item.href !== "/app/dashboard" &&
-                              (pathname?.startsWith(`${item.href}/`) ?? false));
+                            !isDisabled &&
+                            (pathname === item.href ||
+                              (item.href !== "/app/dashboard" &&
+                                (pathname?.startsWith(`${item.href}/`) ?? false)));
 
                           return (
                             <li key={item.label}>
                               <Link
                                 href={item.href}
-                                onClick={handleLinkClick}
+                                aria-disabled={isDisabled || undefined}
+                                tabIndex={isDisabled ? -1 : undefined}
+                                title={isDisabled ? "A preparar o evento..." : undefined}
+                                onClick={(event) => {
+                                  if (isDisabled) {
+                                    event.preventDefault();
+                                    return;
+                                  }
+                                  handleLinkClick();
+                                }}
                                 className={`flex items-center gap-3 rounded-lg px-3 py-2 font-sans text-xs transition-all duration-300 ${
                                   isActive
-                                    ? "bg-brand-gold font-medium text-white"
+                                    ? "border border-brand-gold/35 bg-brand-gold/[0.12] font-medium text-brand-ivory shadow-[inset_3px_0_0_#b88a2a]"
+                                    : isDisabled
+                                      ? "cursor-wait text-zinc-600"
                                     : "text-zinc-400 hover:bg-white/5 hover:text-white"
                                 }`}
                               >

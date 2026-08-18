@@ -88,14 +88,20 @@ export default function SignInForm() {
   };
 
   const inputClass =
-    "w-full rounded-xl border bg-white px-4 py-3 font-sans text-sm font-light text-brand-text-dark placeholder:text-zinc-400 transition-all focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
+    "w-full rounded-xl border bg-brand-ivory/55 px-4 py-3.5 font-sans text-sm font-light text-brand-text-dark placeholder:text-zinc-400 transition-all focus:bg-white focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
+
+  const signUpHref = buildSignUpPath(fromParam);
 
   const signUpHref = buildSignUpPath(fromParam);
 
   return (
-    <div className="rounded-2xl border border-brand-champagne/40 bg-white/80 p-6 shadow-[0_12px_40px_rgba(28,26,23,0.06)] backdrop-blur-sm sm:p-8">
-      <header className="mb-8 space-y-2 text-left">
-        <h1 className="font-serif text-2xl font-light text-brand-text-dark md:text-3xl">
+    <div className="haxr-auth-card rounded-[1.75rem] p-6 backdrop-blur-xl sm:p-9">
+      <header className="mb-8 space-y-3 text-left">
+        <div className="flex items-center gap-3 font-mono text-[8px] font-semibold uppercase tracking-[0.3em] text-brand-gold">
+          <span className="h-px w-8 bg-brand-gold" aria-hidden />
+          Private client access
+        </div>
+        <h1 className="font-serif text-3xl font-light leading-tight tracking-[-0.02em] text-brand-text-dark md:text-4xl">
           Bem-vindo de volta
         </h1>
         <p className="font-sans text-sm font-light leading-relaxed text-brand-text-dark/70">
@@ -201,7 +207,7 @@ export default function SignInForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-black px-6 py-3.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white shadow-md transition-colors hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-brand-gold/25 bg-brand-black px-6 py-4 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_14px_35px_rgba(8,7,6,0.18)] transition-all hover:-translate-y-0.5 hover:border-brand-gold/55 hover:bg-[#17130f] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
         >
           {loading ? (
             <>

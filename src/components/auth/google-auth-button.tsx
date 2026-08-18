@@ -10,6 +10,8 @@ import {
 import { signInWithGoogle } from "@/lib/auth/oauth-auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+const GOOGLE_OAUTH_NAVIGATION_TIMEOUT_MS = 15_000;
+
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -36,19 +38,35 @@ function GoogleIcon({ className }: { className?: string }) {
 type GoogleAuthButtonProps = {
   fromParam?: string | null;
   disabled?: boolean;
+  label?: string;
+  consentAccepted?: boolean;
+  onConsentRequired?: () => void;
   onError?: (message: string) => void;
+  onLoadingChange?: (loading: boolean) => void;
 };
 
 export default function GoogleAuthButton({
   fromParam = null,
   disabled = false,
+  label = "Continuar com Google",
+  consentAccepted,
+  onConsentRequired,
   onError,
+  onLoadingChange,
 }: GoogleAuthButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const handleGoogleAuth = async () => {
+    onError?.("");
+
+    if (consentAccepted === false) {
+      onConsentRequired?.();
+      return;
+    }
+
     stashPostAuthReturn(fromParam);
     setLoading(true);
+    onLoadingChange?.(true);
 
     try {
       const supabase = createSupabaseBrowserClient();
@@ -63,10 +81,27 @@ export default function GoogleAuthButton({
       if (!result.ok) {
         onError?.(result.formError);
         setLoading(false);
+        onLoadingChange?.(false);
+        return;
       }
+
+      const initialUrl = window.location.href;
+      window.location.assign(result.redirectUrl);
+
+      window.setTimeout(() => {
+        if (window.location.href !== initialUrl) return;
+
+        window.stop();
+        onError?.(
+          "O redireccionamento para Google não respondeu. Tente novamente ou use email.",
+        );
+        setLoading(false);
+        onLoadingChange?.(false);
+      }, GOOGLE_OAUTH_NAVIGATION_TIMEOUT_MS);
     } catch {
       onError?.("Não foi possível continuar com Google. Tente novamente.");
       setLoading(false);
+      onLoadingChange?.(false);
     }
   };
 
@@ -75,7 +110,7 @@ export default function GoogleAuthButton({
       type="button"
       onClick={handleGoogleAuth}
       disabled={disabled || loading}
-      className="flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-brand-champagne/55 bg-white px-4 py-3 font-sans text-sm text-brand-text-dark/85 transition-colors hover:border-brand-gold hover:bg-brand-champagne/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+      className="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-brand-gold/35 bg-white px-4 py-3.5 font-sans text-sm font-medium text-brand-text-dark shadow-[0_10px_30px_rgba(28,26,23,0.07)] transition-all hover:-translate-y-0.5 hover:border-brand-gold hover:shadow-[0_16px_36px_rgba(179,134,24,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
     >
       {loading ? (
         <>
@@ -84,8 +119,10 @@ export default function GoogleAuthButton({
         </>
       ) : (
         <>
-          <GoogleIcon className="h-4 w-4 shrink-0" />
-          <span>Continuar com Google</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5">
+            <GoogleIcon className="h-4 w-4 shrink-0" />
+          </span>
+          <span>{label}</span>
         </>
       )}
     </button>

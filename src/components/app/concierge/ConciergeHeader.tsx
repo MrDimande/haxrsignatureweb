@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ConciergeModuleData } from "@/lib/concierge/portal/types";
 import HaxrLogo from "@/components/brand/HaxrLogo";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { MessageCircle, ArrowLeft } from "lucide-react";
 
 type ConciergeHeaderProps = {
   data: ConciergeModuleData;
@@ -23,7 +23,7 @@ export default function ConciergeHeader({
         <div className="max-w-2xl space-y-2">
           <div className="flex items-center gap-2.5 text-brand-gold">
             <HaxrLogo variant="mark" tone="gold" size="sm" className="opacity-90" />
-            <Sparkles className="h-4 w-4" aria-hidden />
+            <MessageCircle className="h-4 w-4" aria-hidden />
             <span className="font-mono text-[9px] font-bold uppercase tracking-widest">
               HAXR Concierge
             </span>

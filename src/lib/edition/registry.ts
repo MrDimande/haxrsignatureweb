@@ -29,6 +29,12 @@ export const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
   /** Public slug → binding key aligned with Admin edition_registry_key. */
   jessicasamuelwedding: "jessica-samuel-wedding",
   "jessica-samuel": "jessica-samuel-wedding",
+  /** Stan — aliases → canónico público /stanturns5 */
+  stan: "stanturns5",
+  "convite-stan": "stanturns5",
+  "stan-5-anos": "stanturns5",
+  /** Nian — alias RSVP → canónico público /nianwebnight */
+  nian: "nianwebnight",
 };
 
 export const ALIAS_INDEX: Record<string, string> = {};
@@ -80,6 +86,18 @@ const SLUG_BINDINGS: Record<string, EditionSlugBinding> = {
     clientName: "Jessica & Samuel",
     envVar: "EDITION_EVENT_JESSICA_WEDDING_ID",
     legacyEnvVar: "WEDDING_EVENT_ID",
+  },
+  stanturns5: {
+    slug: "stanturns5",
+    adminEventName: "Edition · Aniversário · Stan",
+    clientName: "Stan",
+    envVar: "EDITION_EVENT_STAN_ID",
+  },
+  nianwebnight: {
+    slug: "nianwebnight",
+    adminEventName: "Edition · Aniversário · Nian",
+    clientName: "Nian",
+    envVar: "EDITION_EVENT_NIAN_ID",
   },
 };
 

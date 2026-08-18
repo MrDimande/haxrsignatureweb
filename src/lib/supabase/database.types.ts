@@ -576,6 +576,8 @@ export interface Database {
           sheets_sync_summary: string;
           sheets_sync_mode: "master" | "rsvp";
           find_seat_code: string;
+          find_seat_previous_code: string | null;
+          find_seat_previous_code_valid_until: string | null;
           edition_registry_key: string;
           post_event_report_sent_at: string | null;
           date_hold_until: string | null;
@@ -604,6 +606,8 @@ export interface Database {
           sheets_sync_summary?: string;
           sheets_sync_mode?: "master" | "rsvp";
           find_seat_code?: string;
+          find_seat_previous_code?: string | null;
+          find_seat_previous_code_valid_until?: string | null;
           edition_registry_key?: string;
           post_event_report_sent_at?: string | null;
           date_hold_until?: string | null;
@@ -611,6 +615,29 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
+      };
+      event_floor_plans: {
+        Row: {
+          event_id: string;
+          room: Json;
+          items: Json;
+          print_preferences: Json;
+          version: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          event_id: string;
+          room?: Json;
+          items?: Json;
+          print_preferences?: Json;
+          version?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_floor_plans"]["Insert"]
+        >;
       };
       event_sheet_import_rows: {
         Row: {

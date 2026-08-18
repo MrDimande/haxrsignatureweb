@@ -63,6 +63,42 @@ describe("Core Event Registry Alignment", () => {
     assert.equal(resolveEditionSlug("jessicakhulaya"), "jessicakulaya");
   });
 
+  it("resolves stanturns5 and Stan aliases", () => {
+    assert.equal(resolveEditionSlug("stanturns5"), "stanturns5");
+    assert.equal(resolveEditionSlug("stan"), "stanturns5");
+    assert.equal(resolveEditionSlug("convite-stan"), "stanturns5");
+    assert.equal(resolveEditionSlug("stan-5-anos"), "stanturns5");
+  });
+
+  it("resolves nian and nianwebnight to nianwebnight binding", () => {
+    assert.equal(resolveEditionSlug("nian"), "nianwebnight");
+    assert.equal(resolveEditionSlug("nianwebnight"), "nianwebnight");
+  });
+
+  it("binds nianwebnight exclusively to EDITION_EVENT_NIAN_ID", () => {
+    process.env.EDITION_EVENT_NIAN_ID = "test-nian-event";
+    process.env.EDITION_EVENT_STAN_ID = "test-stan-event";
+
+    try {
+      const byAlias = getEditionEventBinding("nian");
+      const byCanonical = getEditionEventBinding("nianwebnight");
+
+      assert.ok(byAlias, "Binding for alias 'nian' should exist.");
+      assert.ok(byCanonical, "Binding for 'nianwebnight' should exist.");
+      assert.equal(byAlias.slug, "nianwebnight");
+      assert.equal(byCanonical.slug, "nianwebnight");
+      assert.equal(byAlias.envVar, "EDITION_EVENT_NIAN_ID");
+      assert.equal(byCanonical.envVar, "EDITION_EVENT_NIAN_ID");
+      assert.equal(byAlias.eventId, "test-nian-event");
+      assert.equal(byCanonical.eventId, "test-nian-event");
+      assert.notEqual(byAlias.envVar, "EDITION_EVENT_STAN_ID");
+      assert.notEqual(byAlias.eventId, "test-stan-event");
+    } finally {
+      delete process.env.EDITION_EVENT_NIAN_ID;
+      delete process.env.EDITION_EVENT_STAN_ID;
+    }
+  });
+
   it("every active canonical slug maps to its intended environment variable binding", () => {
     const expectedVars: Record<string, string> = {
       "jessica-samuel-wedding": "EDITION_EVENT_JESSICA_WEDDING_ID",
@@ -70,6 +106,8 @@ describe("Core Event Registry Alignment", () => {
       "cha-de-lingerie": "EDITION_EVENT_JESSICA_LINGERIE_ID",
       "cha-de-panela": "EDITION_EVENT_JESSICA_PANELA_ID",
       "jessicachadelingerie": "EDITION_EVENT_JESSICA_FAREWELL_ID",
+      stanturns5: "EDITION_EVENT_STAN_ID",
+      nianwebnight: "EDITION_EVENT_NIAN_ID",
     };
 
     for (const [slug, envVar] of Object.entries(expectedVars)) {

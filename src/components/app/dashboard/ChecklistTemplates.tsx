@@ -22,7 +22,7 @@ export default function ChecklistTemplates({
   if (templates.length === 0) return null;
 
   return (
-    <div className="space-y-6 rounded-3xl border border-brand-champagne/10 bg-white/5 p-6 md:p-8">
+    <div className="haxr-dashboard-card space-y-6 rounded-3xl border border-brand-champagne/10 bg-white/5 p-6 md:p-8">
       <div className="flex flex-col justify-between gap-4 border-b border-white/5 pb-4 sm:flex-row sm:items-center">
         <div className="space-y-1 text-left">
           <div className="flex items-center gap-2 text-brand-gold">

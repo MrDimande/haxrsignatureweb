@@ -15,24 +15,16 @@ const originalNodeEnv = process.env.NODE_ENV;
 const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const originalSupabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+function setProcessEnv(key: string, value: string | undefined): void {
+  const env = process.env as Record<string, string | undefined>;
+  if (value === undefined) delete env[key];
+  else env[key] = value;
+}
+
 function restoreEnv(): void {
-  if (originalNodeEnv === undefined) {
-    delete process.env.NODE_ENV;
-  } else {
-    process.env.NODE_ENV = originalNodeEnv;
-  }
-
-  if (originalSupabaseUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-  } else {
-    process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
-  }
-
-  if (originalSupabaseAnon === undefined) {
-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  } else {
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalSupabaseAnon;
-  }
+  setProcessEnv("NODE_ENV", originalNodeEnv);
+  setProcessEnv("NEXT_PUBLIC_SUPABASE_URL", originalSupabaseUrl);
+  setProcessEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", originalSupabaseAnon);
 }
 
 function mockClient(
@@ -98,7 +90,7 @@ describe("sign-up-auth", () => {
   });
 
   it("signUpWithEmailPassword creates session on preview project", async () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
@@ -117,7 +109,7 @@ describe("sign-up-auth", () => {
   });
 
   it("signUpWithEmailPassword surfaces Supabase errors", async () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
@@ -140,7 +132,7 @@ describe("supabase config — sign-up uses same auth guard", () => {
   });
 
   it("validateClientAppAuthEnvironment allows preview ref in development", () => {
-    process.env.NODE_ENV = "development";
+    setProcessEnv("NODE_ENV", "development");
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 

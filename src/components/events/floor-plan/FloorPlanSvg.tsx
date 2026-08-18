@@ -7,6 +7,7 @@ import {
   formatOccupancy,
   themeForTemplate,
 } from "@/lib/events/floor-plan/presentation";
+import { seatPositionForTable } from "@/lib/events/floor-plan/model";
 import type {
   FloorPlanElementKind,
   FloorPlanItem,
@@ -22,10 +23,13 @@ type FloorPlanSvgProps = {
   showGuestNames?: boolean;
   selectedIds?: Set<string>;
   overlappingIds?: Set<string>;
+  highlightedTableKey?: string | null;
   interactive?: boolean;
   onPointerDown?: (event: React.PointerEvent<SVGGElement>, item: FloorPlanItem) => void;
   onSelect?: (itemId: string, additive: boolean) => void;
 };
+
+const EMPTY_IDS = new Set<string>();
 
 const ELEMENT_LABELS: Record<FloorPlanElementKind, string> = {
   entrance: "Entrada",
@@ -113,29 +117,24 @@ function TableSeats({
   theme: ReturnType<typeof themeForTemplate>;
 }) {
   if (!table || item.kind !== "table") return null;
-  const radiusX = item.width / 2 + 0.28;
-  const radiusY = item.height / 2 + 0.28;
-
   return (
     <>
       {table.seats.map((seat, index) => {
-        const angle = (Math.PI * 2 * index) / Math.max(table.capacity, 1) - Math.PI / 2;
-        const cx = item.width / 2 + Math.cos(angle) * radiusX;
-        const cy = item.height / 2 + Math.sin(angle) * radiusY;
+        const position = seatPositionForTable(item, index, table.capacity);
         const occupied = Boolean(seat.guestId);
         return (
           <g key={seat.id}>
             <circle
-              cx={cx}
-              cy={cy}
+              cx={position.x}
+              cy={position.y}
               r={0.18}
               fill={occupied ? theme.seatOccupied : theme.seatEmpty}
               stroke={theme.seatStroke}
               strokeWidth={0.04}
             />
             <text
-              x={cx}
-              y={cy + 0.055}
+              x={position.x}
+              y={position.y + 0.055}
               textAnchor="middle"
               fontSize={0.13}
               fill={occupied ? "#FFFCF8" : theme.tableLabel}
@@ -145,14 +144,17 @@ function TableSeats({
             </text>
             {showGuestNames && seat.guestName ? (
               <text
-                x={cx}
-                y={cy + (cy < item.height / 2 ? -0.28 : 0.42)}
+                x={position.labelX}
+                y={position.labelY + 0.05}
                 textAnchor="middle"
                 fontSize={0.15}
                 fill={theme.tableLabel}
                 fontFamily={theme.serifLabels ? "Georgia, serif" : "ui-sans-serif, sans-serif"}
+                stroke={theme.roomFill}
+                strokeWidth={0.07}
+                paintOrder="stroke"
               >
-                {seat.guestName.slice(0, 20)}
+                {seat.guestName.slice(0, 18)}
               </text>
             ) : null}
           </g>
@@ -351,8 +353,9 @@ export default function FloorPlanSvg({
   tables,
   template = "technical",
   showGuestNames = false,
-  selectedIds = new Set(),
-  overlappingIds = new Set(),
+  selectedIds = EMPTY_IDS,
+  overlappingIds = EMPTY_IDS,
+  highlightedTableKey = null,
   interactive = false,
   onPointerDown,
   onSelect,
@@ -368,7 +371,11 @@ export default function FloorPlanSvg({
       data-floor-plan-svg
       viewBox={`0 0 ${room.width} ${room.length}`}
       role="img"
-      aria-label="Planta visual do evento"
+      aria-label={
+        highlightedTableKey
+          ? "Planta visual do evento com a sua mesa destacada"
+          : "Planta visual do evento"
+      }
       className="h-full w-full touch-none select-none bg-transparent"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -401,7 +408,9 @@ export default function FloorPlanSvg({
 
       {items.map((item) => {
         const table = item.kind === "table" ? tableByKey.get(item.tableKey) : undefined;
-        const selected = selectedIds.has(item.id);
+        const highlighted =
+          item.kind === "table" && item.tableKey === highlightedTableKey;
+        const selected = selectedIds.has(item.id) || highlighted;
         const overlap = overlappingIds.has(item.id);
         const stroke = overlap ? "#C0392B" : selected ? FLOOR_PLAN_GOLD : theme.tableStroke;
         const labelFont = theme.serifLabels
@@ -411,7 +420,7 @@ export default function FloorPlanSvg({
           ? template === "seating-chart"
             ? `${table.occupied}/${table.capacity}`
             : formatOccupancy(table.occupied, table.capacity)
-          : "removida";
+          : "";
 
         return (
           <g
@@ -427,6 +436,21 @@ export default function FloorPlanSvg({
           >
             {item.kind === "table" ? (
               <>
+                {highlighted ? (
+                  <rect
+                    x={-0.38}
+                    y={-0.38}
+                    width={item.width + 0.76}
+                    height={item.height + 0.76}
+                    rx={0.28}
+                    fill={FLOOR_PLAN_GOLD}
+                    fillOpacity={0.12}
+                    stroke={FLOOR_PLAN_GOLD}
+                    strokeWidth={0.1}
+                    strokeDasharray="0.22 0.12"
+                    className="animate-pulse"
+                  />
+                ) : null}
                 <TableShape
                   item={item}
                   stroke={stroke}
@@ -444,7 +468,7 @@ export default function FloorPlanSvg({
                 >
                   {item.sourceTableName}
                 </text>
-                {template !== "seating-chart" ? (
+                {table && template !== "seating-chart" ? (
                   <text
                     x={item.width / 2}
                     y={item.height / 2 + 0.22}
@@ -455,7 +479,7 @@ export default function FloorPlanSvg({
                   >
                     {occupancyLabel}
                   </text>
-                ) : (
+                ) : table ? (
                   <text
                     x={item.width / 2}
                     y={item.height / 2 + 0.2}
@@ -467,7 +491,7 @@ export default function FloorPlanSvg({
                   >
                     {occupancyLabel}
                   </text>
-                )}
+                ) : null}
                 <TableSeats
                   table={table}
                   item={item}

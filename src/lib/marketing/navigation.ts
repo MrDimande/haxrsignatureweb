@@ -58,6 +58,11 @@ export const navGroups: readonly NavGroup[] = [
         description: "Convites digitais e direcção visual.",
       },
       {
+        href: "/plus-memories",
+        label: "Plus Memories",
+        description: "Desafios e álbum colectivo da celebração.",
+      },
+      {
         href: "/gestao-convidados",
         label: "Gestão de Convidados",
         description: "RSVP, lista, lugares e check-in no dia.",
@@ -126,8 +131,8 @@ export const navAccountLink: NavLink = {
 };
 
 export const navCta: NavLink = {
-  href: "/contacto",
-  label: "Pedir proposta",
+  href: "/sign-up",
+  label: "Get Started",
   accent: true,
 };
 
@@ -135,6 +140,7 @@ export const navCta: NavLink = {
 export const primaryNav: NavLink[] = [
   { href: "/assessoria-eventos", label: "Assessoria" },
   { href: "/convites-identidade-visual", label: "Convites" },
+  { href: "/plus-memories", label: "Plus Memories" },
   { href: "/gestao-convidados", label: "Convidados" },
   { href: "/plataforma-eventos", label: "Plataforma" },
   { href: "/tools/haxr-concierge", label: "Concierge" },
@@ -150,6 +156,7 @@ export const primaryNav: NavLink[] = [
 export const footerNav: NavLink[] = [
   { href: "/assessoria-eventos", label: "Assessoria" },
   { href: "/convites-identidade-visual", label: "Convites" },
+  { href: "/plus-memories", label: "Plus Memories" },
   { href: "/gestao-convidados", label: "Convidados" },
   { href: "/plataforma-eventos", label: "Plataforma" },
   { href: "/tools/haxr-concierge", label: "Concierge" },
@@ -175,6 +182,7 @@ export const footerLinkGroups: FooterLinkGroup[] = [
     links: [
       { href: "/assessoria-eventos", label: "Assessoria de Eventos" },
       { href: "/convites-identidade-visual", label: "Convites e Identidade" },
+      { href: "/plus-memories", label: "Plus Memories" },
       { href: "/gestao-convidados", label: "Gestão de Convidados" },
       { href: "/plataforma-eventos", label: "Plataforma HAXR" },
       {

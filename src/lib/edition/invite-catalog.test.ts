@@ -35,6 +35,23 @@ describe("Edition invite catalog", () => {
       "jessicasamuelwedding"
     );
   });
+  it("maps nian-night-of-the-web to public slug nianwebnight as active invitation", () => {
+    assert.equal(
+      resolveEditionInviteSlug("nian-night-of-the-web"),
+      "nianwebnight"
+    );
+    const ref = getEditionInviteRef("nian-night-of-the-web");
+    assert.ok(ref);
+    assert.equal(ref.registryKey, "nian-night-of-the-web");
+    assert.equal(ref.inviteSlug, "nianwebnight");
+    assert.equal(ref.status, "active");
+    assert.equal(ref.experienceType, "invitation");
+    assert.equal(ref.label, "Edition · Aniversário · Nian");
+    assert.equal(
+      buildEditionInviteUrl("nian-night-of-the-web"),
+      "https://edition.haxrsignature.com/nianwebnight"
+    );
+  });
   it("maps traditional-wedding to jessicaesamueltraditionalwedding", () => {
     assert.equal(
       resolveEditionInviteSlug("traditional-wedding"),

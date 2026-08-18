@@ -70,7 +70,7 @@ export default function ModulesGrid({ modules }: ModulesGridProps) {
             <Link
               key={item.id}
               href={item.href}
-              className="group flex min-h-[160px] flex-col justify-between rounded-2xl border border-brand-champagne/10 bg-[#120e0d] p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-gold/45"
+              className="haxr-dashboard-card group flex min-h-[160px] flex-col justify-between rounded-2xl border border-brand-champagne/10 bg-[#120e0d] p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-gold/45"
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between">

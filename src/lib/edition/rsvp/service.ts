@@ -7,7 +7,8 @@ import { validateEditionRsvpBody } from "@/lib/edition/rsvp/validate";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 export async function processEditionRsvpSubmission(
-  body: unknown
+  body: unknown,
+  options?: { presentedProxySecret?: string }
 ): Promise<EditionRsvpResult> {
   const validated = validateEditionRsvpBody(body);
 
@@ -36,7 +37,9 @@ export async function processEditionRsvpSubmission(
     null;
 
   if (persistenceRequired) {
-    persistResult = await persistEditionRsvp(submission);
+    persistResult = await persistEditionRsvp(submission, {
+      presentedProxySecret: options?.presentedProxySecret,
+    });
 
     if (!persistResult.ok) {
       console.error("[edition/rsvp] Persist failed:", persistResult.error);

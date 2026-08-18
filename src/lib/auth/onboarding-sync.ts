@@ -129,7 +129,6 @@ export function writeOnboardingSyncState(
     }
   }
 }
-
 export function mapOnboardingRoleToEventType(
   role: OnboardingRawData["role"],
 ): CreateClientEventInput["eventType"] {
@@ -296,7 +295,6 @@ function clearSyncingStatus(
     store.removeItem(ONBOARDING_SYNC_KEYS.syncStatus);
   }
 }
-
 export async function performOnboardingSync(
   deps: OnboardingSyncDeps = {},
 ): Promise<OnboardingSyncResult> {

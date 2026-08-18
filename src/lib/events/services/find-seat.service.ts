@@ -5,16 +5,32 @@ import {
   isValidFindSeatCode,
   normalizeFindSeatCode,
 } from "@/lib/events/find-seat-code";
+import { normalizeSearchQuery } from "@/lib/events/normalize";
+import { getPublicEventFloorPlan } from "@/lib/events/floor-plan/repository";
 import type { FindSeatSearchResponse } from "@/lib/events/types";
 
 const MAX_QUERY_LENGTH = 80;
 
+export type FindSeatServiceDependencies = {
+  verifyAccess: typeof eventsRepo.verifyFindSeatAccess;
+  searchGuests: typeof guestsRepo.searchGuestsForFindSeat;
+  getPublicFloorPlan: typeof getPublicEventFloorPlan;
+};
+
+const DEFAULT_DEPENDENCIES: FindSeatServiceDependencies = {
+  verifyAccess: eventsRepo.verifyFindSeatAccess,
+  searchGuests: guestsRepo.searchGuestsForFindSeat,
+  getPublicFloorPlan: getPublicEventFloorPlan,
+};
+
 export async function searchFindSeat(
   eventId: string,
   query: string,
-  accessCode: string
+  accessCode: string,
+  dependencies: FindSeatServiceDependencies = DEFAULT_DEPENDENCIES
 ): Promise<FindSeatSearchResponse> {
-  const normalizedQuery = query.trim();
+  const normalizedQuery = normalizeSearchQuery(query);
+  const searchQuery = query.trim();
   const normalizedCode = normalizeFindSeatCode(accessCode);
 
   if (!isValidFindSeatCode(normalizedCode)) {
@@ -29,23 +45,32 @@ export async function searchFindSeat(
     return { ok: false, error: "query_too_long" };
   }
 
-  const event = await eventsRepo.verifyFindSeatAccess(eventId, normalizedCode);
+  const event = await dependencies.verifyAccess(eventId, normalizedCode);
   if (!event) {
     return { ok: false, error: "invalid_access" };
   }
 
-  const results = await guestsRepo.searchGuestsForFindSeat(
+  const results = await dependencies.searchGuests(
     eventId,
-    normalizedQuery
+    searchQuery
   );
 
   if (!results.length) {
     return { ok: false, error: "not_found" };
   }
 
+  let floorPlan = null;
+  try {
+    floorPlan = await dependencies.getPublicFloorPlan(eventId);
+  } catch {
+    // O Croqui é enriquecimento opcional. Uma falha nunca deve ocultar um
+    // lugar que já foi autenticado e encontrado com sucesso.
+  }
+
   return {
     ok: true,
     event,
     results,
+    floorPlan,
   };
 }

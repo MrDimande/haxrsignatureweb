@@ -56,6 +56,59 @@ type FloorPlanEditorProps = {
   schemaAvailable: boolean;
 };
 
+type BoundedNumberInputProps = {
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  className: string;
+  onCommit: (value: number) => void;
+};
+
+function BoundedNumberInput({
+  value,
+  min,
+  max,
+  step,
+  className,
+  onCommit,
+}: BoundedNumberInputProps) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  function commitDraft() {
+    const parsed = Number(draft);
+    if (draft.trim() === "" || !Number.isFinite(parsed) || parsed < min || parsed > max) {
+      setDraft(String(value));
+      return;
+    }
+    onCommit(parsed);
+  }
+
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      step={step}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commitDraft}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.key === "Escape") {
+          setDraft(String(value));
+          event.currentTarget.blur();
+        }
+      }}
+      className={className}
+    />
+  );
+}
+
 const ELEMENTS: { kind: FloorPlanElementKind; label: string; width: number; height: number }[] = [
   { kind: "entrance", label: "Entrada", width: 2, height: 0.7 },
   { kind: "exit", label: "Saída", width: 2, height: 0.7 },
@@ -110,6 +163,20 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function planPointFromClient(
+  svg: SVGSVGElement,
+  clientX: number,
+  clientY: number
+): { x: number; y: number } | null {
+  const matrix = svg.getScreenCTM();
+  if (!matrix) return null;
+  const point = svg.createSVGPoint();
+  point.x = clientX;
+  point.y = clientY;
+  const transformed = point.matrixTransform(matrix.inverse());
+  return { x: transformed.x, y: transformed.y };
+}
+
 export default function FloorPlanEditor({
   event,
   seats,
@@ -144,8 +211,8 @@ export default function FloorPlanEditor({
   const [persistedVersion, setPersistedVersion] = useState(initialPlan.version);
   const dragRef = useRef<{
     itemId: string;
-    pointerX: number;
-    pointerY: number;
+    pointerPlanX: number;
+    pointerPlanY: number;
     base: FloorPlanSnapshot;
     moved: boolean;
     movingIds: Set<string>;
@@ -214,6 +281,11 @@ export default function FloorPlanEditor({
     if (item.locked) return;
     pointerEvent.stopPropagation();
     canvasRef.current?.setPointerCapture(pointerEvent.pointerId);
+    const svg = pointerEvent.currentTarget.ownerSVGElement;
+    const pointer = svg
+      ? planPointFromClient(svg, pointerEvent.clientX, pointerEvent.clientY)
+      : null;
+    if (!pointer) return;
 
     const movingIds = selectedIds.has(item.id)
       ? new Set(selectedIds)
@@ -225,8 +297,8 @@ export default function FloorPlanEditor({
 
     dragRef.current = {
       itemId: item.id,
-      pointerX: pointerEvent.clientX,
-      pointerY: pointerEvent.clientY,
+      pointerPlanX: pointer.x,
+      pointerPlanY: pointer.y,
       base: present,
       moved: false,
       movingIds,
@@ -235,12 +307,12 @@ export default function FloorPlanEditor({
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
     const drag = dragRef.current;
-    const bounds = canvasRef.current?.getBoundingClientRect();
-    if (!drag || !bounds) return;
-    const dx =
-      ((event.clientX - drag.pointerX) / bounds.width) * drag.base.room.width / zoom;
-    const dy =
-      ((event.clientY - drag.pointerY) / bounds.height) * drag.base.room.length / zoom;
+    const svg = canvasRef.current?.querySelector("svg");
+    if (!drag || !svg) return;
+    const pointer = planPointFromClient(svg, event.clientX, event.clientY);
+    if (!pointer) return;
+    const dx = pointer.x - drag.pointerPlanX;
+    const dy = pointer.y - drag.pointerPlanY;
     if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) {
       drag.moved = true;
     }
@@ -367,18 +439,18 @@ export default function FloorPlanEditor({
       room: present.room,
       items: present.items,
       printPreferences: { ...present.printPreferences, showGuestNames: showNames },
-      version: persistedVersion + 1,
+      version: persistedVersion,
       updatedAt: initialPlan.updatedAt,
     });
     setSaving(false);
     if (result.success) {
-      setPersistedVersion((value) => value + 1);
+      setPersistedVersion(result.data.version);
     }
     setStatus(
       result.success
         ? "Planta guardada."
         : result.error.includes("event_floor_plans")
-          ? "Migration 044 necessária antes de guardar."
+          ? "A migration do Croqui deve ser validada no ambiente antes de guardar."
           : result.error
     );
   }
@@ -434,9 +506,8 @@ export default function FloorPlanEditor({
     <div className="space-y-4">
       {!schemaAvailable ? (
         <div className="rounded border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-          Editor disponível em modo local. A migration proposta
-          <strong> 044_event_floor_plans.sql</strong> deve ser revista e aplicada
-          posteriormente para activar Guardar.
+          Editor disponível em modo de consulta. A migration segura do Croqui
+          deve ser validada neste ambiente para activar Guardar.
         </div>
       ) : null}
 
@@ -607,13 +678,13 @@ export default function FloorPlanEditor({
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <label className="text-xs text-grey/65">Largura (m)
-                <input type="number" min={4} max={200} value={present.room.width} onChange={(e) => commit({ ...present, room: { ...present.room, width: Number(e.target.value) } })} className={propertyInput} />
+                <BoundedNumberInput min={4} max={200} value={present.room.width} onCommit={(width) => commit({ ...present, room: { ...present.room, width } })} className={propertyInput} />
               </label>
               <label className="text-xs text-grey/65">Comprimento (m)
-                <input type="number" min={4} max={200} value={present.room.length} onChange={(e) => commit({ ...present, room: { ...present.room, length: Number(e.target.value) } })} className={propertyInput} />
+                <BoundedNumberInput min={4} max={200} value={present.room.length} onCommit={(length) => commit({ ...present, room: { ...present.room, length } })} className={propertyInput} />
               </label>
               <label className="col-span-2 text-xs text-grey/65">Grelha (m)
-                <input type="number" min={0.1} max={5} step={0.1} value={present.room.gridSize} onChange={(e) => commit({ ...present, room: { ...present.room, gridSize: Number(e.target.value) } })} className={propertyInput} />
+                <BoundedNumberInput min={0.1} max={5} step={0.1} value={present.room.gridSize} onCommit={(gridSize) => commit({ ...present, room: { ...present.room, gridSize } })} className={propertyInput} />
               </label>
             </div>
           </section>

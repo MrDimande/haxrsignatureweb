@@ -3,10 +3,11 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import AuthShell from "@/components/auth/auth-shell";
 import SignUpForm from "@/components/auth/sign-up-form";
-import { marketingMetadata } from "@/lib/marketing/seo";
 
 export const metadata: Metadata = {
-  ...marketingMetadata("signUp"),
+  title: "Criar Conta | HAXR Signature",
+  description:
+    "Crie uma conta HAXR para organizar o casamento, guardar fornecedores e aceder às ferramentas de planeamento.",
   robots: { index: false, follow: false },
 };
 

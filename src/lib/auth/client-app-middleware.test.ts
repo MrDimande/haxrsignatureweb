@@ -228,4 +228,11 @@ describe("client-app-middleware", () => {
     assert.equal(isSafeAppReturnPath("//evil.test"), false);
     assert.equal(isSafeAppReturnPath("https://evil.test"), false);
   });
+
+  it("allows only explicit public post-auth destinations", () => {
+    assert.equal(isSafeClientReturnPath("/for-pros"), true);
+    assert.equal(isSafeClientReturnPath("/fornecedores"), true);
+    assert.equal(isSafeClientReturnPath("/contacto"), false);
+    assert.equal(isSafeClientReturnPath("//evil.test/for-pros"), false);
+  });
 });

@@ -29,9 +29,9 @@ export default function OnboardingStep1Page() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-ivory flex flex-col justify-between font-sans text-brand-text-dark select-none p-6 md:p-12 relative overflow-x-hidden">
+    <div className="haxr-onboarding-stage flex min-h-screen select-none flex-col justify-between overflow-x-hidden p-5 font-sans text-brand-text-dark sm:p-8 md:p-12">
 
-      <header className="max-w-3xl w-full mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-brand-champagne/30 text-left">
+      <header className="haxr-onboarding-header mx-auto flex w-full max-w-4xl flex-col justify-between gap-4 border-b pb-6 text-left sm:flex-row sm:items-center">
         <OnboardingBrandHeader />
 
         <div className="flex items-center gap-4 text-xs font-mono">
@@ -42,9 +42,9 @@ export default function OnboardingStep1Page() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center max-w-xl w-full mx-auto py-12 md:py-16">
+      <main className="haxr-onboarding-main mx-auto flex w-full max-w-2xl flex-1 items-center justify-center py-10 md:py-16">
 
-        <form onSubmit={handleContinue} className="w-full space-y-8 text-left">
+        <form onSubmit={handleContinue} className="haxr-onboarding-form w-full space-y-8 text-left">
 
           <div className="space-y-2">
             <span className="font-mono text-[8px] tracking-widest text-brand-gold uppercase font-bold">Perfil Inicial</span>
@@ -53,25 +53,29 @@ export default function OnboardingStep1Page() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div
+            <button
+              type="button"
               onClick={() => setRole("noiva")}
-              className={`border rounded-2xl p-4 cursor-pointer text-center transition-all ${
+              aria-pressed={role === "noiva"}
+              className={`cursor-pointer rounded-2xl border p-4 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 ${
                 role === "noiva" ? "border-brand-gold bg-brand-champagne/10 shadow-sm" : "border-brand-champagne/45 hover:border-brand-gold/40 bg-white"
               }`}
             >
               <span className="font-serif text-sm font-medium text-brand-text-dark">Noiva / Noivo</span>
               <p className="text-[10px] text-zinc-500 font-light mt-1 font-sans">Casal protagonista</p>
-            </div>
+            </button>
 
-            <div
+            <button
+              type="button"
               onClick={() => setRole("consultor")}
-              className={`border rounded-2xl p-4 cursor-pointer text-center transition-all ${
+              aria-pressed={role === "consultor"}
+              className={`cursor-pointer rounded-2xl border p-4 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 ${
                 role === "consultor" ? "border-brand-gold bg-brand-champagne/10 shadow-sm" : "border-brand-champagne/45 hover:border-brand-gold/40 bg-white"
               }`}
             >
               <span className="font-serif text-sm font-medium text-brand-text-dark">Consultor / Planner</span>
               <p className="text-[10px] text-zinc-500 font-light mt-1 font-sans">Organizador de casamentos</p>
-            </div>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -113,7 +117,7 @@ export default function OnboardingStep1Page() {
 
       </main>
 
-      <footer className="max-w-3xl w-full mx-auto pt-6 border-t border-brand-champagne/30 text-center font-mono text-[9px] text-zinc-400">
+      <footer className="haxr-onboarding-footer mx-auto w-full max-w-4xl border-t pt-6 text-center font-mono text-[9px] text-zinc-400">
         <span>HAXR SIGNATURE · GESTÃO OPERACIONAL DE CASAMENTOS</span>
       </footer>
 

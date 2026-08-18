@@ -174,7 +174,7 @@ export const homeConciergeSection = {
       organizedModules: "Fornecedores · Orçamento",
       processingLabel: "A extrair fornecedor e valor…",
       fields: [
-        { label: "Fornecedor", value: "Elegance Decor" },
+        { label: "Fornecedor", value: "Não associado" },
         { label: "Valor proposto", value: "85.000 MT", highlight: true },
         { label: "Condições", value: "50% sinal · 50% até 7 dias antes" },
         {
@@ -196,7 +196,7 @@ export const homeConciergeSection = {
         { label: "Valor pago", value: "42.500 MT", highlight: true },
         { label: "Data", value: "12 Jun 2026" },
         { label: "Método", value: "M-Pesa" },
-        { label: "Fornecedor", value: "Elegance Decor" },
+        { label: "Fornecedor", value: "Não associado" },
         { label: "Referência", value: "MP260612847391" },
       ],
     },
@@ -372,7 +372,7 @@ export const homeConciergeSection = {
       {
         id: "inbox-1",
         scenarioId: "vendor_proposal" as ConciergeScenarioId,
-        title: "Proposta de Decoração — Elegance Decor",
+        title: "Proposta de decoração — sem fornecedor associado",
         type: "Proposta",
         time: "Há 12 min",
         status: "Por rever",

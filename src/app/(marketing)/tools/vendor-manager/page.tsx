@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  Plus, Trash2, RotateCcw,
+  Plus, Trash2,
   MessageCircle, ArrowLeft, Phone, Briefcase,
   CheckCircle, FileText
 } from "lucide-react";
@@ -19,13 +19,6 @@ interface Vendor {
   paid: number;
   status: "Por Contratar" | "Contratado" | "Em Negociação";
 }
-
-const defaultVendors: Vendor[] = [
-  { id: "vendor-1", name: "Elegance Decor", category: "Decoração", contact: "+258 84 999 1111", cost: 85000, paid: 42500, status: "Contratado" },
-  { id: "vendor-2", name: "Studio Lumina (Foto)", category: "Fotografia", contact: "lumina@studio.co.mz", cost: 60000, paid: 30000, status: "Contratado" },
-  { id: "vendor-3", name: "Salão Signature Maputo", category: "Espaço", contact: "+258 82 888 2222", cost: 150000, paid: 75000, status: "Contratado" },
-  { id: "vendor-4", name: "Buffet Gourmet Lda", category: "Catering", contact: "geral@gourmet.co.mz", cost: 200000, paid: 0, status: "Em Negociação" },
-];
 
 const categories = ["Espaço", "Catering", "Decoração", "Fotografia", "Vídeo", "DJ & Música", "Maquilhagem", "Outros"];
 
@@ -45,12 +38,13 @@ export default function VendorManagerPage() {
     const saved = localStorage.getItem("haxr_wedding_vendors");
     if (saved) {
       try {
-        setVendors(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setVendors(Array.isArray(parsed) ? parsed : []);
       } catch {
-        setVendors(defaultVendors);
+        setVendors([]);
       }
     } else {
-      setVendors(defaultVendors);
+      setVendors([]);
     }
   }, []);
 
@@ -89,12 +83,6 @@ export default function VendorManagerPage() {
   const updateStatus = (id: string, newStatus: "Por Contratar" | "Contratado" | "Em Negociação") => {
     const updated = vendors.map((v) => (v.id === id ? { ...v, status: newStatus } : v));
     saveVendors(updated);
-  };
-
-  const resetToDefault = () => {
-    if (window.confirm("Deseja repor a lista original de fornecedores de exemplo?")) {
-      saveVendors(defaultVendors);
-    }
   };
 
   if (!isClient) {
@@ -149,14 +137,6 @@ export default function VendorManagerPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={resetToDefault}
-            className="self-start md:self-auto inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-brand-text-dark/40 hover:text-red-600 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Repor Exemplo</span>
-          </button>
         </div>
 
         {/* Key Info Cards */}
@@ -190,7 +170,7 @@ export default function VendorManagerPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Pastelaria Delícias"
+                  placeholder="Nome do fornecedor"
                   value={newVendorName}
                   onChange={(e) => setNewVendorName(e.target.value)}
                   className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans"
@@ -218,7 +198,7 @@ export default function VendorManagerPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: +258 84 111 2222"
+                  placeholder="Telefone ou email"
                   value={newVendorContact}
                   onChange={(e) => setNewVendorContact(e.target.value)}
                   className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans"

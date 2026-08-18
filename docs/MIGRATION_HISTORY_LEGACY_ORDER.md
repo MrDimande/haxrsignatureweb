@@ -65,9 +65,9 @@ On the empty Staging database:
 
 ## Rules for new migrations
 
-1. **Legacy files are immutable.** Do not rename or reorder `001`–`044`, `0281`, `0301`, `0302`, or other already-shipped short versions.
+1. **Legacy files are immutable.** Do not rename or reorder the already-shipped short versions `001`–`046`, `0281`, `0301`, `0302`, or other explicitly allowlisted legacy files.
 2. **New migrations must use a full UTC timestamp version**, e.g. `20260717123000_description.sql`.
-3. Reject new short names such as `045_...sql` or `046_...sql` (enforce via `scripts/check-migration-version-set.mjs`).
+3. Do not introduce additional short-versioned migrations. Only explicitly allowlisted, already-shipped legacy versions are permitted (enforce via `scripts/check-migration-version-set.mjs`).
 4. Keep rollback SQL under `supabase/rollbacks/` (never as `*.down.sql` inside `migrations/`).
 5. Only consider `migration repair` when `localOnly` or `remoteOnly` is non-empty **and** a human GO authorizes a proven reconciliation plan.
 

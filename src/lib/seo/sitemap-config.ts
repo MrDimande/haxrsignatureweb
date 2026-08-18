@@ -15,6 +15,7 @@ const PAGE_OVERRIDES: Partial<
   home: { priority: 1, changeFrequency: "weekly", tier: "home" },
   assessoria: { priority: 0.95, changeFrequency: "weekly", tier: "service" },
   convites: { priority: 0.95, changeFrequency: "weekly", tier: "service" },
+  plusMemories: { priority: 0.93, changeFrequency: "weekly", tier: "service" },
   convidados: { priority: 0.95, changeFrequency: "weekly", tier: "service" },
   plataforma: { priority: 0.9, changeFrequency: "monthly", tier: "service" },
   contacto: { priority: 0.92, changeFrequency: "monthly", tier: "conversion" },

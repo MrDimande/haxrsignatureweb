@@ -18,7 +18,7 @@ export const DEFAULT_FLOOR_PLAN: Omit<EventFloorPlan, "eventId"> = {
     template: "technical",
     showGuestNames: false,
   },
-  version: 1,
+  version: 0,
   updatedAt: null,
 };
 
@@ -103,6 +103,57 @@ export function createTableItem(
     height: 2.4,
     rotation: 0,
     locked: false,
+  };
+}
+
+export function seatPositionForTable(
+  item: FloorPlanTableItem,
+  index: number,
+  capacity: number
+): { x: number; y: number; labelX: number; labelY: number } {
+  const safeCapacity = Math.max(1, capacity);
+  const centerX = item.width / 2;
+  const centerY = item.height / 2;
+  let x: number;
+  let y: number;
+
+  if (item.shape === "round" || item.shape === "sweetheart") {
+    const angle = (Math.PI * 2 * index) / safeCapacity - Math.PI / 2;
+    x = centerX + Math.cos(angle) * (item.width / 2 + 0.28);
+    y = centerY + Math.sin(angle) * (item.height / 2 + 0.28);
+  } else {
+    const margin = 0.28;
+    const outerWidth = item.width + margin * 2;
+    const outerHeight = item.height + margin * 2;
+    const perimeter = 2 * (outerWidth + outerHeight);
+    let distance = ((index + 0.5) / safeCapacity) * perimeter;
+
+    if (distance <= outerWidth) {
+      x = -margin + distance;
+      y = -margin;
+    } else if ((distance -= outerWidth) <= outerHeight) {
+      x = item.width + margin;
+      y = -margin + distance;
+    } else if ((distance -= outerHeight) <= outerWidth) {
+      x = item.width + margin - distance;
+      y = item.height + margin;
+    } else {
+      distance -= outerWidth;
+      x = -margin;
+      y = item.height + margin - distance;
+    }
+  }
+
+  const vectorX = x - centerX;
+  const vectorY = y - centerY;
+  const magnitude = Math.hypot(vectorX, vectorY) || 1;
+  const labelDistance = 0.38;
+
+  return {
+    x,
+    y,
+    labelX: x + (vectorX / magnitude) * labelDistance,
+    labelY: y + (vectorY / magnitude) * labelDistance,
   };
 }
 

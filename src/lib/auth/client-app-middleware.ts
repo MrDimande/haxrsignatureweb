@@ -10,6 +10,10 @@ export const CLIENT_SIGN_UP_PATH = "/sign-up";
 export const APP_ROUTE_PREFIX = "/app";
 export const CLIENT_DASHBOARD_ALIAS = "/dashboard";
 export const STYLE_QUIZ_PATH = "/style-quiz";
+export const PUBLIC_POST_AUTH_RETURN_PATHS = [
+  "/for-pros",
+  "/fornecedores",
+] as const;
 
 /** Marketing tools that require a free couple account (Loverly-style gate). */
 export const CLIENT_GATED_TOOL_PATHS = [STYLE_QUIZ_PATH] as const;
@@ -57,7 +61,11 @@ export function isSafeAppReturnPath(path: string): boolean {
 export function isSafeClientReturnPath(path: string): boolean {
   if (!path.startsWith("/")) return false;
   if (path.startsWith("//")) return false;
-  return isSafeAppReturnPath(path) || isClientGatedToolPath(path);
+  return (
+    isSafeAppReturnPath(path) ||
+    isClientGatedToolPath(path) ||
+    PUBLIC_POST_AUTH_RETURN_PATHS.some((allowedPath) => path === allowedPath)
+  );
 }
 
 export const POST_AUTH_RETURN_STORAGE_KEY = "haxr_post_auth_return";

@@ -5,9 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import { supplierJoinSchema } from "@/lib/email/email-schemas";
 import { submitSupplierJoin } from "@/lib/marketing/submit";
 import MarketingConsentField from "@/components/marketing/forms/MarketingConsentField";
+import { SUPPLIER_CATEGORIES as MARKETPLACE_SUPPLIER_CATEGORIES } from "@/lib/vendors/marketplace";
 
 type FormData = z.infer<typeof supplierJoinSchema>;
 
@@ -17,23 +19,16 @@ const inputClass =
 const labelClass =
   "block font-mono text-[8px] tracking-[0.4em] uppercase text-brand-gold mb-3";
 
-const SUPPLIER_CATEGORIES = [
-  "Fotografia",
-  "Vídeo",
-  "Flores & decoração",
-  "Catering",
-  "Música & DJ",
-  "Local / venue",
-  "Convites & papelaria",
-  "Assessoria / planning",
-  "Outro",
-];
+const SUPPLIER_CATEGORIES = MARKETPLACE_SUPPLIER_CATEGORIES.map(
+  (category) => category.label,
+);
 
 export default function SupplierJoinForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
     "idle"
   );
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const {
     register,
@@ -52,10 +47,15 @@ export default function SupplierJoinForm() {
   const onSubmit = async (data: FormData) => {
     setStatus("loading");
     setErrorMessage("");
+    setSuccessMessage("");
     try {
-      await submitSupplierJoin(data);
+      const result = await submitSupplierJoin(data);
+      setSuccessMessage(
+        result.message ??
+          "Recebemos a candidatura. O perfil permanecerá privado durante a revisão.",
+      );
       setStatus("success");
-      reset({ gotcha: "", portfolioUrl: "", message: "" });
+      reset();
     } catch (err) {
       setStatus("error");
       setErrorMessage(
@@ -83,32 +83,47 @@ export default function SupplierJoinForm() {
           Partilhe o perfil do vosso negócio. A equipa HAXR analisa cada candidatura
           com discrição e responde quando houver alinhamento com a nossa rede.
         </p>
+        <p className="rounded-lg border border-brand-champagne/35 bg-brand-ivory/40 px-4 py-3 text-xs font-light leading-5 text-brand-text-dark/65">
+          Para ligar esta candidatura à sua conta HAXR, crie a conta ou inicie sessão antes de enviar.
+        </p>
 
         <div className="space-y-8">
           <div>
+            <label htmlFor="supplier-name" className={labelClass}>
+              Nome do fornecedor / empresa
+            </label>
             <input
+              id="supplier-name"
               type="text"
               placeholder="Nome do fornecedor / empresa"
               className={inputClass}
+              aria-invalid={errors.supplierName ? true : undefined}
+              aria-describedby={errors.supplierName ? "supplier-name-error" : undefined}
               {...register("supplierName")}
             />
             {errors.supplierName ? (
-              <p className="text-gold/60 text-xs mt-2 font-sans">
+              <p id="supplier-name-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">
                 {errors.supplierName.message}
               </p>
             ) : null}
           </div>
 
           <div>
+            <label htmlFor="supplier-responsible-name" className={labelClass}>
+              Nome do responsável
+            </label>
             <input
+              id="supplier-responsible-name"
               type="text"
               placeholder="Nome do responsável"
               autoComplete="name"
               className={inputClass}
+              aria-invalid={errors.responsibleName ? true : undefined}
+              aria-describedby={errors.responsibleName ? "supplier-responsible-name-error" : undefined}
               {...register("responsibleName")}
             />
             {errors.responsibleName ? (
-              <p className="text-gold/60 text-xs mt-2 font-sans">
+              <p id="supplier-responsible-name-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">
                 {errors.responsibleName.message}
               </p>
             ) : null}
@@ -116,35 +131,47 @@ export default function SupplierJoinForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
+              <label htmlFor="supplier-email" className={labelClass}>Email</label>
               <input
+                id="supplier-email"
                 type="email"
                 placeholder="Email"
                 autoComplete="email"
                 className={inputClass}
+                aria-invalid={errors.email ? true : undefined}
+                aria-describedby={errors.email ? "supplier-email-error" : undefined}
                 {...register("email")}
               />
               {errors.email ? (
-                <p className="text-gold/60 text-xs mt-2 font-sans">{errors.email.message}</p>
+                <p id="supplier-email-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.email.message}</p>
               ) : null}
             </div>
             <div>
+              <label htmlFor="supplier-phone" className={labelClass}>Telefone / WhatsApp</label>
               <input
+                id="supplier-phone"
                 type="tel"
                 placeholder="Telefone / WhatsApp"
                 autoComplete="tel"
                 className={inputClass}
+                aria-invalid={errors.phone ? true : undefined}
+                aria-describedby={errors.phone ? "supplier-phone-error" : undefined}
                 {...register("phone")}
               />
               {errors.phone ? (
-                <p className="text-gold/60 text-xs mt-2 font-sans">{errors.phone.message}</p>
+                <p id="supplier-phone-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.phone.message}</p>
               ) : null}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
+              <label htmlFor="supplier-category" className={labelClass}>Categoria</label>
               <select
+                id="supplier-category"
                 className={`${inputClass} appearance-none cursor-pointer`}
+                aria-invalid={errors.category ? true : undefined}
+                aria-describedby={errors.category ? "supplier-category-error" : undefined}
                 {...register("category")}
               >
                 <option value="" disabled className="bg-brand-ivory text-brand-text-dark">
@@ -157,18 +184,22 @@ export default function SupplierJoinForm() {
                 ))}
               </select>
               {errors.category ? (
-                <p className="text-gold/60 text-xs mt-2 font-sans">{errors.category.message}</p>
+                <p id="supplier-category-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.category.message}</p>
               ) : null}
             </div>
             <div>
+              <label htmlFor="supplier-city" className={labelClass}>Cidade</label>
               <input
+                id="supplier-city"
                 type="text"
                 placeholder="Cidade"
                 className={inputClass}
+                aria-invalid={errors.city ? true : undefined}
+                aria-describedby={errors.city ? "supplier-city-error" : undefined}
                 {...register("city")}
               />
               {errors.city ? (
-                <p className="text-gold/60 text-xs mt-2 font-sans">{errors.city.message}</p>
+                <p id="supplier-city-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.city.message}</p>
               ) : null}
             </div>
           </div>
@@ -183,10 +214,12 @@ export default function SupplierJoinForm() {
               type="url"
               placeholder="https://"
               className={inputClass}
+              aria-invalid={errors.portfolioUrl ? true : undefined}
+              aria-describedby={errors.portfolioUrl ? "supplier-portfolio-error" : undefined}
               {...register("portfolioUrl")}
             />
             {errors.portfolioUrl ? (
-              <p className="text-gold/60 text-xs mt-2 font-sans">
+              <p id="supplier-portfolio-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">
                 {errors.portfolioUrl.message}
               </p>
             ) : null}
@@ -225,14 +258,28 @@ export default function SupplierJoinForm() {
 
         <AnimatePresence>
           {status === "success" ? (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="font-serif text-sm font-light italic text-gold/75 leading-relaxed"
+              className="rounded-xl border border-brand-gold/25 bg-brand-gold/5 p-4"
+              role="status"
             >
-              Recebemos a candidatura do fornecedor.
-            </motion.p>
+              <p className="font-serif text-sm font-light italic leading-relaxed text-brand-gold">
+                {successMessage}
+              </p>
+              <p className="mt-2 text-xs font-light leading-5 text-brand-text-dark/60">
+                A candidatura não aparece no directório até ser aprovada.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-4 font-mono text-[8px] font-bold uppercase tracking-[0.16em]">
+                <Link href="/sign-up?from=%2Ffor-pros" className="text-brand-gold hover:underline">
+                  Criar conta
+                </Link>
+                <Link href="/fornecedores" className="text-brand-text-dark/60 hover:text-brand-gold">
+                  Ver directório
+                </Link>
+              </div>
+            </motion.div>
           ) : null}
           {status === "error" ? (
             <motion.p
@@ -240,6 +287,7 @@ export default function SupplierJoinForm() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className="font-sans text-sm text-red-400/70"
+              role="alert"
             >
               {errorMessage}
             </motion.p>

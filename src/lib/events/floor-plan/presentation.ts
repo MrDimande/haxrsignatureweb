@@ -12,6 +12,23 @@ export const TEMPLATE_LABELS: Record<FloorPlanPrintTemplate, string> = {
   "seating-chart": "Seating chart",
 };
 
+export const PUBLIC_ELEMENT_LABELS: Record<FloorPlanElementKind, string> = {
+  entrance: "Entrada",
+  exit: "Saída",
+  stage: "Palco",
+  "dance-floor": "Pista de dança",
+  buffet: "Buffet",
+  bar: "Bar",
+  dj: "DJ",
+  cake: "Mesa do bolo",
+  photo: "Fotografia",
+  wc: "WC",
+  wall: "Parede",
+  column: "Coluna",
+  reserved: "Zona reservada",
+  text: "Informação",
+};
+
 export type FloorPlanTheme = {
   roomFill: string;
   roomStroke: string;
