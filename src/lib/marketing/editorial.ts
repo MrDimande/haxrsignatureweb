@@ -124,11 +124,181 @@ export const areaClienteNarrative: PageNarrative = {
     "A tranquilidade de um acompanhamento contínuo — hoje pela equipa, amanhã num espaço dedicado à sua experiência.",
 };
 
+export const haxrStandardPillars = [
+  {
+    num: "01",
+    title: "Independência & Transparência",
+    subtitle: "Padrão de Lealdade Exclusiva",
+    description:
+      "A HAXR não aceita comissões ocultas ou kickbacks de fornecedores. Qualquer negociação e poupança obtida em benefício do evento pertence 100% ao casal.",
+  },
+  {
+    num: "02",
+    title: "Direcção Criativa Autoral",
+    subtitle: "Estética com Intenção",
+    description:
+      "Cada casamento possui uma identidade singular. Desenhamos o conceito visual, a iluminação cenográfica, a acústica e a paleta de texturas como um projeto de alta-costura.",
+  },
+  {
+    num: "03",
+    title: "Engenharia & Comando Invisível",
+    subtitle: "Presença Serena nos Bastidores",
+    description:
+      "Assumimos a complexidade operacional com tranquilidade. Planos de contingência técnica, geradores, climatização e logística de convidados rigorosamente ensaiados.",
+  },
+] as const;
+
+export interface AssessoriaScope {
+  id: string;
+  num: string;
+  name: string;
+  nameEn: string;
+  badge: string;
+  tagline: string;
+  deliverables: string[];
+  idealFor: string;
+}
+
+export const assessoriaScopes: AssessoriaScope[] = [
+  {
+    id: "full-service",
+    num: "I",
+    name: "Assessoria Completa & Direcção Criativa",
+    nameEn: "Full-Service Planning & Creative Direction",
+    badge: "Acompanhamento Integral",
+    tagline:
+      "Para noivos que desejam delegação integral, curadoria de raiz e direção de arte do primeiro dia ao encerramento.",
+    deliverables: [
+      "Direção criativa & desenvolvimento de conceito visual exclusivo",
+      "Engenharia orçamental contínua com The Wedding Financial Book (.xlsx)",
+      "Curadoria rigorosa, negociação e blindagem contratual de fornecedores",
+      "Planta cenográfica 2D/3D, paleta de texturas e styling floral",
+      "Gestão completa de convidados, RSVP digital e mapa de lugares",
+      "Direção de ensaios de cerimónia e comando operacional no dia",
+    ],
+    idealFor:
+      "Celebrações onde o casal procura dedicação total, serenidade emocional e zero sobrecarga logística.",
+  },
+  {
+    id: "spatial-design",
+    num: "II",
+    name: "Direcção Criativa, Cenografia & Gestão de Produção",
+    nameEn: "Creative Direction, Spatial Design & Production Management",
+    badge: "Design & Produção Técnica",
+    tagline:
+      "Para noivos que já possuem local ou parceiros base, mas exigem direção artística autoral, projeto floral e gestão técnica de fornecedores.",
+    deliverables: [
+      "Conceito cenográfico imersivo, iluminação arquitetural e paleta estética",
+      "Curadoria de arte floral, mobiliário, toalharia e loiça de alta linha",
+      "Validação técnica de riders de som, luz, estruturas e geradores",
+      "Supervisão minuciosa de montagem, cronograma técnico e ensaios",
+      "Acompanhamento estético presencial no dia do casamento",
+    ],
+    idealFor:
+      "Casamentos com forte componente visual e estrutural que necessitam de liderança criativa e supervisão técnica de parceiros.",
+  },
+  {
+    id: "run-of-show",
+    num: "III",
+    name: "Coordenação Executiva · Reta Final & Dia-D",
+    nameEn: "Executive Run-of-Show & Day-Of Coordination",
+    badge: "Governação Operacional",
+    tagline:
+      "A HAXR assume a governação operacional na fase final definida após diagnóstico do evento.",
+    deliverables: [
+      "Auditoria executiva de contratos e cronograma mestre de timings",
+      "Reunião de alinhamento técnico com todos os fornecedores contratados",
+      "Ensaio geral de cortejo, protocolo e alinhamento com celebrante",
+      "Supervisão cirúrgica de montagem, recepção de convidados e cortejo",
+      "Equipa sênior de bastidores dedicada à tranquilidade dos noivos",
+    ],
+    idealFor:
+      "Noivos que organizaram o planeamento de forma autónoma e exigem comando experiente na reta final e no grande dia.",
+  },
+];
+
+export const signatureJourneyPhases = [
+  {
+    phase: "Fase 01",
+    title: "Visão & Conceito",
+    titleEn: "Vision & Concept Architecture",
+    description:
+      "Diagnóstico de estilo, alinhamento de expectativas, definição da atmosfera visual e narrativa que guiará cada elemento do casamento.",
+    items: [
+      "Sessão de diagnóstico criativo",
+      "Desenho de moodboards e narrativa",
+      "Definição do perfil e escala do evento",
+    ],
+  },
+  {
+    phase: "Fase 02",
+    title: "Arquitetura Financeira",
+    titleEn: "Financial Architecture & Curating",
+    description:
+      "Fixação do teto orçamental, contratação com blindagem contratual e curadoria criteriosa dos melhores fornecedores de Moçambique.",
+    items: [
+      "The Wedding Financial Book (.xlsx)",
+      "Análise e negociação de propostas",
+      "Blindagem jurídica de contratos",
+    ],
+  },
+  {
+    phase: "Fase 03",
+    title: "Produção Criativa & Cenografia",
+    titleEn: "Creative Production & Spatial Design",
+    description:
+      "Desenho de plantas, fluxo de convidados, iluminação cenográfica, degustações gastronómicas e amostras reais de mesa.",
+    items: [
+      "Layout espacial e fluxo de circulação",
+      "Degustação de menu e harmonização",
+      "Amostra de styling floral e iluminação",
+    ],
+  },
+  {
+    phase: "Fase 04",
+    title: "Experiência de Convidados",
+    titleEn: "Guest Experience & Protocol",
+    description:
+      "Gestão de confirmações em tempo real, acompanhamento de restrições alimentares, mapa de mesas e acolhimento com discrição.",
+    items: [
+      "Live RSVP e controle de presenças",
+      "Gestão de lugares e restrições",
+      "Protocolo de recepção e check-in",
+    ],
+  },
+  {
+    phase: "Fase 05",
+    title: "Execução & Comando no Grande Dia",
+    titleEn: "Master Execution & Run-of-Show",
+    description:
+      "Montagem milimétrica, comando de bastidores, sincronização de cortejo e presença invisível para que o casal viva apenas o momento.",
+    items: [
+      "Comando de montagem e fornecedores",
+      "Sincronização de cortejo e timings",
+      "Resolução serena de qualquer imprevisto",
+    ],
+  },
+] as const;
+
 export function getCaseStudyForDemo(demoId: string): CaseStudy | undefined {
   return caseStudies.find((study) => study.id === demoId);
 }
 
 export const caseStudies: CaseStudy[] = [
+  {
+    id: "casamento-leila-armando",
+    title: "Leila & Armando",
+    category: "Assessoria Integral",
+    context:
+      "Casamento no Catembe Gallery Hotel, Maputo, com 200 convidados e desafios de logística costeira, cenografia ao ar livre e múltiplos momentos musicais.",
+    challenge:
+      "Coordenar fornecedores de alta complexidade (catering, som, iluminação arquitetural e floristas) mantendo rigoroso controlo financeiro e fluidez para os noivos.",
+    solution:
+      "Direção criativa HAXR de ponta a ponta, governança fiduciária através do The Wedding Financial Book, RSVP em tempo real e comando de bastidores no dia.",
+    result:
+      "Execução cronometrada ao minuto, zero custos imprevistos e tranquilidade absoluta para o casal do cortejo ao encerramento.",
+    image: portfolioAssets.casamentoSignature,
+  },
   {
     id: "casamento-vania-fabiao",
     title: "Vânia & Fabiao",
@@ -160,20 +330,6 @@ export const caseStudies: CaseStudy[] = [
     image: portfolioAssets.saveTheDate,
     href: getDemoById("save-the-date-jessica-samuel")?.publicPath,
     external: false,
-  },
-  {
-    id: "corporativo",
-    title: "Evento Corporativo",
-    category: "Corporativos",
-    context:
-      "Marca institucional que precisava de comunicar exclusividade num evento de alto perfil.",
-    challenge:
-      "Traduzir identidade corporativa em linguagem visual coerente — do convite à recepção.",
-    solution:
-      "Identidade visual e convite digital alinhados à marca, com curadoria HAXR de ponta a ponta.",
-    result:
-      "Uma experiência que reflectiu o posicionamento da organização — antes, durante e após o evento.",
-    image: portfolioAssets.corporativo,
   },
   {
     id: "celebracao-privada",

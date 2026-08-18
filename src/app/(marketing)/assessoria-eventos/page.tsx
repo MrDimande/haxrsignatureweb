@@ -1,199 +1,359 @@
 "use client";
 
+import { useState } from "react";
 import StructuredData from "@/components/seo/StructuredData";
 import PageHero, { CTABand } from "@/components/marketing/PageHero";
 import DetailGallery from "@/components/ui/DetailGallery";
 import StickyReservationCard from "@/components/ui/StickyReservationCard";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
-import { assessoriaNarrative } from "@/lib/marketing/editorial";
-import { assessoriaPhases } from "@/lib/marketing/pages";
+import AssessoriaManifesto from "@/components/marketing/AssessoriaManifesto";
+import AssessoriaScopeMatrix from "@/components/marketing/AssessoriaScopeMatrix";
+import AssessoriaTechEcosystem from "@/components/marketing/AssessoriaTechEcosystem";
+import {
+  assessoriaNarrative,
+  signatureJourneyPhases,
+  caseStudies,
+} from "@/lib/marketing/editorial";
+import { CheckCircle2, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 
 export default function AssessoriaEventosPage() {
-  const blocks = [
-    { key: "problem", title: "O desafio", text: assessoriaNarrative.problem },
-    { key: "impact", title: "O que sente", text: assessoriaNarrative.emotionalImpact },
-    { key: "solution", title: "Como a HAXR conduz", text: assessoriaNarrative.solution },
-    { key: "after", title: "Depois", text: assessoriaNarrative.feelingAfter },
+  const [selectedScope, setSelectedScope] = useState<string>("full-service");
+
+  const narrativeBlocks = [
+    { key: "problem", title: "O Desafio", text: assessoriaNarrative.problem },
+    { key: "impact", title: "O Que Sente", text: assessoriaNarrative.emotionalImpact },
+    { key: "solution", title: "Como a HAXR Conduz", text: assessoriaNarrative.solution },
+    { key: "after", title: "A Experiência Final", text: assessoriaNarrative.feelingAfter },
   ] as const;
+
+  const weddingCase = caseStudies.find((c) => c.id === "casamento-leila-armando") || caseStudies[0];
+
+  const handleScopeSelect = (scopeId: string) => {
+    setSelectedScope(scopeId);
+    const el = document.getElementById("reservation-card-anchor");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
     <>
       <StructuredData page="assessoria" />
 
-      {/* Cabeçalho */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          01 · HERO — A PRESENÇA INVISÍVEL
+          ═══════════════════════════════════════════════════════════════════ */}
       <PageHero
-        label="Assessoria de Eventos"
-        headline="Direcção estratégica e operacional — para que alguém cuide de tudo por si."
-        description="A assessoria HAXR não é organização genérica. É presença, método e discrição — para que entre na experiência do seu evento, não na logística que a sustenta."
+        label="Assessoria de Eventos Signature"
+        headline="Direcção criativa, rigor de governação e presença invisível — para que viva a celebração, não a logística."
+        description="A assessoria HAXR Signature une curadoria autoral, proteção orçamental fiduciária e discrição nos bastidores. Assumimos a complexidade técnica para que o dia do seu casamento pertença inteiramente à sua memória."
       />
 
-      {/* Loverly Editorial Metadata */}
-      <div className="site-container mx-auto pb-8">
-        <div className="flex items-center gap-4 text-[10px] font-mono text-brand-text-dark/40 border-b border-brand-champagne/45 pb-6">
-          <span>POR HAXR EDITORIAL</span>
-          <span>•</span>
-          <span>5 MINUTOS DE LEITURA</span>
-          <span>•</span>
-          <span>ATUALIZADO EM 2026</span>
+      {/* Editorial Metadata Bar */}
+      <div className="site-container mx-auto pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-[9.5px] font-mono text-brand-text-dark/45 border-b border-brand-champagne/45 pb-5">
+          <div className="flex items-center gap-3">
+            <span className="text-brand-gold font-bold">HAXR PRIVATE CLIENT ADVISORY</span>
+            <span>•</span>
+            <span>MOÇAMBIQUE</span>
+            <span>•</span>
+            <span>EDIÇÃO 2026</span>
+          </div>
+          <div className="text-brand-text-dark/60 font-semibold">
+            CAPACIDADE LIMITADA · ATENDIMENTO RESTRITO POR TEMPORADA
+          </div>
         </div>
       </div>
 
-      {/* Galeria de Fotos Estilo Airbnb */}
+      {/* Immersive Photo Gallery */}
       <DetailGallery />
 
-      {/* Layout Duas Colunas Estilo Airbnb */}
-      <section className="relative py-12 md:py-20 bg-brand-ivory pointer-events-auto">
-        <div className="site-container mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+      {/* ═══════════════════════════════════════════════════════════════════
+          02 · O PADRÃO HAXR — INDEPENDÊNCIA, DIRECÇÃO & CONTROLO
+          ═══════════════════════════════════════════════════════════════════ */}
+      <AssessoriaManifesto />
 
-            {/* Coluna Esquerda: Detalhes do Serviço & Fases */}
-            <div className="lg:col-span-8 space-y-16">
+      {/* ═══════════════════════════════════════════════════════════════════
+          03 · TRÊS FORMAS DE ACOMPANHAMENTO — SCOPE OF ENGAGEMENT
+          ═══════════════════════════════════════════════════════════════════ */}
+      <AssessoriaScopeMatrix onSelectScope={handleScopeSelect} />
 
-              {/* Narrativa Editorial */}
-              <div className="border-b border-brand-champagne/45 pb-12 space-y-10">
-                <h2 className="font-mono text-[9px] tracking-[0.35em] uppercase text-brand-gold font-bold">A Nossa Abordagem</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:gap-10">
-                  {blocks.map((block) => (
-                    <article key={block.key} className="space-y-3">
-                      <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-brand-text-dark/45">
-                        {block.title}
-                      </p>
-                      <p className="font-serif text-base text-brand-text-dark/85 leading-relaxed font-light">
-                        {block.text}
-                      </p>
-                    </article>
-                  ))}
-                </div>
+      {/* ═══════════════════════════════════════════════════════════════════
+          04 · THE SIGNATURE JOURNEY — CINCO FASES DE GOVERNANÇÃO
+          ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-16 md:py-24 bg-white border-b border-brand-champagne/30">
+        <div className="site-container mx-auto space-y-16">
+          <RevealOnScroll>
+            <div className="max-w-3xl space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-px bg-brand-gold" />
+                <span className="font-mono text-[9px] tracking-[0.4em] uppercase text-brand-gold font-bold">
+                  04 · The Signature Journey
+                </span>
               </div>
 
-              {/* Painel de Controlo HAXR (iPad Mockup Visual - Replicating Invitation page structure) */}
-              <div className="bg-brand-black border border-brand-champagne/30 rounded-[2rem] p-6 md:p-10 space-y-8 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(circle_at_bottom,rgba(184,138,42,0.15),transparent)]" />
+              <h2 className="font-serif text-2xl md:text-4xl lg:text-5xl font-light text-brand-text-dark leading-tight">
+                Cinco Fases de Governação
+              </h2>
 
-                <div className="relative z-10 space-y-6">
-                  <div className="space-y-2">
-                    <h2 className="font-mono text-[9px] tracking-[0.35em] uppercase text-brand-gold font-bold">Painel de Planeamento</h2>
-                    <p className="font-sans text-xs md:text-sm text-brand-ivory/70 font-light leading-relaxed">
-                      O controlo estratégico das fases do vosso casamento é gerido no ecossistema digital da HAXR Signature. Acompanhe fornecedores, custos e cronogramas em tempo real com transparência total.
+              <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light leading-relaxed">
+                Do primeiro diálogo de visão ao encerramento do grande dia, cada etapa é orquestrada
+                com clareza, prazos rigorosos e serenidade contínua.
+              </p>
+            </div>
+          </RevealOnScroll>
+
+          {/* 5 Phases Timeline Grid */}
+          <div className="space-y-10">
+            {signatureJourneyPhases.map((phase, idx) => (
+              <RevealOnScroll key={phase.phase} delay={idx * 0.08}>
+                <div className="border-t border-brand-champagne/45 pt-8 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
+                  <div className="lg:col-span-4 space-y-1">
+                    <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-brand-gold font-bold block">
+                      {phase.phase}
+                    </span>
+                    <h3 className="font-serif text-xl md:text-2xl font-light text-brand-text-dark">
+                      {phase.title}
+                    </h3>
+                    <p className="font-mono text-[9px] text-brand-text-dark/45 uppercase tracking-wider">
+                      {phase.titleEn}
                     </p>
                   </div>
 
-                  {/* Beautiful iPad Mockup rendering the Planner Hub */}
-                  <div className="w-full aspect-[16/10] bg-[#1a1312] border border-brand-champagne/20 rounded-2xl overflow-hidden p-4 relative font-sans flex flex-col justify-between">
-                    {/* Header */}
-                    <div className="flex justify-between items-center border-b border-white/5 pb-2 text-[5px] md:text-[8px] text-brand-ivory/40 font-mono">
-                      <span>PLANNER HUB · HAXR SIGNATURE</span>
-                      <span className="text-brand-gold">SOFIA & ALBERTO</span>
-                    </div>
+                  <div className="lg:col-span-8 space-y-4">
+                    <p className="font-sans text-sm text-brand-text-dark/80 font-light leading-relaxed">
+                      {phase.description}
+                    </p>
 
-                    {/* Body Columns */}
-                    <div className="flex-1 grid grid-cols-12 gap-3 py-3 overflow-hidden">
-                      {/* Left side: Budget Summary */}
-                      <div className="col-span-5 bg-white/5 rounded-xl border border-white/5 p-3 flex flex-col justify-between text-left">
-                        <p className="font-mono text-[4.5px] md:text-[6px] text-brand-gold uppercase font-bold">Controlo Financeiro</p>
-                        <div className="space-y-2">
-                          <div>
-                            <p className="text-[4px] md:text-[5px] text-brand-ivory/50">Orçamento Adjudicado</p>
-                            <p className="text-[7.5px] md:text-[9.5px] font-serif font-light text-brand-ivory">750.056 MT</p>
-                          </div>
-                          <div>
-                            <p className="text-[4px] md:text-[5px] text-brand-ivory/50">Total Pago</p>
-                            <p className="text-[7.5px] md:text-[9.5px] font-serif font-light text-emerald-400">446.600 MT</p>
-                          </div>
-                          <div>
-                            <p className="text-[4px] md:text-[5px] text-brand-ivory/50">Pendente</p>
-                            <p className="text-[7.5px] md:text-[9.5px] font-serif font-light text-brand-gold">303.456 MT</p>
-                          </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                      {phase.items.map((item, iIdx) => (
+                        <div
+                          key={iIdx}
+                          className="bg-brand-ivory/60 border border-brand-champagne/30 rounded-xl p-3 flex items-start gap-2"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-brand-gold shrink-0 mt-0.5" />
+                          <span className="text-xs font-sans text-brand-text-dark/80 font-light leading-snug">
+                            {item}
+                          </span>
                         </div>
-                      </div>
-
-                      {/* Right side: Checklist and Suppliers */}
-                      <div className="col-span-7 flex flex-col gap-3">
-                        {/* Checklist */}
-                        <div className="flex-1 bg-white/5 rounded-xl border border-white/5 p-3 text-left space-y-1.5 overflow-y-auto">
-                          <p className="font-mono text-[4.5px] md:text-[6px] text-brand-gold uppercase font-bold">Checklist Operacional</p>
-                          <div className="space-y-1 text-[4.5px] md:text-[7px] font-sans text-brand-ivory/80 leading-snug">
-                            <p className="flex items-center gap-1.5">
-                              <span className="text-brand-gold">✓</span>
-                              <span className="line-through text-brand-ivory/40">Definir conceito criativo</span>
-                            </p>
-                            <p className="flex items-center gap-1.5">
-                              <span className="text-brand-gold">✓</span>
-                              <span className="line-through text-brand-ivory/40">Adjudicar decorador e catering</span>
-                            </p>
-                            <p className="flex items-center gap-1.5">
-                              <span className="text-brand-gold">⚡</span>
-                              <span>Enviar save the date digital</span>
-                            </p>
-                            <p className="flex items-center gap-1.5">
-                              <span className="text-brand-ivory/30">○</span>
-                              <span>Reunião técnica de layout</span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Supplier status */}
-                        <div className="bg-white/5 rounded-xl border border-white/5 px-3 py-2 text-left flex justify-between items-center text-[4.5px] md:text-[6.5px] font-mono">
-                          <span className="text-brand-ivory/60">FORNECEDORES ATIVOS:</span>
-                          <span className="text-brand-gold font-bold">12 CONTRATADOS</span>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Fases de Trabalho (Timeline) */}
-              <div className="space-y-10">
-                <h2 className="font-mono text-[9px] tracking-[0.35em] uppercase text-brand-gold font-bold">Fases de Condução</h2>
-                <div className="space-y-12">
-                  {assessoriaPhases.map((block, idx) => (
-                    <RevealOnScroll key={block.phase} delay={idx * 0.05}>
-                      <div className="border-t border-brand-champagne/40 pt-8">
-                        <p className="font-mono text-[9px] tracking-[0.45em] uppercase text-brand-gold font-semibold mb-2">
-                          {block.phase}
-                        </p>
-                        <h3 className="font-serif text-lg md:text-xl font-light text-brand-text-dark mb-6">
-                          {block.headline}
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                          {block.items.map((item) => (
-                            <article key={item.title} className="space-y-2 text-left">
-                              <h4 className="font-serif text-sm font-light text-brand-text-dark">
-                                {item.title}
-                              </h4>
-                              <p className="font-sans text-xs text-brand-text-dark/70 leading-relaxed font-light">
-                                {item.body}
-                              </p>
-                            </article>
-                          ))}
-                        </div>
-                      </div>
-                    </RevealOnScroll>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Coluna Direita: Cartão de Reserva Flutuante */}
-            <div className="lg:col-span-4">
-              <StickyReservationCard
-                serviceTitle="Assessoria de Eventos Signature"
-                basePrice="120.000 MT"
-                priceNumeric={120000}
-              />
-            </div>
-
+              </RevealOnScroll>
+            ))}
           </div>
         </div>
       </section>
 
+      {/* ═══════════════════════════════════════════════════════════════════
+          05 · HAXR PRIVATE CLIENT ECOSYSTEM — TECNOLOGIA NOS BASTIDORES
+          ═══════════════════════════════════════════════════════════════════ */}
+      <AssessoriaTechEcosystem />
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          06 · HISTÓRIAS REAIS & NARRATIVA — THE WORK SPEAKS
+          ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-16 md:py-24 bg-brand-ivory">
+        <div className="site-container mx-auto space-y-16">
+          <RevealOnScroll>
+            <div className="max-w-3xl space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-px bg-brand-gold" />
+                <span className="font-mono text-[9px] tracking-[0.4em] uppercase text-brand-gold font-bold">
+                  06 · Histórias Reais
+                </span>
+              </div>
+
+              <h2 className="font-serif text-2xl md:text-4xl lg:text-5xl font-light text-brand-text-dark leading-tight">
+                The Work Speaks
+              </h2>
+
+              <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light leading-relaxed">
+                Cada projecto conduzido pela HAXR Signature é um testemunho de método, discrição e excelência estética.
+              </p>
+            </div>
+          </RevealOnScroll>
+
+          {/* Real Wedding Spotlight Card */}
+          <RevealOnScroll delay={0.1}>
+            <div className="bg-white border border-brand-champagne/60 rounded-3xl p-8 md:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              <div className="lg:col-span-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-[8.5px] font-mono tracking-wider uppercase font-semibold bg-brand-gold/10 text-brand-gold border border-brand-gold/20">
+                    {weddingCase.category}
+                  </span>
+                  <span className="text-xs font-mono text-brand-text-dark/40">• Moçambique</span>
+                </div>
+
+                <h3 className="font-serif text-2xl md:text-3xl font-light text-brand-text-dark">
+                  {weddingCase.title}
+                </h3>
+
+                <p className="font-sans text-xs md:text-sm text-brand-text-dark/75 font-light leading-relaxed">
+                  {weddingCase.context}
+                </p>
+
+                <div className="space-y-3 pt-3 border-t border-brand-champagne/30 text-xs font-sans">
+                  <div>
+                    <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
+                      Desafio & Complexidade:
+                    </span>
+                    <p className="text-brand-text-dark/70 font-light mt-0.5 leading-relaxed">
+                      {weddingCase.challenge}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
+                      Solução HAXR:
+                    </span>
+                    <p className="text-brand-text-dark/70 font-light mt-0.5 leading-relaxed">
+                      {weddingCase.solution}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="font-mono text-[8.5px] uppercase font-bold text-brand-gold block">
+                      Resultado:
+                    </span>
+                    <p className="text-brand-text-dark/90 font-medium mt-0.5 leading-relaxed">
+                      {weddingCase.result}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3">
+                  <Link
+                    href="/portfolio"
+                    className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider uppercase text-brand-gold font-bold hover:underline"
+                  >
+                    <span>Ver Arquivo de Portfólio</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="lg:col-span-7 rounded-2xl overflow-hidden aspect-[4/3] bg-brand-champagne/10 relative border border-brand-champagne/30">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={weddingCase.image}
+                  alt={weddingCase.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </RevealOnScroll>
+
+          {/* Editorial Philosophy Blocks */}
+          <div className="border-t border-brand-champagne/45 pt-12 space-y-8">
+            <h3 className="font-mono text-[9px] tracking-[0.35em] uppercase text-brand-gold font-bold">
+              A Nossa Filosofia de Condução
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {narrativeBlocks.map((block) => (
+                <article key={block.key} className="space-y-2.5">
+                  <p className="font-mono text-[8.5px] tracking-[0.3em] uppercase text-brand-text-dark/45">
+                    {block.title}
+                  </p>
+                  <p className="font-serif text-sm md:text-base text-brand-text-dark/85 leading-relaxed font-light">
+                    {block.text}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          07 · DIAGNÓSTICO PRIVADO — BEGIN YOUR CELEBRATION
+          ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-16 md:py-24 bg-white border-t border-brand-champagne/30 pointer-events-auto">
+        <div className="site-container mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+            {/* Left Side: Consultation Narrative */}
+            <div className="lg:col-span-8 space-y-10">
+              <RevealOnScroll>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-px bg-brand-gold" />
+                    <span className="font-mono text-[9px] tracking-[0.4em] uppercase text-brand-gold font-bold">
+                      07 · Diagnóstico Privado
+                    </span>
+                  </div>
+
+                  <h2 className="font-serif text-2xl md:text-4xl lg:text-5xl font-light text-brand-text-dark leading-tight">
+                    Begin Your Celebration
+                  </h2>
+
+                  <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light leading-relaxed">
+                    A primeira conversa é confidencial, estruturada e sem qualquer obrigação comercial.
+                    Dedicamos esse momento para compreender a dimensão da vossa visão, mapear os principais
+                    desafios e apresentar a arquitetura de acompanhamento ideal para o vosso casamento.
+                  </p>
+                </div>
+              </RevealOnScroll>
+
+              {/* Steps of Diagnosis */}
+              <div className="space-y-6 pt-4">
+                <div className="border-t border-brand-champagne/35 pt-6 flex gap-4 items-start">
+                  <span className="font-mono text-sm text-brand-gold font-bold">01</span>
+                  <div className="space-y-1">
+                    <h4 className="font-serif text-base text-brand-text-dark font-light">
+                      Alinhamento de Visão & Escala
+                    </h4>
+                    <p className="font-sans text-xs text-brand-text-dark/70 leading-relaxed font-light">
+                      Conversa estratégica sobre data, local, perfil de convidados e expectativas estéticas.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-brand-champagne/35 pt-6 flex gap-4 items-start">
+                  <span className="font-mono text-sm text-brand-gold font-bold">02</span>
+                  <div className="space-y-1">
+                    <h4 className="font-serif text-base text-brand-text-dark font-light">
+                      Mapeamento de Complexidade Técnica
+                    </h4>
+                    <p className="font-sans text-xs text-brand-text-dark/70 leading-relaxed font-light">
+                      Diagnóstico de fornecedores necessários, requisitos de infraestrutura e viabilidade orçamental.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-brand-champagne/35 pt-6 flex gap-4 items-start">
+                  <span className="font-mono text-sm text-brand-gold font-bold">03</span>
+                  <div className="space-y-1">
+                    <h4 className="font-serif text-base text-brand-text-dark font-light">
+                      Apresentação de Proposta Fechada
+                    </h4>
+                    <p className="font-sans text-xs text-brand-text-dark/70 leading-relaxed font-light">
+                      Estruturação do âmbito de assessoria com cronograma, entregáveis e transparência total de honorários.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side: Sticky Reservation Card */}
+            <div className="lg:col-span-4">
+              <StickyReservationCard
+                serviceTitle="Assessoria de Eventos Signature"
+                selectedScopeId={selectedScope}
+                basePrice="120.000 MT"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Global CTA Band */}
       <CTABand
-        headline="Existe alguém a cuidar de tudo por si?"
-        description="Conte-nos a história do seu evento. Avaliamos juntos o nível de acompanhamento que procura."
+        headline="Pronto para conduzir o seu evento com tranquilidade?"
+        description="Agende uma sessão privada de diagnóstico. Avaliamos juntos a complexidade e o nível de assessoria ideal para o seu dia."
         secondaryHref="/portfolio"
-        secondaryLabel="Ver histórias reais"
+        secondaryLabel="Explorar histórias reais"
       />
     </>
   );
