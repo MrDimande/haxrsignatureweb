@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Document,
+  Image,
   Page,
   Text,
   View,
@@ -64,7 +65,20 @@ export function WeddingFinancialReportDocument({
       <Page size="A4" style={styles.coverPage}>
         {/* Top Header */}
         <View style={styles.coverTop}>
-          <Text style={styles.coverBrandLabel}>HAXR SIGNATURE</Text>
+          {options?.logoSrc ? (
+            <Image
+              src={options.logoSrc}
+              style={{
+                width: 140,
+                height: 38,
+                objectFit: "contain",
+                objectPosition: "left",
+                marginBottom: 6,
+              }}
+            />
+          ) : (
+            <Text style={styles.coverBrandLabel}>HAXR SIGNATURE</Text>
+          )}
           <Text style={styles.coverEditionLabel}>PRIVATE CLIENT EDITION</Text>
         </View>
 
@@ -119,19 +133,19 @@ export function WeddingFinancialReportDocument({
 
         {/* Metadata Strip */}
         <View style={styles.metaGrid}>
-          <View style={[styles.metaCol, styles.metaColDivider]}>
+          <View style={[styles.metaCol, styles.metaColDivider, { width: "22%" }]}>
             <Text style={styles.metaLabel}>Evento / Casal</Text>
             <Text style={styles.metaValue}>{clientNames}</Text>
           </View>
-          <View style={[styles.metaCol, styles.metaColDivider]}>
+          <View style={[styles.metaCol, styles.metaColDivider, { width: "20%" }]}>
             <Text style={styles.metaLabel}>Data Oficial</Text>
             <Text style={styles.metaValue}>{eventDateFormatted}</Text>
           </View>
-          <View style={[styles.metaCol, styles.metaColDivider]}>
+          <View style={[styles.metaCol, styles.metaColDivider, { width: "36%" }]}>
             <Text style={styles.metaLabel}>Localização</Text>
-            <Text style={styles.metaValue}>{eventLocation}</Text>
+            <Text style={[styles.metaValue, { lineHeight: 1.3 }]}>{eventLocation}</Text>
           </View>
-          <View style={styles.metaCol}>
+          <View style={[styles.metaCol, { width: "22%" }]}>
             <Text style={styles.metaLabel}>Data de Emissão</Text>
             <Text style={styles.metaValue}>{emissionDateFormatted}</Text>
           </View>
@@ -264,7 +278,7 @@ export function WeddingFinancialReportDocument({
                 <Text style={[styles.th, styles.tdRight, { width: "17%" }]}>Alocado</Text>
                 <Text style={[styles.th, styles.tdRight, { width: "18%" }]}>Contratado</Text>
                 <Text style={[styles.th, styles.tdRight, { width: "17%" }]}>Liquidado</Text>
-                <Text style={[styles.th, styles.tdRight, { width: "18%" }]}>Participação</Text>
+                <Text style={[styles.th, styles.tdRight, { width: "18%", fontSize: 6 }]}>% DO CONTRATADO</Text>
               </View>
 
               {categories.map((cat, idx) => {
@@ -291,6 +305,33 @@ export function WeddingFinancialReportDocument({
                   </View>
                 );
               })}
+
+              {/* Category Table Total Summary */}
+              <View
+                style={[
+                  styles.tableHeaderRow,
+                  {
+                    backgroundColor: "#F7F1E8",
+                    borderTopWidth: 0.5,
+                    borderTopColor: PDF_COLORS.hairline,
+                    borderBottomWidth: 1,
+                    borderBottomColor: PDF_COLORS.gold,
+                  },
+                ]}
+                wrap={false}
+              >
+                <Text style={[styles.tdBold, { width: "30%" }]}>TOTAL CONTRATADO</Text>
+                <Text style={[styles.tdBold, styles.tdRight, { width: "17%" }]}>
+                  {formatReportCurrency(categories.reduce((s, c) => s + c.allocated, 0), currencySymbol)}
+                </Text>
+                <Text style={[styles.tdGold, styles.tdRight, { width: "18%" }]}>
+                  {formatReportCurrency(summary.contractedAmount, currencySymbol)}
+                </Text>
+                <Text style={[styles.tdBold, styles.tdRight, { width: "17%" }]}>
+                  {formatReportCurrency(summary.paidAmount, currencySymbol)}
+                </Text>
+                <Text style={[styles.tdMuted, styles.tdRight, { width: "18%" }]}>100,0%</Text>
+              </View>
             </View>
 
             {/* Visual Bars Composition */}
@@ -299,14 +340,30 @@ export function WeddingFinancialReportDocument({
                 style={{
                   fontFamily: "Helvetica-Bold",
                   fontSize: 7.5,
-                  letterSpacing: 1.2,
+                  letterSpacing: 0.8,
                   color: PDF_COLORS.slate,
                   textTransform: "uppercase",
-                  marginBottom: 10,
+                  marginBottom: 8,
                 }}
               >
                 Composição Visual de Contratação e Liquidação
               </Text>
+
+              {/* Micro-Legenda */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <View style={{ width: 8, height: 5, backgroundColor: PDF_COLORS.gold }} />
+                  <Text style={{ fontFamily: "Helvetica", fontSize: 6.5, color: PDF_COLORS.slate }}>
+                    Liquidado (Executado)
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <View style={{ width: 8, height: 5, backgroundColor: PDF_COLORS.champagne }} />
+                  <Text style={{ fontFamily: "Helvetica", fontSize: 6.5, color: PDF_COLORS.slate }}>
+                    Saldo Contratado a Liquidar
+                  </Text>
+                </View>
+              </View>
 
               {categories.map((cat, idx) => {
                 const maxBudget = summary.budgetCeiling > 0 ? summary.budgetCeiling : summary.contractedAmount || 1;
@@ -380,49 +437,117 @@ export function WeddingFinancialReportDocument({
             </Text>
           </View>
         ) : (
-          <View style={styles.table}>
-            {/* Table Header Row (Repeated on Page Breaks) */}
-            <View style={styles.tableHeaderRow} fixed>
-              <Text style={[styles.th, { width: "18%" }]}>Categoria</Text>
-              <Text style={[styles.th, { width: "26%" }]}>Item / Fornecedor</Text>
-              <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Proposta</Text>
-              <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Contratado</Text>
-              <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Liquidado</Text>
-              <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Saldo</Text>
+          <View>
+            <View style={styles.table}>
+              {/* Table Header Row (Repeated on Page Breaks) */}
+              <View style={styles.tableHeaderRow} fixed>
+                <Text style={[styles.th, { width: "18%" }]}>Categoria</Text>
+                <Text style={[styles.th, { width: "26%" }]}>Item / Fornecedor</Text>
+                <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Proposta</Text>
+                <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Contratado</Text>
+                <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Liquidado</Text>
+                <Text style={[styles.th, styles.tdRight, { width: "14%" }]}>Saldo</Text>
+              </View>
+
+              {/* Table Data Rows */}
+              {items.map((item, idx) => {
+                const isAlternate = idx % 2 === 1;
+                return (
+                  <View
+                    key={`item-row-${item.id}-${idx}`}
+                    style={isAlternate ? [styles.tableRow, styles.tableRowAlternate] : styles.tableRow}
+                    wrap={false}
+                  >
+                    <Text style={[styles.tdMuted, { width: "18%" }]}>{item.category}</Text>
+                    <Text style={[styles.tdBold, { width: "26%" }]}>{item.vendorOrItem}</Text>
+                    <Text style={[styles.td, styles.tdRight, { width: "14%" }]}>
+                      {item.proposedAmount > 0
+                        ? formatReportCurrency(item.proposedAmount, currencySymbol)
+                        : "—"}
+                    </Text>
+                    <Text style={[styles.tdGold, styles.tdRight, { width: "14%" }]}>
+                      {item.contractedAmount > 0
+                        ? formatReportCurrency(item.contractedAmount, currencySymbol)
+                        : "—"}
+                    </Text>
+                    <Text style={[styles.td, styles.tdRight, { width: "14%" }]}>
+                      {item.paidAmount > 0
+                        ? formatReportCurrency(item.paidAmount, currencySymbol)
+                        : "0 " + currencySymbol}
+                    </Text>
+                    <Text style={[styles.tdBold, styles.tdRight, { width: "14%" }]}>
+                      {formatReportCurrency(item.balance, currencySymbol)}
+                    </Text>
+                  </View>
+                );
+              })}
+
+              {/* Table Total Summary Footer */}
+              <View
+                style={[
+                  styles.tableHeaderRow,
+                  {
+                    backgroundColor: "#F7F1E8",
+                    borderTopWidth: 0.5,
+                    borderTopColor: PDF_COLORS.hairline,
+                    borderBottomWidth: 1,
+                    borderBottomColor: PDF_COLORS.gold,
+                  },
+                ]}
+                wrap={false}
+              >
+                <Text style={[styles.tdBold, { width: "44%" }]}>TOTAL COMPROMISSOS</Text>
+                <Text style={[styles.td, styles.tdRight, { width: "14%" }]}>
+                  {formatReportCurrency(items.reduce((s, i) => s + i.proposedAmount, 0), currencySymbol)}
+                </Text>
+                <Text style={[styles.tdGold, styles.tdRight, { width: "14%" }]}>
+                  {formatReportCurrency(summary.contractedAmount, currencySymbol)}
+                </Text>
+                <Text style={[styles.td, styles.tdRight, { width: "14%" }]}>
+                  {formatReportCurrency(summary.paidAmount, currencySymbol)}
+                </Text>
+                <Text style={[styles.tdBold, styles.tdRight, { width: "14%" }]}>
+                  {formatReportCurrency(summary.outstandingAmount, currencySymbol)}
+                </Text>
+              </View>
             </View>
 
-            {/* Table Data Rows */}
-            {items.map((item, idx) => {
-              const isAlternate = idx % 2 === 1;
-              return (
-                <View
-                  key={`item-row-${item.id}-${idx}`}
-                  style={isAlternate ? [styles.tableRow, styles.tableRowAlternate] : styles.tableRow}
-                  wrap={false}
-                >
-                  <Text style={[styles.tdMuted, { width: "18%" }]}>{item.category}</Text>
-                  <Text style={[styles.tdBold, { width: "26%" }]}>{item.vendorOrItem}</Text>
-                  <Text style={[styles.td, styles.tdRight, { width: "14%" }]}>
-                    {item.proposedAmount > 0
-                      ? formatReportCurrency(item.proposedAmount, currencySymbol)
-                      : "—"}
-                  </Text>
-                  <Text style={[styles.tdGold, styles.tdRight, { width: "14%" }]}>
-                    {item.contractedAmount > 0
-                      ? formatReportCurrency(item.contractedAmount, currencySymbol)
-                      : "—"}
-                  </Text>
-                  <Text style={[styles.td, styles.tdRight, { width: "14%" }]}>
-                    {item.paidAmount > 0
-                      ? formatReportCurrency(item.paidAmount, currencySymbol)
-                      : "0 " + currencySymbol}
-                  </Text>
-                  <Text style={[styles.tdBold, styles.tdRight, { width: "14%" }]}>
-                    {formatReportCurrency(item.balance, currencySymbol)}
-                  </Text>
+            {/* Adaptive Executive Summary Strip for Concise Datasets */}
+            {items.length <= 6 && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  backgroundColor: PDF_COLORS.cardBg,
+                  borderWidth: 0.5,
+                  borderColor: PDF_COLORS.hairline,
+                  padding: 12,
+                  marginTop: 14,
+                  justifyContent: "space-between",
+                }}
+                wrap={false}
+              >
+                <View style={{ flex: 1, borderRightWidth: 0.5, borderRightColor: PDF_COLORS.hairline, paddingRight: 8 }}>
+                  <Text style={styles.metaLabel}>Contratos Ativos</Text>
+                  <Text style={[styles.kpiValueGold, { fontSize: 13 }]}>{items.length} Contratos</Text>
+                  <Text style={styles.kpiSubtext}>Registo formalizado</Text>
                 </View>
-              );
-            })}
+                <View style={{ flex: 1.2, borderRightWidth: 0.5, borderRightColor: PDF_COLORS.hairline, paddingHorizontal: 8 }}>
+                  <Text style={styles.metaLabel}>Total Contratado</Text>
+                  <Text style={styles.kpiValue}>{formatReportCurrency(summary.contractedAmount, currencySymbol)}</Text>
+                  <Text style={styles.kpiSubtext}>Compromissos firmados</Text>
+                </View>
+                <View style={{ flex: 1.2, borderRightWidth: 0.5, borderRightColor: PDF_COLORS.hairline, paddingHorizontal: 8 }}>
+                  <Text style={styles.metaLabel}>Total Liquidado</Text>
+                  <Text style={styles.kpiValue}>{formatReportCurrency(summary.paidAmount, currencySymbol)}</Text>
+                  <Text style={styles.kpiSubtext}>Execução financeira</Text>
+                </View>
+                <View style={{ flex: 1.2, paddingLeft: 8 }}>
+                  <Text style={styles.metaLabel}>Saldo a Liquidar</Text>
+                  <Text style={styles.kpiValueGold}>{formatReportCurrency(summary.outstandingAmount, currencySymbol)}</Text>
+                  <Text style={styles.kpiSubtext}>Conforme cronograma</Text>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -665,7 +790,7 @@ export function WeddingFinancialReportDocument({
                     <Text style={[styles.tdGold, styles.tdRight, { width: "18%" }]}>
                       {formatReportCurrency(item.contractedAmount, currencySymbol)}
                     </Text>
-                    <Text style={[styles.tdBold, styles.tdRight, { width: "18%", color: PDF_COLORS.success }]}>
+                    <Text style={[styles.tdBold, styles.tdRight, { width: "18%", color: PDF_COLORS.goldMuted }]}>
                       {formatReportCurrency(item.saving, currencySymbol)} ({formatReportPercent(item.savingPercentage)})
                     </Text>
                   </View>
@@ -691,7 +816,7 @@ export function WeddingFinancialReportDocument({
                 style={{
                   fontFamily: "Helvetica-Bold",
                   fontSize: 7.5,
-                  letterSpacing: 1.2,
+                  letterSpacing: 0.9,
                   color: PDF_COLORS.charcoal,
                   textTransform: "uppercase",
                 }}

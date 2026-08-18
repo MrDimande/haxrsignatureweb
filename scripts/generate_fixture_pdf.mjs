@@ -1,6 +1,6 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { generateWeddingFinancialReportBuffer } from "../src/lib/export/wedding-financial-report/pdf-generator.js";
+import { generateWeddingFinancialReportBuffer } from "../src/lib/export/wedding-financial-report/pdf-generator.ts";
 
 const items = [
   {
@@ -114,7 +114,7 @@ const ledger = {
       paid: 200000,
       balance: 270000,
       itemCount: 1,
-      percentageOfTotal: 40.17,
+      shareOfTotal: 40.17,
     },
     {
       name: "Espaço",
@@ -123,7 +123,7 @@ const ledger = {
       paid: 150000,
       balance: 180000,
       itemCount: 1,
-      percentageOfTotal: 28.21,
+      shareOfTotal: 28.21,
     },
     {
       name: "Decoração & Design",
@@ -132,7 +132,7 @@ const ledger = {
       paid: 100000,
       balance: 120000,
       itemCount: 1,
-      percentageOfTotal: 18.8,
+      shareOfTotal: 18.8,
     },
     {
       name: "Foto & Vídeo",
@@ -141,7 +141,7 @@ const ledger = {
       paid: 75000,
       balance: 75000,
       itemCount: 1,
-      percentageOfTotal: 12.82,
+      shareOfTotal: 12.82,
     },
   ],
   items,
@@ -153,7 +153,7 @@ const ledger = {
       amount: 200000,
       dueDate: "01/08/2026",
       dueDateIso: "2026-08-01",
-      status: "liquidado",
+      status: "pago",
     },
     {
       id: "inst-2",
@@ -171,7 +171,7 @@ const ledger = {
       amount: 150000,
       dueDate: "05/08/2026",
       dueDateIso: "2026-08-05",
-      status: "liquidado",
+      status: "pago",
     },
     {
       id: "inst-4",
@@ -189,7 +189,7 @@ const ledger = {
       amount: 100000,
       dueDate: "10/08/2026",
       dueDateIso: "2026-08-10",
-      status: "liquidado",
+      status: "pago",
     },
     {
       id: "inst-6",
@@ -207,7 +207,7 @@ const ledger = {
       amount: 75000,
       dueDate: "12/08/2026",
       dueDateIso: "2026-08-12",
-      status: "liquidado",
+      status: "pago",
     },
     {
       id: "inst-8",

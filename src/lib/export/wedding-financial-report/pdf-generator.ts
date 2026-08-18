@@ -11,6 +11,23 @@ import type {
 } from "./report-types";
 import { WeddingFinancialReportDocument } from "./WeddingFinancialReportDocument";
 
+import path from "node:path";
+import fs from "node:fs";
+
+function resolveOfficialLogoSrc(explicitLogo?: string): string | undefined {
+  if (explicitLogo) return explicitLogo;
+  try {
+    const defaultLogoPath = path.join(process.cwd(), "public", "images", "brand", "logo-horizontal-gold.png");
+    if (fs.existsSync(defaultLogoPath)) {
+      const buffer = fs.readFileSync(defaultLogoPath);
+      return `data:image/png;base64,${buffer.toString("base64")}`;
+    }
+  } catch {
+    // Non-node or restricted environment fallback
+  }
+  return undefined;
+}
+
 /**
  * Gera um Buffer Node.js contendo o documento PDF oficial.
  */
@@ -18,9 +35,14 @@ export async function generateWeddingFinancialReportBuffer(
   ledger: NormalizedEventFinancialLedger,
   options?: WeddingFinancialReportOptions,
 ): Promise<Buffer> {
+  const resolvedOptions: WeddingFinancialReportOptions = {
+    ...options,
+    logoSrc: resolveOfficialLogoSrc(options?.logoSrc),
+  };
+
   const element = React.createElement(WeddingFinancialReportDocument, {
     ledger,
-    options,
+    options: resolvedOptions,
   }) as ReactElement<DocumentProps>;
 
   return renderToBuffer(element);

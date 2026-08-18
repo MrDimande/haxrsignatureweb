@@ -54,14 +54,14 @@ export const styles = StyleSheet.create({
   runningHeaderBrand: {
     fontFamily: "Helvetica-Bold",
     fontSize: 7,
-    letterSpacing: 1.5,
+    letterSpacing: 1.1,
     color: PDF_COLORS.goldMuted,
     textTransform: "uppercase",
   },
   runningHeaderDoc: {
     fontFamily: "Helvetica",
     fontSize: 7,
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     color: PDF_COLORS.slate,
     textTransform: "uppercase",
   },
@@ -83,7 +83,7 @@ export const styles = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 6.5,
     color: PDF_COLORS.slateDim,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   runningFooterPage: {
     fontFamily: "Helvetica",
@@ -98,7 +98,7 @@ export const styles = StyleSheet.create({
   coverBrandLabel: {
     fontFamily: "Helvetica-Bold",
     fontSize: 8.5,
-    letterSpacing: 2.2,
+    letterSpacing: 1.6,
     color: PDF_COLORS.gold,
     textTransform: "uppercase",
     marginBottom: 4,
@@ -106,7 +106,7 @@ export const styles = StyleSheet.create({
   coverEditionLabel: {
     fontFamily: "Helvetica",
     fontSize: 7.5,
-    letterSpacing: 1.2,
+    letterSpacing: 0.9,
     color: PDF_COLORS.slate,
     textTransform: "uppercase",
   },
@@ -117,7 +117,7 @@ export const styles = StyleSheet.create({
   coverTitleMain: {
     fontFamily: "Times-Bold",
     fontSize: 34,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     color: PDF_COLORS.charcoal,
     lineHeight: 1.15,
     marginBottom: 6,
@@ -126,7 +126,7 @@ export const styles = StyleSheet.create({
     fontFamily: "Times-Roman",
     fontSize: 26,
     color: PDF_COLORS.gold,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     marginBottom: 32,
   },
   coverDivider: {
@@ -161,7 +161,7 @@ export const styles = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 7,
     color: PDF_COLORS.slateDim,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
   },
   coverSignatureStamp: {
@@ -178,7 +178,7 @@ export const styles = StyleSheet.create({
   sectionPreTitle: {
     fontFamily: "Helvetica-Bold",
     fontSize: 7,
-    letterSpacing: 1.8,
+    letterSpacing: 1.3,
     color: PDF_COLORS.gold,
     textTransform: "uppercase",
     marginBottom: 3,
@@ -224,7 +224,7 @@ export const styles = StyleSheet.create({
   kpiLabel: {
     fontFamily: "Helvetica-Bold",
     fontSize: 6.5,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     color: PDF_COLORS.slate,
     textTransform: "uppercase",
     marginBottom: 4,
@@ -268,15 +268,16 @@ export const styles = StyleSheet.create({
   metaLabel: {
     fontFamily: "Helvetica-Bold",
     fontSize: 6.5,
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     color: PDF_COLORS.slateDim,
     textTransform: "uppercase",
     marginBottom: 2,
   },
   metaValue: {
     fontFamily: "Helvetica",
-    fontSize: 8,
+    fontSize: 7.5,
     color: PDF_COLORS.charcoal,
+    lineHeight: 1.25,
   },
 
   // Table Styles
@@ -296,7 +297,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 0.5,
     borderBottomColor: PDF_COLORS.hairline,
-    paddingVertical: 5.5,
+    paddingVertical: 6,
     paddingHorizontal: 6,
     alignItems: "center",
   },
@@ -306,7 +307,7 @@ export const styles = StyleSheet.create({
   th: {
     fontFamily: "Helvetica-Bold",
     fontSize: 6.5,
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     color: PDF_COLORS.charcoal,
     textTransform: "uppercase",
   },
@@ -344,25 +345,33 @@ export const styles = StyleSheet.create({
     borderRadius: 2,
     fontSize: 6,
     fontFamily: "Helvetica-Bold",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
     textAlign: "center",
   },
   statusPaid: {
-    backgroundColor: "#E8F5E9",
-    color: "#2E7D32",
+    backgroundColor: "#EAE4D9",
+    color: "#1C1A17",
+    borderWidth: 0.5,
+    borderColor: "#DCD4C7",
   },
   statusPartial: {
-    backgroundColor: "#FFF8E1",
-    color: "#F57F17",
+    backgroundColor: "#F4EDE1",
+    color: "#8C6A1E",
+    borderWidth: 0.5,
+    borderColor: "#EAD8B8",
   },
   statusPending: {
-    backgroundColor: "#EDE7F6",
-    color: "#512DA8",
+    backgroundColor: "#F7EBEB",
+    color: "#8C2A2A",
+    borderWidth: 0.5,
+    borderColor: "#ECCECE",
   },
   statusPlanned: {
-    backgroundColor: "#ECEFF1",
-    color: "#546E7A",
+    backgroundColor: "#F2EBE0",
+    color: "#7A756D",
+    borderWidth: 0.5,
+    borderColor: "#E5DEC9",
   },
 
   // Bar Chart Primitives

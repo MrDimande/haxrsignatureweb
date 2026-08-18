@@ -64,4 +64,5 @@ export interface FinancialReportMetadata {
 
 export interface WeddingFinancialReportOptions {
   generatedAt?: Date | string;
+  logoSrc?: string;
 }
