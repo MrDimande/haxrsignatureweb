@@ -8,9 +8,12 @@ ALTER TABLE public.event_vendors
 ALTER TABLE public.event_vendors
   ADD COLUMN IF NOT EXISTS contract_signed BOOLEAN NOT NULL DEFAULT false;
 
--- 2. Extensão da tabela payments com relação explícita a fornecedores e contratos
+-- 2. Garantia de unicidade composta para integridade relacional entre Evento e Fornecedor
+CREATE UNIQUE INDEX IF NOT EXISTS idx_event_vendors_id_event ON public.event_vendors (id, event_id);
+
+-- 3. Extensão da tabela payments com relação explícita a fornecedores e integridade de evento
 ALTER TABLE public.payments
-  ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES public.event_vendors(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS vendor_id UUID;
 
 ALTER TABLE public.payments
   ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES public.documents(id) ON DELETE SET NULL;
@@ -18,7 +21,17 @@ ALTER TABLE public.payments
 CREATE INDEX IF NOT EXISTS idx_payments_vendor_id ON public.payments (vendor_id);
 CREATE INDEX IF NOT EXISTS idx_payments_contract_id ON public.payments (contract_id);
 
--- 3. Actualização da RPC get_client_event_payments para devolver vendor_id e contract_id
+-- 4. Chave estrangeira composta impedindo que um pagamento do Evento A referencie um fornecedor do Evento B
+DO $$ BEGIN
+  ALTER TABLE public.payments
+    ADD CONSTRAINT fk_payments_vendor_event
+    FOREIGN KEY (vendor_id, event_id)
+    REFERENCES public.event_vendors(id, event_id)
+    ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- 5. Actualização da RPC get_client_event_payments para devolver vendor_id e contract_id
 CREATE OR REPLACE FUNCTION public.get_client_event_payments(
   p_client_event_id UUID
 )
@@ -153,7 +166,7 @@ BEGIN
 END;
 $$;
 
--- 4. Actualização da RPC get_client_event_vendors para devolver proposed_amount e contracted_amount
+-- 6. Actualização da RPC get_client_event_vendors com cálculo estrito de totalContracted
 CREATE OR REPLACE FUNCTION public.get_client_event_vendors(
   p_client_event_id UUID
 )
@@ -237,7 +250,13 @@ BEGIN
         OR ev.contract_signed = true
     )::INTEGER,
     COALESCE(SUM(ev.proposed_amount), 0),
-    COALESCE(SUM(COALESCE(ev.contracted_amount, ev.proposed_amount)), 0)
+    COALESCE(SUM(
+      CASE
+        WHEN ev.contracted_amount IS NOT NULL AND ev.contracted_amount > 0
+        THEN ev.contracted_amount
+        ELSE 0
+      END
+    ), 0)
   INTO
     v_vendor_count,
     v_active_vendors,

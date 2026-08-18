@@ -4,6 +4,7 @@
  * NODE_ENV=development|staging|preview.
  */
 import { spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 import { resolve } from "node:path";
 
 const incoming = process.env.NODE_ENV?.trim();
@@ -16,6 +17,12 @@ if (incoming && !allowed.has(incoming)) {
 }
 
 process.env.NODE_ENV = "production";
+
+try {
+  rmSync(resolve(process.cwd(), ".next/cache"), { recursive: true, force: true });
+} catch {
+  // ignore
+}
 
 const nextBin = resolve(process.cwd(), "node_modules/next/dist/bin/next");
 const result = spawnSync(process.execPath, [nextBin, "build"], {

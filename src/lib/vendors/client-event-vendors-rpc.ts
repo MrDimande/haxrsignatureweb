@@ -34,6 +34,7 @@ export type ClientEventVendorsRpcSummary = {
   pendingVendors: number;
   approvedVendors: number;
   totalEstimated: number;
+  totalContracted: number;
   categories: string[];
   latestVendor: ClientEventVendorsRpcLatestVendor | null;
 };
@@ -145,7 +146,8 @@ export function parseClientEventVendorsRpcPayload(
     activeVendors: readNumber(summaryRaw.activeVendors),
     pendingVendors: readNumber(summaryRaw.pendingVendors),
     approvedVendors: readNumber(summaryRaw.approvedVendors),
-    totalEstimated: readNumber(summaryRaw.totalEstimated),
+    totalEstimated: readNumber(summaryRaw.totalEstimated ?? summaryRaw.total_estimated),
+    totalContracted: readNumber(summaryRaw.totalContracted ?? summaryRaw.total_contracted),
     categories: readCategories(summaryRaw.categories),
     latestVendor: readLatestVendor(summaryRaw.latestVendor),
   };

@@ -161,7 +161,7 @@ function resolveNextAction(status: VendorStatus, deadline: string | null): strin
   }
 }
 
-function mapVendorRowToUiVendor(row: ClientEventVendorsRpcVendorRow): Vendor {
+export function mapVendorRowToUiVendor(row: ClientEventVendorsRpcVendorRow): Vendor {
   const status = mapDbVendorStatusToUiStatus(row.status);
   const isContracted =
     status === "contratado" ||
@@ -172,8 +172,6 @@ function mapVendorRowToUiVendor(row: ClientEventVendorsRpcVendorRow): Vendor {
   const contractedAmount =
     typeof row.contracted_amount === "number" && row.contracted_amount > 0
       ? row.contracted_amount
-      : isContracted && typeof row.proposed_amount === "number"
-      ? row.proposed_amount
       : 0;
 
   const proposedAmount = typeof row.proposed_amount === "number" ? row.proposed_amount : 0;

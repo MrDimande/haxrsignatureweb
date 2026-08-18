@@ -52,6 +52,7 @@ CREATE INDEX IF NOT EXISTS idx_sender_profiles_event
 CREATE INDEX IF NOT EXISTS idx_sender_profiles_event_kind
   ON public.sender_profiles (event_id, sender_kind);
 
+DROP TRIGGER IF EXISTS sender_profiles_updated_at ON public.sender_profiles;
 CREATE TRIGGER sender_profiles_updated_at
   BEFORE UPDATE ON public.sender_profiles
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -108,6 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_invitation_campaigns_event
 CREATE INDEX IF NOT EXISTS idx_invitation_campaigns_event_status
   ON public.invitation_campaigns (event_id, status);
 
+DROP TRIGGER IF EXISTS invitation_campaigns_updated_at ON public.invitation_campaigns;
 CREATE TRIGGER invitation_campaigns_updated_at
   BEFORE UPDATE ON public.invitation_campaigns
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -167,6 +169,7 @@ CREATE INDEX IF NOT EXISTS idx_campaign_recipients_event_campaign
 CREATE INDEX IF NOT EXISTS idx_campaign_recipients_status
   ON public.campaign_recipients (campaign_id, status);
 
+DROP TRIGGER IF EXISTS campaign_recipients_updated_at ON public.campaign_recipients;
 CREATE TRIGGER campaign_recipients_updated_at
   BEFORE UPDATE ON public.campaign_recipients
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();

@@ -47,6 +47,7 @@ const LEGACY_VERSION_ALLOWLIST = new Set([
   "026",
   "027",
   "028",
+  "0280",
   "0281",
   "029",
   "0301",

@@ -11,14 +11,20 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ENV_FILES = [
-  resolve(ROOT, ".env.development.local"),
-  resolve(ROOT, ".env.local"),
-];
-const sqlFile = process.argv[2];
+const customEnvArg = process.argv.find((a) => a.startsWith("--env="));
+const customEnv = customEnvArg ? customEnvArg.slice(6) : null;
+
+const ENV_FILES = customEnv
+  ? [resolve(ROOT, customEnv)]
+  : [
+      resolve(ROOT, ".env.development.local"),
+      resolve(ROOT, ".env.local"),
+    ];
+
+const sqlFile = process.argv.find((a) => !a.startsWith("--") && a !== process.argv[0] && a !== process.argv[1]);
 
 if (!sqlFile) {
-  console.error("Uso: node scripts/apply-sql-migration.mjs <ficheiro.sql>");
+  console.error("Uso: node scripts/apply-sql-migration.mjs <ficheiro.sql> [--env=.env.preview|--env=.env.production]");
   process.exit(1);
 }
 
@@ -51,10 +57,11 @@ function loadEnv() {
   return values;
 }
 
-const dbUrl = loadEnv().SUPABASE_DB_URL;
+const envValues = loadEnv();
+const dbUrl = envValues.SUPABASE_DB_URL || envValues.DATABASE_URL || envValues.POSTGRES_URL;
 if (!dbUrl) {
   console.error(
-    "SUPABASE_DB_URL em falta em .env.development.local ou .env.local.\n" +
+    `SUPABASE_DB_URL em falta nos ficheiros configurados (${ENV_FILES.join(", ")}).\n` +
       "Supabase → Project Settings → Database → Connection string (URI, Session mode)."
   );
   process.exit(1);
