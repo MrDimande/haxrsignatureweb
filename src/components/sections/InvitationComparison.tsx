@@ -6,12 +6,12 @@ import { invitationComparison, type ComparisonLevel } from "@/lib/site-config";
 
 function CellIcon({ level }: { level: ComparisonLevel }) {
   if (level === "included") {
-    return <span className="text-gold/80 text-xs">✓</span>;
+    return <span className="text-brand-gold text-xs">✓</span>;
   }
   if (level === "optional") {
-    return <span className="text-grey/40 text-[10px]">○</span>;
+    return <span className="text-brand-text-dark/30 text-[10px]">○</span>;
   }
-  return <span className="text-grey/20 text-xs">—</span>;
+  return <span className="text-brand-text-dark/15 text-xs">—</span>;
 }
 
 export default function InvitationComparison() {
@@ -24,10 +24,10 @@ export default function InvitationComparison() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="group inline-flex items-center gap-3 border border-grey-dark px-6 py-3 font-sans text-[10px] tracking-[0.3em] uppercase text-grey/70 transition-all duration-500 hover:border-gold-dim hover:text-gold/80"
+          className="group inline-flex items-center gap-3 border border-brand-champagne/80 px-6 py-3 font-sans text-[10px] tracking-[0.3em] uppercase text-brand-text-dark/70 transition-all duration-500 hover:border-brand-gold/60 hover:text-brand-gold bg-white/70 shadow-sm rounded-full"
         >
           <span>{open ? "Ocultar comparativo" : "Ver comparativo dos pacotes"}</span>
-          <span className="font-mono text-gold/40 transition-transform duration-500 group-hover:text-gold/70">
+          <span className="font-mono text-brand-gold/60 transition-transform duration-500 group-hover:text-brand-gold">
             {open ? "—" : "+"}
           </span>
         </button>
@@ -43,29 +43,29 @@ export default function InvitationComparison() {
             className="overflow-hidden"
           >
             <div className="pt-2 pb-4">
-              <p className="font-sans text-xs text-grey/60 mb-8 flex flex-wrap justify-center gap-x-6 gap-y-2">
+              <p className="font-sans text-xs text-brand-text-dark/60 mb-8 flex flex-wrap justify-center gap-x-6 gap-y-2">
                 <span>
-                  <span className="text-gold/70 mr-2">✓</span> Incluído
+                  <span className="text-brand-gold mr-2">✓</span> Incluído
                 </span>
                 <span>
-                  <span className="text-grey/50 mr-2">○</span> Opcional
+                  <span className="text-brand-text-dark/30 mr-2">○</span> Opcional
                 </span>
               </p>
 
               <div className="overflow-x-auto scrollbar-none site-bleed-x">
                 <table className="w-full min-w-[640px] border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-grey-dark">
-                      <th className="py-4 pr-4 font-mono text-[8px] tracking-[0.4em] uppercase text-grey/50 font-normal w-[40%]">
+                    <tr className="border-b border-brand-champagne/45">
+                      <th className="py-4 pr-4 font-mono text-[8px] tracking-[0.4em] uppercase text-brand-text-dark/50 font-normal w-[40%]">
                         Serviço
                       </th>
-                      <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-grey/50 font-normal text-center">
+                      <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-brand-text-dark/50 font-normal text-center">
                         Essencial
                       </th>
-                      <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-gold/60 font-normal text-center border-x border-gold-dim/30 bg-gold/[0.03]">
+                      <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-brand-gold font-medium text-center border-x border-brand-gold/20 bg-brand-gold/[0.04]">
                         Signature
                       </th>
-                      <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-grey/50 font-normal text-center">
+                      <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-brand-text-dark/50 font-normal text-center">
                         Royal
                       </th>
                     </tr>
@@ -74,15 +74,15 @@ export default function InvitationComparison() {
                     {invitationComparison.map((row) => (
                       <tr
                         key={row.service}
-                        className="border-b border-grey-dark/60 hover:bg-white/[0.02] transition-colors"
+                        className="border-b border-brand-champagne/45 hover:bg-brand-champagne/10 transition-colors group/row"
                       >
-                        <td className="py-3.5 pr-4 font-sans text-xs text-white/45">
+                        <td className="py-3.5 pr-4 font-sans text-xs text-brand-text-dark/70 group-hover/row:text-brand-text-dark transition-colors font-light">
                           {row.service}
                         </td>
                         <td className="py-3.5 text-center">
                           <CellIcon level={row.essencial} />
                         </td>
-                        <td className="py-3.5 text-center border-x border-gold-dim/20 bg-gold/[0.02]">
+                        <td className="py-3.5 text-center border-x border-brand-gold/20 bg-brand-gold/[0.03]">
                           <CellIcon level={row.signature} />
                         </td>
                         <td className="py-3.5 text-center">

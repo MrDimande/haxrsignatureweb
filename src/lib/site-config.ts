@@ -444,7 +444,7 @@ export const invitationPackages = [
       "Direção de arte estendida",
     ],
     occasions: ["casamento"],
-    featured: false,
+    featured: true,
   },
   {
     id: "royal",
