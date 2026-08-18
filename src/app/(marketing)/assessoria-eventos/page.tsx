@@ -255,24 +255,24 @@ export default function AssessoriaEventosPage() {
 
                 {/* Right: Dual Editorial Photo Composition */}
                 <div className="lg:col-span-6 grid grid-cols-12 gap-3 items-center">
-                  <div className="col-span-8 rounded-2xl overflow-hidden aspect-[4/5] bg-brand-champagne/10 relative border border-brand-champagne/30 shadow-md">
+                  <div className="col-span-8 rounded-2xl overflow-hidden aspect-[4/3] bg-brand-champagne/10 relative border border-brand-champagne/30 shadow-md">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/images/archive-01.webp"
+                      src="/images/casamento-vania-fabiao-evelyn-eventos.webp"
                       alt="Casamento Vânia Luky & Fabião Dimande no Evelyn Eventos, C. de Maputo"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center"
                     />
                     <div className="absolute bottom-2 left-2 right-2 bg-brand-black/60 backdrop-blur-sm px-2.5 py-1 rounded-md text-[7px] font-mono text-brand-ivory/80">
                       EVELYN EVENTOS · C. DE MAPUTO
                     </div>
                   </div>
 
-                  <div className="col-span-4 rounded-2xl overflow-hidden aspect-[3/4] bg-[#141210] p-2 relative border border-brand-champagne/20 flex flex-col justify-between shadow-sm">
+                  <div className="col-span-4 rounded-2xl overflow-hidden aspect-[4/3] bg-[#141210] p-2 relative border border-brand-champagne/20 flex flex-col justify-between shadow-sm">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src="/images/convite-mockup-vania-fabiao.png"
                       alt="Convite Digital Vânia & Fabião"
-                      className="w-full h-auto object-contain mx-auto my-auto rounded-lg"
+                      className="w-full h-auto max-h-[90%] object-contain mx-auto my-auto rounded-lg"
                     />
                     <span className="text-[6.5px] font-mono text-brand-gold text-center block pt-1">
                       CONVITE & RSVP

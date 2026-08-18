@@ -297,7 +297,7 @@ export const caseStudies: CaseStudy[] = [
       "Assessoria completa HAXR com direcção criativa contínua, criação de identidade visual, desenvolvimento de convite digital e coordenação de bastidores no Evelyn Eventos, C. de Maputo.",
     result:
       "Celebração com linguagem estética contínua desde o primeiro convite até à recepção, proporcionando tranquilidade aos noivos e um acolhimento caloroso aos convidados.",
-    image: "/images/archive-01.webp",
+    image: "/images/casamento-vania-fabiao-evelyn-eventos.webp",
     href: getDemoById("casamento-vania-fabiao")?.publicPath,
     external: false,
   },
