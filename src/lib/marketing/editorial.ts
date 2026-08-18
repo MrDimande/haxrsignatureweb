@@ -171,7 +171,7 @@ export const assessoriaScopes: AssessoriaScope[] = [
     deliverables: [
       "Direção criativa & desenvolvimento de conceito visual exclusivo",
       "Engenharia orçamental contínua com The Wedding Financial Book (.xlsx)",
-      "Curadoria rigorosa, negociação e blindagem contratual de fornecedores",
+      "Curadoria criteriosa, negociação e validação de prazos e entregáveis de fornecedores",
       "Planta cenográfica 2D/3D, paleta de texturas e styling floral",
       "Gestão completa de convidados, RSVP digital e mapa de lugares",
       "Direção de ensaios de cerimónia e comando operacional no dia",
@@ -206,7 +206,7 @@ export const assessoriaScopes: AssessoriaScope[] = [
     tagline:
       "A HAXR assume a governação operacional na fase final definida após diagnóstico do evento.",
     deliverables: [
-      "Auditoria executiva de contratos e cronograma mestre de timings",
+      "Revisão executiva de contratos, entregáveis e cronograma mestre de timings",
       "Reunião de alinhamento técnico com todos os fornecedores contratados",
       "Ensaio geral de cortejo, protocolo e alinhamento com celebrante",
       "Supervisão cirúrgica de montagem, recepção de convidados e cortejo",
@@ -235,11 +235,11 @@ export const signatureJourneyPhases = [
     title: "Arquitetura Financeira",
     titleEn: "Financial Architecture & Curating",
     description:
-      "Fixação do teto orçamental, contratação com blindagem contratual e curadoria criteriosa dos melhores fornecedores de Moçambique.",
+      "Fixação do teto orçamental, análise rigorosa de propostas e curadoria criteriosa dos melhores fornecedores de Moçambique.",
     items: [
       "The Wedding Financial Book (.xlsx)",
       "Análise e negociação de propostas",
-      "Blindagem jurídica de contratos",
+      "Análise de condições comerciais, prazos e entregáveis contratuais",
     ],
   },
   {
@@ -286,31 +286,17 @@ export function getCaseStudyForDemo(demoId: string): CaseStudy | undefined {
 
 export const caseStudies: CaseStudy[] = [
   {
-    id: "casamento-leila-armando",
-    title: "Leila & Armando",
-    category: "Assessoria Integral",
-    context:
-      "Casamento no Catembe Gallery Hotel, Maputo, com 200 convidados e desafios de logística costeira, cenografia ao ar livre e múltiplos momentos musicais.",
-    challenge:
-      "Coordenar fornecedores de alta complexidade (catering, som, iluminação arquitetural e floristas) mantendo rigoroso controlo financeiro e fluidez para os noivos.",
-    solution:
-      "Direção criativa HAXR de ponta a ponta, governança fiduciária através do The Wedding Financial Book, RSVP em tempo real e comando de bastidores no dia.",
-    result:
-      "Execução cronometrada ao minuto, zero custos imprevistos e tranquilidade absoluta para o casal do cortejo ao encerramento.",
-    image: portfolioAssets.casamentoSignature,
-  },
-  {
     id: "casamento-vania-fabiao",
-    title: "Vânia & Fabiao",
-    category: "Casamentos",
+    title: "Vânia Luky & Fabião Dimande",
+    category: "Assessoria & Identidade Visual",
     context:
-      "Casamento em Maputo com visão de uma experiência digital que definisse o tom de toda a celebração.",
+      "Casamento realizado no Salão de Eventos Evely, Maputo, integrando assessoria completa, identidade visual e experiência digital de convites.",
     challenge:
-      "Criar um convite que fosse mais do que informação — uma narrativa imersiva, elegante e funcional no telemóvel.",
+      "Articular a identidade visual e o conceito dos convites com a produção no espaço, alinhando fornecedores para assegurar uma condução serena e harmoniosa.",
     solution:
-      "Convite digital Signature com identidade própria, música, confirmação de presença e curadoria editorial HAXR.",
+      "Assessoria completa HAXR com direção criativa contínua, criação de identidade visual, desenvolvimento de convite digital e coordenação de bastidores no Salão de Eventos Evely.",
     result:
-      "Os convidados falaram do convite durante semanas. A experiência digital antecipou a fluidez do dia do casamento.",
+      "Celebração com linguagem estética contínua desde o primeiro convite até à recepção, proporcionando tranquilidade aos noivos e um acolhimento caloroso aos convidados.",
     image: portfolioAssets.casamentoSignature,
     href: getDemoById("casamento-vania-fabiao")?.publicPath,
     external: false,

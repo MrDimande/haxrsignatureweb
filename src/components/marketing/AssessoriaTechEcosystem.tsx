@@ -25,18 +25,18 @@ export default function AssessoriaTechEcosystem() {
       icon: FileText,
       title: "The Wedding Financial Report (.pdf)",
       description:
-        "Documento editorial de alta-costura emitido a qualquer momento da assessoria. Apresenta o sumário consolidado de capital, detalhe do master budget por fornecedor e histórico de liquidações.",
-      highlight: "Normas internacionais de reconciliação financeira.",
+        "Documento editorial emitido a qualquer momento da assessoria. Apresenta o sumário consolidado de capital, detalhe do master budget por fornecedor e histórico de liquidações.",
+      highlight: "Reconciliação e consolidação financeira em formato editorial.",
     },
     {
       id: "book",
       label: "Financial Book XLSX",
-      sub: "Livro Contábil Mestre",
+      sub: "Master Financial Workbook",
       icon: Table,
       title: "The Wedding Financial Book (.xlsx)",
       description:
-        "Livro financeiro completo gerado via motor ExcelJS com fórmulas nativas dinâmicas e 7 abas especializadas. Transparência contábil de cada metical contratado, pago e economizado.",
-      highlight: "Zero comissões ocultas: 100% de transparência fiduciária.",
+        "Livro financeiro operacional gerado via motor ExcelJS com fórmulas nativas e 9 áreas financeiras especializadas. Transparência de cada metical contratado, liquidado e saldo a pagar.",
+      highlight: "9 áreas financeiras especializadas · uma única fonte financeira canónica.",
     },
     {
       id: "rsvp",
@@ -143,11 +143,11 @@ export default function AssessoriaTechEcosystem() {
             <div className="pt-2 flex items-center gap-6 text-[10px] font-mono text-brand-ivory/40">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3 h-3 text-brand-gold" />
-                DADOS CRIPTOGRAFADOS
+                ACESSO PRIVADO
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3 h-3 text-brand-gold" />
-                AUDITADO EM TEMPO REAL
+                DADOS CONSOLIDADOS
               </span>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function AssessoriaTechEcosystem() {
                   <span className="w-2 h-2 rounded-full bg-brand-gold/80 inline-block" />
                   <span>HAXR SIGNATURE · PRIVATE ENGINE</span>
                 </div>
-                <span className="text-brand-gold font-bold">CASAL LEILA & ARMANDO</span>
+                <span className="text-brand-gold font-bold">PAINEL DE ACOMPANHAMENTO</span>
               </div>
 
               {/* Dynamic Screen Content Based on Tab */}
@@ -237,7 +237,7 @@ export default function AssessoriaTechEcosystem() {
                     </div>
                   </div>
                   <p className="text-[6px] font-mono text-brand-ivory/40 text-center">
-                    Documento privado e confidencial emitido sob normas de alta-costura editorial
+                    Documento executivo privado com reconciliação da posição financeira do evento
                   </p>
                 </div>
               )}
@@ -246,28 +246,28 @@ export default function AssessoriaTechEcosystem() {
                 <div className="flex-1 bg-white/[0.04] rounded-xl border border-white/10 p-3 my-2 flex flex-col justify-between text-left font-mono">
                   <div className="border-b border-white/10 pb-1.5 flex justify-between items-center text-[6px]">
                     <span className="text-brand-ivory font-bold">HAXR_Wedding_Financial_Book.xlsx</span>
-                    <span className="text-brand-gold">7 ABAS AUDITADAS</span>
+                    <span className="text-brand-gold">9 ÁREAS ESPECIALIZADAS</span>
                   </div>
                   <div className="space-y-1 text-[6px] text-brand-ivory/70 py-1">
                     <div className="flex justify-between border-b border-white/5 pb-0.5">
-                      <span>01_Sumario_Executivo</span>
-                      <span className="text-brand-gold">Pronto</span>
+                      <span>01_Executive_Dashboard</span>
+                      <span className="text-brand-gold">Consolidado</span>
                     </div>
                     <div className="flex justify-between border-b border-white/5 pb-0.5">
-                      <span>02_Orcamento_Mestre</span>
+                      <span>02_Master_Budget</span>
                       <span className="text-brand-gold">Reconciliado</span>
                     </div>
                     <div className="flex justify-between border-b border-white/5 pb-0.5">
-                      <span>03_Registo_Pagamentos</span>
-                      <span className="text-brand-gold">100% Auditado</span>
+                      <span>03_Payment_Schedule</span>
+                      <span className="text-brand-gold">Em dia</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>04_Cronograma_Liquidacoes</span>
-                      <span className="text-brand-gold">Em dia</span>
+                      <span>04_Vendors_Contracts</span>
+                      <span className="text-brand-gold">Registado</span>
                     </div>
                   </div>
                   <p className="text-[5.5px] text-brand-ivory/40 text-center">
-                    Livro contábil gerado com fórmulas nativas e zero distorções
+                    Livro operacional com fórmulas nativas e zero distorções manuais
                   </p>
                 </div>
               )}

@@ -45,13 +45,13 @@ export default function StickyReservationCard({
       <div className="flex justify-between items-start mb-6 pb-4 border-b border-brand-champagne/40">
         <div>
           <span className="font-mono text-[8px] tracking-[0.25em] uppercase text-brand-gold font-bold block mb-1">
-            Investimento de Referência
+            Investimento sob Medida
           </span>
-          <span className="font-serif text-2xl font-light text-brand-text-dark">
-            A partir de {basePrice}
+          <span className="font-serif text-xl md:text-2xl font-light text-brand-text-dark">
+            Definido após Diagnóstico Privado
           </span>
           <span className="font-sans text-[10px] text-brand-text-dark/50 block font-light mt-0.5">
-            Proposta final formalizada após diagnóstico
+            Proposta personalizada conforme âmbito, dimensão e logística
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-brand-gold bg-brand-gold/10 px-2.5 py-1 rounded-full border border-brand-gold/20">

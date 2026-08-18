@@ -27,7 +27,7 @@ export default function AssessoriaEventosPage() {
     { key: "after", title: "A Experiência Final", text: assessoriaNarrative.feelingAfter },
   ] as const;
 
-  const weddingCase = caseStudies.find((c) => c.id === "casamento-leila-armando") || caseStudies[0];
+  const weddingCase = caseStudies.find((c) => c.id === "casamento-vania-fabiao") || caseStudies[0];
 
   const handleScopeSelect = (scopeId: string) => {
     setSelectedScope(scopeId);
@@ -47,7 +47,7 @@ export default function AssessoriaEventosPage() {
       <PageHero
         label="Assessoria de Eventos Signature"
         headline="Direcção criativa, rigor de governação e presença invisível — para que viva a celebração, não a logística."
-        description="A assessoria HAXR Signature une curadoria autoral, proteção orçamental fiduciária e discrição nos bastidores. Assumimos a complexidade técnica para que o dia do seu casamento pertença inteiramente à sua memória."
+        description="A assessoria HAXR Signature une curadoria autoral, controlo financeiro transparente e discrição nos bastidores. Assumimos a complexidade técnica para que o dia do seu casamento pertença inteiramente à sua memória."
       />
 
       {/* Editorial Metadata Bar */}
@@ -184,7 +184,7 @@ export default function AssessoriaEventosPage() {
                   <span className="px-3 py-1 rounded-full text-[8.5px] font-mono tracking-wider uppercase font-semibold bg-brand-gold/10 text-brand-gold border border-brand-gold/20">
                     {weddingCase.category}
                   </span>
-                  <span className="text-xs font-mono text-brand-text-dark/40">• Moçambique</span>
+                  <span className="text-xs font-mono text-brand-text-dark/40">• Salão de Eventos Evely, Maputo</span>
                 </div>
 
                 <h3 className="font-serif text-2xl md:text-3xl font-light text-brand-text-dark">

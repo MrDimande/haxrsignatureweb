@@ -69,7 +69,7 @@ export default function AssessoriaManifesto() {
 
                   <div className="pt-4 border-t border-white/5 flex items-center justify-between text-[8px] font-mono text-brand-ivory/40">
                     <span>HAXR SIGNATURE STANDARD</span>
-                    <span className="text-brand-gold">GARANTIA HAXR</span>
+                    <span className="text-brand-gold">TRANSPARÊNCIA & DISCRIÇÃO</span>
                   </div>
                 </div>
               </RevealOnScroll>
