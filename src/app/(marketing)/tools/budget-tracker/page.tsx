@@ -675,17 +675,13 @@ export default function BudgetTrackerPage() {
 
         {/* Master Atelier Hero */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
-          <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.35em] text-brand-gold bg-white border border-brand-champagne/60 px-3.5 py-1.5 rounded-full shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse" />
-              Private Wealth & Wedding Atelier
-            </div>
+          <div className="space-y-3 max-w-2xl">
             <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light leading-[1.1] tracking-[-0.02em] text-brand-text-dark">
               Balanço & Gestão <br className="hidden sm:inline" />
-              <span className="italic font-normal text-brand-gold">Orçamental Editorial</span>
+              <span className="italic font-normal text-brand-gold">Orçamental</span>
             </h1>
             <p className="font-sans text-xs sm:text-sm text-brand-text-dark/70 font-light leading-relaxed">
-              O mais avançado instrumento de engenharia financeira para casamentos de alto prestígio. Calcule alocações proporcionais com base nos padrões de alta sociedade de Maputo e mantenha cada investimento sob controle absoluto.
+              Instrumento de controlo e planeamento financeiro para casamentos. Calcule alocações proporcionais com base nas directrizes de mercado de Maputo e mantenha cada investimento estruturado.
             </p>
           </div>
 
