@@ -15,6 +15,8 @@ export type ClientEventPaymentsRpcPaymentRow = {
   paid_at: string;
   created_at: string;
   document: ClientEventPaymentsRpcDocument | null;
+  vendor_id?: string | null;
+  contract_id?: string | null;
 };
 
 export type ClientEventPaymentsRpcLastPayment = {
@@ -101,6 +103,8 @@ function readPaymentRow(value: unknown): ClientEventPaymentsRpcPaymentRow | null
     paid_at: value.paid_at,
     created_at: value.created_at,
     document: readDocument(value.document),
+    vendor_id: readNullableString(value.vendor_id),
+    contract_id: readNullableString(value.contract_id),
   };
 }
 

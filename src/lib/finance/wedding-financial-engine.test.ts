@@ -165,4 +165,28 @@ describe("Wedding Financial Calculation Engine", () => {
     assert.equal(isPastDue("2026-08-01", "2026-08-18"), true);
     assert.equal(isPastDue("2026-08-30", "2026-08-18"), false);
   });
+
+  it("calculates category breakdown proportions accurately", () => {
+    const items: MasterBudgetItem[] = [
+      {
+        id: "cat-1",
+        category: "Decoração",
+        vendorOrItem: "Flores",
+        initialPlanned: 100000,
+        proposedAmount: 100000,
+        contractedAmount: 100000,
+        actualAmount: 100000,
+        paidAmount: 50000,
+        balance: 50000,
+        variance: 0,
+        dueDate: "—",
+        status: "parcial",
+      },
+    ];
+
+    const breakdown = calculateCategoryBreakdown(items);
+    assert.equal(breakdown.length, 1);
+    assert.equal(breakdown[0].name, "Decoração");
+    assert.equal(breakdown[0].shareOfTotal, 1);
+  });
 });

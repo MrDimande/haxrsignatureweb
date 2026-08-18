@@ -127,12 +127,18 @@ export interface BudgetItem {
   category: string;
   vendorOrItem: string;
   plannedAmount: number;
+  initialPlanned?: number;
+  proposedAmount?: number;
+  contractedAmount?: number;
   actualAmount: number;
   paidAmount: number;
   balance: number;
+  variance?: number;
   status: PaymentStatus;
   dueDate: string;
   dueDateIso?: string;
+  notes?: string;
+  isDayOfWedding?: boolean;
 }
 
 export interface PaymentRecord {
@@ -142,6 +148,8 @@ export interface PaymentRecord {
   paidAt: string;
   paidAtLabel: string;
   method: string;
+  vendorId?: string;
+  isUnallocated?: boolean;
 }
 
 export interface BudgetModuleData {
@@ -151,6 +159,12 @@ export interface BudgetModuleData {
     registered: number;
     paid: number;
     pending: number;
+    contracted?: number;
+    uncommitted?: number;
+    forecast?: number;
+    variance?: number;
+    guestCount?: number;
+    costPerGuest?: number;
     nextPayment: {
       vendorName: string;
       dueDate: string;
@@ -160,6 +174,11 @@ export interface BudgetModuleData {
   categories: BudgetCategory[];
   items: BudgetItem[];
   recentPayments: PaymentRecord[];
+  ledger?: import("@/lib/finance/wedding-financial-engine").NormalizedEventFinancialLedger;
+}
+
+export interface BudgetFinancialModuleData extends BudgetModuleData {
+  ledger: import("@/lib/finance/wedding-financial-engine").NormalizedEventFinancialLedger;
 }
 
 // ——— Vendors ———

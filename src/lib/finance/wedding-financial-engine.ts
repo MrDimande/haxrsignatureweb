@@ -1,4 +1,4 @@
-import { PaymentStatus } from "@/lib/event-modules/types";
+import { EventModuleContext, PaymentStatus } from "@/lib/event-modules/types";
 
 export interface MasterBudgetItem {
   id: string;
@@ -85,6 +85,32 @@ export interface ExecutiveFinancialSummary {
     dueDate: string;
     amount: number;
   } | null;
+}
+
+export interface NormalizedEventFinancialLedger {
+  context: EventModuleContext;
+  summary: ExecutiveFinancialSummary;
+  categories: CategoryFinancialMetric[];
+  items: MasterBudgetItem[];
+  installments: PaymentInstallment[];
+  recentPayments: {
+    id: string;
+    vendorOrItem: string;
+    amount: number;
+    paidAt: string;
+    paidAtLabel: string;
+    method: string;
+    vendorId?: string;
+    isUnallocated?: boolean;
+  }[];
+  clientNames: string;
+  eventTitle: string;
+  eventDateFormatted: string;
+  eventDateIso: string | null;
+  eventLocation: string;
+  guestCount: number;
+  currency: string;
+  currencySymbol: string;
 }
 
 export interface FinancialEngineInput {

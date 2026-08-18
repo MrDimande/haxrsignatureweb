@@ -1,7 +1,6 @@
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
 import type {
   BudgetModuleData,
-  EventModuleContext,
   PaymentRecord,
   PaymentStatus,
   Vendor,
@@ -9,9 +8,8 @@ import type {
 import {
   calculateCategoryBreakdown,
   calculateExecutiveFinancialSummary,
-  type CategoryFinancialMetric,
-  type ExecutiveFinancialSummary,
   type MasterBudgetItem,
+  type NormalizedEventFinancialLedger,
   type PaymentInstallment,
 } from "./wedding-financial-engine";
 import { PAYMENT_METHOD_LABELS } from "@/lib/finance/constants";
@@ -21,22 +19,7 @@ import type {
   ClientEventPaymentsRpcPayload,
 } from "@/lib/payments/client-event-payments-rpc";
 
-export interface NormalizedEventFinancialLedger {
-  context: EventModuleContext;
-  summary: ExecutiveFinancialSummary;
-  categories: CategoryFinancialMetric[];
-  items: MasterBudgetItem[];
-  installments: PaymentInstallment[];
-  recentPayments: PaymentRecord[];
-  clientNames: string;
-  eventTitle: string;
-  eventDateFormatted: string;
-  eventDateIso: string | null;
-  eventLocation: string;
-  guestCount: number;
-  currency: string;
-  currencySymbol: string;
-}
+export type { NormalizedEventFinancialLedger };
 
 function formatEventDate(date: string | null): string {
   if (!date) return "Data por definir";
@@ -74,7 +57,7 @@ function resolvePaymentLabel(row: ClientEventPaymentsRpcPaymentRow): string {
   return "Pagamento registado";
 }
 
-function mapPaymentRowToRecord(row: ClientEventPaymentsRpcPaymentRow): PaymentRecord {
+export function mapPaymentRowToRecord(row: ClientEventPaymentsRpcPaymentRow): PaymentRecord {
   return {
     id: row.id,
     vendorOrItem: resolvePaymentLabel(row),
@@ -82,6 +65,7 @@ function mapPaymentRowToRecord(row: ClientEventPaymentsRpcPaymentRow): PaymentRe
     paidAt: row.paid_at,
     paidAtLabel: formatPaidAtLabel(row.paid_at),
     method: resolvePaymentMethodLabel(row.payment_method),
+    vendorId: row.vendor_id || undefined,
   };
 }
 
@@ -106,7 +90,10 @@ export function buildNormalizedFinancialLedger(input: {
   const installments: PaymentInstallment[] = [];
   const recordedPayments: PaymentRecord[] = (paymentsPayload?.payments || []).map(mapPaymentRowToRecord);
 
-  // 1. Process real Vendors & Contracts
+  // Set of payment IDs reconciled to specific vendors
+  const reconciledPaymentIds = new Set<string>();
+
+  // 1. Process real Vendors & Contracts with ID-based payment reconciliation
   vendors.forEach((vendor, index) => {
     const isContracted =
       vendor.status === "contratado" ||
@@ -117,8 +104,15 @@ export function buildNormalizedFinancialLedger(input: {
     const proposedAmount = vendor.proposal?.amount || 0;
     const initialPlanned = contractedAmount > 0 ? contractedAmount : (proposedAmount > 0 ? proposedAmount : 0);
 
-    // Payments associated strictly by vendorId if present on payment, or zero
-    const paidAmount = 0;
+    // ID-based reconciliation: match strictly by vendor.id or vendor.contract.id
+    const matchingPayments = recordedPayments.filter((p) => {
+      if (vendor.id && p.vendorId === vendor.id) return true;
+      return false;
+    });
+
+    matchingPayments.forEach((p) => reconciledPaymentIds.add(p.id));
+
+    const paidAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
     const actualAmount = contractedAmount > 0 ? contractedAmount : proposedAmount;
     const balance = Math.max(0, (contractedAmount > 0 ? contractedAmount : initialPlanned) - paidAmount);
     const variance = initialPlanned > 0 && contractedAmount > 0 ? initialPlanned - contractedAmount : 0;
@@ -148,31 +142,51 @@ export function buildNormalizedFinancialLedger(input: {
       notes: vendor.nextAction || undefined,
     });
 
-    if (contractedAmount > 0) {
+    // Schedule installments for this vendor without economic duplication:
+    // a) Liquidated portions
+    matchingPayments.forEach((p, pIdx) => {
       installments.push({
-        id: `inst-v-${index + 1}`,
+        id: `inst-paid-${vendor.id || index}-${pIdx + 1}`,
         vendorOrItem: vendor.name,
-        installmentLabel: "Liquidação Contratual",
-        amount: contractedAmount,
+        installmentLabel: "Pagamento Liquidado",
+        amount: p.amount,
+        dueDate: p.paidAtLabel,
+        dueDateIso: p.paidAt,
+        paidAt: p.paidAt,
+        status: "pago",
+        method: p.method,
+      });
+    });
+
+    // b) Remaining outstanding balance
+    if (balance > 0 && isContracted) {
+      installments.push({
+        id: `inst-bal-${vendor.id || index + 1}`,
+        vendorOrItem: vendor.name,
+        installmentLabel: paidAmount > 0 ? "Saldo em Falta" : "Liquidação Contratual",
+        amount: balance,
         dueDate: "Conforme Contrato",
-        status: status,
+        status: "pendente",
       });
     }
   });
 
-  // 2. Add recorded payments as real chronological installments
+  // 2. Unallocated / Unassociated Recorded Payments
   recordedPayments.forEach((p, idx) => {
-    installments.push({
-      id: `inst-p-${idx + 1}`,
-      vendorOrItem: p.vendorOrItem,
-      installmentLabel: "Pagamento Liquidado",
-      amount: p.amount,
-      dueDate: p.paidAtLabel,
-      dueDateIso: p.paidAt,
-      paidAt: p.paidAt,
-      status: "pago",
-      method: p.method,
-    });
+    if (!reconciledPaymentIds.has(p.id)) {
+      p.isUnallocated = true;
+      installments.push({
+        id: `inst-unrec-${idx + 1}`,
+        vendorOrItem: `[Não associado] ${p.vendorOrItem}`,
+        installmentLabel: "Pagamento Liquidado (Sem Fornecedor Vinculado)",
+        amount: p.amount,
+        dueDate: p.paidAtLabel,
+        dueDateIso: p.paidAt,
+        paidAt: p.paidAt,
+        status: "pago",
+        method: p.method,
+      });
+    }
   });
 
   const summary = calculateExecutiveFinancialSummary({
@@ -235,6 +249,12 @@ export function convertNormalizedLedgerToBudgetModuleData(
       registered: ledger.summary.paidAmount,
       paid: ledger.summary.paidAmount,
       pending: ledger.summary.outstandingAmount,
+      contracted: ledger.summary.contractedAmount,
+      uncommitted: ledger.summary.uncommittedBudget,
+      forecast: ledger.summary.forecastFinalCost,
+      variance: ledger.summary.projectedVariance,
+      guestCount: ledger.guestCount,
+      costPerGuest: ledger.summary.costPerGuest,
       nextPayment: ledger.summary.nextPayment
         ? {
             vendorName: ledger.summary.nextPayment.vendorName,
@@ -256,13 +276,20 @@ export function convertNormalizedLedgerToBudgetModuleData(
       category: item.category,
       vendorOrItem: item.vendorOrItem,
       plannedAmount: item.initialPlanned,
+      initialPlanned: item.initialPlanned,
+      proposedAmount: item.proposedAmount,
+      contractedAmount: item.contractedAmount,
       actualAmount: item.actualAmount,
       paidAmount: item.paidAmount,
       balance: item.balance,
+      variance: item.variance,
       status: item.status,
       dueDate: item.dueDate,
       dueDateIso: item.dueDateIso,
+      notes: item.notes,
+      isDayOfWedding: item.isDayOfWedding,
     })),
     recentPayments: ledger.recentPayments,
+    ledger: ledger,
   };
 }

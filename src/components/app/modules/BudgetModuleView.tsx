@@ -20,100 +20,82 @@ import {
   Search,
 } from "lucide-react";
 import { downloadOfficialWeddingLedger } from "@/lib/export/excel-wedding-ledger";
+import type { NormalizedEventFinancialLedger } from "@/lib/finance/wedding-financial-engine";
 import {
   calculateCategoryBreakdown,
   calculateExecutiveFinancialSummary,
-  MasterBudgetItem,
-  PaymentInstallment,
 } from "@/lib/finance/wedding-financial-engine";
-import type { NormalizedEventFinancialLedger } from "@/lib/finance/normalized-financial-ledger";
 
 export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
-  const { summary, items, categories, recentPayments, context } = data;
-  const currency = context.currency || "MT";
   const [activeTab, setActiveTab] = useState<"master" | "schedule" | "payments">("master");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
 
-  // Map BudgetModuleData items strictly without inventing contractedAmount
-  const masterItems: MasterBudgetItem[] = useMemo(() => {
-    return items.map((item) => ({
+  // Canonical Ledger: use direct ledger if passed by server, or synthesize fallback without demo mocks
+  const canonicalLedger: NormalizedEventFinancialLedger = useMemo(() => {
+    if (data.ledger) {
+      return data.ledger;
+    }
+
+    // Fallback if data.ledger was not provided
+    const items = data.items.map((item) => ({
       id: item.id,
       categoryId: item.categoryId,
       category: item.category,
       vendorOrItem: item.vendorOrItem,
-      initialPlanned: item.plannedAmount,
-      proposedAmount: item.plannedAmount,
-      contractedAmount: item.actualAmount > 0 ? item.actualAmount : 0,
-      actualAmount: item.actualAmount > 0 ? item.actualAmount : 0,
+      initialPlanned: item.initialPlanned ?? item.plannedAmount,
+      proposedAmount: item.proposedAmount ?? item.plannedAmount,
+      contractedAmount: item.contractedAmount ?? (item.status === "pago" || item.status === "parcial" ? item.actualAmount : 0),
+      actualAmount: item.actualAmount,
       paidAmount: item.paidAmount,
       balance: item.balance,
-      variance: item.plannedAmount > 0 && item.actualAmount > 0 ? item.plannedAmount - item.actualAmount : 0,
+      variance: item.variance ?? 0,
       dueDate: item.dueDate,
       dueDateIso: item.dueDateIso,
       status: item.status,
+      notes: item.notes,
+      isDayOfWedding: item.isDayOfWedding,
     }));
-  }, [items]);
 
-  // Installments derived from items and recent payments
-  const installments: PaymentInstallment[] = useMemo(() => {
-    const list: PaymentInstallment[] = [];
-    masterItems.forEach((item, idx) => {
-      if (item.contractedAmount > 0) {
-        list.push({
-          id: `inst-${idx + 1}`,
-          vendorOrItem: item.vendorOrItem,
-          installmentLabel: item.status === "pago" ? "Liquidação Total" : "Saldo em Falta",
-          amount: item.balance > 0 ? item.balance : item.contractedAmount,
-          dueDate: item.dueDate,
-          dueDateIso: item.dueDateIso,
-          paidAt: item.status === "pago" ? item.dueDate : undefined,
-          status: item.status,
-        });
-      }
-    });
-
-    recentPayments.forEach((p, idx) => {
-      list.push({
-        id: `rec-inst-${idx + 1}`,
-        vendorOrItem: p.vendorOrItem,
-        installmentLabel: "Pagamento Liquidado",
-        amount: p.amount,
-        dueDate: p.paidAtLabel,
-        dueDateIso: p.paidAt,
-        paidAt: p.paidAt,
-        status: "pago",
-        method: p.method,
-      });
-    });
-
-    return list;
-  }, [masterItems, recentPayments]);
-
-  // Executive Calculation Engine using real numbers (NO 800000 or 150 guests demo fallback)
-  const executiveSummary = useMemo(() => {
-    return calculateExecutiveFinancialSummary({
-      estimatedBudget: summary.estimated || 0,
+    const summary = calculateExecutiveFinancialSummary({
+      estimatedBudget: data.summary.estimated || 0,
       approvedBudget: null,
-      guestCount: 0,
-      items: masterItems,
-      installments,
-      recordedPayments: recentPayments.map((p) => ({
+      guestCount: data.summary.guestCount || 0,
+      items,
+      installments: [],
+      recordedPayments: data.recentPayments.map((p) => ({
         amount: p.amount,
         paidAt: p.paidAt,
         vendorOrItem: p.vendorOrItem,
       })),
     });
-  }, [summary.estimated, masterItems, installments, recentPayments]);
 
-  const categoryBreakdown = useMemo(() => {
-    return calculateCategoryBreakdown(masterItems);
-  }, [masterItems]);
+    const categories = calculateCategoryBreakdown(items);
+
+    return {
+      context: data.context,
+      summary,
+      categories,
+      items,
+      installments: [],
+      recentPayments: data.recentPayments,
+      clientNames: data.context.eventOverview.name,
+      eventTitle: data.context.eventOverview.name,
+      eventDateFormatted: data.context.eventOverview.date,
+      eventDateIso: null,
+      eventLocation: data.context.eventOverview.location || "Local por definir",
+      guestCount: data.summary.guestCount || 0,
+      currency: "MZN",
+      currencySymbol: data.context.currency || "MT",
+    };
+  }, [data]);
+
+  const { context, summary, items, installments, recentPayments, currencySymbol } = canonicalLedger;
 
   // Filtered Master Items
   const filteredMasterItems = useMemo(() => {
-    return masterItems.filter((item) => {
+    return items.filter((item) => {
       const matchSearch =
         searchQuery.trim() === "" ||
         item.vendorOrItem.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -121,30 +103,13 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
       const matchStatus = statusFilter === "all" || item.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [masterItems, searchQuery, statusFilter]);
+  }, [items, searchQuery, statusFilter]);
 
-  // Export handler
+  // Export handler — directly passes the canonical ledger to ExcelJS exporter
   const handleExportWeddingLedger = async () => {
     try {
       setIsExporting(true);
-      const ledger: NormalizedEventFinancialLedger = {
-        context,
-        summary: executiveSummary,
-        categories: categoryBreakdown,
-        items: masterItems,
-        installments,
-        recentPayments,
-        clientNames: context.eventOverview.name,
-        eventTitle: context.eventOverview.name,
-        eventDateFormatted: context.eventOverview.date,
-        eventDateIso: null,
-        eventLocation: context.eventOverview.location || "Local por definir",
-        guestCount: 0,
-        currency: "MZN",
-        currencySymbol: currency,
-      };
-
-      await downloadOfficialWeddingLedger(ledger);
+      await downloadOfficialWeddingLedger(canonicalLedger);
     } catch (err) {
       console.error("Erro ao gerar Wedding Financial Book:", err);
     } finally {
@@ -186,7 +151,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
             <Wallet className="w-4 h-4 text-brand-gold" />
           </div>
           <p className="font-serif text-2xl font-light text-white tracking-tight">
-            {executiveSummary.budgetCeiling > 0 ? formatCurrencyMZN(executiveSummary.budgetCeiling, currency) : "Por definir"}
+            {summary.budgetCeiling > 0 ? formatCurrencyMZN(summary.budgetCeiling, currencySymbol) : "Por definir"}
           </p>
           <p className="font-sans text-[11px] text-zinc-400 font-light">
             Teto orçamental de referência
@@ -200,12 +165,12 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
             <Percent className="w-4 h-4 text-zinc-400" />
           </div>
           <p className="font-serif text-2xl font-light text-white tracking-tight">
-            {formatCurrencyMZN(executiveSummary.contractedAmount, currency)}
+            {formatCurrencyMZN(summary.contractedAmount, currencySymbol)}
           </p>
           <div className="flex items-center justify-between text-[11px] text-zinc-400 font-light">
             <span>Margem livre:</span>
             <span className="font-mono text-zinc-300 font-semibold">
-              {formatCurrencyMZN(executiveSummary.uncommittedBudget, currency)}
+              {formatCurrencyMZN(summary.uncommittedBudget, currencySymbol)}
             </span>
           </div>
         </div>
@@ -217,12 +182,12 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="font-serif text-2xl font-light text-emerald-400 tracking-tight">
-            {formatCurrencyMZN(executiveSummary.paidAmount, currency)}
+            {formatCurrencyMZN(summary.paidAmount, currencySymbol)}
           </p>
           <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mt-1">
             <div
               className="bg-emerald-400 h-full transition-all duration-500"
-              style={{ width: `${executiveSummary.paymentProgress}%` }}
+              style={{ width: `${summary.paymentProgress}%` }}
             />
           </div>
         </div>
@@ -234,7 +199,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
             <TrendingUp className="w-4 h-4 text-brand-gold" />
           </div>
           <p className="font-serif text-2xl font-light text-brand-gold tracking-tight">
-            {formatCurrencyMZN(executiveSummary.outstandingAmount, currency)}
+            {formatCurrencyMZN(summary.outstandingAmount, currencySymbol)}
           </p>
           <p className="font-sans text-[11px] text-zinc-400 font-light">
             Compromissos pendentes de fecho
@@ -245,7 +210,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-white/10 pb-3 pt-2">
         {[
-          { key: "master", label: "Master Budget Ledger", count: masterItems.length },
+          { key: "master", label: "Master Budget Ledger", count: items.length },
           { key: "schedule", label: "Calendário de Pagamentos", count: installments.length },
           { key: "payments", label: "Pagamentos Registados", count: recentPayments.length },
         ].map((tab) => (
@@ -268,7 +233,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
       {/* TAB 1: Master Budget */}
       {activeTab === "master" && (
         <ModulePanel title="Master Budget & Detalhe de Contratos">
-          {masterItems.length === 0 ? (
+          {items.length === 0 ? (
             <ModuleEmptyState
               title="Sem linhas orçamentais registadas"
               description="Os contratos formalizados com fornecedores e faturas da assessoria aparecerão aqui automaticamente organizados."
@@ -320,12 +285,14 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
                       <tr key={item.id} className="hover:bg-white/5 transition-colors">
                         <td className="py-3.5 pr-3 text-zinc-400">{item.category}</td>
                         <td className="py-3.5 pr-3 font-medium text-white">{item.vendorOrItem}</td>
-                        <td className="py-3.5 pr-3 text-right font-mono">{formatCurrencyMZN(item.initialPlanned, currency)}</td>
+                        <td className="py-3.5 pr-3 text-right font-mono">{formatCurrencyMZN(item.initialPlanned, currencySymbol)}</td>
                         <td className="py-3.5 pr-3 text-right font-mono text-zinc-200">
-                          {item.contractedAmount > 0 ? formatCurrencyMZN(item.contractedAmount, currency) : "—"}
+                          {item.contractedAmount > 0 ? formatCurrencyMZN(item.contractedAmount, currencySymbol) : "—"}
                         </td>
-                        <td className="py-3.5 pr-3 text-right font-mono text-emerald-400 font-medium">{formatCurrencyMZN(item.paidAmount, currency)}</td>
-                        <td className="py-3.5 pr-3 text-right font-mono text-brand-gold">{formatCurrencyMZN(item.balance, currency)}</td>
+                        <td className="py-3.5 pr-3 text-right font-mono text-emerald-400 font-medium">
+                          {item.paidAmount > 0 ? formatCurrencyMZN(item.paidAmount, currencySymbol) : "0 MT"}
+                        </td>
+                        <td className="py-3.5 pr-3 text-right font-mono text-brand-gold">{formatCurrencyMZN(item.balance, currencySymbol)}</td>
                         <td className="py-3.5 pr-3 text-center">
                           <span
                             className={`inline-block rounded-full border px-2.5 py-0.5 font-mono text-[8px] uppercase tracking-wider font-semibold ${
@@ -372,7 +339,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
                     <tr key={inst.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-3.5 pr-3 font-medium text-white">{inst.vendorOrItem}</td>
                       <td className="py-3.5 pr-3 text-zinc-400">{inst.installmentLabel}</td>
-                      <td className="py-3.5 pr-3 text-right font-mono font-medium text-brand-gold">{formatCurrencyMZN(inst.amount, currency)}</td>
+                      <td className="py-3.5 pr-3 text-right font-mono font-medium text-brand-gold">{formatCurrencyMZN(inst.amount, currencySymbol)}</td>
                       <td className="py-3.5 pr-3 font-mono text-zinc-400">{inst.dueDate}</td>
                       <td className="py-3.5 pr-3 text-center">
                         <span
@@ -410,10 +377,13 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
                 >
                   <div className="space-y-0.5">
                     <span className="font-serif text-sm font-normal text-white">{payment.vendorOrItem}</span>
-                    <p className="font-mono text-[10px] text-zinc-400">{payment.paidAtLabel} · {payment.method}</p>
+                    <p className="font-mono text-[10px] text-zinc-400">
+                      {payment.paidAtLabel} · {payment.method}
+                      {payment.isUnallocated && " · (Não associado a contrato específico)"}
+                    </p>
                   </div>
                   <span className="font-mono text-sm font-semibold text-emerald-400">
-                    {formatCurrencyMZN(payment.amount, currency)}
+                    {formatCurrencyMZN(payment.amount, currencySymbol)}
                   </span>
                 </div>
               ))}
