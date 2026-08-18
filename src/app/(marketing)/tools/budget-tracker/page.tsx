@@ -4,13 +4,15 @@ import { useState, useEffect, useMemo, useId } from "react";
 import {
   DollarSign, Plus, Trash2, RotateCcw,
   MessageCircle, ArrowLeft, Wallet, Percent,
-  CheckCircle2, Sparkles,
-  FileSpreadsheet, Wand2,
+  CheckCircle2,
+  FileSpreadsheet, SlidersHorizontal,
   TrendingUp, Building2, Utensils,
   Camera, Music, Shirt, Search,
   ArrowUpRight, Check, X, Printer,
-  ShieldCheck, Clock, Award,
-  Sliders, ChevronRight, Gem, Info
+  ShieldCheck, Clock, Crown,
+  ChevronRight, Flower2, Receipt,
+  PieChart, Lightbulb, Info, FileText,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,11 +22,11 @@ import { downloadWeddingLedgerExcel } from "@/lib/export/excel-wedding-ledger";
 
 export type Currency = "MZN" | "USD" | "EUR" | "ZAR";
 
-const CURRENCY_CONFIG: Record<Currency, { symbol: string; rateFromMzn: number; label: string; prefix: string }> = {
-  MZN: { symbol: "MT", rateFromMzn: 1, label: "Metical Moçambicano", prefix: "" },
-  USD: { symbol: "$", rateFromMzn: 0.0156, label: "Dólar Americano", prefix: "$" },
-  EUR: { symbol: "€", rateFromMzn: 0.0145, label: "Euro", prefix: "€" },
-  ZAR: { symbol: "R", rateFromMzn: 0.285, label: "Rand Sul-Africano", prefix: "R" },
+const CURRENCY_CONFIG: Record<Currency, { symbol: string; rateFromMzn: number; label: string }> = {
+  MZN: { symbol: "MT", rateFromMzn: 1, label: "Metical Moçambicano" },
+  USD: { symbol: "$", rateFromMzn: 0.0156, label: "Dólar Americano" },
+  EUR: { symbol: "€", rateFromMzn: 0.0145, label: "Euro" },
+  ZAR: { symbol: "R", rateFromMzn: 0.285, label: "Rand Sul-Africano" },
 };
 
 export interface Expense {
@@ -34,8 +36,6 @@ export interface Expense {
   planned: number; // Stored always in MZN
   paid: number;    // Stored always in MZN
   status: "Pendente" | "Sinalizado" | "Pago";
-  supplierName?: string;
-  notes?: string;
 }
 
 export type PriorityProfile = "balanced" | "gastronomy" | "visual_media" | "atmosphere";
@@ -46,7 +46,7 @@ interface CategoryBenchmark {
   share: Record<PriorityProfile, number>;
   sampleItems: { name: string; shareOfCat: number }[];
   color: string;
-  accentBg: string;
+  badgeBg: string;
   description: string;
   vendorCategorySlug?: string;
 }
@@ -60,8 +60,8 @@ const CATEGORY_BENCHMARKS: CategoryBenchmark[] = [
       { name: "Aluguer Exclusivo de Salão & Jardim Privado", shareOfCat: 0.85 },
       { name: "Segurança de Protocolo & Valet Parking", shareOfCat: 0.15 },
     ],
-    color: "#C5A880", // Gold Foil
-    accentBg: "rgba(197, 168, 128, 0.12)",
+    color: "#B88A2A", // Brand Gold
+    badgeBg: "rgba(184, 138, 42, 0.12)",
     description: "Cenário físico, exclusividade de horário e infraestrutura climatizada.",
     vendorCategorySlug: "espacos",
   },
@@ -74,22 +74,22 @@ const CATEGORY_BENCHMARKS: CategoryBenchmark[] = [
       { name: "Bar Aberto Premium & Espumantes Selecionados", shareOfCat: 0.20 },
       { name: "Bolo de Noiva de Alta Confeitaria & Doces Finos", shareOfCat: 0.08 },
     ],
-    color: "#9E825A", // Deep Antique Gold
-    accentBg: "rgba(158, 130, 90, 0.12)",
+    color: "#9E825A", // Deep Gold
+    badgeBg: "rgba(158, 130, 90, 0.12)",
     description: "Experiência de degustação, empratamento de luxo e carta de bebidas finas.",
     vendorCategorySlug: "catering",
   },
   {
     name: "Decoração & Arte Floral",
-    icon: Sparkles,
+    icon: Flower2,
     share: { balanced: 0.16, gastronomy: 0.12, visual_media: 0.18, atmosphere: 0.16 },
     sampleItems: [
       { name: "Cenografia de Altar, Mesa dos Noivos & Aéreos", shareOfCat: 0.65 },
       { name: "Arranjos Florais com Flores Importadas & Centros", shareOfCat: 0.25 },
       { name: "Iluminação Cénica & Mobiliário Imperial", shareOfCat: 0.10 },
     ],
-    color: "#82705D", // Warm Earth
-    accentBg: "rgba(130, 112, 93, 0.12)",
+    color: "#6F7E5A", // Brand Eucalyptus
+    badgeBg: "rgba(111, 126, 90, 0.12)",
     description: "Conceito visual, design botânico, paleta de cores e atmosfera cénica.",
     vendorCategorySlug: "decoracao",
   },
@@ -101,20 +101,20 @@ const CATEGORY_BENCHMARKS: CategoryBenchmark[] = [
       { name: "Cobertura Fotográfica Editorial (2 Fotógrafos)", shareOfCat: 0.55 },
       { name: "Cinema 4K Documental, Drone Teaser & Live Edit", shareOfCat: 0.45 },
     ],
-    color: "#6B5B4D", // Deep Coffee
-    accentBg: "rgba(107, 91, 77, 0.12)",
+    color: "#57534E", // Charcoal Slate
+    badgeBg: "rgba(87, 83, 78, 0.10)",
     description: "Memória histórica, direção artística e álbuns encadernados em couro nobre.",
     vendorCategorySlug: "fotografia",
   },
   {
     name: "Assessoria & Coordenação HAXR",
-    icon: Gem,
+    icon: Crown,
     share: { balanced: 0.09, gastronomy: 0.07, visual_media: 0.09, atmosphere: 0.09 },
     sampleItems: [
       { name: "Assessoria Completa & Gestão de Protocolo HAXR", shareOfCat: 1.0 },
     ],
-    color: "#161514", // Obsidian Black
-    accentBg: "rgba(22, 21, 20, 0.08)",
+    color: "#1C1A17", // Brand Text Dark
+    badgeBg: "rgba(28, 26, 23, 0.08)",
     description: "Auditoria de contratos, cronograma ao minuto e tranquilidade dos noivos.",
     vendorCategorySlug: "assessoria",
   },
@@ -126,8 +126,8 @@ const CATEGORY_BENCHMARKS: CategoryBenchmark[] = [
       { name: "DJ Curador, Sound System Acústico & Iluminação", shareOfCat: 0.65 },
       { name: "Saxofonista / Quarteto de Cordas no Cocktail", shareOfCat: 0.35 },
     ],
-    color: "#B49770", // Light Gold
-    accentBg: "rgba(180, 151, 112, 0.12)",
+    color: "#B88A2A", // Brand Gold
+    badgeBg: "rgba(184, 138, 42, 0.10)",
     description: "Curadoria sonora, transições de energia da festa e acústica refinada.",
     vendorCategorySlug: "musica",
   },
@@ -139,8 +139,8 @@ const CATEGORY_BENCHMARKS: CategoryBenchmark[] = [
       { name: "Vestido de Alta Costura, Smoking & Calçado Nobre", shareOfCat: 0.70 },
       { name: "Hair Styling & Make-up Artistry para o Casal", shareOfCat: 0.30 },
     ],
-    color: "#D9C3A5", // Cashmere Sand
-    accentBg: "rgba(217, 195, 165, 0.15)",
+    color: "#A38668", // Warm Cashmere
+    badgeBg: "rgba(163, 134, 104, 0.12)",
     description: "Imagem pessoal, tecidos italianos e cuidados de beleza de spa.",
     vendorCategorySlug: "beleza",
   },
@@ -151,8 +151,8 @@ const CATEGORY_BENCHMARKS: CategoryBenchmark[] = [
     sampleItems: [
       { name: "Fundo de Segurança para Imprevistos & Extras (5%)", shareOfCat: 1.0 },
     ],
-    color: "#38342E", // Charcoal Bronze
-    accentBg: "rgba(56, 52, 46, 0.12)",
+    color: "#57534E", // Charcoal
+    badgeBg: "rgba(87, 83, 78, 0.12)",
     description: "Margem de liquidez para imprevistos de última hora e upgrades espontâneos.",
   },
 ];
@@ -253,7 +253,6 @@ export default function BudgetTrackerPage() {
     e.preventDefault();
     if (!newExpName.trim() || !newExpPlanned) return;
 
-    // Convert input back to MZN if entered in another currency
     const rate = CURRENCY_CONFIG[currency].rateFromMzn;
     const plannedVal = Math.round(Number(newExpPlanned) / rate);
     const paidVal = Math.round((Number(newExpPaid) || 0) / rate);
@@ -342,7 +341,7 @@ export default function BudgetTrackerPage() {
     setIsAllocatorOpen(false);
   };
 
-  // Instant AI & Quote Parser
+  // Instant Quote / Receipt Parser
   const parseRawProposal = () => {
     if (!rawProposalText.trim()) return;
 
@@ -430,8 +429,8 @@ export default function BudgetTrackerPage() {
         title: "Royal Imperial & Haute Couture",
         badge: "Nível Imperial",
         description: "Padrão de gala internacional: alta gastronomia com serviço à inglesa, orquestra ao vivo, cenografia botânica e cobertura documental de cinema.",
-        color: "text-amber-300",
-        bg: "bg-amber-950/40 border-amber-500/40",
+        color: "text-brand-gold",
+        bg: "bg-brand-champagne/20 border-brand-champagne/50",
       };
     }
     if (costPerGuest >= 5000) {
@@ -440,7 +439,7 @@ export default function BudgetTrackerPage() {
         badge: "Padrão Editorial",
         description: "Casamento de alto impacto visual: cenografia aérea rica, bar aberto premium, iluminação arquitetónica e assessoria completa HAXR.",
         color: "text-brand-gold",
-        bg: "bg-brand-gold/10 border-brand-gold/40",
+        bg: "bg-brand-champagne/15 border-brand-champagne/40",
       };
     }
     if (costPerGuest >= 3000) {
@@ -448,16 +447,16 @@ export default function BudgetTrackerPage() {
         title: "Bespoke Intimate Luxury",
         badge: "Luxo Intimista",
         description: "Experiência refinada com foco em excelência gastronómica, hospitalidade personalizada e memórias fotográficas impecáveis.",
-        color: "text-emerald-300",
-        bg: "bg-emerald-950/30 border-emerald-500/30",
+        color: "text-brand-eucalyptus",
+        bg: "bg-brand-eucalyptus/10 border-brand-eucalyptus/30",
       };
     }
     return {
       title: "Essential Contemporary",
       badge: "Essencial Elegante",
       description: "Planeamento focado nas rubricas fundamentais com estética limpa e controle orçamental rigoroso.",
-      color: "text-zinc-300",
-      bg: "bg-zinc-900/40 border-zinc-700/40",
+      color: "text-brand-text-dark/70",
+      bg: "bg-white border-brand-champagne/40",
     };
   }, [costPerGuest]);
 
@@ -608,29 +607,23 @@ export default function BudgetTrackerPage() {
 
   if (!isClient) {
     return (
-      <main className="min-h-screen bg-[#0E0D0C] flex items-center justify-center">
+      <main className="min-h-screen bg-brand-ivory flex items-center justify-center">
         <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand-gold animate-pulse">
-          Iniciando Atelier Financeiro Privado...
+          Carregando Atelier Financeiro...
         </p>
       </main>
     );
   }
 
   return (
-    <main className="relative min-h-screen py-24 bg-[#0E0D0C] text-[#F4EFE6] selection:bg-brand-gold selection:text-black print:bg-white print:text-black print:py-4">
-      {/* Background Ambience Glows (Hidden in Print) */}
-      <div className="print:hidden absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-[radial-gradient(ellipse_at_center,rgba(197,168,128,0.15),transparent_70%)] blur-3xl" />
-        <div className="absolute top-[600px] right-0 w-[500px] h-[500px] bg-[radial-gradient(ellipse_at_center,rgba(158,130,90,0.1),transparent_70%)] blur-3xl" />
-      </div>
-
+    <main className="relative min-h-screen py-24 bg-brand-ivory text-brand-text-dark print:bg-white print:py-4">
       <div className="site-container mx-auto px-4 max-w-6xl relative z-10">
 
-        {/* Top Navigation & Haute Couture Bar (Hidden on Print) */}
-        <div className="print:hidden flex flex-wrap items-center justify-between gap-4 mb-10 border-b border-[#2A2621] pb-6">
+        {/* Top Navigation Bar (Hidden on Print) */}
+        <div className="print:hidden flex flex-wrap items-center justify-between gap-4 mb-10 border-b border-brand-champagne/40 pb-6">
           <Link
             href="/ferramentas"
-            className="inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-[#C5A880]/70 hover:text-[#F4EFE6] transition-colors"
+            className="inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.25em] text-brand-text-dark/60 hover:text-brand-text-dark transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Voltar ao Hub de Ferramentas</span>
@@ -638,7 +631,7 @@ export default function BudgetTrackerPage() {
 
           {/* Currency Switcher & Master Actions */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center bg-[#1C1A17] border border-[#38332C] rounded-full p-1 shadow-inner">
+            <div className="flex items-center bg-white border border-brand-champagne/60 rounded-full p-1 shadow-xs">
               {(["MZN", "USD", "EUR", "ZAR"] as Currency[]).map((curr) => (
                 <button
                   key={curr}
@@ -646,8 +639,8 @@ export default function BudgetTrackerPage() {
                   onClick={() => setCurrency(curr)}
                   className={`px-3 py-1 font-mono text-[9px] uppercase tracking-wider rounded-full transition-all cursor-pointer ${
                     currency === curr
-                      ? "bg-[#C5A880] text-[#121110] font-bold shadow-xs"
-                      : "text-[#A89F91] hover:text-[#F4EFE6]"
+                      ? "bg-brand-gold text-white font-bold shadow-xs"
+                      : "text-brand-text-dark/60 hover:text-brand-text-dark"
                   }`}
                 >
                   {curr}
@@ -658,16 +651,16 @@ export default function BudgetTrackerPage() {
             <button
               type="button"
               onClick={() => setIsAllocatorOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-[#C5A880]/50 bg-[#1C1A17] hover:bg-[#C5A880]/20 px-4 py-1.5 font-mono text-[9px] uppercase tracking-widest text-[#E8DCC8] transition shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-full border border-brand-gold/60 bg-white hover:bg-brand-gold/10 px-4 py-1.5 font-mono text-[9px] uppercase tracking-widest text-brand-text-dark transition shadow-xs cursor-pointer"
             >
-              <Wand2 className="w-3.5 h-3.5 text-[#C5A880]" />
-              <span>Auto-Distribuir com IA</span>
+              <PieChart className="w-3.5 h-3.5 text-brand-gold" />
+              <span>Auto-Distribuir Orçamento</span>
             </button>
 
             <button
               type="button"
               onClick={resetToDefault}
-              className="inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-[#A89F91]/60 hover:text-red-400 transition-colors p-1.5 cursor-pointer"
+              className="inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/40 hover:text-red-600 transition-colors p-1.5 cursor-pointer"
               title="Repor diretrizes de exemplo originais"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -683,74 +676,74 @@ export default function BudgetTrackerPage() {
         {/* Master Atelier Hero */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
           <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.35em] text-[#C5A880] bg-[#1F1C18] border border-[#3E382F] px-3.5 py-1.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C5A880] animate-pulse" />
+            <div className="inline-flex items-center gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.35em] text-brand-gold bg-white border border-brand-champagne/60 px-3.5 py-1.5 rounded-full shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse" />
               Private Wealth & Wedding Atelier
             </div>
-            <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light leading-[1.1] tracking-[-0.02em] text-[#FAF7F2]">
+            <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light leading-[1.1] tracking-[-0.02em] text-brand-text-dark">
               Balanço & Gestão <br className="hidden sm:inline" />
-              <span className="italic font-normal text-[#C5A880]">Orçamental Editorial</span>
+              <span className="italic font-normal text-brand-gold">Orçamental Editorial</span>
             </h1>
-            <p className="font-sans text-xs sm:text-sm text-[#B8AEA0] font-light leading-relaxed">
+            <p className="font-sans text-xs sm:text-sm text-brand-text-dark/70 font-light leading-relaxed">
               O mais avançado instrumento de engenharia financeira para casamentos de alto prestígio. Calcule alocações proporcionais com base nos padrões de alta sociedade de Maputo e mantenha cada investimento sob controle absoluto.
             </p>
           </div>
 
-          {/* Quick AI Quote Paste & CTA Button */}
+          {/* Quick Quote Paste CTA */}
           <div className="print:hidden flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               type="button"
               onClick={() => setIsAiParserOpen(true)}
-              className="px-6 py-4 rounded-xl bg-linear-to-r from-[#C5A880] to-[#9E825A] text-[#121110] font-mono text-[9px] tracking-[0.25em] uppercase font-bold shadow-lg hover:brightness-110 transition flex items-center justify-center gap-2.5 cursor-pointer"
+              className="px-6 py-4 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[9px] tracking-[0.25em] uppercase font-bold shadow-sm transition flex items-center justify-center gap-2.5 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-[#121110]" />
-              <span>Colar Proposta / IA</span>
+              <Receipt className="w-4 h-4 text-white" />
+              <span>Colar Proposta / Cotação</span>
             </button>
           </div>
         </div>
 
         {/* The Prestige Experience Index Banner */}
-        <div className={`p-6 md:p-8 rounded-2xl border backdrop-blur-md mb-10 transition-all ${prestigeTier.bg}`}>
+        <div className={`p-6 md:p-8 rounded-sm border shadow-xs mb-10 transition-all ${prestigeTier.bg}`}>
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2.5">
-                <Award className={`w-5 h-5 ${prestigeTier.color}`} />
-                <span className="font-mono text-[9px] uppercase tracking-[0.3em] font-bold text-[#E8DCC8]">
+                <Crown className={`w-5 h-5 ${prestigeTier.color}`} />
+                <span className="font-mono text-[9px] uppercase tracking-[0.3em] font-bold text-brand-text-dark/80">
                   Índice de Experiência por Convidado
                 </span>
                 <span className={`text-[8px] font-mono uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-current font-bold ${prestigeTier.color}`}>
                   {prestigeTier.badge}
                 </span>
               </div>
-              <h2 className="font-serif text-2xl font-normal text-[#FAF7F2]">
+              <h2 className="font-serif text-2xl font-normal text-brand-text-dark">
                 {prestigeTier.title}
               </h2>
-              <p className="font-sans text-xs text-[#D1C7BA] font-light max-w-2xl leading-relaxed">
+              <p className="font-sans text-xs text-brand-text-dark/75 font-light max-w-2xl leading-relaxed">
                 {prestigeTier.description}
               </p>
             </div>
 
-            <div className="flex items-center gap-6 self-start lg:self-auto bg-[#141312]/80 border border-[#3A352D] px-6 py-4 rounded-xl">
+            <div className="flex items-center gap-6 self-start lg:self-auto bg-white border border-brand-champagne/50 px-6 py-4 rounded-sm shadow-xs">
               <div>
-                <span className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91]">
+                <span className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/50">
                   Média por Convidado
                 </span>
                 <span className={`font-serif text-2xl font-medium ${prestigeTier.color}`}>
                   {formatMoney(costPerGuest)}
                 </span>
-                <span className="text-[10px] text-[#A89F91] font-mono ml-1">/ Pax</span>
+                <span className="text-[10px] text-brand-text-dark/50 font-mono ml-1">/ Pax</span>
               </div>
 
-              <div className="h-10 w-px bg-[#3A352D]" />
+              <div className="h-10 w-px bg-brand-champagne/40" />
 
               <div>
-                <span className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91]">
+                <span className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/50">
                   Lotação Prevista
                 </span>
-                <span className="font-serif text-2xl font-medium text-[#FAF7F2]">
+                <span className="font-serif text-2xl font-medium text-brand-text-dark">
                   {guestCount}
                 </span>
-                <span className="text-[10px] text-[#A89F91] font-mono ml-1">Pessoas</span>
+                <span className="text-[10px] text-brand-text-dark/50 font-mono ml-1">Pessoas</span>
               </div>
             </div>
           </div>
@@ -760,21 +753,21 @@ export default function BudgetTrackerPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
 
           {/* Card 1: Total Investment Ceiling */}
-          <div className="bg-[#181614] border border-[#38332C] hover:border-[#C5A880]/50 p-6 rounded-2xl shadow-xl space-y-3 transition group">
-            <div className="flex items-center justify-between text-[#A89F91] font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
+          <div className="bg-white border border-brand-champagne/50 p-6 rounded-sm shadow-xs space-y-3 transition">
+            <div className="flex items-center justify-between text-brand-text-dark/50 font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
               <span>Teto de Investimento</span>
-              <Wallet className="w-3.5 h-3.5 text-[#C5A880]" />
+              <Wallet className="w-3.5 h-3.5 text-brand-gold" />
             </div>
             <div>
-              <p className="font-serif text-2xl sm:text-3xl font-light text-[#FAF7F2] tracking-tight">
+              <p className="font-serif text-2xl sm:text-3xl font-light text-brand-text-dark tracking-tight">
                 {formatMoney(totalBudget)}
               </p>
-              <p className="font-sans text-[11px] text-[#A89F91] font-light mt-0.5">
+              <p className="font-sans text-[11px] text-brand-text-dark/50 font-light mt-0.5">
                 Alvo de capital definido
               </p>
             </div>
-            <div className="print:hidden pt-3 border-t border-[#2A2621] flex items-center justify-between gap-2">
-              <span className="font-mono text-[8px] uppercase text-[#A89F91]/70">Ajustar Teto</span>
+            <div className="print:hidden pt-3 border-t border-brand-champagne/30 flex items-center justify-between gap-2">
+              <span className="font-mono text-[8px] uppercase text-brand-text-dark/50">Ajustar Teto</span>
               <input
                 type="range"
                 min="200000"
@@ -782,29 +775,29 @@ export default function BudgetTrackerPage() {
                 step="25000"
                 value={totalBudget}
                 onChange={(e) => handleBudgetChange(Number(e.target.value))}
-                className="w-28 h-1 bg-[#2E2A24] rounded-lg appearance-none cursor-pointer accent-[#C5A880]"
+                className="w-28 h-1 bg-brand-champagne/40 rounded-lg appearance-none cursor-pointer accent-brand-gold"
               />
             </div>
           </div>
 
           {/* Card 2: Committed Costs */}
-          <div className="bg-[#181614] border border-[#38332C] hover:border-[#C5A880]/50 p-6 rounded-2xl shadow-xl space-y-3 transition group">
-            <div className="flex items-center justify-between text-[#A89F91] font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
+          <div className="bg-white border border-brand-champagne/50 p-6 rounded-sm shadow-xs space-y-3 transition">
+            <div className="flex items-center justify-between text-brand-text-dark/50 font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
               <span>Custos Comprometidos</span>
-              <Percent className="w-3.5 h-3.5 text-[#A89F91]" />
+              <Percent className="w-3.5 h-3.5 text-brand-text-dark/40" />
             </div>
             <div>
-              <p className="font-serif text-2xl sm:text-3xl font-light text-[#FAF7F2] tracking-tight">
+              <p className="font-serif text-2xl sm:text-3xl font-light text-brand-text-dark tracking-tight">
                 {formatMoney(totalPlanned)}
               </p>
-              <p className="font-sans text-[11px] text-[#A89F91] font-light mt-0.5">
+              <p className="font-sans text-[11px] text-brand-text-dark/50 font-light mt-0.5">
                 Soma de todas as rubricas
               </p>
             </div>
-            <div className="pt-3 border-t border-[#2A2621] flex items-center justify-between">
-              <span className="font-mono text-[8px] uppercase text-[#A89F91]/70">Balanço do Teto</span>
+            <div className="pt-3 border-t border-brand-champagne/30 flex items-center justify-between">
+              <span className="font-mono text-[8px] uppercase text-brand-text-dark/50">Balanço do Teto</span>
               <span className={`font-mono text-[9px] font-bold uppercase tracking-wider ${
-                isOverBudget ? "text-amber-400" : "text-emerald-400"
+                isOverBudget ? "text-red-700" : "text-emerald-700"
               }`}>
                 {isOverBudget ? `Excedido (+${formatMoney(Math.abs(budgetVariance))})` : `Margem (${formatMoney(budgetVariance)})`}
               </span>
@@ -812,23 +805,23 @@ export default function BudgetTrackerPage() {
           </div>
 
           {/* Card 3: Disbursed / Paid Funds */}
-          <div className="bg-[#181614] border border-[#38332C] hover:border-[#C5A880]/50 p-6 rounded-2xl shadow-xl space-y-3 transition group">
-            <div className="flex items-center justify-between text-[#A89F91] font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
+          <div className="bg-white border border-brand-champagne/50 p-6 rounded-sm shadow-xs space-y-3 transition">
+            <div className="flex items-center justify-between text-brand-text-dark/50 font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
               <span>Património Liquidado</span>
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             </div>
             <div>
-              <p className="font-serif text-2xl sm:text-3xl font-light text-emerald-400 tracking-tight">
+              <p className="font-serif text-2xl sm:text-3xl font-light text-emerald-800 tracking-tight">
                 {formatMoney(totalPaid)}
               </p>
-              <p className="font-sans text-[11px] text-[#A89F91] font-light mt-0.5">
+              <p className="font-sans text-[11px] text-brand-text-dark/50 font-light mt-0.5">
                 {totalPlanned > 0 ? Math.round((totalPaid / totalPlanned) * 100) : 0}% dos contratos pagos
               </p>
             </div>
-            <div className="pt-3 border-t border-[#2A2621]">
-              <div className="w-full bg-[#2A2621] h-1.5 rounded-full overflow-hidden">
+            <div className="pt-3 border-t border-brand-champagne/30">
+              <div className="w-full bg-brand-champagne/25 h-1.5 rounded-full overflow-hidden">
                 <div
-                  className="bg-linear-to-r from-emerald-500 to-[#C5A880] h-full transition-all duration-500"
+                  className="bg-emerald-600 h-full transition-all duration-500"
                   style={{ width: `${Math.min(100, totalPlanned > 0 ? (totalPaid / totalPlanned) * 100 : 0)}%` }}
                 />
               </div>
@@ -836,45 +829,45 @@ export default function BudgetTrackerPage() {
           </div>
 
           {/* Card 4: Remaining Balance */}
-          <div className="bg-[#181614] border border-[#38332C] hover:border-[#C5A880]/50 p-6 rounded-2xl shadow-xl space-y-3 transition group">
-            <div className="flex items-center justify-between text-[#A89F91] font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
+          <div className="bg-white border border-brand-champagne/50 p-6 rounded-sm shadow-xs space-y-3 transition">
+            <div className="flex items-center justify-between text-brand-text-dark/50 font-mono text-[8px] uppercase tracking-[0.25em] font-bold">
               <span>Saldo por Liquidar</span>
-              <TrendingUp className="w-3.5 h-3.5 text-[#C5A880]" />
+              <TrendingUp className="w-3.5 h-3.5 text-brand-gold" />
             </div>
             <div>
-              <p className="font-serif text-2xl sm:text-3xl font-light text-[#C5A880] tracking-tight">
+              <p className="font-serif text-2xl sm:text-3xl font-light text-brand-gold tracking-tight">
                 {formatMoney(totalRemainingToPay)}
               </p>
-              <p className="font-sans text-[11px] text-[#A89F91] font-light mt-0.5">
+              <p className="font-sans text-[11px] text-brand-text-dark/50 font-light mt-0.5">
                 Valores pendentes de fecho
               </p>
             </div>
-            <div className="pt-3 border-t border-[#2A2621] flex items-center justify-between">
-              <span className="font-mono text-[8px] uppercase text-[#A89F91]/70">Rubricas Ativas</span>
-              <span className="font-mono text-[9px] text-[#FAF7F2] font-semibold">{expenses.length} contratos</span>
+            <div className="pt-3 border-t border-brand-champagne/30 flex items-center justify-between">
+              <span className="font-mono text-[8px] uppercase text-brand-text-dark/50">Rubricas Ativas</span>
+              <span className="font-mono text-[9px] text-brand-text-dark font-semibold">{expenses.length} contratos</span>
             </div>
           </div>
 
         </div>
 
-        {/* The Gold Halo Runway: Visual Category Breakdown */}
-        <div className="bg-[#181614] border border-[#38332C] p-6 md:p-8 rounded-3xl shadow-xl mb-10 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2A2621] pb-5">
+        {/* Category Breakdown & Allocation Visual */}
+        <div className="bg-white border border-brand-champagne/50 p-6 md:p-8 rounded-sm shadow-xs mb-10 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-champagne/30 pb-5">
             <div>
-              <h2 className="font-serif text-xl font-light text-[#FAF7F2]">
+              <h2 className="font-serif text-xl font-light text-brand-text-dark">
                 Distribuição Proporcional por Categoria
               </h2>
-              <p className="font-sans text-xs text-[#A89F91] font-light mt-0.5">
+              <p className="font-sans text-xs text-brand-text-dark/60 font-light mt-0.5">
                 Composição do capital alocado vs diretrizes de luxo para Moçambique.
               </p>
             </div>
-            <div className="font-mono text-[10px] text-[#C5A880] uppercase tracking-widest font-bold">
+            <div className="font-mono text-[10px] text-brand-gold uppercase tracking-widest font-bold">
               100% dos Custos Monitorizados
             </div>
           </div>
 
-          {/* Segmented Haute Couture Bar */}
-          <div className="w-full h-3 rounded-full overflow-hidden bg-[#24211D] flex shadow-inner">
+          {/* Segmented Bar */}
+          <div className="w-full h-3 rounded-full overflow-hidden bg-brand-champagne/20 flex shadow-inner">
             {categoryStats.map((cat) => {
               if (cat.shareOfPlanned === 0) return null;
               return (
@@ -891,51 +884,50 @@ export default function BudgetTrackerPage() {
             })}
           </div>
 
-          {/* Runway Cards Grid */}
+          {/* Category Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-2">
             {categoryStats.map((cat) => {
               const IconComponent = cat.icon;
-              const isOverTarget = cat.shareOfPlanned > cat.benchmarkShare * 1.3;
 
               return (
                 <div
                   key={cat.name}
-                  className="p-4 rounded-xl border border-[#2E2A24] bg-[#141210] hover:border-[#C5A880]/40 transition space-y-2.5 text-left group"
+                  className="p-4 rounded-sm border border-brand-champagne/35 bg-brand-champagne/5 hover:border-brand-gold/50 transition space-y-2.5 text-left group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: cat.accentBg, color: cat.color }}
+                        className="w-7 h-7 rounded-sm flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: cat.badgeBg, color: cat.color }}
                       >
                         <IconComponent className="w-3.5 h-3.5" />
                       </div>
-                      <span className="font-serif text-xs font-normal text-[#FAF7F2] truncate">
+                      <span className="font-serif text-xs font-normal text-brand-text-dark truncate">
                         {cat.name}
                       </span>
                     </div>
-                    <span className="font-mono text-[9px] text-[#C5A880] font-semibold">
+                    <span className="font-mono text-[9px] text-brand-gold font-semibold">
                       {Math.round(cat.shareOfPlanned * 100)}%
                     </span>
                   </div>
 
                   <div>
-                    <p className="font-mono text-sm font-medium text-[#FAF7F2]">
+                    <p className="font-mono text-sm font-medium text-brand-text-dark">
                       {formatMoney(cat.planned)}
                     </p>
-                    <p className="font-sans text-[10px] text-[#A89F91]/70 font-light mt-0.5 line-clamp-1">
+                    <p className="font-sans text-[10px] text-brand-text-dark/60 font-light mt-0.5 line-clamp-1">
                       {cat.description}
                     </p>
                   </div>
 
                   {cat.vendorCategorySlug && (
-                    <div className="pt-2 border-t border-[#24211D] flex items-center justify-between">
-                      <span className="font-mono text-[8px] uppercase text-[#A89F91]">
+                    <div className="pt-2 border-t border-brand-champagne/20 flex items-center justify-between">
+                      <span className="font-mono text-[8px] uppercase text-brand-text-dark/45">
                         {cat.itemCount} {cat.itemCount === 1 ? "item" : "itens"}
                       </span>
                       <Link
                         href={`/fornecedores`}
-                        className="print:hidden inline-flex items-center gap-1 font-mono text-[8px] uppercase text-[#C5A880] hover:underline"
+                        className="print:hidden inline-flex items-center gap-1 font-mono text-[8px] uppercase text-brand-gold hover:underline"
                       >
                         <span>Fornecedores</span>
                         <ArrowUpRight className="w-2.5 h-2.5" />
@@ -952,38 +944,38 @@ export default function BudgetTrackerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
 
           {/* Cash-Flow Rhythm (Column 1) */}
-          <div className="lg:col-span-7 bg-[#181614] border border-[#38332C] p-6 md:p-8 rounded-3xl shadow-xl space-y-6">
-            <div className="flex items-center justify-between border-b border-[#2A2621] pb-4">
+          <div className="lg:col-span-7 bg-white border border-brand-champagne/50 p-6 md:p-8 rounded-sm shadow-xs space-y-6">
+            <div className="flex items-center justify-between border-b border-brand-champagne/30 pb-4">
               <div className="flex items-center gap-2.5">
-                <Clock className="w-4 h-4 text-[#C5A880]" />
-                <h3 className="font-serif text-lg font-light text-[#FAF7F2]">
+                <Clock className="w-4 h-4 text-brand-gold" />
+                <h3 className="font-serif text-lg font-light text-brand-text-dark">
                   Ritmo de Fluxo de Caixa
                 </h3>
               </div>
-              <span className="font-mono text-[8px] uppercase tracking-widest text-[#C5A880] bg-[#221E19] border border-[#3A342B] px-2.5 py-1 rounded-full font-bold">
+              <span className="font-mono text-[8px] uppercase tracking-widest text-brand-gold bg-brand-gold/10 border border-brand-gold/30 px-2.5 py-1 rounded-full font-bold">
                 Padrão 30 · 40 · 30
               </span>
             </div>
 
-            <div className="space-y-5">
-              {cashFlowRhythm.map((milestone, idx) => (
-                <div key={milestone.phase} className="space-y-2 p-4 rounded-xl bg-[#141210] border border-[#2A2621]">
+            <div className="space-y-4">
+              {cashFlowRhythm.map((milestone) => (
+                <div key={milestone.phase} className="space-y-2 p-4 rounded-sm bg-brand-champagne/5 border border-brand-champagne/30">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <span className="font-serif text-xs text-[#FAF7F2] font-normal">
+                    <span className="font-serif text-xs text-brand-text-dark font-normal">
                       {milestone.phase}
                     </span>
-                    <span className="font-mono text-xs text-[#C5A880] font-semibold">
+                    <span className="font-mono text-xs text-brand-gold font-semibold">
                       {formatMoney(milestone.paid)} / {formatMoney(milestone.target)}
                     </span>
                   </div>
 
-                  <p className="font-sans text-[11px] text-[#A89F91] font-light">
+                  <p className="font-sans text-[11px] text-brand-text-dark/65 font-light">
                     {milestone.label}
                   </p>
 
-                  <div className="w-full bg-[#24211D] h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-brand-champagne/20 h-1.5 rounded-full overflow-hidden">
                     <div
-                      className="bg-linear-to-r from-[#C5A880] to-emerald-400 h-full transition-all duration-500"
+                      className="bg-brand-gold h-full transition-all duration-500"
                       style={{ width: `${milestone.percent}%` }}
                     />
                   </div>
@@ -992,12 +984,12 @@ export default function BudgetTrackerPage() {
             </div>
           </div>
 
-          {/* HAXR Financial Concierge Advisor (Column 2) */}
-          <div className="lg:col-span-5 bg-[#181614] border border-[#38332C] p-6 md:p-8 rounded-3xl shadow-xl space-y-6 flex flex-col justify-between">
+          {/* HAXR Financial Advisor (Column 2) */}
+          <div className="lg:col-span-5 bg-white border border-brand-champagne/50 p-6 md:p-8 rounded-sm shadow-xs space-y-6 flex flex-col justify-between">
             <div className="space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[#2A2621] pb-4">
-                <Sparkles className="w-4 h-4 text-[#C5A880]" />
-                <h3 className="font-serif text-lg font-light text-[#FAF7F2]">
+              <div className="flex items-center gap-2.5 border-b border-brand-champagne/30 pb-4">
+                <Lightbulb className="w-4 h-4 text-brand-gold" />
+                <h3 className="font-serif text-lg font-light text-brand-text-dark">
                   Conselheiro Privado HAXR
                 </h3>
               </div>
@@ -1006,23 +998,23 @@ export default function BudgetTrackerPage() {
                 {financialAdvisory.map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-4 rounded-xl border text-left space-y-1 ${
+                    className={`p-4 rounded-sm border text-left space-y-1 ${
                       item.type === "warning"
-                        ? "bg-amber-950/20 border-amber-500/30 text-amber-200"
+                        ? "bg-amber-50 border-amber-200 text-amber-900"
                         : item.type === "positive"
-                          ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-200"
-                          : "bg-[#201D19] border-[#3E382E] text-[#E8DCC8]"
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                          : "bg-brand-champagne/10 border-brand-champagne/35 text-brand-text-dark"
                     }`}
                   >
                     <div className="flex items-center gap-2 font-serif text-xs font-medium">
                       {item.type === "warning" ? (
-                        <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                       ) : (
-                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       )}
                       <span>{item.title}</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#A89F91] font-light leading-relaxed">
+                    <p className="font-sans text-[11px] text-brand-text-dark/70 font-light leading-relaxed">
                       {item.text}
                     </p>
                   </div>
@@ -1030,13 +1022,13 @@ export default function BudgetTrackerPage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#2A2621]">
+            <div className="pt-4 border-t border-brand-champagne/30">
               <Link
                 href="/contacto"
-                className="w-full py-3 rounded-xl border border-[#C5A880]/40 bg-[#1C1A17] hover:bg-[#C5A880]/15 text-[#E8DCC8] font-mono text-[9px] uppercase tracking-widest font-bold transition flex items-center justify-center gap-2 text-center"
+                className="w-full py-3 rounded-sm border border-brand-champagne hover:border-brand-gold bg-brand-champagne/10 hover:bg-brand-champagne/20 text-brand-text-dark font-mono text-[9px] uppercase tracking-widest font-bold transition flex items-center justify-center gap-2 text-center"
               >
                 <span>Agendar Auditoria com Assessora HAXR</span>
-                <ChevronRight className="w-3.5 h-3.5 text-[#C5A880]" />
+                <ChevronRight className="w-3.5 h-3.5 text-brand-gold" />
               </Link>
             </div>
           </div>
@@ -1047,22 +1039,22 @@ export default function BudgetTrackerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
 
           {/* Add Expense Form (Column 1) */}
-          <div className="print:hidden lg:col-span-4 bg-[#181614] border border-[#38332C] p-6 md:p-7 rounded-3xl shadow-xl space-y-4 sticky top-6">
-            <div className="flex items-center justify-between border-b border-[#2A2621] pb-3">
-              <h3 className="font-serif text-base font-light text-[#FAF7F2]">Registar Nova Rubrica</h3>
+          <div className="print:hidden lg:col-span-4 bg-white border border-brand-champagne/50 p-6 md:p-7 rounded-sm shadow-xs space-y-4 sticky top-6">
+            <div className="flex items-center justify-between border-b border-brand-champagne/30 pb-3">
+              <h3 className="font-serif text-base font-light text-brand-text-dark">Registar Nova Rubrica</h3>
               <button
                 type="button"
                 onClick={() => setIsAiParserOpen(true)}
-                className="font-mono text-[8px] font-bold text-[#C5A880] uppercase tracking-wider hover:underline inline-flex items-center gap-1 cursor-pointer"
+                className="font-mono text-[8px] font-bold text-brand-gold uppercase tracking-wider hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
-                <Sparkles className="w-3 h-3" />
+                <Receipt className="w-3 h-3" />
                 <span>Colar Cotação</span>
               </button>
             </div>
 
             <form onSubmit={addExpense} className="space-y-4">
               <div>
-                <label htmlFor={nameInputId} className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-1.5 font-bold">
+                <label htmlFor={nameInputId} className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-1.5 font-bold">
                   Rubrica / Fornecedor Contratado
                 </label>
                 <input
@@ -1072,19 +1064,19 @@ export default function BudgetTrackerPage() {
                   placeholder="Ex: Quinta dos Cedros / Atelier Floral"
                   value={newExpName}
                   onChange={(e) => setNewExpName(e.target.value)}
-                  className="w-full bg-[#121110] border border-[#38332C] focus:border-[#C5A880] text-xs p-3 rounded-xl outline-none font-sans text-[#FAF7F2] placeholder:text-[#575147]"
+                  className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans text-brand-text-dark"
                 />
               </div>
 
               <div>
-                <label htmlFor={categoryInputId} className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-1.5 font-bold">
+                <label htmlFor={categoryInputId} className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-1.5 font-bold">
                   Categoria de Alocação
                 </label>
                 <select
                   id={categoryInputId}
                   value={newExpCategory}
                   onChange={(e) => setNewExpCategory(e.target.value)}
-                  className="w-full bg-[#121110] border border-[#38332C] focus:border-[#C5A880] text-xs p-3 rounded-xl outline-none font-sans text-[#FAF7F2] cursor-pointer"
+                  className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans text-brand-text-dark cursor-pointer"
                 >
                   {CATEGORY_BENCHMARKS.map((cat) => (
                     <option key={cat.name} value={cat.name}>{cat.name}</option>
@@ -1094,7 +1086,7 @@ export default function BudgetTrackerPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor={plannedInputId} className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-1.5 font-bold">
+                  <label htmlFor={plannedInputId} className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-1.5 font-bold">
                     Planeado ({currency})
                   </label>
                   <input
@@ -1105,12 +1097,12 @@ export default function BudgetTrackerPage() {
                     placeholder="250000"
                     value={newExpPlanned}
                     onChange={(e) => setNewExpPlanned(e.target.value)}
-                    className="w-full bg-[#121110] border border-[#38332C] focus:border-[#C5A880] text-xs p-3 rounded-xl outline-none font-sans text-[#FAF7F2] placeholder:text-[#575147]"
+                    className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans text-brand-text-dark"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor={paidInputId} className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-1.5 font-bold">
+                  <label htmlFor={paidInputId} className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-1.5 font-bold">
                     Já Liquidado ({currency})
                   </label>
                   <input
@@ -1120,13 +1112,13 @@ export default function BudgetTrackerPage() {
                     placeholder="0"
                     value={newExpPaid}
                     onChange={(e) => setNewExpPaid(e.target.value)}
-                    className="w-full bg-[#121110] border border-[#38332C] focus:border-[#C5A880] text-xs p-3 rounded-xl outline-none font-sans text-[#FAF7F2] placeholder:text-[#575147]"
+                    className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans text-brand-text-dark"
                   />
                 </div>
               </div>
 
               <div>
-                <span className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-1.5 font-bold">
+                <span className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-1.5 font-bold">
                   Estado do Pagamento
                 </span>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -1135,10 +1127,10 @@ export default function BudgetTrackerPage() {
                       key={st}
                       type="button"
                       onClick={() => setNewExpStatus(st)}
-                      className={`font-mono text-[8px] uppercase tracking-wider py-2 border rounded-lg transition-colors cursor-pointer text-center ${
+                      className={`font-mono text-[8px] uppercase tracking-wider py-2 border rounded-sm transition-colors cursor-pointer text-center ${
                         newExpStatus === st
-                          ? "bg-[#C5A880] border-[#C5A880] text-[#121110] font-bold"
-                          : "border-[#38332C] bg-[#141210] text-[#A89F91] hover:border-[#C5A880]/60"
+                          ? "bg-brand-gold border-brand-gold text-white font-bold"
+                          : "border-brand-champagne/50 bg-brand-champagne/5 text-brand-text-dark/60 hover:border-brand-gold/60"
                       }`}
                     >
                       {st}
@@ -1149,7 +1141,7 @@ export default function BudgetTrackerPage() {
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-linear-to-r from-[#C5A880] to-[#9E825A] text-[#121110] font-mono text-[9px] tracking-[0.25em] uppercase font-bold shadow-md hover:brightness-110 transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[9px] tracking-[0.25em] uppercase font-bold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar ao Livro</span>
@@ -1158,18 +1150,18 @@ export default function BudgetTrackerPage() {
           </div>
 
           {/* Ledger Table & Master Exports (Column 2) */}
-          <div className="lg:col-span-8 bg-[#181614] border border-[#38332C] rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+          <div className="lg:col-span-8 bg-white border border-brand-champagne/50 rounded-sm p-6 md:p-8 shadow-xs space-y-6">
 
             {/* Table Header & Controls (Hidden on Print) */}
-            <div className="print:hidden flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#2A2621] pb-4">
+            <div className="print:hidden flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-champagne/30 pb-4">
               <div className="relative flex-1">
-                <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A89F91]" />
+                <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-text-dark/40" />
                 <input
                   type="text"
                   placeholder="Filtrar por rubrica ou fornecedor..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#121110] border border-[#38332C] rounded-xl text-xs outline-none focus:border-[#C5A880] font-sans text-[#FAF7F2] placeholder:text-[#575147]"
+                  className="w-full pl-9 pr-3 py-2 bg-brand-ivory/50 border border-brand-champagne/50 rounded-sm text-xs outline-none focus:border-brand-gold font-sans text-brand-text-dark"
                 />
               </div>
 
@@ -1177,7 +1169,7 @@ export default function BudgetTrackerPage() {
                 <select
                   value={selectedCategoryFilter}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="bg-[#121110] border border-[#38332C] rounded-xl text-xs py-2 px-3 outline-none focus:border-[#C5A880] font-sans text-[#FAF7F2] cursor-pointer"
+                  className="bg-brand-ivory/50 border border-brand-champagne/50 rounded-sm text-xs py-2 px-3 outline-none focus:border-brand-gold font-sans text-brand-text-dark cursor-pointer"
                 >
                   <option value="all">Todas as Categorias</option>
                   {CATEGORY_BENCHMARKS.map((c) => (
@@ -1188,7 +1180,7 @@ export default function BudgetTrackerPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-[#121110] border border-[#38332C] rounded-xl text-xs py-2 px-3 outline-none focus:border-[#C5A880] font-sans text-[#FAF7F2] cursor-pointer"
+                  className="bg-brand-ivory/50 border border-brand-champagne/50 rounded-sm text-xs py-2 px-3 outline-none focus:border-brand-gold font-sans text-brand-text-dark cursor-pointer"
                 >
                   <option value="all">Todos os Estados</option>
                   <option value="Pendente">Pendente</option>
@@ -1201,18 +1193,18 @@ export default function BudgetTrackerPage() {
             {/* Expenses Table */}
             {filteredExpenses.length === 0 ? (
               <div className="text-center py-16 space-y-3">
-                <p className="font-serif text-base text-[#A89F91] font-light">
+                <p className="font-serif text-base text-brand-text-dark/40 font-light">
                   Nenhuma rubrica encontrada para os filtros selecionados.
                 </p>
-                <p className="font-sans text-xs text-[#5E574D]">
-                  Use a auto-distribuição com IA ou adicione uma proposta manualmente.
+                <p className="font-sans text-xs text-brand-text-dark/50">
+                  Use a auto-distribuição ou adicione uma proposta manualmente.
                 </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-[#2A2621] font-mono text-[9px] uppercase tracking-wider text-[#A89F91]">
+                    <tr className="border-b border-brand-champagne/45 font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/50">
                       <th className="pb-3 font-semibold">Rubrica / Fornecedor</th>
                       <th className="pb-3 font-semibold">Categoria</th>
                       <th className="pb-3 font-semibold text-right">Planeado</th>
@@ -1221,36 +1213,36 @@ export default function BudgetTrackerPage() {
                       <th className="print:hidden pb-3 text-right">Ação</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#24211D] font-sans font-light">
+                  <tbody className="divide-y divide-brand-champagne/10 font-sans font-light">
                     {filteredExpenses.map((exp) => {
                       const benchmark = CATEGORY_BENCHMARKS.find((b) => b.name === exp.category);
                       return (
-                        <tr key={exp.id} className="hover:bg-[#1C1A17] transition-colors group">
-                          <td className="py-4 font-medium text-[#FAF7F2]">
+                        <tr key={exp.id} className="hover:bg-brand-champagne/5 transition-colors group">
+                          <td className="py-4 font-medium text-brand-text-dark">
                             <div>{exp.name}</div>
                             {benchmark?.vendorCategorySlug && (
                               <Link
                                 href={`/fornecedores`}
-                                className="print:hidden inline-flex items-center gap-1 font-mono text-[8px] text-[#C5A880] hover:underline mt-0.5"
+                                className="print:hidden inline-flex items-center gap-1 font-mono text-[8px] text-brand-gold hover:underline mt-0.5"
                               >
                                 <span>Ver directório de fornecedores</span>
                                 <ArrowUpRight className="w-2.5 h-2.5" />
                               </Link>
                             )}
                           </td>
-                          <td className="py-4 text-[#A89F91] text-[11px]">{exp.category}</td>
-                          <td className="py-4 text-right font-mono text-[#FAF7F2]">{formatMoney(exp.planned)}</td>
-                          <td className="py-4 text-right font-mono text-emerald-400 font-medium">{formatMoney(exp.paid)}</td>
+                          <td className="py-4 text-brand-text-dark/70 text-[11px]">{exp.category}</td>
+                          <td className="py-4 text-right font-mono text-brand-text-dark">{formatMoney(exp.planned)}</td>
+                          <td className="py-4 text-right font-mono text-emerald-800 font-medium">{formatMoney(exp.paid)}</td>
                           <td className="py-4 text-center">
                             <button
                               type="button"
                               onClick={() => toggleStatus(exp.id)}
                               className={`inline-block font-mono text-[8px] tracking-wider uppercase px-3 py-1 rounded-full cursor-pointer transition-all hover:scale-105 ${
                                 exp.status === "Pago"
-                                  ? "bg-emerald-950/60 text-emerald-300 border border-emerald-500/40"
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                                   : exp.status === "Sinalizado"
-                                    ? "bg-amber-950/60 text-amber-300 border border-amber-500/40"
-                                    : "bg-rose-950/60 text-rose-300 border border-rose-500/40"
+                                    ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                    : "bg-red-100 text-red-800 border border-red-200"
                               }`}
                               title="Clique para alternar estado (Pendente -> Sinalizado -> Pago)"
                             >
@@ -1261,7 +1253,7 @@ export default function BudgetTrackerPage() {
                             <button
                               type="button"
                               onClick={() => deleteExpense(exp.id)}
-                              className="text-[#A89F91]/30 hover:text-red-400 transition-colors p-1.5 rounded-md cursor-pointer"
+                              className="text-brand-text-dark/30 hover:text-red-600 transition-colors p-1.5 rounded-md cursor-pointer"
                               title="Eliminar rubrica"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1276,13 +1268,13 @@ export default function BudgetTrackerPage() {
             )}
 
             {/* Export & Actions Hub */}
-            <div className="print:hidden mt-8 pt-6 border-t border-[#2A2621] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#141210] p-5 rounded-2xl border border-[#2E2A24]">
+            <div className="print:hidden mt-8 pt-6 border-t border-brand-champagne/30 flex flex-col sm:flex-row items-center justify-between gap-4 bg-brand-champagne/10 p-5 rounded-sm border border-brand-champagne/40">
               <div className="text-left">
-                <h3 className="font-serif text-sm font-medium text-[#FAF7F2]">
+                <h3 className="font-serif text-sm font-medium text-brand-text-dark">
                   The Private Wedding Ledger (Exportação)
                 </h3>
-                <p className="font-sans text-xs text-[#A89F91] font-light leading-relaxed mt-0.5">
-                  Gere o documento editorial para reuniões com familiares ou partilhe instantaneamente no WhatsApp.
+                <p className="font-sans text-xs text-brand-text-dark/60 font-light leading-relaxed mt-0.5">
+                  Gere o documento oficial para reuniões com familiares ou partilhe instantaneamente no WhatsApp.
                 </p>
               </div>
 
@@ -1290,18 +1282,18 @@ export default function BudgetTrackerPage() {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex-1 sm:flex-none border border-[#38332C] bg-[#1C1A17] hover:border-[#C5A880] text-[#FAF7F2] py-2.5 px-4 font-mono text-[9px] tracking-wider uppercase font-bold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer transition shadow-xs"
+                  className="flex-1 sm:flex-none border border-brand-champagne bg-white hover:border-brand-gold text-brand-text-dark py-2.5 px-4 font-mono text-[9px] tracking-wider uppercase font-bold rounded-sm inline-flex items-center justify-center gap-1.5 cursor-pointer transition shadow-2xs"
                 >
-                  <Printer className="w-3.5 h-3.5 text-[#C5A880]" />
+                  <Printer className="w-3.5 h-3.5 text-brand-gold" />
                   <span>Imprimir Relatório</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleExportExcel}
-                  className="flex-1 sm:flex-none border border-[#38332C] bg-[#1C1A17] hover:border-[#C5A880] text-[#FAF7F2] py-2.5 px-4 font-mono text-[9px] tracking-wider uppercase font-bold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer transition shadow-xs"
+                  className="flex-1 sm:flex-none border border-brand-champagne bg-white hover:border-brand-gold text-brand-text-dark py-2.5 px-4 font-mono text-[9px] tracking-wider uppercase font-bold rounded-sm inline-flex items-center justify-center gap-1.5 cursor-pointer transition shadow-2xs"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
                   <span>Livro Excel (.xlsx)</span>
                 </button>
 
@@ -1309,9 +1301,9 @@ export default function BudgetTrackerPage() {
                   href={getWhatsAppLink()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-linear-to-r from-[#C5A880] to-[#9E825A] text-[#121110] font-mono text-[9px] tracking-widest uppercase font-bold shadow-xs hover:brightness-110 transition inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[9px] tracking-widest uppercase font-bold shadow-xs transition inline-flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <MessageCircle className="w-3.5 h-3.5 text-[#121110]" />
+                  <MessageCircle className="w-3.5 h-3.5 text-white" />
                   <span>WhatsApp</span>
                 </a>
               </div>
@@ -1324,25 +1316,25 @@ export default function BudgetTrackerPage() {
         {/* Modal 1: Smart Auto-Allocation Modal */}
         <AnimatePresence>
           {isAllocatorOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-black/75 backdrop-blur-xs">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#181614] border border-[#3E382E] rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl space-y-6 text-[#FAF7F2]"
+                className="bg-white border border-brand-champagne/60 rounded-sm p-6 md:p-8 max-w-xl w-full shadow-2xl space-y-6 text-brand-text-dark"
               >
-                <div className="flex items-center justify-between border-b border-[#2A2621] pb-4">
+                <div className="flex items-center justify-between border-b border-brand-champagne/30 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <Wand2 className="w-5 h-5 text-[#C5A880]" />
+                    <PieChart className="w-5 h-5 text-brand-gold" />
                     <div>
-                      <h3 className="font-serif text-xl font-light">Auto-Distribuição Orçamental IA</h3>
-                      <p className="font-sans text-xs text-[#A89F91]">Diretrizes de mercado e alta costura para Maputo</p>
+                      <h3 className="font-serif text-xl font-light">Auto-Distribuição Orçamental</h3>
+                      <p className="font-sans text-xs text-brand-text-dark/60">Diretrizes de mercado e alta gestão para Maputo</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsAllocatorOpen(false)}
-                    className="text-[#A89F91] hover:text-[#FAF7F2] p-1 cursor-pointer"
+                    className="text-brand-text-dark/40 hover:text-brand-text-dark p-1 cursor-pointer"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -1351,7 +1343,7 @@ export default function BudgetTrackerPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-1.5 font-bold">
+                      <label className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-1.5 font-bold">
                         Teto Total ({currency})
                       </label>
                       <input
@@ -1360,12 +1352,12 @@ export default function BudgetTrackerPage() {
                         step="25000"
                         value={Math.round(totalBudget * CURRENCY_CONFIG[currency].rateFromMzn)}
                         onChange={(e) => setTotalBudget(Math.round(Number(e.target.value) / CURRENCY_CONFIG[currency].rateFromMzn))}
-                        className="w-full bg-[#121110] border border-[#38332C] focus:border-[#C5A880] text-xs p-3 rounded-xl outline-none font-sans font-medium text-[#FAF7F2]"
+                        className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans font-medium text-brand-text-dark"
                       />
                     </div>
 
                     <div>
-                      <label className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-1.5 font-bold">
+                      <label className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-1.5 font-bold">
                         Lotação de Convidados (Pax)
                       </label>
                       <input
@@ -1374,54 +1366,54 @@ export default function BudgetTrackerPage() {
                         max="1500"
                         value={guestCount}
                         onChange={(e) => setGuestCount(Number(e.target.value))}
-                        className="w-full bg-[#121110] border border-[#38332C] focus:border-[#C5A880] text-xs p-3 rounded-xl outline-none font-sans font-medium text-[#FAF7F2]"
+                        className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3 rounded-sm outline-none font-sans font-medium text-brand-text-dark"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <span className="block font-mono text-[8px] uppercase tracking-wider text-[#A89F91] mb-2 font-bold">
+                    <span className="block font-mono text-[8px] uppercase tracking-wider text-brand-text-dark/60 mb-2 font-bold">
                       Estilo de Celebração & Prioridade Editorial
                     </span>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { key: "balanced", label: "Equilibrado Clássico", desc: "Proporções recomendadas HAXR" },
                         { key: "gastronomy", label: "Alta Gastronomia", desc: "35% Catering + Espaço Nobre" },
-                        { key: "visual_media", label: "Cenografia & Média", desc: "20% Decoração + 20% Cinema" },
+                        { key: "visual_media", label: "Cenografia & Média", desc: "18% Decoração + 20% Cinema" },
                         { key: "atmosphere", label: "Festa & Animação", desc: "Bar estendido + Orquestra/DJ" },
                       ].map((prof) => (
                         <button
                           key={prof.key}
                           type="button"
                           onClick={() => setPriorityProfile(prof.key as PriorityProfile)}
-                          className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                          className={`p-3.5 rounded-sm border text-left transition cursor-pointer ${
                             priorityProfile === prof.key
-                              ? "bg-[#C5A880]/15 border-[#C5A880] text-[#FAF7F2] font-medium"
-                              : "border-[#2E2A24] bg-[#141210] text-[#A89F91] hover:border-[#C5A880]/50"
+                              ? "bg-brand-gold/10 border-brand-gold text-brand-text-dark font-medium"
+                              : "border-brand-champagne/40 bg-brand-champagne/5 text-brand-text-dark/70 hover:border-brand-gold/50"
                           }`}
                         >
-                          <div className="font-serif text-xs text-[#FAF7F2]">{prof.label}</div>
-                          <div className="font-sans text-[10px] text-[#A89F91] font-light mt-0.5">{prof.desc}</div>
+                          <div className="font-serif text-xs text-brand-text-dark">{prof.label}</div>
+                          <div className="font-sans text-[10px] text-brand-text-dark/50 font-light mt-0.5">{prof.desc}</div>
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2A2621]">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-brand-champagne/30">
                   <button
                     type="button"
                     onClick={() => setIsAllocatorOpen(false)}
-                    className="px-4 py-2.5 font-mono text-[9px] uppercase tracking-wider text-[#A89F91] hover:text-[#FAF7F2] cursor-pointer"
+                    className="px-4 py-2.5 font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/60 hover:text-brand-text-dark cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="button"
                     onClick={applySmartAllocation}
-                    className="px-6 py-3 rounded-xl bg-linear-to-r from-[#C5A880] to-[#9E825A] text-[#121110] font-mono text-[9px] tracking-widest uppercase font-bold shadow-xs hover:brightness-110 transition cursor-pointer"
+                    className="px-6 py-3 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[9px] tracking-widest uppercase font-bold shadow-xs transition cursor-pointer"
                   >
-                    Aplicar Alocação de Luxo
+                    Aplicar Alocação
                   </button>
                 </div>
               </motion.div>
@@ -1429,35 +1421,35 @@ export default function BudgetTrackerPage() {
           )}
         </AnimatePresence>
 
-        {/* Modal 2: AI Quote Parser Modal */}
+        {/* Modal 2: Quote Parser Modal */}
         <AnimatePresence>
           {isAiParserOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-black/75 backdrop-blur-xs">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#181614] border border-[#3E382E] rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 text-[#FAF7F2]"
+                className="bg-white border border-brand-champagne/60 rounded-sm p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 text-brand-text-dark"
               >
-                <div className="flex items-center justify-between border-b border-[#2A2621] pb-4">
+                <div className="flex items-center justify-between border-b border-brand-champagne/30 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <Sparkles className="w-5 h-5 text-[#C5A880]" />
+                    <Receipt className="w-5 h-5 text-brand-gold" />
                     <div>
-                      <h3 className="font-serif text-xl font-light">Extrator de Cotação com IA</h3>
-                      <p className="font-sans text-xs text-[#A89F91]">Cole a proposta recebida por WhatsApp ou Email</p>
+                      <h3 className="font-serif text-xl font-light">Extrator de Cotações</h3>
+                      <p className="font-sans text-xs text-brand-text-dark/60">Cole a proposta recebida por WhatsApp ou Email</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsAiParserOpen(false)}
-                    className="text-[#A89F91] hover:text-[#FAF7F2] p-1 cursor-pointer"
+                    className="text-brand-text-dark/40 hover:text-brand-text-dark p-1 cursor-pointer"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 <div className="space-y-3">
-                  <p className="font-sans text-xs text-[#A89F91] font-light leading-relaxed">
+                  <p className="font-sans text-xs text-brand-text-dark/70 font-light leading-relaxed">
                     Cole qualquer mensagem ou resumo de orçamento (ex: <em>&quot;Boa tarde Jessica, o valor da cobertura fotográfica fica em 95.000 MT com sinal de 45.000 MT para fechar o contrato&quot;</em>).
                   </p>
 
@@ -1466,22 +1458,22 @@ export default function BudgetTrackerPage() {
                     value={rawProposalText}
                     onChange={(e) => setRawProposalText(e.target.value)}
                     placeholder="Cole aqui a mensagem ou cotação..."
-                    className="w-full bg-[#121110] border border-[#38332C] focus:border-[#C5A880] text-xs p-3.5 rounded-xl outline-none font-sans text-[#FAF7F2] placeholder:text-[#575147] leading-relaxed"
+                    className="w-full bg-brand-ivory/50 border border-brand-champagne/70 focus:border-brand-gold text-xs p-3.5 rounded-sm outline-none font-sans text-brand-text-dark placeholder:text-brand-text-dark/40 leading-relaxed"
                   />
 
                   {parserFeedback && (
-                    <div className="flex items-center gap-2 p-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs">
-                      <Check className="w-4 h-4 shrink-0" />
+                    <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-sm text-xs">
+                      <Check className="w-4 h-4 shrink-0 text-emerald-600" />
                       <span>{parserFeedback}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#2A2621]">
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-brand-champagne/30">
                   <button
                     type="button"
                     onClick={() => setIsAiParserOpen(false)}
-                    className="px-4 py-2.5 font-mono text-[9px] uppercase tracking-wider text-[#A89F91] hover:text-[#FAF7F2] cursor-pointer"
+                    className="px-4 py-2.5 font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/60 hover:text-brand-text-dark cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -1489,7 +1481,7 @@ export default function BudgetTrackerPage() {
                     type="button"
                     onClick={parseRawProposal}
                     disabled={!rawProposalText.trim()}
-                    className="px-6 py-3 rounded-xl bg-linear-to-r from-[#C5A880] to-[#9E825A] text-[#121110] font-mono text-[9px] tracking-widest uppercase font-bold shadow-xs hover:brightness-110 transition disabled:opacity-50 cursor-pointer"
+                    className="px-6 py-3 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[9px] tracking-widest uppercase font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
                   >
                     Extrair & Preencher
                   </button>
