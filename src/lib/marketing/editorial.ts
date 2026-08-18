@@ -290,11 +290,11 @@ export const caseStudies: CaseStudy[] = [
     title: "Vânia Luky & Fabião Dimande",
     category: "Assessoria Completa · Identidade Visual · Convites",
     context:
-      "Casamento realizado no Evelyn Eventos, Maputo, integrando assessoria completa, identidade visual e experiência digital de convites.",
+      "Casamento realizado no Evelyn Eventos, C. de Maputo, integrando assessoria completa, identidade visual e experiência digital de convites.",
     challenge:
       "Articular a identidade visual e o conceito dos convites com a produção no espaço, alinhando parceiros para assegurar uma condução serena e harmoniosa.",
     solution:
-      "Assessoria completa HAXR com direcção criativa contínua, criação de identidade visual, desenvolvimento de convite digital e coordenação de bastidores no Evelyn Eventos.",
+      "Assessoria completa HAXR com direcção criativa contínua, criação de identidade visual, desenvolvimento de convite digital e coordenação de bastidores no Evelyn Eventos, C. de Maputo.",
     result:
       "Celebração com linguagem estética contínua desde o primeiro convite até à recepção, proporcionando tranquilidade aos noivos e um acolhimento caloroso aos convidados.",
     image: "/images/archive-01.webp",

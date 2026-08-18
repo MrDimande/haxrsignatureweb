@@ -31,7 +31,7 @@ export default function AssessoriaManifesto() {
             </h2>
 
             <p className="font-sans text-sm md:text-base text-brand-ivory/70 font-light leading-relaxed">
-              A assessoria HAXR Signature não é gestão convencional de tarefas. É direção criativa,
+              A assessoria HAXR Signature não é gestão convencional de tarefas. É direcção criativa,
               rigor de governação e uma presença serena e invisível nos bastidores — para que viva
               a antecipação e a celebração do seu casamento em plenitude.
             </p>

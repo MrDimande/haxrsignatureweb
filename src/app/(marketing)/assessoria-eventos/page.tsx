@@ -186,7 +186,7 @@ export default function AssessoriaEventosPage() {
                     CASAMENTO · MAPUTO, MOÇAMBIQUE
                   </span>
                   <span className="text-[10px] font-mono text-brand-text-dark/50">
-                    Evelyn Eventos · Assessoria Completa · Identidade Visual · Convites
+                    Evelyn Eventos · C. de Maputo · Assessoria Completa · Identidade Visual · Convites
                   </span>
                 </div>
                 <h3 className="font-serif text-2xl md:text-4xl font-light text-brand-text-dark">
@@ -199,8 +199,8 @@ export default function AssessoriaEventosPage() {
                 {/* Left: Editorial Narrative */}
                 <div className="lg:col-span-6 space-y-6">
                   <div className="space-y-3">
-                    <h4 className="font-serif text-lg md:text-xl font-light text-brand-text-dark italic">
-                      “A experiência digital definiu o tom de toda a celebração, prolongando-se com fluidez até ao grande dia.”
+                    <h4 className="font-serif text-lg md:text-xl font-light text-brand-text-dark leading-snug">
+                      A experiência digital definiu o tom de toda a celebração, prolongando-se com harmonia até ao grande dia.
                     </h4>
                     <p className="font-sans text-xs md:text-sm text-brand-text-dark/75 font-light leading-relaxed">
                       {weddingCase.context}
@@ -259,11 +259,11 @@ export default function AssessoriaEventosPage() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src="/images/archive-01.webp"
-                      alt="Casamento Vânia Luky & Fabião Dimande no Evelyn Eventos"
+                      alt="Casamento Vânia Luky & Fabião Dimande no Evelyn Eventos, C. de Maputo"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute bottom-2 left-2 right-2 bg-brand-black/60 backdrop-blur-sm px-2.5 py-1 rounded-md text-[7px] font-mono text-brand-ivory/80">
-                      EVELYN EVENTOS · MAPUTO
+                      EVELYN EVENTOS · C. DE MAPUTO
                     </div>
                   </div>
 
