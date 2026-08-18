@@ -41,10 +41,11 @@ export default function Hero() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams();
-    params.set("tipo", "casamento");
-    if (eventDate) params.set("data", eventDate);
-    router.push(`/contacto?${params.toString()}`);
+    if (eventDate) {
+      localStorage.setItem("haxr_onboarding_date", eventDate);
+    }
+    localStorage.setItem("haxr_onboarding_role", "noiva");
+    router.push(eventDate ? "/onboarding/profile/2" : "/onboarding/profile/1");
   };
 
   return (
@@ -121,7 +122,7 @@ export default function Hero() {
             <p>
               Já tem uma conta?{" "}
               <Link
-                href="/sign-in"
+                href="/dashboard"
                 className="text-brand-gold hover:text-brand-gold-light font-medium underline underline-offset-4 transition-colors"
               >
                 Entrar no painel
@@ -131,7 +132,7 @@ export default function Hero() {
             <p>
               É um fornecedor?{" "}
               <Link
-                href="/contacto"
+                href="/contacto?intent=fornecedor"
                 className="text-brand-gold hover:text-brand-gold-light font-medium underline underline-offset-4 transition-colors"
               >
                 Crie a sua conta aqui

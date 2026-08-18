@@ -4,6 +4,7 @@ import {
   buildDemoSitemapEntries,
   buildMarketingSitemapEntries,
 } from "@/lib/seo/sitemap-config";
+import { insightArticles } from "@/lib/marketing/insights-articles";
 import { siteUrl } from "@/lib/seo";
 
 /** Data base do sitemap — actualizar quando houver alteração editorial relevante. */
@@ -30,5 +31,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: entry.priority,
   }));
 
-  return [...marketing, ...demos];
+  const insightPages = insightArticles.map((article) => ({
+    url: `${siteUrl}/insights/${article.slug}`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.68,
+  }));
+
+  return [...marketing, ...demos, ...insightPages];
 }

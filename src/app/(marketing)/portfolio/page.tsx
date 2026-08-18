@@ -25,8 +25,10 @@ export default function PortfolioPage() {
       </section>
       <CTABand
         headline="A sua história pode ser a próxima."
-        secondaryHref="/convites-identidade-visual"
-        secondaryLabel="A primeira impressão"
+        primaryHref="/portfolio/submeter"
+        primaryLabel="Submeter casamento"
+        secondaryHref="/experiencias"
+        secondaryLabel="Ver experiências ao vivo"
       />
     </>
   );

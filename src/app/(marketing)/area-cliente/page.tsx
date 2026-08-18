@@ -27,7 +27,7 @@ export default function AreaClientePage() {
         <div className="site-container mx-auto">
           <RevealOnScroll>
             <Link
-              href="/sign-in"
+              href="/dashboard"
               className="bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[10px] tracking-[0.3em] uppercase font-bold py-4 px-8 rounded-lg shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer active:scale-95"
             >
               <span>Aceder ao HAXR Wedding Dashboard</span>

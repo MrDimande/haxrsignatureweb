@@ -180,8 +180,8 @@ export default function AssessoriaEventosPage() {
             <div className="lg:col-span-4">
               <StickyReservationCard
                 serviceTitle="Assessoria de Eventos Signature"
-                basePrice="1.800 €"
-                priceNumeric={1800}
+                basePrice="120.000 MT"
+                priceNumeric={120000}
               />
             </div>
 

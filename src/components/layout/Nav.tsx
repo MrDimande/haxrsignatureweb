@@ -9,6 +9,7 @@ import BrandLogo from "@/components/ui/BrandLogo";
 import NavMegaMenu, { type NavVariant } from "@/components/layout/NavMegaMenu";
 import NavMobileDrawer from "@/components/layout/NavMobileDrawer";
 import {
+  navAccountLink,
   navCta,
   navDirectLinks,
   navGroups,
@@ -129,11 +130,28 @@ export default function Nav() {
               </Link>
             ))}
 
+            <button
+              type="button"
+              onClick={() => setFavoritesOpen(true)}
+              className="relative p-2 text-white/80 hover:text-brand-gold transition-colors duration-300 cursor-pointer"
+              aria-label={`Favoritos (${favorites.length})`}
+            >
+              <Heart
+                className={`h-4 w-4 ${favorites.length > 0 ? "fill-brand-gold text-brand-gold" : ""}`}
+                strokeWidth={1.25}
+              />
+              {favorites.length > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-gold px-1 font-mono text-[8px] font-bold text-brand-black">
+                  {favorites.length}
+                </span>
+              ) : null}
+            </button>
+
             <Link
-              href="/sign-in"
+              href={navAccountLink.href}
               className="font-sans text-[11px] font-semibold tracking-[0.2em] uppercase text-white hover:text-brand-gold border border-white/20 px-4 py-2.5 hover:border-brand-gold hover:bg-white/5 transition-all duration-300 whitespace-nowrap"
             >
-              Sign In
+              {navAccountLink.label}
             </Link>
 
             <Link

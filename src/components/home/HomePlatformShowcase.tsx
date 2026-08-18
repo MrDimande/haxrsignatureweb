@@ -72,7 +72,7 @@ export default function HomePlatformShowcase() {
 
             <div className="pt-4">
               <Link
-                href="/sign-in"
+                href="/dashboard"
                 className="bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[10px] tracking-widest uppercase font-bold py-4 px-8 rounded-sm shadow-md transition-colors cursor-pointer inline-block"
               >
                 Configurar Painel

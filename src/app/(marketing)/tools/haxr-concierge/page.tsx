@@ -19,13 +19,15 @@ import {
   FileSpreadsheet,
   ArrowUpRight,
   Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import StructuredData from "@/components/seo/StructuredData";
+import MarketingToolBanner from "@/components/marketing/MarketingToolBanner";
+import ToolProductionCta from "@/components/marketing/ToolProductionCta";
 import { homeConciergeSection } from "@/lib/marketing/home-content";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
-import { CTABand } from "@/components/marketing/PageHero";
 
 type ProcessStep = "idle" | "reading" | "classifying" | "validating" | "success";
 
@@ -130,7 +132,7 @@ export default function HaxrConciergeSetupPage() {
 
   return (
     <>
-      <StructuredData page="plataforma" />
+      <StructuredData page="haxrConcierge" />
 
       {/* Hero Section Split Vogue Style */}
       <section className="relative pt-32 pb-24 md:pt-40 md:pb-36 bg-[#FCFBF9] overflow-hidden border-b border-brand-champagne/15 text-left">
@@ -143,6 +145,18 @@ export default function HaxrConciergeSetupPage() {
         />
 
         <div className="site-container-wide mx-auto relative z-10">
+          <Link
+            href="/ferramentas"
+            className="mb-8 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-brand-text-dark/50 transition-colors hover:text-brand-text-dark"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Voltar às ferramentas</span>
+          </Link>
+
+          <div className="mb-10 max-w-3xl">
+            <MarketingToolBanner title="HAXR Concierge" />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-center">
 
             {/* Left Column: Headline and description */}
@@ -857,15 +871,14 @@ export default function HaxrConciergeSetupPage() {
         </div>
       </section>
 
-      {/* Elegant Footer CTA Band */}
-      <CTABand
-        headline="Pronto para simplificar a organização?"
-        description="Fale connosco hoje e ative o HAXR Concierge para o vosso casamento."
-        primaryHref="#upload-demo"
-        primaryLabel={homeConciergeSection.setupCtaLabel}
-        secondaryHref={homeConciergeSection.projectCtaHref}
-        secondaryLabel={homeConciergeSection.projectCtaLabel}
-      />
+      <section className="bg-[#FCFBF9] py-16">
+        <div className="site-container-wide mx-auto px-4">
+          <ToolProductionCta
+            headline="Active o HAXR Concierge no vosso casamento real"
+            packageHref="/contacto?tipo=casamento"
+          />
+        </div>
+      </section>
     </>
   );
 }

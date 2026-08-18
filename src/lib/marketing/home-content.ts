@@ -532,7 +532,7 @@ export const homeTools: readonly HomeTool[] = [
     title: "Dashboard do Evento",
     description:
       "Indicadores, convidados e operação num ecossistema próprio HAXR.",
-    href: "/sign-in",
+    href: "/dashboard",
     icon: LayoutDashboard,
   },
 ];
@@ -570,7 +570,7 @@ export const homeToolsSection = {
   description:
     "Incluídas nos nossos serviços — pensadas para tranquilidade, clareza e operação premium.",
   ctaLabel: "Ver todas as capacidades",
-  ctaHref: "/plataforma-eventos",
+  ctaHref: "/ferramentas",
 } as const;
 
 export const homeServicesSection = {

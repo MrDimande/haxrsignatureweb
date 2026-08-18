@@ -6,6 +6,8 @@ import {
   Smartphone, Monitor, Check
 } from "lucide-react";
 import Link from "next/link";
+import MarketingToolBanner from "@/components/marketing/MarketingToolBanner";
+import ToolProductionCta from "@/components/marketing/ToolProductionCta";
 
 interface WebsiteConfig {
   partner1: string;
@@ -80,12 +82,14 @@ export default function WeddingWebsiteSetupPage() {
 
         {/* Back Link */}
         <Link
-          href="/sign-in"
+          href="/ferramentas"
           className="inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-brand-text-dark/50 hover:text-brand-text-dark mb-10 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Voltar ao Painel</span>
+          <span>Voltar às ferramentas</span>
         </Link>
+
+        <MarketingToolBanner title="Website do Casamento" />
 
         {/* Header */}
         <div className="max-w-4xl mb-12">
@@ -364,6 +368,8 @@ export default function WeddingWebsiteSetupPage() {
           </div>
 
         </div>
+
+        <ToolProductionCta />
 
       </div>
     </main>

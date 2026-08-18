@@ -14,4 +14,10 @@ export const seoRedirectSources = [
   { source: "/seating-plan", destination: "/gestao-convidados" },
   { source: "/gestao-de-convidados", destination: "/gestao-convidados" },
   { source: "/plataforma", destination: "/plataforma-eventos" },
+  { source: "/ferramentas/rsvp-digital", destination: "/gestao-convidados" },
+  { source: "/ferramentas/find-your-seat", destination: "/gestao-convidados" },
+  { source: "/ferramentas/lista-convidados", destination: "/tools/guest-list" },
+  { source: "/ferramentas/check-in-qr", destination: "/gestao-convidados" },
+  { source: "/real-weddings", destination: "/portfolio" },
+  { source: "/parceiros", destination: "/contacto?intent=fornecedor" },
 ] as const;

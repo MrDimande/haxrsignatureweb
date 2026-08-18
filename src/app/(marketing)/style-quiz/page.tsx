@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ArrowRight, ArrowLeft, RefreshCw, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { packageForStyleKey } from "@/lib/marketing/style-quiz-packages";
 
 interface QuizQuestion {
   id: number;
@@ -303,6 +305,7 @@ export default function StyleQuizPage() {
   };
 
   const winner = getWinner();
+  const recommendedPackage = packageForStyleKey(winner.key);
 
   async function submitStyleQuizLead() {
     setLeadStatus("");
@@ -527,6 +530,33 @@ export default function StyleQuizPage() {
                     </li>
                   ))}
                 </ul>
+              </div>
+
+              <div className="rounded-sm border border-brand-gold/35 bg-brand-ivory/60 p-6 text-center space-y-3">
+                <p className="font-mono text-[9px] uppercase tracking-[0.35em] text-brand-gold font-bold">
+                  Pacote HAXR recomendado
+                </p>
+                <h3 className="font-serif text-2xl font-light text-brand-text-dark">
+                  {recommendedPackage.name}
+                </h3>
+                <p className="font-sans text-sm text-brand-text-dark/75">
+                  {recommendedPackage.tagline}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                  <Link
+                    href={recommendedPackage.contactHref}
+                    className="inline-flex items-center justify-center gap-2 bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[10px] tracking-widest uppercase font-bold px-6 py-3 rounded-sm"
+                  >
+                    Pedir proposta {recommendedPackage.name}
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href={recommendedPackage.href}
+                    className="inline-flex items-center justify-center font-mono text-[10px] tracking-widest uppercase text-brand-text-dark/70 hover:text-brand-gold"
+                  >
+                    Ver pacotes
+                  </Link>
+                </div>
               </div>
 
               <div className="border border-brand-champagne/30 rounded-sm p-6 space-y-4 max-w-xl mx-auto">

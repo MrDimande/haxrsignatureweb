@@ -11,6 +11,8 @@ import {
 import { marketingPillars } from "@/lib/marketing/pages";
 import { invitationFaqs, portfolioCopy, siteContact } from "@/lib/site-config";
 import { assessoriaFaqs, convidadosFaqs } from "@/lib/seo/service-faqs";
+import { allFaqs } from "@/lib/marketing/faqs";
+import { getInsightArticle } from "@/lib/marketing/insights-articles";
 import { siteSeo, siteUrl } from "@/lib/seo/site-meta";
 
 export type JsonLd = Record<string, unknown>;
@@ -413,6 +415,31 @@ export function buildPageStructuredData(key: MarketingPageKey): JsonLd[] {
     return schemas;
   }
 
+  if (key === "faq") {
+    schemas.push(
+      buildWebPageEntity({
+        path: page.path,
+        title: page.title,
+        description: page.description,
+        type: "FAQPage",
+      }),
+      buildFaqPage(allFaqs)
+    );
+    return schemas;
+  }
+
+  if (key === "ferramentas" || key === "experiencias" || key === "guias" || key === "submitWedding") {
+    schemas.push(
+      buildWebPageEntity({
+        path: page.path,
+        title: page.title,
+        description: page.description,
+        type: "CollectionPage",
+      })
+    );
+    return schemas;
+  }
+
   if (SERVICE_PAGES.includes(key) && serviceName) {
     const serviceDetail = siteSeo.serviceDetails.find((s) =>
       page.path.startsWith(s.url)
@@ -464,6 +491,29 @@ export function buildPageStructuredData(key: MarketingPageKey): JsonLd[] {
   );
 
   return schemas;
+}
+
+export function buildInsightArticleStructuredData(slug: string): JsonLd[] {
+  const article = getInsightArticle(slug);
+  if (!article) return [];
+
+  return [
+    buildWebPageEntity({
+      path: `/insights/${article.slug}`,
+      title: article.title,
+      description: article.excerpt,
+      type: "Article",
+    }),
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: article.title,
+      description: article.excerpt,
+      author: { "@id": JSONLD_IDS.organization },
+      publisher: { "@id": JSONLD_IDS.organization },
+      mainEntityOfPage: pageUrl(`/insights/${article.slug}`),
+    },
+  ];
 }
 
 /** @deprecated Usar buildHomeStructuredData */

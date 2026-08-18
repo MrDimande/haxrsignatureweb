@@ -4,17 +4,16 @@ import { createInquiry } from "@/lib/contact/inquiries.repository";
 import { captureMarketingContact } from "@/lib/email/marketing/contact-capture";
 import { resolveSegmentFromEventType } from "@/lib/email/marketing/marketing-contact";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
 
-const styleQuizLeadSchema = z.object({
+const submitWeddingSchema = z.object({
   name: z.string().min(2).max(120),
   email: z.string().email().max(200),
   phone: z.string().max(30).optional(),
-  eventType: z.string().min(2).max(80),
-  budgetRange: z.string().min(2).max(80),
-  urgency: z.string().min(2).max(80),
-  styleResult: z.string().min(2).max(120),
-  styleDescription: z.string().max(500).optional(),
+  coupleNames: z.string().min(2).max(160),
+  eventDate: z.string().max(32).optional(),
+  location: z.string().max(160).optional(),
+  instagram: z.string().max(120).optional(),
+  story: z.string().min(20).max(4000),
   marketingOptIn: z.boolean().optional(),
 });
 
@@ -26,15 +25,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { user } = await resolveAuthenticatedSupabaseClient(request);
-  if (!user) {
-    return NextResponse.json(
-      { error: "Inicie sessão para aceder ao Style Quiz." },
-      { status: 401 }
-    );
-  }
-
-  const parsed = styleQuizLeadSchema.safeParse(await request.json());
+  const parsed = submitWeddingSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Dados inválidos." },
@@ -44,21 +35,23 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
   const message = [
-    `Style Quiz: ${data.styleResult}`,
-    data.styleDescription ? `Descrição: ${data.styleDescription}` : null,
-    `Orçamento: ${data.budgetRange}`,
-    `Urgência: ${data.urgency}`,
+    `Casal: ${data.coupleNames}`,
+    data.eventDate ? `Data: ${data.eventDate}` : null,
+    data.location ? `Local: ${data.location}` : null,
+    data.instagram ? `Instagram: ${data.instagram}` : null,
     data.phone ? `Telefone: ${data.phone}` : null,
+    "",
+    data.story,
   ]
-    .filter(Boolean)
+    .filter((line) => line !== null)
     .join("\n");
 
   const inquiry = await createInquiry({
     name: data.name,
     email: data.email,
-    projectType: data.eventType,
-    packageLabel: data.styleResult,
-    intent: "style_quiz",
+    projectType: "casamento",
+    packageLabel: "Submissão portfólio",
+    intent: "submit_wedding",
     message,
     marketingOptIn: data.marketingOptIn ?? true,
   });
@@ -69,10 +62,10 @@ export async function POST(request: Request) {
       email: data.email,
       firstName: firstName ?? data.name,
       lastName: rest.join(" ") || undefined,
-      segment: resolveSegmentFromEventType(data.eventType),
+      segment: resolveSegmentFromEventType("casamento"),
       consentStatus: "granted",
-      source: "style_quiz",
-      eventType: data.eventType,
+      source: "submit_wedding",
+      eventType: "casamento",
       message,
     }).catch(() => undefined);
   }

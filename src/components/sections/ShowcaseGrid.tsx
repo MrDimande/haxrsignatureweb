@@ -46,7 +46,7 @@ const showcaseItems: ShowcaseItem[] = [
     subtitle: "Rigor operacional para a fase final",
     images: [portfolioAssets.celebracaoPrivada, portfolioAssets.saveTheDate, portfolioAssets.casamentoSignature],
     rating: "4.9 (12 noivas)",
-    price: "Desde 1.800 €",
+    price: "Desde 75.000 MT",
     href: "/assessoria-eventos",
   },
   {
@@ -57,7 +57,7 @@ const showcaseItems: ShowcaseItem[] = [
     subtitle: "Design editorial e experiência imersiva",
     images: [portfolioAssets.convitePreviewPortrait, portfolioAssets.saveTheDate, portfolioAssets.casamentoSignature],
     rating: "5.0 (42 reviews)",
-    price: "Desde 450 €",
+    price: "Desde 5.999 MT",
     href: "/convites-identidade-visual",
   },
   {
@@ -68,7 +68,7 @@ const showcaseItems: ShowcaseItem[] = [
     subtitle: "A primeira reserva de data digital",
     images: [portfolioAssets.saveTheDate, portfolioAssets.convitePreviewPortrait, portfolioAssets.celebracaoPrivada],
     rating: "5.0 (8 reviews)",
-    price: "Desde 250 €",
+    price: "Desde 3.999 MT",
     href: "/convites-identidade-visual",
   },
   {
@@ -79,7 +79,7 @@ const showcaseItems: ShowcaseItem[] = [
     subtitle: "Plataforma digital integrada elegante",
     images: [portfolioAssets.casamentoSignature, portfolioAssets.convitePreviewPortrait, portfolioAssets.saveTheDate],
     rating: "4.9 (18 casais)",
-    price: "Desde 650 €",
+    price: "Desde 12.999 MT",
     href: "/plataforma-eventos",
   },
   {
@@ -90,7 +90,7 @@ const showcaseItems: ShowcaseItem[] = [
     subtitle: "Gestão inteligente de presenças",
     images: [portfolioAssets.celebracaoPrivada, portfolioAssets.casamentoSignature, portfolioAssets.saveTheDate],
     rating: "5.0 (32 eventos)",
-    price: "Desde 300 €",
+    price: "Desde 5.999 MT",
     href: "/gestao-convidados",
   },
   {
@@ -101,7 +101,7 @@ const showcaseItems: ShowcaseItem[] = [
     subtitle: "Monogramas, paletas e direção artística",
     images: [portfolioAssets.saveTheDate, portfolioAssets.convitePreviewPortrait, portfolioAssets.casamentoSignature],
     rating: "5.0 (15 reviews)",
-    price: "Desde 800 €",
+    price: "Desde 12.999 MT",
     href: "/convites-identidade-visual",
   },
   {

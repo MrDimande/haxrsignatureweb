@@ -25,13 +25,12 @@ export default function StickyReservationCard({
     if (guests === "250+") return 1.3;
     return 1.0;
   };
-
   const estimatedTotal = priceNumeric > 0
     ? Math.round(priceNumeric * getMultiplier())
     : 0;
 
   const getWhatsAppLink = () => {
-    const message = `Olá HAXR Signature, gostaria de agendar uma sessão de diagnóstico para o serviço "${serviceTitle}".\n- Data Estimada: ${dateEstimate}\n- Convidados: ${guests}\n- Estimativa: ${estimatedTotal > 0 ? `${estimatedTotal} €` : "Sob consulta"}`;
+    const message = `Olá HAXR Signature, gostaria de agendar uma sessão de diagnóstico para o serviço "${serviceTitle}".\n- Data Estimada: ${dateEstimate}\n- Convidados: ${guests}\n- Estimativa: ${estimatedTotal > 0 ? `${estimatedTotal.toLocaleString('de-DE')} MT` : "Sob consulta"}`;
     return `https://wa.me/258870883428?text=${encodeURIComponent(message)}`;
   };
 
@@ -63,7 +62,7 @@ export default function StickyReservationCard({
               Período Estimado
             </label>
             <select
-              id="period-select"
+               id="period-select"
               value={dateEstimate}
               onChange={(e) => setDateEstimate(e.target.value)}
               className="w-full bg-transparent border-none text-xs font-sans text-brand-text-dark/80 font-medium p-0 outline-none cursor-pointer"
@@ -115,7 +114,7 @@ export default function StickyReservationCard({
         <div className="space-y-3.5 border-t border-brand-champagne/45 pt-6 text-xs text-brand-text-dark/70 font-light">
           <div className="flex justify-between">
             <span className="underline decoration-brand-champagne/80 decoration-dotted">Serviço de assessoria base</span>
-            <span>{Math.round(priceNumeric * getMultiplier())} €</span>
+            <span>{Math.round(priceNumeric * getMultiplier()).toLocaleString('de-DE')} MT</span>
           </div>
           <div className="flex justify-between">
             <span className="underline decoration-brand-champagne/80 decoration-dotted">Taxa de plataforma digital</span>
@@ -124,7 +123,7 @@ export default function StickyReservationCard({
 
           <div className="border-t border-brand-champagne/45 pt-4 flex justify-between text-sm text-brand-text-dark font-medium">
             <span>Total estimado</span>
-            <span>{estimatedTotal} €</span>
+            <span>{estimatedTotal.toLocaleString('de-DE')} MT</span>
           </div>
 
           <div className="bg-brand-champagne/10 rounded-xl p-3 flex gap-2.5 items-start mt-4 border border-brand-champagne/20">

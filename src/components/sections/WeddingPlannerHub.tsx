@@ -14,7 +14,7 @@ interface TasksByTime {
 
 export default function WeddingPlannerHub() {
   const [activeTab, setActiveTab] = useState<TabName>("orcamento");
-  const [totalBudget, setTotalBudget] = useState(25000);
+  const [totalBudget, setTotalBudget] = useState(1500000);
   const [monthsLeft, setMonthsLeft] = useState(12);
 
   // Estado das tarefas para o checklist interativo
@@ -58,9 +58,9 @@ export default function WeddingPlannerHub() {
     let message = "";
     if (activeTab === "orcamento") {
       const breakdownText = getBudgetBreakdown()
-        .map((item) => `- ${item.label}: ${item.value.toLocaleString()} €`)
+        .map((item) => `- ${item.label}: ${item.value.toLocaleString('de-DE')} MT`)
         .join("\n");
-      message = `Olá HAXR Signature, simulei a distribuição do meu orçamento de casamentos no vosso simulador:\n- Orçamento Total: ${totalBudget.toLocaleString()} €\n\nDistribuição Sugerida:\n${breakdownText}\n\nGostaria de obter uma proposta personalizada com base nestes números.`;
+      message = `Olá HAXR Signature, simulei a distribuição do meu orçamento de casamentos no vosso simulador:\n- Orçamento Total: ${totalBudget.toLocaleString('de-DE')} MT\n\nDistribuição Sugerida:\n${breakdownText}\n\nGostaria de obter uma proposta personalizada com base nestes números.`;
     } else {
       const currentTasks = tasksData[monthsLeft];
       const completed = currentTasks.filter((t) => t.done).map((t) => `[x] ${t.text}`).join("\n");
@@ -148,20 +148,20 @@ export default function WeddingPlannerHub() {
                 <div className="space-y-3 bg-brand-champagne/10 border border-brand-champagne/25 p-5 rounded-2xl">
                   <div className="flex justify-between items-center">
                     <span className="font-mono text-[10px] uppercase text-brand-text-dark/50">Orçamento Disponível</span>
-                    <span className="font-serif text-xl font-medium text-brand-gold">{totalBudget.toLocaleString()} €</span>
+                    <span className="font-serif text-xl font-medium text-brand-gold">{totalBudget.toLocaleString('de-DE')} MT</span>
                   </div>
                   <input
                     type="range"
-                    min="10000"
-                    max="100000"
-                    step="5000"
+                    min="500000"
+                    max="5000000"
+                    step="100000"
                     value={totalBudget}
                     onChange={(e) => setTotalBudget(Number(e.target.value))}
                     className="w-full h-1.5 bg-brand-champagne/45 rounded-lg appearance-none cursor-pointer accent-brand-gold"
                   />
                   <div className="flex justify-between text-[9px] font-mono text-brand-text-dark/30">
-                    <span>10.000 €</span>
-                    <span>100.000 €</span>
+                    <span>500.000 MT</span>
+                    <span>5.000.000 MT</span>
                   </div>
                 </div>
 
@@ -170,7 +170,7 @@ export default function WeddingPlannerHub() {
                   {getBudgetBreakdown().map((item) => (
                     <div key={item.key} className="flex justify-between items-center py-2.5 border-b border-brand-champagne/30 text-xs font-sans">
                       <span className="text-brand-text-dark/70 font-light">{item.label}</span>
-                      <span className="font-medium text-brand-text-dark">{item.value.toLocaleString()} €</span>
+                      <span className="font-medium text-brand-text-dark">{item.value.toLocaleString('de-DE')} MT</span>
                     </div>
                   ))}
                 </div>

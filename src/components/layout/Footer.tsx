@@ -269,13 +269,13 @@ export default function Footer() {
                 <NewsletterSignupForm variant="footer" className="max-w-md" />
               </div>
 
-              <div className="grid grid-cols-3 gap-6 pt-4 border-t border-white/5">
+              <div className="grid grid-cols-2 gap-6 pt-4 border-t border-white/5 md:grid-cols-4">
                 {footerLinkGroups.map((group) => (
                   <nav key={group.title} aria-label={group.title} className="space-y-4">
                     <p className="font-mono text-[9px] tracking-[0.25em] uppercase text-white/60 font-semibold">{group.title}</p>
                     <ul className="space-y-2.5">
                       {group.links.map((link) => (
-                        <li key={link.href}>
+                        <li key={`${group.title}-${link.href}-${link.label}`}>
                           <Link
                             href={link.href}
                             className="font-sans text-[10px] tracking-[0.15em] uppercase text-white/40 hover:text-gold transition-colors duration-300 block"

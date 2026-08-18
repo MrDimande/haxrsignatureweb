@@ -6,6 +6,8 @@ import {
   MessageCircle, ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
+import MarketingToolBanner from "@/components/marketing/MarketingToolBanner";
+import ToolProductionCta from "@/components/marketing/ToolProductionCta";
 
 interface BoardItem {
   id: string;
@@ -134,12 +136,14 @@ export default function VisionBoardsPage() {
 
         {/* Back Link */}
         <Link
-          href="/sign-in"
+          href="/ferramentas"
           className="inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-brand-text-dark/50 hover:text-brand-text-dark mb-10 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Voltar ao Painel</span>
+          <span>Voltar às ferramentas</span>
         </Link>
+
+        <MarketingToolBanner title="Vision Boards" />
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -339,6 +343,8 @@ export default function VisionBoardsPage() {
           </div>
 
         </div>
+
+        <ToolProductionCta />
 
       </div>
     </main>

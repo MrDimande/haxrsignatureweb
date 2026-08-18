@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Heart, MessageCircle, Trash2, X } from "lucide-react";
-import type { NavGroup, NavLink } from "@/lib/marketing/navigation";
+import { navAccountLink, type NavGroup, type NavLink } from "@/lib/marketing/navigation";
 
 interface FavoriteItem {
   id: string;
@@ -235,11 +235,11 @@ export default function NavMobileDrawer({
 
             <div className="p-5 border-t border-gold-dim shrink-0 flex flex-col gap-3">
               <Link
-                href="/sign-in"
+                href={navAccountLink.href}
                 onClick={onClose}
                 className="w-full text-center font-sans text-[10px] font-semibold tracking-[0.2em] uppercase text-white hover:text-brand-gold border border-white/20 py-3.5 hover:border-brand-gold hover:bg-white/5 transition-all duration-300 rounded-sm"
               >
-                Sign In
+                {navAccountLink.label}
               </Link>
               <Link
                 href={cta.href}

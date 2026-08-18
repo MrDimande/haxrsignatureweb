@@ -183,6 +183,18 @@ export const marketingPagesSeo = {
       "Acompanhamento próximo do seu evento com a HAXR Signature — cronograma, documentos e decisões com clareza e discrição.",
     keywords: ["área do cliente eventos", "HAXR Signature cliente"],
   },
+  signUp: {
+    path: "/sign-up",
+    title: "Criar Conta Gratuita — Painel de Casamento | HAXR",
+    description:
+      "Registe-se gratuitamente na HAXR: Style Quiz, checklist, orçamento, convidados, fornecedores e painel editorial do vosso casamento.",
+    keywords: [
+      "criar conta casamento",
+      "painel casamento gratuito",
+      "wedding dashboard Moçambique",
+      "HAXR Signature registo",
+    ],
+  },
   styleQuiz: {
     path: "/style-quiz",
     title: "Style Quiz — Descubra a Identidade do seu Casamento | HAXR Signature",
@@ -230,6 +242,71 @@ export const marketingPagesSeo = {
     title: "Lista de Presentes e Honeymoon Fund | HAXR Signature",
     description: "Crie a sua lista de presentes virtuais e fundos de lua de mel com elegância e discrição para os seus convidados.",
     keywords: ["lista de presentes", "honeymoon fund", "prendas casamento", "HAXR Signature registry"],
+  },
+  ferramentas: {
+    path: "/ferramentas",
+    title: "Ferramentas de Casamento — RSVP, Orçamento e Concierge | HAXR",
+    description:
+      "Hub de ferramentas HAXR: Concierge, lista de convidados, orçamento, checklist, vision boards, RSVP e check-in — incluídas nos pacotes premium em Maputo.",
+    keywords: [
+      "ferramentas casamento",
+      "RSVP digital Maputo",
+      "lista convidados casamento",
+      "orçamento casamento",
+      "wedding planning tools",
+    ],
+  },
+  faq: {
+    path: "/faq",
+    title: "Perguntas Frequentes — Assessoria, Convites e Plataforma HAXR",
+    description:
+      "Respostas sobre assessoria de eventos, convites digitais, gestão de convidados, Find Your Seat e plataforma HAXR Signature em Moçambique.",
+    keywords: ["FAQ casamento Maputo", "perguntas assessoria eventos", "RSVP digital FAQ"],
+  },
+  experiencias: {
+    path: "/experiencias",
+    title: "Experiências Digitais — Convites e Save the Date | HAXR",
+    description:
+      "Demonstrações ao vivo de convites digitais e save the date assinados HAXR — RSVP, música e identidade editorial.",
+    keywords: ["convite digital demo", "save the date Maputo", "experiências casamento"],
+  },
+  submitWedding: {
+    path: "/portfolio/submeter",
+    title: "Submeter Casamento — Portfólio HAXR Signature",
+    description:
+      "Candidature o vosso casamento à curadoria editorial HAXR. Histórias reais para inspirar casais em Maputo.",
+    keywords: ["submeter casamento", "real wedding Moçambique", "portfólio casamento"],
+  },
+  guias: {
+    path: "/guias",
+    title: "Guias Gratuitos — Checklist, RSVP e Orçamento | HAXR",
+    description:
+      "PDFs editoriais gratuitos: checklist 12 meses, guia RSVP e modelo de orçamento para casamentos em Maputo.",
+    keywords: ["checklist casamento", "guia RSVP", "orçamento casamento Moçambique"],
+  },
+  forPros: {
+    path: "/for-pros",
+    title: "Para Profissionais — Rede de Fornecedores HAXR Signature",
+    description:
+      "Junte-se à rede curada HAXR em Maputo: floristas, fotógrafos, espaços e fornecedores premium referenciados em eventos assinados.",
+    keywords: [
+      "fornecedores casamento Maputo",
+      "rede fornecedores eventos",
+      "parceiros HAXR Signature",
+      "wedding vendors Moçambique",
+    ],
+  },
+  haxrConcierge: {
+    path: "/tools/haxr-concierge",
+    title: "HAXR Concierge — IA para Organizar o Casamento | HAXR Signature",
+    description:
+      "Reencaminhe propostas, listas e pagamentos por email ou WhatsApp. A IA HAXR organiza tudo no painel, com validação humana.",
+    keywords: [
+      "concierge casamento",
+      "organização casamento IA",
+      "HAXR Concierge",
+      "assistente casamento Maputo",
+    ],
   },
 } as const;
 
