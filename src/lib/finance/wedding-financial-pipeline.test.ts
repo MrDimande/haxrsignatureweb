@@ -199,7 +199,7 @@ describe("HAXR Canonical Wedding Financial Pipeline & Parity", () => {
     assert.ok(decorItem);
     assert.equal(decorItem.contractedAmount, 0);
     assert.equal(decorItem.paidAmount, 0);
-    assert.equal(decorItem.balance, 180000);
+    assert.equal(decorItem.balance, 0);
     assert.equal(decorItem.status, "planeado");
 
     // Totals verification

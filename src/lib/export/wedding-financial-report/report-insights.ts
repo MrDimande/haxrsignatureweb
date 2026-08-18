@@ -150,18 +150,24 @@ export function classifyPaymentsAndContractualPosition(
   };
 }
 
-/**
- * Deriva notas de auditoria e alertas deterministicamente do ledger.
- */
-export function extractPlannerAuditingNotes(
-  ledger: NormalizedEventFinancialLedger,
-): string[] {
-  const notes: string[] = [];
+export interface FinancialObservationsResult {
+  persistedNotes: string[];
+  systemObservations: string[];
+}
 
-  // 1. Fornecedores com notas explícitas persistidas
+/**
+ * Deriva notas financeiras e observações operacionais do sistema a partir do ledger.
+ */
+export function extractPlannerFinancialObservations(
+  ledger: NormalizedEventFinancialLedger,
+): FinancialObservationsResult {
+  const persistedNotes: string[] = [];
+  const systemObservations: string[] = [];
+
+  // 1. Observações e ações operacionais registadas nos fornecedores
   for (const item of ledger.items) {
     if (item.notes && item.notes.trim()) {
-      notes.push(`[${item.category} · ${item.vendorOrItem}] ${item.notes.trim()}`);
+      systemObservations.push(`[${item.category} · ${item.vendorOrItem}] ${item.notes.trim()}`);
     }
   }
 
@@ -171,7 +177,7 @@ export function extractPlannerAuditingNotes(
   );
   if (unallocatedPayments.length > 0) {
     const unallocatedTotal = unallocatedPayments.reduce((s, p) => s + p.amount, 0);
-    notes.push(
+    systemObservations.push(
       `Existem ${unallocatedPayments.length} pagamento(s) liquidado(s) no total de ${unallocatedTotal.toLocaleString()} ${ledger.currencySymbol} registados sem vinculação a contrato formalizado.`,
     );
   }
@@ -181,10 +187,13 @@ export function extractPlannerAuditingNotes(
     (item) => item.status === "pendente" && item.contractedAmount === 0,
   );
   if (pendingValueContracts.length > 0) {
-    notes.push(
-      `${pendingValueContracts.length} fornecedor(es) constam em fase de contratação com valor final a registar.`,
+    systemObservations.push(
+      `${pendingValueContracts.length} fornecedor(es) com contrato formalizado e valor contratual por registar.`,
     );
   }
 
-  return notes;
+  return {
+    persistedNotes,
+    systemObservations,
+  };
 }

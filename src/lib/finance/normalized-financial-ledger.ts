@@ -117,7 +117,10 @@ export function buildNormalizedFinancialLedger(input: {
 
     const paidAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
     const actualAmount = contractedAmount > 0 ? contractedAmount : (proposedAmount > 0 ? proposedAmount : 0);
-    const balance = Math.max(0, (contractedAmount > 0 ? contractedAmount : initialPlanned) - paidAmount);
+    const balance =
+      contractedAmount > 0
+        ? Math.max(0, contractedAmount - paidAmount)
+        : 0;
     const variance = initialPlanned > 0 && contractedAmount > 0 ? initialPlanned - contractedAmount : 0;
 
     let status: PaymentStatus = "planeado";
@@ -161,8 +164,8 @@ export function buildNormalizedFinancialLedger(input: {
       });
     });
 
-    // b) Remaining outstanding balance
-    if (balance > 0 && isContracted) {
+    // b) Remaining outstanding balance (only when formal contractedAmount > 0)
+    if (balance > 0 && contractedAmount > 0) {
       installments.push({
         id: `inst-bal-${vendor.id || index + 1}`,
         vendorOrItem: vendor.name,

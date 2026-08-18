@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { PDFParse } from "pdf-parse";
+import { buildNormalizedFinancialLedger } from "@/lib/finance/normalized-financial-ledger";
 import type { NormalizedEventFinancialLedger } from "@/lib/finance/wedding-financial-engine";
 import {
   formatReportCurrency,
@@ -430,5 +431,90 @@ describe("HAXR Wedding Financial Report (PDF System)", () => {
       authClient: {} as ClientEventPaymentsAuthClient,
     });
     assert.equal(envErrRes.status, 503);
+  });
+
+  it("I. Contrato assinado sem contracted_amount: zero proposal-to-balance inference", async () => {
+    // Cenário: proposal = 500000, contractSigned = true, contractedAmount = 0, paid = 0
+    const ledger = buildNormalizedFinancialLedger({
+      event: {
+        id: "ev-test-no-val",
+        name: "Casamento Teste Sem Valor",
+        event_date: "2026-12-01",
+        budget: 1000000,
+        currency: "MZN",
+      },
+      paymentsPayload: {
+        currency: "MZN",
+        totals: { totalAmount: 0, count: 0 },
+        payments: [],
+      },
+      vendors: [
+        {
+          id: "v-signed-no-val",
+          name: "Flores do Campo Atelier",
+          category: "Decoração & Flores",
+          proposal: {
+            amount: 500000,
+            submittedAt: "2026-07-01",
+          },
+          contract: {
+            signed: true,
+            status: "contratado",
+          },
+          contractedAmount: 0,
+        },
+      ],
+    });
+
+    // 1. Asserções do Ledger Canónico
+    const item = ledger.items[0];
+    assert.ok(item, "Item do fornecedor deve existir no ledger");
+    assert.equal(item.proposedAmount, 500000, "proposedAmount deve ser 500.000");
+    assert.equal(item.contractedAmount, 0, "contractedAmount deve ser estritamente 0 (sem fallback para a proposta)");
+    assert.equal(item.balance, 0, "balance deve ser 0 (nunca herdar da proposta)");
+    assert.equal(ledger.summary.contractedAmount, 0, "summary.contractedAmount deve ser 0");
+    assert.equal(ledger.summary.outstandingAmount, 0, "summary.outstandingAmount deve ser 0");
+
+    // 2. Não deve gerar nenhuma parcela contratual pendente
+    assert.equal(ledger.installments.length, 0, "Não pode gerar parcela contratual pendente quando contractedAmount = 0");
+
+    // 3. Renderização e Asserções do PDF Buffer
+    const buffer = await generateWeddingFinancialReportBuffer(ledger);
+    const parser = new PDFParse({ data: buffer });
+    const res = await parser.getText();
+    const pdfText = res.text;
+    await parser.destroy();
+
+    assert.ok(pdfText.includes("Flores do Campo Atelier"));
+    // O PDF NÃO pode mostrar 500.000 MT como contratado ou saldo contratual
+    assert.ok(!pdfText.includes("Contratado: 500.000 MT"), "Não pode mostrar 500.000 MT como contratado");
+    assert.ok(!pdfText.includes("Saldo: 500.000 MT"), "Não pode mostrar 500.000 MT como saldo");
+  });
+
+  it("J. Zero AUDIT terminology assertion across generated PDF text", async () => {
+    const ledger = createLeilaArmandoLedger();
+    const buffer = await generateWeddingFinancialReportBuffer(ledger);
+
+    const parser = new PDFParse({ data: buffer });
+    const res = await parser.getText();
+    const pdfText = res.text;
+    await parser.destroy();
+
+    // Verificação de ausência de terminologia "audit" / "auditado"
+    assert.ok(!pdfText.toLowerCase().includes("audit notes"), "Não pode conter 'AUDIT NOTES'");
+    assert.ok(!pdfText.toLowerCase().includes("auditado"), "Não pode conter 'auditado'");
+    assert.ok(!pdfText.toLowerCase().includes("audited"), "Não pode conter 'audited'");
+
+    // Presença das secções canónicas corretas
+    assert.ok(pdfText.includes("FINANCIAL NOTES") && pdfText.includes("CLOSING"), "Deve conter 'FINANCIAL NOTES' e 'CLOSING'");
+    assert.ok(pdfText.includes("SYSTEM OBSERVATIONS"), "Deve conter 'SYSTEM OBSERVATIONS'");
+  });
+
+  it("K. Canonical download filename consistency", () => {
+    const ledger = createLeilaArmandoLedger();
+    const filename = generateWeddingFinancialReportFilename(ledger);
+
+    assert.equal(filename, "HAXR_Wedding_Financial_Report_Leila_Armando_2026-11-14.pdf");
+    assert.ok(!filename.includes("ce-leila-armando"), "Não deve conter o eventId ou slug como fallback silencioso");
   });
 });

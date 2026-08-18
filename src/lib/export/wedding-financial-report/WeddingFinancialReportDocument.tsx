@@ -19,7 +19,7 @@ import { PDF_COLORS, styles } from "./report-styles";
 import {
   classifyPaymentsAndContractualPosition,
   extractNegotiatedSavings,
-  extractPlannerAuditingNotes,
+  extractPlannerFinancialObservations,
   extractVendorExposures,
 } from "./report-insights";
 
@@ -49,7 +49,7 @@ export function WeddingFinancialReportDocument({
     totalOverdue,
     totalUpcoming30Days,
   } = classifyPaymentsAndContractualPosition(ledger);
-  const auditNotes = extractPlannerAuditingNotes(ledger);
+  const { persistedNotes, systemObservations } = extractPlannerFinancialObservations(ledger);
 
   return (
     <Document
@@ -725,57 +725,113 @@ export function WeddingFinancialReportDocument({
       </Page>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          PAGE 07 — PLANNER COMMENTARY & CLOSING
+          PAGE 07 — FINANCIAL NOTES & CLOSING
           ═══════════════════════════════════════════════════════════════════ */}
       <Page size="A4" style={styles.page}>
         <View style={styles.runningHeader} fixed>
           <Text style={styles.runningHeaderBrand}>HAXR SIGNATURE</Text>
           <Text style={styles.runningHeaderDoc}>
-            AUDIT NOTES & CLOSING · {clientNames}
+            FINANCIAL NOTES & CLOSING · {clientNames}
           </Text>
         </View>
 
-        {/* Section 1: Notes & Observations */}
+        {/* Section 1: Financial Notes & System Observations */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionPreTitle}>Observações Financeiras</Text>
-          <Text style={styles.sectionTitle}>HAXR PLANNER COMMENTARY</Text>
+          <Text style={styles.sectionPreTitle}>Observações e Alertas</Text>
+          <Text style={styles.sectionTitle}>FINANCIAL NOTES & CLOSING</Text>
           <Text style={styles.sectionSubtitle}>
-            Notas operacionais, alertas de conciliação e registos específicos do casamento.
+            Observações determinísticas do sistema, alertas operacionais e registo formal de encerramento.
           </Text>
         </View>
 
-        {auditNotes.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>Sem observações pendentes</Text>
-            <Text style={styles.emptyStateText}>
-              Nenhum alerta de conciliação ou nota operacional pendente nesta edição.
+        {/* Section 1A: Persisted Human Notes (if any) */}
+        {persistedNotes.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text
+              style={{
+                fontFamily: "Helvetica-Bold",
+                fontSize: 7.5,
+                letterSpacing: 0.5,
+                color: PDF_COLORS.slate,
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              EVENT / FINANCIAL NOTES
             </Text>
-          </View>
-        ) : (
-          <View style={{ marginBottom: 24 }}>
-            {auditNotes.map((note, idx) => (
-              <View
-                key={`note-${idx}`}
-                style={{
-                  flexDirection: "row",
-                  backgroundColor: PDF_COLORS.cardBg,
-                  borderWidth: 0.5,
-                  borderColor: PDF_COLORS.hairline,
-                  padding: 10,
-                  marginBottom: 6,
-                }}
-                wrap={false}
-              >
-                <Text style={{ width: 14, color: PDF_COLORS.gold, fontFamily: "Helvetica-Bold", fontSize: 8 }}>
-                  •
-                </Text>
-                <Text style={{ flex: 1, fontFamily: "Helvetica", fontSize: 7.5, color: PDF_COLORS.charcoal, lineHeight: 1.35 }}>
-                  {note}
-                </Text>
-              </View>
-            ))}
+            <View style={{ marginBottom: 12 }}>
+              {persistedNotes.map((note, idx) => (
+                <View
+                  key={`p-note-${idx}`}
+                  style={{
+                    flexDirection: "row",
+                    backgroundColor: PDF_COLORS.cardBg,
+                    borderWidth: 0.5,
+                    borderColor: PDF_COLORS.hairline,
+                    padding: 10,
+                    marginBottom: 6,
+                  }}
+                  wrap={false}
+                >
+                  <Text style={{ width: 14, color: PDF_COLORS.gold, fontFamily: "Helvetica-Bold", fontSize: 8 }}>
+                    •
+                  </Text>
+                  <Text style={{ flex: 1, fontFamily: "Helvetica", fontSize: 7.5, color: PDF_COLORS.charcoal, lineHeight: 1.35 }}>
+                    {note}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
+
+        {/* Section 1B: System Observations */}
+        <View style={{ marginBottom: 20 }}>
+          <Text
+            style={{
+              fontFamily: "Helvetica-Bold",
+              fontSize: 7.5,
+              letterSpacing: 0.5,
+              color: PDF_COLORS.slate,
+              textTransform: "uppercase",
+              marginBottom: 8,
+            }}
+          >
+            SYSTEM OBSERVATIONS
+          </Text>
+          {systemObservations.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateTitle}>Sem observações operacionais pendentes</Text>
+              <Text style={styles.emptyStateText}>
+                Nenhum alerta de conciliação ou registo operacional pendente nesta edição.
+              </Text>
+            </View>
+          ) : (
+            <View>
+              {systemObservations.map((obs, idx) => (
+                <View
+                  key={`obs-${idx}`}
+                  style={{
+                    flexDirection: "row",
+                    backgroundColor: PDF_COLORS.cardBg,
+                    borderWidth: 0.5,
+                    borderColor: PDF_COLORS.hairline,
+                    padding: 10,
+                    marginBottom: 6,
+                  }}
+                  wrap={false}
+                >
+                  <Text style={{ width: 14, color: PDF_COLORS.gold, fontFamily: "Helvetica-Bold", fontSize: 8 }}>
+                    •
+                  </Text>
+                  <Text style={{ flex: 1, fontFamily: "Helvetica", fontSize: 7.5, color: PDF_COLORS.charcoal, lineHeight: 1.35 }}>
+                    {obs}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
 
         {/* Section 2: Institutional Closing Statement */}
         <View style={styles.closingContainer} wrap={false}>

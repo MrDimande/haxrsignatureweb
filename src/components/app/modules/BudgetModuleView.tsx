@@ -64,11 +64,22 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
       setIsGeneratingPdf(true);
       const res = await fetch(`/api/events/${data.context.eventId}/financial-report`);
       if (!res.ok) throw new Error("Falha ao gerar relatório PDF.");
+
+      // Parse canonical filename from Content-Disposition header
+      let downloadFilename = `HAXR_Wedding_Financial_Report_${(canonicalLedger.clientNames || canonicalLedger.eventTitle || "Casal").replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
+      const disposition = res.headers.get("content-disposition");
+      if (disposition) {
+        const filenameMatch = disposition.match(/filename="?([^";]+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          downloadFilename = filenameMatch[1].trim();
+        }
+      }
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `HAXR_Wedding_Financial_Report_${data.context.eventOverview.slug || data.context.eventId}.pdf`;
+      a.download = downloadFilename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
