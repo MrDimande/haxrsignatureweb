@@ -100,9 +100,9 @@ export function buildNormalizedFinancialLedger(input: {
       vendor.contract?.signed === true ||
       (typeof vendor.contractedAmount === "number" && vendor.contractedAmount > 0);
 
-    const contractedAmount = isContracted ? (vendor.contractedAmount || vendor.proposal?.amount || 0) : 0;
     const proposedAmount = vendor.proposal?.amount || 0;
-    const initialPlanned = contractedAmount > 0 ? contractedAmount : (proposedAmount > 0 ? proposedAmount : 0);
+    const contractedAmount = isContracted ? (vendor.contractedAmount || vendor.proposal?.amount || 0) : 0;
+    const initialPlanned = proposedAmount > 0 ? proposedAmount : (contractedAmount > 0 ? contractedAmount : 0);
 
     // ID-based reconciliation: match strictly by vendor.id or vendor.contract.id
     const matchingPayments = recordedPayments.filter((p) => {
@@ -113,7 +113,7 @@ export function buildNormalizedFinancialLedger(input: {
     matchingPayments.forEach((p) => reconciledPaymentIds.add(p.id));
 
     const paidAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
-    const actualAmount = contractedAmount > 0 ? contractedAmount : proposedAmount;
+    const actualAmount = contractedAmount > 0 ? contractedAmount : (proposedAmount > 0 ? proposedAmount : 0);
     const balance = Math.max(0, (contractedAmount > 0 ? contractedAmount : initialPlanned) - paidAmount);
     const variance = initialPlanned > 0 && contractedAmount > 0 ? initialPlanned - contractedAmount : 0;
 
@@ -248,7 +248,10 @@ export function convertNormalizedLedgerToBudgetModuleData(
       estimated: ledger.summary.budgetCeiling,
       registered: ledger.summary.paidAmount,
       paid: ledger.summary.paidAmount,
-      pending: ledger.summary.outstandingAmount,
+      pending:
+        ledger.summary.contractedAmount > 0
+          ? ledger.summary.outstandingAmount
+          : Math.max(0, ledger.summary.budgetCeiling - ledger.summary.paidAmount),
       contracted: ledger.summary.contractedAmount,
       uncommitted: ledger.summary.uncommittedBudget,
       forecast: ledger.summary.forecastFinalCost,

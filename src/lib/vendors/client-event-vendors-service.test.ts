@@ -180,6 +180,47 @@ describe("client-event-vendors-rpc", () => {
     assert.equal(parsed.summary.totalEstimated, 140000);
     assert.deepEqual(parsed.summary.categories, ["Catering", "Fotografia"]);
   });
+
+  it("parseClientEventVendorsRpcPayload parses real DB migration 047 contracted_amount and contract_signed fields", () => {
+    const dbPayload = {
+      vendors: [
+        {
+          id: "00000000-0000-0000-0000-000000000010",
+          name: "Alta Costura Floral",
+          service_category: "Decoração",
+          contact_email: "info@altacostura.co.mz",
+          contact_phone: "+258 84 000 1111",
+          proposed_amount: "500000.00",
+          contracted_amount: "470000.00",
+          contract_signed: true,
+          currency: "MZN",
+          payment_terms: "30/40/30",
+          deadline: "2026-11-01",
+          notes: "Negociação aprovada com desconto institucional",
+          status: "contratado",
+          created_at: "2026-08-01T10:00:00Z",
+          updated_at: "2026-08-05T14:00:00Z",
+        },
+      ],
+      summary: {
+        vendorCount: 1,
+        activeVendors: 1,
+        pendingVendors: 0,
+        approvedVendors: 1,
+        totalEstimated: "500000.00",
+        totalContracted: "470000.00",
+        categories: ["Decoração"],
+        latestVendor: null,
+      },
+    };
+
+    const parsed = parseClientEventVendorsRpcPayload(dbPayload);
+    assert.ok(parsed);
+    assert.equal(parsed.vendors.length, 1);
+    assert.equal(parsed.vendors[0].proposed_amount, 500000);
+    assert.equal(parsed.vendors[0].contracted_amount, 470000);
+    assert.equal(parsed.vendors[0].contract_signed, true);
+  });
 });
 
 describe("client-event-vendors-service", () => {

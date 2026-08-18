@@ -7,6 +7,8 @@ export type ClientEventVendorsRpcVendorRow = {
   contact_email: string | null;
   contact_phone: string | null;
   proposed_amount: number | null;
+  contracted_amount: number | null;
+  contract_signed: boolean | null;
   currency: string;
   payment_terms: string | null;
   deadline: string | null;
@@ -91,6 +93,8 @@ function readVendorRow(value: unknown): ClientEventVendorsRpcVendorRow | null {
     contact_email: readNullableString(value.contact_email),
     contact_phone: readNullableString(value.contact_phone),
     proposed_amount: readNullableNumber(value.proposed_amount),
+    contracted_amount: readNullableNumber(value.contracted_amount),
+    contract_signed: typeof value.contract_signed === "boolean" ? value.contract_signed : null,
     currency: typeof value.currency === "string" ? value.currency : "MZN",
     payment_terms: readNullableString(value.payment_terms),
     deadline: readNullableString(value.deadline),

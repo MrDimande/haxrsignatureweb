@@ -163,8 +163,21 @@ function resolveNextAction(status: VendorStatus, deadline: string | null): strin
 
 function mapVendorRowToUiVendor(row: ClientEventVendorsRpcVendorRow): Vendor {
   const status = mapDbVendorStatusToUiStatus(row.status);
-  const contractedAmount = row.proposed_amount ?? 0;
-  const hasSignedContract = status === "contratado" || status === "concluído";
+  const isContracted =
+    status === "contratado" ||
+    status === "concluído" ||
+    row.contract_signed === true ||
+    (typeof row.contracted_amount === "number" && row.contracted_amount > 0);
+
+  const contractedAmount =
+    typeof row.contracted_amount === "number" && row.contracted_amount > 0
+      ? row.contracted_amount
+      : isContracted && typeof row.proposed_amount === "number"
+      ? row.proposed_amount
+      : 0;
+
+  const proposedAmount = typeof row.proposed_amount === "number" ? row.proposed_amount : 0;
+  const hasSignedContract = isContracted;
 
   return {
     id: row.id,
@@ -175,12 +188,12 @@ function mapVendorRowToUiVendor(row: ClientEventVendorsRpcVendorRow): Vendor {
     status,
     contractedAmount,
     proposal:
-      contractedAmount > 0
+      proposedAmount > 0
         ? {
             id: `${row.id}-proposal`,
-            amount: contractedAmount,
+            amount: proposedAmount,
             receivedAt: row.created_at,
-            status: status === "rejeitado" ? "rejeitada" : "pendente",
+            status: isContracted ? "aprovada" : status === "rejeitado" ? "rejeitada" : "pendente",
           }
         : undefined,
     contract: hasSignedContract

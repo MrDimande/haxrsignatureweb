@@ -128,30 +128,13 @@ export function mapRpcPayloadToBudgetModuleData(
   payload: ClientEventPaymentsRpcPayload,
   vendors?: Vendor[],
 ): BudgetModuleData {
-  if (vendors && vendors.length > 0) {
-    const ledger = buildNormalizedFinancialLedger({
-      event,
-      paymentsPayload: payload,
-      vendors,
-    });
-    return convertNormalizedLedgerToBudgetModuleData(ledger);
-  }
+  const ledger = buildNormalizedFinancialLedger({
+    event,
+    paymentsPayload: payload,
+    vendors: vendors ?? [],
+  });
 
-  const finance = mapRpcPayloadToDashboardFinanceMetrics(event, payload);
-
-  return {
-    context: buildBudgetModuleContext(event),
-    summary: {
-      estimated: finance.budgetEstimated,
-      registered: finance.paidAmount,
-      paid: finance.paidAmount,
-      pending: finance.pendingAmount,
-      nextPayment: finance.nextPayment,
-    },
-    categories: [],
-    items: [],
-    recentPayments: payload.payments.map(mapPaymentRowToRecord),
-  };
+  return convertNormalizedLedgerToBudgetModuleData(ledger);
 }
 
 export async function getClientEventPaymentsData(input: {

@@ -166,6 +166,47 @@ describe("client-event-payments-rpc", () => {
     assert.equal(parsed.summary.pendingAmount, 210_000);
     assert.equal(parsed.summary.budgetMax, 250_000);
   });
+
+  it("parseClientEventPaymentsRpcPayload parses real DB migration 047 vendor_id and contract_id fields", () => {
+    const dbPayload = {
+      payments: [
+        {
+          id: "pay-rec-01",
+          amount: "150000.00",
+          currency: "MZN",
+          payment_method: "bank_transfer",
+          reference: "BIM-REF-100",
+          notes: "Sinal Fotografia",
+          paid_at: "2026-08-01T10:00:00Z",
+          created_at: "2026-08-01T10:00:00Z",
+          vendor_id: "00000000-0000-0000-0000-000000000001",
+          contract_id: "00000000-0000-0000-0000-000000000002",
+          document: {
+            number: "FT-2026/01",
+            client_name: "Leila & Armando",
+          },
+        },
+      ],
+      summary: {
+        paymentCount: 1,
+        totalPayments: "150000.00",
+        totalPaid: "150000.00",
+        pendingAmount: "0.00",
+        currency: "MZN",
+        budgetMin: null,
+        budgetMax: "1200000.00",
+        budgetRange: "1200000",
+        lastPayment: null,
+      },
+    };
+
+    const parsed = parseClientEventPaymentsRpcPayload(dbPayload);
+    assert.ok(parsed);
+    assert.equal(parsed.payments.length, 1);
+    assert.equal(parsed.payments[0].vendor_id, "00000000-0000-0000-0000-000000000001");
+    assert.equal(parsed.payments[0].contract_id, "00000000-0000-0000-0000-000000000002");
+    assert.equal(parsed.payments[0].amount, 150000);
+  });
 });
 
 describe("client-event-payments-service", () => {

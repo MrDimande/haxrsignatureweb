@@ -239,4 +239,86 @@ describe("HAXR Canonical Wedding Financial Pipeline & Parity", () => {
 
     assert.equal(sumOutflows, 800000, "Cash flow total scheduled outflows must equal exact contracted total of 800.000 MT without duplication");
   });
+
+  it("negotiation scenario: preserves proposal (500k), contracted (470k), saving (30k), paid (200k), balance (270k)", async () => {
+    const negotiatedVendor: Vendor = {
+      id: "v-neg-01",
+      name: "Alta Costura Floral",
+      category: "decoracao",
+      status: "contratado",
+      contractedAmount: 470000,
+      proposal: {
+        id: "prop-01",
+        amount: 500000,
+        receivedAt: "2026-08-01",
+        status: "aprovada",
+      },
+      contract: {
+        id: "ct-01",
+        signed: true,
+      },
+    };
+
+    const payment: ClientEventPaymentsRpcPayload = {
+      payments: [
+        {
+          id: "pay-neg-01",
+          amount: 200000,
+          currency: "MZN",
+          payment_method: "bank_transfer",
+          reference: "REF-NEG-200",
+          notes: "Sinal contratual negociado",
+          paid_at: "2026-08-05T10:00:00Z",
+          created_at: "2026-08-05T10:00:00Z",
+          document: null,
+          vendor_id: "v-neg-01",
+        },
+      ],
+      summary: {
+        paymentCount: 1,
+        totalPayments: 200000,
+        totalPaid: 200000,
+        pendingAmount: 270000,
+        currency: "MZN",
+        budgetMin: 500000,
+        budgetMax: 500000,
+        budgetRange: "500000",
+        lastPayment: null,
+      },
+    };
+
+    const ledger = buildNormalizedFinancialLedger({
+      event: { ...realEvent, budget_max: 500000, budget_min: 500000 },
+      vendors: [negotiatedVendor],
+      paymentsPayload: payment,
+    });
+
+    const item = ledger.items[0];
+    assert.ok(item);
+    assert.equal(item.proposedAmount, 500000);
+    assert.equal(item.contractedAmount, 470000);
+    assert.equal(item.variance, 30000, "Saving must be exactly 30.000 MT (500k proposal - 470k contracted)");
+    assert.equal(item.paidAmount, 200000);
+    assert.equal(item.balance, 270000, "Balance must be 270.000 MT (470k contracted - 200k paid)");
+
+    // UI Data parity
+    const uiData = convertNormalizedLedgerToBudgetModuleData(ledger);
+    const uiItem = uiData.items[0];
+    assert.equal(uiItem.proposedAmount, 500000);
+    assert.equal(uiItem.contractedAmount, 470000);
+    assert.equal(uiItem.variance, 30000);
+    assert.equal(uiItem.paidAmount, 200000);
+    assert.equal(uiItem.balance, 270000);
+
+    // XLSX Workbook Savings Sheet parity
+    const wb = await buildOfficialWeddingLedgerWorkbook(ledger);
+    const wsSavings = wb.getWorksheet("08 — Savings & Negotiations");
+    assert.ok(wsSavings);
+
+    const row2 = wsSavings.getRow(2);
+    assert.equal(row2.getCell(1).value, "Alta Costura Floral");
+    assert.equal(row2.getCell(2).value, 500000); // Initial proposed
+    assert.equal(row2.getCell(3).value, 470000); // Final contracted
+    assert.equal(row2.getCell(4).value, 30000);  // Saved
+  });
 });
