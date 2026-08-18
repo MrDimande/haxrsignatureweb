@@ -20,6 +20,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import StructuredData from "@/components/seo/StructuredData";
 import MarketingToolBanner from "@/components/marketing/MarketingToolBanner";
 import ToolProductionCta from "@/components/marketing/ToolProductionCta";

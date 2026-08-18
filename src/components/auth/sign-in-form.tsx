@@ -92,8 +92,6 @@ export default function SignInForm() {
 
   const signUpHref = buildSignUpPath(fromParam);
 
-  const signUpHref = buildSignUpPath(fromParam);
-
   return (
     <div className="haxr-auth-card rounded-[1.75rem] p-6 backdrop-blur-xl sm:p-9">
       <header className="mb-8 space-y-3 text-left">

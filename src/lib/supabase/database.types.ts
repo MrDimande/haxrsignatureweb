@@ -911,29 +911,6 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["seats"]["Insert"]>;
       };
-      event_floor_plans: {
-        Row: {
-          event_id: string;
-          room: Json;
-          items: Json;
-          print_preferences: Json;
-          version: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          event_id: string;
-          room?: Json;
-          items?: Json;
-          print_preferences?: Json;
-          version?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<
-          Database["public"]["Tables"]["event_floor_plans"]["Insert"]
-        >;
-      };
       guest_groups: {
         Row: {
           id: string;
