@@ -16,6 +16,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import MarketingToolBanner from "@/components/marketing/MarketingToolBanner";
 import ToolProductionCta from "@/components/marketing/ToolProductionCta";
+import { downloadWeddingLedgerExcel } from "@/lib/export/excel-wedding-ledger";
 
 export type Currency = "MZN" | "USD" | "EUR" | "ZAR";
 
@@ -572,36 +573,18 @@ export default function BudgetTrackerPage() {
   }, [expenses, searchQuery, selectedCategoryFilter, statusFilter]);
 
   // Export Helpers
-  const exportToCsv = () => {
-    const headers = ["Rubrica", "Categoria", `Planeado (${currency})`, `Pago (${currency})`, `Saldo em Falta (${currency})`, "Estado"];
-    const rate = CURRENCY_CONFIG[currency].rateFromMzn;
-
-    const rows = expenses.map((e) => [
-      `"${e.name.replace(/"/g, '""')}"`,
-      `"${e.category}"`,
-      Math.round(e.planned * rate),
-      Math.round(e.paid * rate),
-      Math.round((e.planned - e.paid) * rate),
-      e.status,
-    ]);
-
-    const summaryRow = [
-      `"TOTAL GERAL HAXR"`,
-      `""`,
-      Math.round(totalPlanned * rate),
-      Math.round(totalPaid * rate),
-      Math.round(totalRemainingToPay * rate),
-      `"${isOverBudget ? "Desvio Orçamental" : "Dentro do Teto"}"`,
-    ];
-
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(",")), summaryRow.join(",")].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Balanco_Financeiro_HAXR_${currency}_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExportExcel = () => {
+    downloadWeddingLedgerExcel({
+      totalBudget,
+      guestCount,
+      currency,
+      currencySymbol: CURRENCY_CONFIG[currency].symbol,
+      rateFromMzn: CURRENCY_CONFIG[currency].rateFromMzn,
+      prestigeTierTitle: prestigeTier.title,
+      prestigeTierBadge: prestigeTier.badge,
+      expenses,
+      eventName: "Casamento HAXR Signature",
+    });
   };
 
   const getWhatsAppLink = () => {
@@ -1315,11 +1298,11 @@ export default function BudgetTrackerPage() {
 
                 <button
                   type="button"
-                  onClick={exportToCsv}
+                  onClick={handleExportExcel}
                   className="flex-1 sm:flex-none border border-[#38332C] bg-[#1C1A17] hover:border-[#C5A880] text-[#FAF7F2] py-2.5 px-4 font-mono text-[9px] tracking-wider uppercase font-bold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer transition shadow-xs"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Excel (CSV)</span>
+                  <span>Livro Excel (.xlsx)</span>
                 </button>
 
                 <a
