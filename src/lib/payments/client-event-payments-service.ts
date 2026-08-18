@@ -6,21 +6,28 @@ import type { ClientEventRow } from "@/lib/events/client-app-database.types";
 import type {
   BudgetModuleData,
   EventModuleContext,
-  PaymentRecord as BudgetPaymentRecord,
+  PaymentRecord,
+  Vendor,
 } from "@/lib/event-modules/types";
-import { PAYMENT_METHOD_LABELS } from "@/lib/finance/constants";
-import type { PaymentMethod } from "@/lib/finance/types";
 import { mapRpcPayloadToDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
 import {
   ClientEventPaymentsRpcError,
   fetchClientEventPaymentsViaRpc,
   type ClientEventPaymentsRpcClient,
-  type ClientEventPaymentsRpcPayload,
   type ClientEventPaymentsRpcPaymentRow,
+  type ClientEventPaymentsRpcPayload,
 } from "@/lib/payments/client-event-payments-rpc";
-
-export type { ClientEventDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
-export { mapRpcPayloadToDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
+import {
+  fetchClientEventVendorsViaRpc,
+  type ClientEventVendorsRpcClient,
+} from "@/lib/vendors/client-event-vendors-rpc";
+import { mapRpcPayloadToVendorModuleData } from "@/lib/vendors/client-event-vendors-service";
+import {
+  buildNormalizedFinancialLedger,
+  convertNormalizedLedgerToBudgetModuleData,
+} from "@/lib/finance/normalized-financial-ledger";
+import { PAYMENT_METHOD_LABELS } from "@/lib/finance/constants";
+import type { PaymentMethod } from "@/lib/finance/types";
 
 export type ClientEventPaymentsAuthClient = ClientEventDashboardAuthClient;
 
@@ -51,7 +58,7 @@ function mapEventTypeLabel(type: ClientEventRow["event_type"]): string {
     case "birthday":
       return "Aniversário";
     case "corporate":
-      return "Corporativo";
+      return "Evento corporativo";
     case "baby_shower":
       return "Baby shower";
     case "graduation":
@@ -73,7 +80,7 @@ export function buildBudgetModuleContext(event: ClientEventRow): EventModuleCont
       name: event.event_name,
       type: mapEventTypeLabel(event.event_type),
       date: formatEventDate(event.event_date),
-      location: event.event_location || "Local por definir",
+      location: event.event_location?.trim() ? event.event_location.trim() : "Local por definir",
       status: event.status === "planning" ? "Em planeamento" : event.status,
       slug: event.slug,
     },
@@ -105,7 +112,7 @@ function resolvePaymentLabel(row: ClientEventPaymentsRpcPaymentRow): string {
   return "Pagamento registado";
 }
 
-function mapPaymentRowToRecord(row: ClientEventPaymentsRpcPaymentRow): BudgetPaymentRecord {
+export function mapPaymentRowToRecord(row: ClientEventPaymentsRpcPaymentRow): PaymentRecord {
   return {
     id: row.id,
     vendorOrItem: resolvePaymentLabel(row),
@@ -119,7 +126,17 @@ function mapPaymentRowToRecord(row: ClientEventPaymentsRpcPaymentRow): BudgetPay
 export function mapRpcPayloadToBudgetModuleData(
   event: ClientEventRow,
   payload: ClientEventPaymentsRpcPayload,
+  vendors?: Vendor[],
 ): BudgetModuleData {
+  if (vendors && vendors.length > 0) {
+    const ledger = buildNormalizedFinancialLedger({
+      event,
+      paymentsPayload: payload,
+      vendors,
+    });
+    return convertNormalizedLedgerToBudgetModuleData(ledger);
+  }
+
   const finance = mapRpcPayloadToDashboardFinanceMetrics(event, payload);
 
   return {
@@ -162,14 +179,27 @@ export async function getClientEventPaymentsData(input: {
   }
 
   try {
-    const payload = await fetchClientEventPaymentsViaRpc(
+    const paymentsPayload = await fetchClientEventPaymentsViaRpc(
       input.rpcClient,
       access.event.id,
     );
 
+    let vendors: Vendor[] = [];
+    try {
+      const vendorsPayload = await fetchClientEventVendorsViaRpc(
+        input.rpcClient as unknown as ClientEventVendorsRpcClient,
+        access.event.id,
+      );
+      if (vendorsPayload) {
+        vendors = mapRpcPayloadToVendorModuleData(access.event, vendorsPayload).vendors;
+      }
+    } catch {
+      // Vendors optional or not present
+    }
+
     return {
       kind: "ok",
-      data: mapRpcPayloadToBudgetModuleData(access.event, payload),
+      data: mapRpcPayloadToBudgetModuleData(access.event, paymentsPayload, vendors),
     };
   } catch (error) {
     if (error instanceof ClientEventPaymentsRpcError) {

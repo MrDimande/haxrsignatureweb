@@ -16,15 +16,8 @@ import {
   Wallet,
   CheckCircle2,
   TrendingUp,
-  Clock,
-  AlertCircle,
   Percent,
   Search,
-  Filter,
-  ArrowDownToLine,
-  Receipt,
-  Building2,
-  Calendar,
 } from "lucide-react";
 import { downloadOfficialWeddingLedger } from "@/lib/export/excel-wedding-ledger";
 import {
@@ -43,7 +36,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
 
-  // Map BudgetModuleData items to MasterBudgetItem
+  // Map BudgetModuleData items strictly without inventing contractedAmount
   const masterItems: MasterBudgetItem[] = useMemo(() => {
     return items.map((item) => ({
       id: item.id,
@@ -52,11 +45,11 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
       vendorOrItem: item.vendorOrItem,
       initialPlanned: item.plannedAmount,
       proposedAmount: item.plannedAmount,
-      contractedAmount: item.actualAmount > 0 ? item.actualAmount : item.plannedAmount,
-      actualAmount: item.actualAmount > 0 ? item.actualAmount : item.plannedAmount,
+      contractedAmount: item.actualAmount > 0 ? item.actualAmount : 0,
+      actualAmount: item.actualAmount > 0 ? item.actualAmount : 0,
       paidAmount: item.paidAmount,
       balance: item.balance,
-      variance: item.plannedAmount > 0 ? item.plannedAmount - (item.actualAmount || item.plannedAmount) : 0,
+      variance: item.plannedAmount > 0 && item.actualAmount > 0 ? item.plannedAmount - item.actualAmount : 0,
       dueDate: item.dueDate,
       dueDateIso: item.dueDateIso,
       status: item.status,
@@ -85,7 +78,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
       list.push({
         id: `rec-inst-${idx + 1}`,
         vendorOrItem: p.vendorOrItem,
-        installmentLabel: "Pagamento Efetuado",
+        installmentLabel: "Pagamento Liquidado",
         amount: p.amount,
         dueDate: p.paidAtLabel,
         dueDateIso: p.paidAt,
@@ -98,15 +91,19 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
     return list;
   }, [masterItems, recentPayments]);
 
-  // Executive Calculation Engine
+  // Executive Calculation Engine using real numbers (NO 800000 or 150 guests demo fallback)
   const executiveSummary = useMemo(() => {
     return calculateExecutiveFinancialSummary({
-      estimatedBudget: summary.estimated > 0 ? summary.estimated : 800000,
+      estimatedBudget: summary.estimated || 0,
       approvedBudget: null,
-      guestCount: 150,
+      guestCount: 0,
       items: masterItems,
       installments,
-      recordedPayments: recentPayments.map((p) => ({ amount: p.amount, paidAt: p.paidAt, vendorOrItem: p.vendorOrItem })),
+      recordedPayments: recentPayments.map((p) => ({
+        amount: p.amount,
+        paidAt: p.paidAt,
+        vendorOrItem: p.vendorOrItem,
+      })),
     });
   }, [summary.estimated, masterItems, installments, recentPayments]);
 
@@ -141,7 +138,8 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
         eventTitle: context.eventOverview.name,
         eventDateFormatted: context.eventOverview.date,
         eventDateIso: null,
-        guestCount: 150,
+        eventLocation: context.eventOverview.location || "Local por definir",
+        guestCount: 0,
         currency: "MZN",
         currencySymbol: currency,
       };
@@ -188,7 +186,7 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
             <Wallet className="w-4 h-4 text-brand-gold" />
           </div>
           <p className="font-serif text-2xl font-light text-white tracking-tight">
-            {formatCurrencyMZN(executiveSummary.budgetCeiling, currency)}
+            {executiveSummary.budgetCeiling > 0 ? formatCurrencyMZN(executiveSummary.budgetCeiling, currency) : "Por definir"}
           </p>
           <p className="font-sans text-[11px] text-zinc-400 font-light">
             Teto orçamental de referência
@@ -206,7 +204,9 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
           </p>
           <div className="flex items-center justify-between text-[11px] text-zinc-400 font-light">
             <span>Margem livre:</span>
-            <span className="font-mono text-zinc-300 font-semibold">{formatCurrencyMZN(executiveSummary.uncommittedBudget, currency)}</span>
+            <span className="font-mono text-zinc-300 font-semibold">
+              {formatCurrencyMZN(executiveSummary.uncommittedBudget, currency)}
+            </span>
           </div>
         </div>
 
@@ -321,7 +321,9 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
                         <td className="py-3.5 pr-3 text-zinc-400">{item.category}</td>
                         <td className="py-3.5 pr-3 font-medium text-white">{item.vendorOrItem}</td>
                         <td className="py-3.5 pr-3 text-right font-mono">{formatCurrencyMZN(item.initialPlanned, currency)}</td>
-                        <td className="py-3.5 pr-3 text-right font-mono text-zinc-200">{formatCurrencyMZN(item.contractedAmount, currency)}</td>
+                        <td className="py-3.5 pr-3 text-right font-mono text-zinc-200">
+                          {item.contractedAmount > 0 ? formatCurrencyMZN(item.contractedAmount, currency) : "—"}
+                        </td>
                         <td className="py-3.5 pr-3 text-right font-mono text-emerald-400 font-medium">{formatCurrencyMZN(item.paidAmount, currency)}</td>
                         <td className="py-3.5 pr-3 text-right font-mono text-brand-gold">{formatCurrencyMZN(item.balance, currency)}</td>
                         <td className="py-3.5 pr-3 text-center">

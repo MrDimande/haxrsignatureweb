@@ -16,6 +16,7 @@ export interface MasterBudgetItem {
   dueDateIso?: string;
   status: PaymentStatus;
   notes?: string;
+  isDayOfWedding?: boolean;
 }
 
 export interface PaymentInstallment {
@@ -30,6 +31,7 @@ export interface PaymentInstallment {
   method?: string;
   reference?: string;
   notes?: string;
+  isDayOfWedding?: boolean;
 }
 
 export interface CategoryFinancialMetric {
@@ -42,31 +44,31 @@ export interface CategoryFinancialMetric {
 }
 
 export interface ExecutiveFinancialSummary {
-  /** The initial estimated budget range or target (e.g. from onboarding). */
+  /** The initial estimated budget range or target (e.g. from onboarding). 0 if unassigned. */
   estimatedBudget: number;
   /** Explicit approved budget if formally established, otherwise null. */
   approvedBudget: number | null;
-  /** Active baseline ceiling (approvedBudget if set, else estimatedBudget). */
+  /** Active baseline ceiling (approvedBudget if set, else estimatedBudget). 0 if unassigned. */
   budgetCeiling: number;
   hasApprovedBudget: boolean;
   /** Total formal/contracted commitments. */
   contractedAmount: number;
-  /** Total disbarsed/liquidated payments. */
+  /** Total disbursed/liquidated payments. */
   paidAmount: number;
   /** Outstanding balance on contracted commitments (contracted - paid). */
   outstandingAmount: number;
   /** Remaining uncommitted capital from budget ceiling. */
   uncommittedBudget: number;
-  /** Realistic final cost forecast (contracted for signed items + planned for uncontracted). */
+  /** Realistic final cost forecast. */
   forecastFinalCost: number;
   /** Budget ceiling minus forecastFinalCost. Positive = margin, Negative = excess. */
   projectedVariance: number;
   isOverBudget: boolean;
   /** Contingency reserve allocated. */
   contingencyReserved: number;
-  /** Contingency reserve disbarsed. */
+  /** Contingency reserve disbursed. */
   contingencySpent: number;
-  /** Average investment per confirmed/estimated guest. */
+  /** Average investment per confirmed/estimated guest. 0 if no guests. */
   costPerGuest: number;
   guestCount: number;
   /** % of contracted commitments paid (0 - 100). */
@@ -100,7 +102,6 @@ export function isPastDue(dueDateIso?: string, todayIso?: string): boolean {
   const now = todayIso ? new Date(todayIso) : new Date();
   const due = new Date(dueDateIso);
   if (Number.isNaN(due.getTime())) return false;
-  // Compare date only at midnight
   now.setHours(0, 0, 0, 0);
   due.setHours(0, 0, 0, 0);
   return due.getTime() < now.getTime();
@@ -109,9 +110,18 @@ export function isPastDue(dueDateIso?: string, todayIso?: string): boolean {
 export function calculateExecutiveFinancialSummary(
   input: FinancialEngineInput,
 ): ExecutiveFinancialSummary {
-  const { estimatedBudget, approvedBudget = null, guestCount, items, installments = [], recordedPayments = [], todayIso } = input;
+  const {
+    estimatedBudget,
+    approvedBudget = null,
+    guestCount,
+    items,
+    installments = [],
+    recordedPayments = [],
+    todayIso,
+  } = input;
 
-  const budgetCeiling = approvedBudget !== null && approvedBudget > 0 ? approvedBudget : estimatedBudget;
+  const budgetCeiling =
+    approvedBudget !== null && approvedBudget > 0 ? approvedBudget : (estimatedBudget > 0 ? estimatedBudget : 0);
   const hasApprovedBudget = approvedBudget !== null && approvedBudget > 0;
 
   let totalContracted = 0;
@@ -121,35 +131,46 @@ export function calculateExecutiveFinancialSummary(
   let contingencySpent = 0;
 
   items.forEach((item) => {
-    const isContingency = item.category.toLowerCase().includes("reserva") || item.category.toLowerCase().includes("conting");
+    const isContingency =
+      item.category.toLowerCase().includes("reserva") ||
+      item.category.toLowerCase().includes("conting");
     if (isContingency) {
       contingencyReserved += item.initialPlanned;
       contingencySpent += item.paidAmount;
     }
 
-    const itemContracted = item.contractedAmount > 0 ? item.contractedAmount : (item.status === "pago" || item.status === "parcial" ? (item.actualAmount || item.initialPlanned) : 0);
+    // Contracted only exists when explicit evidence of contractedAmount exists
+    const itemContracted = item.contractedAmount > 0 ? item.contractedAmount : 0;
     totalContracted += itemContracted;
 
     totalPaidFromItems += item.paidAmount;
 
-    // Forecast: if contracted, use contracted value; otherwise, use initial planned value
-    const itemForecast = item.contractedAmount > 0 ? item.contractedAmount : (item.actualAmount > 0 ? item.actualAmount : item.initialPlanned);
+    // Forecast: if contracted, use contracted value; otherwise proposed or planned
+    const itemForecast =
+      item.contractedAmount > 0
+        ? item.contractedAmount
+        : (item.proposedAmount > 0
+            ? item.proposedAmount
+            : (item.actualAmount > 0 ? item.actualAmount : item.initialPlanned));
     totalForecast += itemForecast;
   });
 
-  // Disbursed payments can also come from recorded payment ledger
   const totalPaidRecorded = recordedPayments.reduce((sum, p) => sum + p.amount, 0);
   const paidAmount = Math.max(totalPaidFromItems, totalPaidRecorded);
 
   const outstandingAmount = Math.max(0, totalContracted - paidAmount);
   const uncommittedBudget = Math.max(0, budgetCeiling - totalContracted);
   const forecastFinalCost = totalForecast > 0 ? totalForecast : budgetCeiling;
-  const projectedVariance = budgetCeiling - forecastFinalCost;
+  const projectedVariance = budgetCeiling > 0 || forecastFinalCost > 0 ? budgetCeiling - forecastFinalCost : 0;
   const isOverBudget = projectedVariance < 0;
 
-  const costPerGuest = guestCount > 0 ? Math.round(forecastFinalCost / guestCount) : 0;
-  const paymentProgress = totalContracted > 0 ? Math.min(100, Math.round((paidAmount / totalContracted) * 100)) : (forecastFinalCost > 0 ? Math.min(100, Math.round((paidAmount / forecastFinalCost) * 100)) : 0);
-  const commitmentProgress = budgetCeiling > 0 ? Math.min(100, Math.round((totalContracted / budgetCeiling) * 100)) : 0;
+  const costPerGuest = guestCount > 0 && forecastFinalCost > 0 ? Math.round(forecastFinalCost / guestCount) : 0;
+  const paymentProgress =
+    totalContracted > 0
+      ? Math.min(100, Math.round((paidAmount / totalContracted) * 100))
+      : (forecastFinalCost > 0 ? Math.min(100, Math.round((paidAmount / forecastFinalCost) * 100)) : 0);
+  const commitmentProgress =
+    budgetCeiling > 0 ? Math.min(100, Math.round((totalContracted / budgetCeiling) * 100)) : 0;
 
   // Overdue and Next Payment Calculation
   let overdueCount = 0;
@@ -159,7 +180,7 @@ export function calculateExecutiveFinancialSummary(
   const nowTime = todayIso ? new Date(todayIso).getTime() : Date.now();
 
   installments.forEach((inst) => {
-    const isPaid = inst.status === "pago" || (inst.paidAt && inst.paidAt.trim().length > 0);
+    const isPaid = inst.status === "pago" || (Boolean(inst.paidAt) && (inst.paidAt?.trim().length ?? 0) > 0);
     const overdue = !isPaid && isPastDue(inst.dueDateIso, todayIso);
 
     if (overdue) {
@@ -178,7 +199,6 @@ export function calculateExecutiveFinancialSummary(
     }
   });
 
-  // Fallback nextPayment if none from installments
   if (!nextPayment && items.length > 0) {
     const pendingItem = items.find((i) => i.status === "pendente" || i.status === "parcial");
     if (pendingItem) {
@@ -224,7 +244,7 @@ export function calculateCategoryBreakdown(
     const existing = categoryMap.get(cat) || { allocated: 0, contracted: 0, paid: 0, balance: 0 };
 
     existing.allocated += item.initialPlanned;
-    existing.contracted += item.contractedAmount > 0 ? item.contractedAmount : (item.actualAmount || item.initialPlanned);
+    existing.contracted += item.contractedAmount > 0 ? item.contractedAmount : 0;
     existing.paid += item.paidAmount;
     existing.balance += item.balance;
 

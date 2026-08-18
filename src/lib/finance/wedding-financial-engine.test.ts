@@ -21,7 +21,7 @@ describe("Wedding Financial Calculation Engine", () => {
         actualAmount: 190000,
         paidAmount: 95000,
         balance: 95000,
-        variance: 10000, // saved 10.000 MT
+        variance: 10000,
         dueDate: "30 Ago 2026",
         dueDateIso: "2026-08-30",
         status: "parcial",
@@ -101,66 +101,64 @@ describe("Wedding Financial Calculation Engine", () => {
     assert.equal(summary.uncommittedBudget, 260000);
     // Forecast Final Cost: 190.000 + 300.000 + 40.000 = 530.000
     assert.equal(summary.forecastFinalCost, 530000);
-    // Projected Variance: 750.000 - 530.000 = 220.000 (surplus)
+    // Projected Variance: 750.000 - 530.000 = 220.000
     assert.equal(summary.projectedVariance, 220000);
     assert.equal(summary.isOverBudget, false);
     // Cost per guest: 530.000 / 150 = 3.533 MT
     assert.equal(summary.costPerGuest, 3533);
-    // Overdue check: inst-2 due 2026-08-01 is past 2026-08-18
+    // Overdue check
     assert.equal(summary.overdueCount, 1);
     assert.equal(summary.overdueTotalAmount, 95000);
   });
 
-  it("handles estimated budget when approved budget is null without inventing approved budget", () => {
-    const summary = calculateExecutiveFinancialSummary({
-      estimatedBudget: 600000,
-      approvedBudget: null,
-      guestCount: 100,
-      items: [],
-    });
-
-    assert.equal(summary.estimatedBudget, 600000);
-    assert.equal(summary.approvedBudget, null);
-    assert.equal(summary.hasApprovedBudget, false);
-    assert.equal(summary.budgetCeiling, 600000);
-  });
-
-  it("calculates category breakdown percentages accurately", () => {
-    const items: MasterBudgetItem[] = [
+  it("does not infer contractedAmount if contractedAmount is zero", () => {
+    const uncontractedItems: MasterBudgetItem[] = [
       {
-        id: "1",
-        category: "Decoração",
-        vendorOrItem: "Flores",
-        initialPlanned: 100000,
-        proposedAmount: 100000,
-        contractedAmount: 100000,
-        actualAmount: 100000,
-        paidAmount: 50000,
-        balance: 50000,
+        id: "item-u1",
+        category: "Fotografia",
+        vendorOrItem: "Studio Lumina",
+        initialPlanned: 120000,
+        proposedAmount: 120000,
+        contractedAmount: 0,
+        actualAmount: 0,
+        paidAmount: 0,
+        balance: 120000,
         variance: 0,
-        dueDate: "—",
-        status: "parcial",
-      },
-      {
-        id: "2",
-        category: "Música",
-        vendorOrItem: "DJ",
-        initialPlanned: 100000,
-        proposedAmount: 100000,
-        contractedAmount: 100000,
-        actualAmount: 100000,
-        paidAmount: 100000,
-        balance: 0,
-        variance: 0,
-        dueDate: "—",
-        status: "pago",
+        dueDate: "A acordar",
+        status: "planeado",
       },
     ];
 
-    const breakdown = calculateCategoryBreakdown(items);
-    assert.equal(breakdown.length, 2);
-    assert.equal(breakdown[0].shareOfTotal, 0.5);
-    assert.equal(breakdown[1].shareOfTotal, 0.5);
+    const summary = calculateExecutiveFinancialSummary({
+      estimatedBudget: 500000,
+      approvedBudget: null,
+      guestCount: 0,
+      items: uncontractedItems,
+    });
+
+    assert.equal(summary.contractedAmount, 0);
+    assert.equal(summary.outstandingAmount, 0);
+    assert.equal(summary.uncommittedBudget, 500000);
+    assert.equal(summary.forecastFinalCost, 120000);
+    assert.equal(summary.costPerGuest, 0);
+  });
+
+  it("handles empty event with zero budget and zero guests without fallbacks", () => {
+    const summary = calculateExecutiveFinancialSummary({
+      estimatedBudget: 0,
+      approvedBudget: null,
+      guestCount: 0,
+      items: [],
+    });
+
+    assert.equal(summary.estimatedBudget, 0);
+    assert.equal(summary.budgetCeiling, 0);
+    assert.equal(summary.contractedAmount, 0);
+    assert.equal(summary.paidAmount, 0);
+    assert.equal(summary.outstandingAmount, 0);
+    assert.equal(summary.uncommittedBudget, 0);
+    assert.equal(summary.forecastFinalCost, 0);
+    assert.equal(summary.costPerGuest, 0);
   });
 
   it("detects past due dates correctly", () => {

@@ -37,6 +37,7 @@ const COLORS = {
 
 /**
  * Builds the official, multi-tab HAXR Wedding Financial Book (.xlsx) using ExcelJS.
+ * Contains ZERO demo/mock financial lines.
  */
 export async function buildOfficialWeddingLedgerWorkbook(
   ledger: NormalizedEventFinancialLedger,
@@ -61,11 +62,11 @@ export async function buildOfficialWeddingLedgerWorkbook(
 
   wsDash.columns = [
     { width: 4 },  // A (padding)
-    { width: 34 }, // B
+    { width: 36 }, // B
     { width: 22 }, // C
     { width: 14 }, // D
     { width: 28 }, // E
-    { width: 22 }, // F
+    { width: 24 }, // F
     { width: 4 },  // G
   ];
 
@@ -79,7 +80,7 @@ export async function buildOfficialWeddingLedgerWorkbook(
 
   wsDash.mergeCells("B3:F3");
   const cellSub = wsDash.getCell("B3");
-  cellSub.value = "RELATÓRIO EXECUTIVO & ARQUITECTURA FINANCEIRA PATRIMONIAL";
+  cellSub.value = "RELATÓRIO EXECUTIVO & CONSOLIDAÇÃO ORÇAMENTAL";
   cellSub.font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.CHARCOAL } };
 
   // Event Metadata Block (B5:F8)
@@ -95,12 +96,12 @@ export async function buildOfficialWeddingLedgerWorkbook(
 
   wsDash.getCell("B6").value = "Local / Cidade:";
   wsDash.getCell("B6").font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.CHARCOAL } };
-  wsDash.getCell("C6").value = ledger.context.eventOverview.location;
+  wsDash.getCell("C6").value = ledger.eventLocation;
   wsDash.getCell("C6").font = { name: "Calibri", size: 10 };
 
   wsDash.getCell("E6").value = "Lotação de Convidados:";
   wsDash.getCell("E6").font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.CHARCOAL } };
-  wsDash.getCell("F6").value = `${ledger.guestCount} Convidados (Pax)`;
+  wsDash.getCell("F6").value = ledger.guestCount > 0 ? `${ledger.guestCount} Convidados (Pax)` : "Lotação por definir";
   wsDash.getCell("F6").font = { name: "Calibri", size: 10, bold: true };
 
   wsDash.getCell("B7").value = "Moeda Base:";
@@ -127,8 +128,8 @@ export async function buildOfficialWeddingLedgerWorkbook(
     {
       metric: ledger.summary.hasApprovedBudget ? "Orçamento Aprovado (Teto Formal)" : "Orçamento Inicial (Faixa Estimada)",
       val: ledger.summary.budgetCeiling,
-      share: 1.0,
-      note: ledger.summary.hasApprovedBudget ? "Teto aprovado pelo casal" : "Estimativa inicial de planeamento",
+      share: ledger.summary.budgetCeiling > 0 ? 1.0 : 0,
+      note: ledger.summary.hasApprovedBudget ? "Teto aprovado pelo casal" : (ledger.summary.budgetCeiling > 0 ? "Estimativa inicial do evento" : "Orçamento por definir"),
     },
     {
       metric: "Total de Compromissos Contratados",
@@ -158,7 +159,7 @@ export async function buildOfficialWeddingLedgerWorkbook(
       metric: "Previsão de Custo Final (Forecast Final)",
       val: ledger.summary.forecastFinalCost,
       share: ledger.summary.budgetCeiling > 0 ? ledger.summary.forecastFinalCost / ledger.summary.budgetCeiling : 0,
-      note: "Projeção realista de encerramento",
+      note: "Projeção de encerramento contratual",
     },
     {
       metric: "Variação Projectada vs Teto",
@@ -170,7 +171,7 @@ export async function buildOfficialWeddingLedgerWorkbook(
       metric: "Investimento Médio por Convidado",
       val: ledger.summary.costPerGuest,
       share: null,
-      note: `${currencySymbol}/Pax baseado na lotação de ${ledger.guestCount} pessoas`,
+      note: ledger.guestCount > 0 ? `${currencySymbol}/Pax baseado na lotação de ${ledger.guestCount} convidados` : "Lotação por definir",
     },
   ];
 
@@ -235,24 +236,37 @@ export async function buildOfficialWeddingLedgerWorkbook(
   });
   kpiRow++;
 
-  ledger.categories.forEach((cat) => {
-    wsDash.getCell(`B${kpiRow}`).value = cat.name;
-    wsDash.getCell(`C${kpiRow}`).value = cat.allocated;
+  if (ledger.categories.length === 0) {
+    wsDash.getCell(`B${kpiRow}`).value = "Sem categorias orçamentais definidas";
+    wsDash.getCell(`C${kpiRow}`).value = 0;
     wsDash.getCell(`C${kpiRow}`).numFmt = numFormatCurrency;
-    wsDash.getCell(`D${kpiRow}`).value = cat.contracted;
+    wsDash.getCell(`D${kpiRow}`).value = 0;
     wsDash.getCell(`D${kpiRow}`).numFmt = numFormatCurrency;
-    wsDash.getCell(`E${kpiRow}`).value = cat.paid;
+    wsDash.getCell(`E${kpiRow}`).value = 0;
     wsDash.getCell(`E${kpiRow}`).numFmt = numFormatCurrency;
-    wsDash.getCell(`F${kpiRow}`).value = cat.balance;
+    wsDash.getCell(`F${kpiRow}`).value = 0;
     wsDash.getCell(`F${kpiRow}`).numFmt = numFormatCurrency;
-
-    ["B", "C", "D", "E", "F"].forEach((c) => {
-      wsDash.getCell(`${c}${kpiRow}`).border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
-    });
     kpiRow++;
-  });
+  } else {
+    ledger.categories.forEach((cat) => {
+      wsDash.getCell(`B${kpiRow}`).value = cat.name;
+      wsDash.getCell(`C${kpiRow}`).value = cat.allocated;
+      wsDash.getCell(`C${kpiRow}`).numFmt = numFormatCurrency;
+      wsDash.getCell(`D${kpiRow}`).value = cat.contracted;
+      wsDash.getCell(`D${kpiRow}`).numFmt = numFormatCurrency;
+      wsDash.getCell(`E${kpiRow}`).value = cat.paid;
+      wsDash.getCell(`E${kpiRow}`).numFmt = numFormatCurrency;
+      wsDash.getCell(`F${kpiRow}`).value = cat.balance;
+      wsDash.getCell(`F${kpiRow}`).numFmt = numFormatCurrency;
 
-  // Footer Confidentiality
+      ["B", "C", "D", "E", "F"].forEach((c) => {
+        wsDash.getCell(`${c}${kpiRow}`).border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
+      });
+      kpiRow++;
+    });
+  }
+
+  // Footer
   kpiRow += 2;
   wsDash.mergeCells(`B${kpiRow}:F${kpiRow}`);
   const confCell = wsDash.getCell(`B${kpiRow}`);
@@ -279,7 +293,7 @@ export async function buildOfficialWeddingLedgerWorkbook(
     { header: "Valor Liquidado", width: 18 },
     { header: "Saldo em Falta", width: 18 },
     { header: "Variação / Poupança", width: 18 },
-    { header: "Vencimento", width: 16 },
+    { header: "Vencimento", width: 18 },
     { header: "Estado", width: 14 },
     { header: "Notas Operacionais", width: 30 },
   ];
@@ -387,23 +401,37 @@ export async function buildOfficialWeddingLedgerWorkbook(
     cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.HAXR_GOLD } };
   });
 
-  ledger.installments.forEach((inst) => {
-    const row = wsSched.addRow([
-      inst.vendorOrItem,
-      inst.installmentLabel,
-      inst.amount,
-      inst.dueDate,
-      inst.paidAt || "—",
-      inst.status.toUpperCase(),
-      inst.method || "Transferência Bancária",
-      inst.reference || "—",
+  if (ledger.installments.length === 0) {
+    const emptyRow = wsSched.addRow([
+      "Sem parcelas calendarizadas",
+      "—",
+      0,
+      "—",
+      "—",
+      "—",
+      "—",
+      "—",
     ]);
-    row.height = 19;
-    row.getCell(3).numFmt = numFormatCurrency;
-    row.eachCell((cell) => {
-      cell.border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
+    emptyRow.getCell(3).numFmt = numFormatCurrency;
+  } else {
+    ledger.installments.forEach((inst) => {
+      const row = wsSched.addRow([
+        inst.vendorOrItem,
+        inst.installmentLabel,
+        inst.amount,
+        inst.dueDate,
+        inst.paidAt || "—",
+        inst.status.toUpperCase(),
+        inst.method || "Transferência Bancária",
+        inst.reference || "—",
+      ]);
+      row.height = 19;
+      row.getCell(3).numFmt = numFormatCurrency;
+      row.eachCell((cell) => {
+        cell.border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
+      });
     });
-  });
+  }
 
   // -------------------------------------------------------------
   // 4. TAB: 04 — Vendors & Contracts
@@ -417,7 +445,7 @@ export async function buildOfficialWeddingLedgerWorkbook(
     { header: "Valor Total Acordado", width: 20 },
     { header: "Valor Já Pago", width: 20 },
     { header: "Saldo Pendente", width: 20 },
-    { header: "Estado do Contrato", width: 18 },
+    { header: "Estado do Contrato", width: 22 },
     { header: "Próxima Ação / Protocolo", width: 34 },
   ];
   wsVendors.getRow(1).height = 22;
@@ -426,38 +454,53 @@ export async function buildOfficialWeddingLedgerWorkbook(
     cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.HAXR_GOLD } };
   });
 
-  ledger.items.forEach((item) => {
-    const row = wsVendors.addRow([
-      item.vendorOrItem,
-      item.category,
-      item.contractedAmount > 0 ? item.contractedAmount : item.actualAmount,
-      item.paidAmount,
-      item.balance,
-      item.status === "pago" ? "CONCLUÍDO / PAGO" : (item.contractedAmount > 0 ? "CONTRATO FORMALIZADO" : "EM CURADORIA"),
-      item.notes || "Acompanhamento HAXR Signature",
+  if (ledger.items.length === 0) {
+    const emptyRow = wsVendors.addRow([
+      "Sem fornecedores registados",
+      "—",
+      0,
+      0,
+      0,
+      "—",
+      "—",
     ]);
-    row.height = 19;
-    row.getCell(3).numFmt = numFormatCurrency;
-    row.getCell(4).numFmt = numFormatCurrency;
-    row.getCell(5).numFmt = numFormatCurrency;
-    row.eachCell((cell) => {
-      cell.border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
+    emptyRow.getCell(3).numFmt = numFormatCurrency;
+    emptyRow.getCell(4).numFmt = numFormatCurrency;
+    emptyRow.getCell(5).numFmt = numFormatCurrency;
+  } else {
+    ledger.items.forEach((item) => {
+      const row = wsVendors.addRow([
+        item.vendorOrItem,
+        item.category,
+        item.contractedAmount > 0 ? item.contractedAmount : item.actualAmount,
+        item.paidAmount,
+        item.balance,
+        item.status === "pago" ? "CONCLUÍDO / PAGO" : (item.contractedAmount > 0 ? "CONTRATO FORMALIZADO" : "EM CURADORIA"),
+        item.notes || "Acompanhamento HAXR Signature",
+      ]);
+      row.height = 19;
+      row.getCell(3).numFmt = numFormatCurrency;
+      row.getCell(4).numFmt = numFormatCurrency;
+      row.getCell(5).numFmt = numFormatCurrency;
+      row.eachCell((cell) => {
+        cell.border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
+      });
     });
-  });
+  }
 
   // -------------------------------------------------------------
-  // 5. TAB: 05 — Cash Flow
+  // 5. TAB: 05 — Cash Flow (Chronological Real Outflows, ZERO dummy 30/40/30)
   // -------------------------------------------------------------
   const wsCash = wb.addWorksheet("05 — Cash Flow", {
     views: [{ showGridLines: true }],
   });
   wsCash.columns = [
-    { header: "Marco Temporal (Milestone)", width: 34 },
-    { header: "Proporção (% Alvo)", width: 18 },
-    { header: "Previsão de Saída", width: 22 },
+    { header: "Vencimento / Marco", width: 28 },
+    { header: "Fornecedor / Rubrica", width: 34 },
+    { header: "Montante Previsto", width: 22 },
     { header: "Valor Já Liquidado", width: 22 },
-    { header: "Saldo Pendente do Marco", width: 22 },
-    { header: "Objetivo Operacional", width: 40 },
+    { header: "Saldo em Aberto", width: 22 },
+    { header: "Estado do Fluxo", width: 24 },
   ];
   wsCash.getRow(1).height = 22;
   wsCash.getRow(1).eachCell((cell) => {
@@ -465,42 +508,41 @@ export async function buildOfficialWeddingLedgerWorkbook(
     cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.HAXR_GOLD } };
   });
 
-  const totalContracted = ledger.summary.contractedAmount > 0 ? ledger.summary.contractedAmount : ledger.summary.budgetCeiling;
-  const totalPaid = ledger.summary.paidAmount;
-
-  const phase1Target = Math.round(totalContracted * 0.30);
-  const phase1Paid = Math.min(totalPaid, phase1Target);
-
-  const phase2Target = Math.round(totalContracted * 0.40);
-  const phase2Paid = Math.min(Math.max(0, totalPaid - phase1Target), phase2Target);
-
-  const phase3Target = Math.round(totalContracted * 0.30);
-  const phase3Paid = Math.min(Math.max(0, totalPaid - phase1Target - phase2Target), phase3Target);
-
-  const cashMilestones = [
-    { name: "Fase 1: Sinais de Bloqueio (Imediato)", pct: 0.30, target: phase1Target, paid: phase1Paid, desc: "Garante exclusividade de data com fornecedores nobres." },
-    { name: "Fase 2: Reforço de Produção (90 Dias)", pct: 0.40, target: phase2Target, paid: phase2Paid, desc: "Aquisição de botânica, tecidos, menus e montagem cénica." },
-    { name: "Fase 3: Liquidação Final (Semana do Evento)", pct: 0.30, target: phase3Target, paid: phase3Paid, desc: "Fecho final de contas operacionais e geradores de apoio." },
-  ];
-
-  cashMilestones.forEach((m) => {
-    const row = wsCash.addRow([
-      m.name,
-      m.pct,
-      m.target,
-      m.paid,
-      Math.max(0, m.target - m.paid),
-      m.desc,
+  if (ledger.installments.length === 0) {
+    const emptyRow = wsCash.addRow([
+      "Sem fluxos calendarizados",
+      "—",
+      0,
+      0,
+      0,
+      "As previsões de tesouraria serão listadas conforme os contratos forem calendarizados.",
     ]);
-    row.height = 20;
-    row.getCell(2).numFmt = numFormatPercent;
-    row.getCell(3).numFmt = numFormatCurrency;
-    row.getCell(4).numFmt = numFormatCurrency;
-    row.getCell(5).numFmt = numFormatCurrency;
-    row.eachCell((cell) => {
-      cell.border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
+    emptyRow.getCell(3).numFmt = numFormatCurrency;
+    emptyRow.getCell(4).numFmt = numFormatCurrency;
+    emptyRow.getCell(5).numFmt = numFormatCurrency;
+  } else {
+    ledger.installments.forEach((inst) => {
+      const isPaid = inst.status === "pago" || (Boolean(inst.paidAt) && (inst.paidAt?.trim().length ?? 0) > 0);
+      const paidVal = isPaid ? inst.amount : 0;
+      const openVal = isPaid ? 0 : inst.amount;
+
+      const row = wsCash.addRow([
+        inst.dueDate,
+        inst.vendorOrItem,
+        inst.amount,
+        paidVal,
+        openVal,
+        inst.status.toUpperCase(),
+      ]);
+      row.height = 20;
+      row.getCell(3).numFmt = numFormatCurrency;
+      row.getCell(4).numFmt = numFormatCurrency;
+      row.getCell(5).numFmt = numFormatCurrency;
+      row.eachCell((cell) => {
+        cell.border = { bottom: { style: "thin", color: { argb: COLORS.GRAY_BORDER } } };
+      });
     });
-  });
+  }
 
   // -------------------------------------------------------------
   // 6. TAB: 06 — Variations & Extras
@@ -520,31 +562,46 @@ export async function buildOfficialWeddingLedgerWorkbook(
     cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.HAXR_GOLD } };
   });
 
-  ledger.items.filter((i) => i.variance !== 0).forEach((item) => {
-    const row = wsVar.addRow([
-      item.vendorOrItem,
-      item.variance > 0 ? "Poupança Negociada" : "Upgrade / Acréscimo",
-      item.initialPlanned,
-      item.actualAmount,
-      item.variance,
-      "Validação de Curadoria HAXR Signature",
+  const variations = ledger.items.filter((i) => i.variance !== 0);
+  if (variations.length === 0) {
+    const emptyRow = wsVar.addRow([
+      "Sem variações registadas",
+      "—",
+      0,
+      0,
+      0,
+      "Nenhum desvio ou alteração de escopo registada.",
     ]);
-    row.height = 19;
-    row.getCell(3).numFmt = numFormatCurrency;
-    row.getCell(4).numFmt = numFormatCurrency;
-    row.getCell(5).numFmt = numFormatCurrency;
-  });
+    emptyRow.getCell(3).numFmt = numFormatCurrency;
+    emptyRow.getCell(4).numFmt = numFormatCurrency;
+    emptyRow.getCell(5).numFmt = numFormatCurrency;
+  } else {
+    variations.forEach((item) => {
+      const row = wsVar.addRow([
+        item.vendorOrItem,
+        item.variance > 0 ? "Poupança Negociada" : "Upgrade / Acréscimo",
+        item.initialPlanned,
+        item.actualAmount,
+        item.variance,
+        "Validação de Curadoria HAXR Signature",
+      ]);
+      row.height = 19;
+      row.getCell(3).numFmt = numFormatCurrency;
+      row.getCell(4).numFmt = numFormatCurrency;
+      row.getCell(5).numFmt = numFormatCurrency;
+    });
+  }
 
   // -------------------------------------------------------------
-  // 7. TAB: 07 — Wedding Day Payments
+  // 7. TAB: 07 — Wedding Day Payments (ZERO hardcoded 15.000 MT or 10.000 MT)
   // -------------------------------------------------------------
   const wsDay = wb.addWorksheet("07 — Wedding Day Payments", { views: [{ showGridLines: true }] });
   wsDay.columns = [
-    { header: "Destinatário / Fornecedor", width: 30 },
+    { header: "Destinatário / Fornecedor", width: 32 },
     { header: "Finalidade", width: 24 },
     { header: "Montante a Entregar", width: 20 },
     { header: "Responsável pela Entrega", width: 24 },
-    { header: "Formato / Envelope", width: 20 },
+    { header: "Formato / Protocolo", width: 22 },
     { header: "Rubrica de Confirmação", width: 26 },
   ];
   wsDay.getRow(1).height = 22;
@@ -553,8 +610,33 @@ export async function buildOfficialWeddingLedgerWorkbook(
     cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.HAXR_GOLD } };
   });
 
-  wsDay.addRow(["Coordenadora de Protocolo HAXR", "Fundo de Manobra do Dia", 15000, "Assessora Responsável", "Numerário em Envelope Selado", "Assinatura no Local"]).getCell(3).numFmt = numFormatCurrency;
-  wsDay.addRow(["Equipa de Som & Músicos", "Gratificações de Performance", 10000, "Chefe de Cerimonial", "Numerário em Envelope Selado", "Assinatura no Local"]).getCell(3).numFmt = numFormatCurrency;
+  const dayPayments = ledger.installments.filter(
+    (i) => i.isDayOfWedding || i.dueDate.toLowerCase().includes("dia do evento") || i.dueDate.toLowerCase().includes("no local")
+  );
+
+  if (dayPayments.length === 0) {
+    const emptyRow = wsDay.addRow([
+      "Sem pagamentos do dia registados",
+      "—",
+      0,
+      "—",
+      "—",
+      "Nenhum pagamento específico calendarizado para o dia da celebração.",
+    ]);
+    emptyRow.getCell(3).numFmt = numFormatCurrency;
+  } else {
+    dayPayments.forEach((p) => {
+      const row = wsDay.addRow([
+        p.vendorOrItem,
+        p.installmentLabel,
+        p.amount,
+        "Assessoria HAXR Signature",
+        "Envelope Selado",
+        "Assinatura no Local",
+      ]);
+      row.getCell(3).numFmt = numFormatCurrency;
+    });
+  }
 
   // -------------------------------------------------------------
   // 8. TAB: 08 — Savings & Negotiations
@@ -573,11 +655,23 @@ export async function buildOfficialWeddingLedgerWorkbook(
     cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: COLORS.HAXR_GOLD } };
   });
 
-  ledger.items.forEach((item) => {
+  const savingsItems = ledger.items.filter((item) => {
     const prop = item.proposedAmount > 0 ? item.proposedAmount : item.initialPlanned;
     const finalVal = item.contractedAmount > 0 ? item.contractedAmount : item.actualAmount;
-    const saving = Math.max(0, prop - finalVal);
-    if (saving > 0) {
+    return prop > finalVal && finalVal > 0;
+  });
+
+  if (savingsItems.length === 0) {
+    const emptyRow = wsSav.addRow(["Sem negociações registadas", 0, 0, 0, 0]);
+    emptyRow.getCell(2).numFmt = numFormatCurrency;
+    emptyRow.getCell(3).numFmt = numFormatCurrency;
+    emptyRow.getCell(4).numFmt = numFormatCurrency;
+    emptyRow.getCell(5).numFmt = numFormatPercent;
+  } else {
+    savingsItems.forEach((item) => {
+      const prop = item.proposedAmount > 0 ? item.proposedAmount : item.initialPlanned;
+      const finalVal = item.contractedAmount > 0 ? item.contractedAmount : item.actualAmount;
+      const saving = prop - finalVal;
       const row = wsSav.addRow([
         item.vendorOrItem,
         prop,
@@ -590,16 +684,16 @@ export async function buildOfficialWeddingLedgerWorkbook(
       row.getCell(3).numFmt = numFormatCurrency;
       row.getCell(4).numFmt = numFormatCurrency;
       row.getCell(5).numFmt = numFormatPercent;
-    }
-  });
+    });
+  }
 
   // -------------------------------------------------------------
   // 9. TAB: 09 — Financial Notes
   // -------------------------------------------------------------
   const wsNotes = wb.addWorksheet("09 — Financial Notes", { views: [{ showGridLines: true }] });
   wsNotes.columns = [
-    { header: "Secção de Auditoria", width: 26 },
-    { header: "Directrizes & Notas de Tesouraria HAXR Signature", width: 70 },
+    { header: "Secção", width: 30 },
+    { header: "Directrizes & Notas de Gestão HAXR Signature", width: 70 },
   ];
   wsNotes.getRow(1).height = 22;
   wsNotes.getRow(1).eachCell((cell) => {
@@ -608,10 +702,10 @@ export async function buildOfficialWeddingLedgerWorkbook(
   });
 
   const notes = [
-    ["1. Validação de Faturas", "Todos os pagamentos a fornecedores devem ser efetuados contra emissão de fatura/recibo formal."],
-    ["2. Gestão de Contingência", "O fundo de contingência só deve ser movimentado mediante validação prévia entre o casal e a assessora HAXR."],
-    ["3. Prazos de Liquidação", "Nenhum fornecedor essencial deve entrar no dia da montagem com mais de 10% de saldo por liquidar."],
-    ["4. Protocolo de Assinatura", "Relatório oficial auditado pela HAXR Signature · Maputo, Moçambique."],
+    ["1. Gestão Orçamental & Consolidação", "Relatório executivo gerado a partir dos registos financeiros e contratos consolidados no ecossistema HAXR Signature."],
+    ["2. Prazos e Liquidações", "Os valores e datas de vencimento refletem as condições acordadas nos contratos celebrados com cada fornecedor credenciado."],
+    ["3. Gestão de Tesouraria", "O acompanhamento de saldos pendentes e liquidações é atualizado em tempo real na área privada do evento."],
+    ["4. Chancela Institucional", "HAXR Signature · Maputo, Moçambique."],
   ];
 
   notes.forEach(([sec, txt]) => {

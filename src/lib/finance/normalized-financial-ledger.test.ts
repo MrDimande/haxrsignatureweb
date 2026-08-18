@@ -1,6 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildNormalizedFinancialLedger, convertNormalizedLedgerToBudgetModuleData } from "./normalized-financial-ledger";
+import {
+  buildNormalizedFinancialLedger,
+  convertNormalizedLedgerToBudgetModuleData,
+} from "./normalized-financial-ledger";
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
 import type { ClientEventPaymentsRpcPayload } from "@/lib/payments/client-event-payments-rpc";
 import type { Vendor } from "@/lib/event-modules/types";
@@ -83,13 +86,13 @@ describe("Normalized Financial Ledger Assembler", () => {
       contact: "+258 84 111 2222",
       location: "Maputo",
       status: "em_análise",
-      contractedAmount: 250000,
+      contractedAmount: 0,
       proposal: { id: "prop-1", amount: 250000, receivedAt: "2026-08-05", status: "pendente" },
       nextAction: "Degustação de Menu",
     },
   ];
 
-  it("normalizes real event, vendor and payment data without conflating approved budget", () => {
+  it("normalizes real event, vendor and payment data without conflating uncontracted items into contracted amounts", () => {
     const ledger = buildNormalizedFinancialLedger({
       event: baseEvent,
       paymentsPayload: samplePaymentsPayload,
@@ -99,21 +102,51 @@ describe("Normalized Financial Ledger Assembler", () => {
     assert.equal(ledger.clientNames, "Jessica & Samuel");
     assert.equal(ledger.eventTitle, "Casamento Jessica & Samuel");
     assert.equal(ledger.guestCount, 150);
+    assert.equal(ledger.eventLocation, "Polana Serena Hotel, Maputo");
     // Estimated budget comes from budget_max (850000)
     assert.equal(ledger.summary.estimatedBudget, 850000);
     assert.equal(ledger.summary.approvedBudget, null);
     assert.equal(ledger.summary.hasApprovedBudget, false);
-    // Contracted amount = 80000 + 250000 = 330000
-    assert.equal(ledger.summary.contractedAmount, 330000);
+    // Contracted amount = only v-1 (80.000 MT), because v-2 is in analysis without contract!
+    assert.equal(ledger.summary.contractedAmount, 80000);
     // Paid = 80000
     assert.equal(ledger.summary.paidAmount, 80000);
-    // Outstanding = 330000 - 80000 = 250000
-    assert.equal(ledger.summary.outstandingAmount, 250000);
+    // Outstanding on contracted amount = 80000 - 80000 = 0
+    assert.equal(ledger.summary.outstandingAmount, 0);
     // Items length = 2 vendors
     assert.equal(ledger.items.length, 2);
   });
 
-  it("converts cleanly to BudgetModuleData for private UI rendering", () => {
+  it("handles event without guests, location or budget without injecting fallbacks", () => {
+    const emptyEvent: ClientEventRow = {
+      ...baseEvent,
+      budget_min: null,
+      budget_max: null,
+      estimated_guests: 0,
+      event_location: null,
+      event_date: null,
+      bride_name: null,
+      groom_name: null,
+      event_name: "Evento Privado",
+    };
+
+    const ledger = buildNormalizedFinancialLedger({
+      event: emptyEvent,
+      paymentsPayload: null,
+      vendors: [],
+    });
+
+    assert.equal(ledger.guestCount, 0);
+    assert.equal(ledger.eventLocation, "Local por definir");
+    assert.equal(ledger.eventDateFormatted, "Data por definir");
+    assert.equal(ledger.summary.estimatedBudget, 0);
+    assert.equal(ledger.summary.budgetCeiling, 0);
+    assert.equal(ledger.summary.contractedAmount, 0);
+    assert.equal(ledger.summary.paidAmount, 0);
+    assert.equal(ledger.summary.costPerGuest, 0);
+  });
+
+  it("converts cleanly to BudgetModuleData preserving financial parity", () => {
     const ledger = buildNormalizedFinancialLedger({
       event: baseEvent,
       paymentsPayload: samplePaymentsPayload,
@@ -121,8 +154,9 @@ describe("Normalized Financial Ledger Assembler", () => {
     });
 
     const moduleData = convertNormalizedLedgerToBudgetModuleData(ledger);
-    assert.equal(moduleData.summary.paid, 80000);
-    assert.equal(moduleData.summary.pending, 250000);
+    assert.equal(moduleData.summary.estimated, ledger.summary.budgetCeiling);
+    assert.equal(moduleData.summary.paid, ledger.summary.paidAmount);
+    assert.equal(moduleData.summary.pending, ledger.summary.outstandingAmount);
     assert.equal(moduleData.items.length, 2);
     assert.equal(moduleData.recentPayments.length, 1);
   });
