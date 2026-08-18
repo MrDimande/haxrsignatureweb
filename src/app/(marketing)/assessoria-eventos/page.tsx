@@ -236,19 +236,13 @@ export default function AssessoriaEventosPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2 flex flex-wrap items-center gap-6">
-                    <Link
-                      href="/experiencias/casamento-vania-fabiao"
-                      className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider uppercase text-brand-gold font-bold hover:underline"
-                    >
-                      <span>Ver Convite Digital Signature</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </Link>
+                  <div className="pt-2">
                     <Link
                       href="/portfolio"
-                      className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider uppercase text-brand-text-dark/50 hover:text-brand-text-dark"
+                      className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider uppercase text-brand-gold font-bold hover:underline"
                     >
                       <span>Arquivo de Portfólio</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </div>
