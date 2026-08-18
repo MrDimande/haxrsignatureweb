@@ -15,10 +15,10 @@ import {
   AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import MarketingToolBanner from "@/components/marketing/MarketingToolBanner";
 import ToolProductionCta from "@/components/marketing/ToolProductionCta";
-import { downloadWeddingLedgerExcel } from "@/lib/export/excel-wedding-ledger";
 
 export type Currency = "MZN" | "USD" | "EUR" | "ZAR";
 
@@ -168,6 +168,7 @@ const defaultExpenses: Expense[] = [
 ];
 
 export default function BudgetTrackerPage() {
+  const router = useRouter();
   const [totalBudget, setTotalBudget] = useState<number>(810000); // MZN base
   const [guestCount, setGuestCount] = useState<number>(150);
   const [priorityProfile, setPriorityProfile] = useState<PriorityProfile>("balanced");
@@ -192,6 +193,7 @@ export default function BudgetTrackerPage() {
   const [rawProposalText, setRawProposalText] = useState("");
   const [parserFeedback, setParserFeedback] = useState<string | null>(null);
   const [isAllocatorOpen, setIsAllocatorOpen] = useState(false);
+  const [isAuthGateOpen, setIsAuthGateOpen] = useState(false);
 
   // Accessible IDs
   const nameInputId = useId();
@@ -571,19 +573,18 @@ export default function BudgetTrackerPage() {
     });
   }, [expenses, searchQuery, selectedCategoryFilter, statusFilter]);
 
-  // Export Helpers
-  const handleExportExcel = () => {
-    downloadWeddingLedgerExcel({
-      totalBudget,
-      guestCount,
-      currency,
-      currencySymbol: CURRENCY_CONFIG[currency].symbol,
-      rateFromMzn: CURRENCY_CONFIG[currency].rateFromMzn,
-      prestigeTierTitle: prestigeTier.title,
-      prestigeTierBadge: prestigeTier.badge,
-      expenses,
-      eventName: "Casamento HAXR Signature",
-    });
+  // Export / Gate Helpers
+  const handleGenerateWeddingBookClick = () => {
+    try {
+      const syncedEventId = localStorage.getItem("haxr_synced_event_id");
+      if (syncedEventId) {
+        router.push(`/app/events/${encodeURIComponent(syncedEventId)}/budget`);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    setIsAuthGateOpen(true);
   };
 
   const getWhatsAppLink = () => {
@@ -676,12 +677,15 @@ export default function BudgetTrackerPage() {
         {/* Master Atelier Hero */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
           <div className="space-y-3 max-w-2xl">
+            <span className="font-mono text-[8.5px] uppercase tracking-[0.35em] text-brand-gold font-semibold block">
+              Simulação Aberta · Atelier Financeiro
+            </span>
             <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light leading-[1.1] tracking-[-0.02em] text-brand-text-dark">
               Balanço & Gestão <br className="hidden sm:inline" />
               <span className="italic font-normal text-brand-gold">Orçamental</span>
             </h1>
             <p className="font-sans text-xs sm:text-sm text-brand-text-dark/70 font-light leading-relaxed">
-              Instrumento de controlo e planeamento financeiro para casamentos. Calcule alocações proporcionais com base nas directrizes de mercado de Maputo e mantenha cada investimento estruturado.
+              Explore livremente a experiência. O orçamento real, histórico financeiro, sincronização e Wedding Financial Book são disponibilizados no painel privado.
             </p>
           </div>
 
@@ -1286,11 +1290,11 @@ export default function BudgetTrackerPage() {
 
                 <button
                   type="button"
-                  onClick={handleExportExcel}
+                  onClick={handleGenerateWeddingBookClick}
                   className="flex-1 sm:flex-none border border-brand-champagne bg-white hover:border-brand-gold text-brand-text-dark py-2.5 px-4 font-mono text-[9px] tracking-wider uppercase font-bold rounded-sm inline-flex items-center justify-center gap-1.5 cursor-pointer transition shadow-2xs"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Livro Excel (.xlsx)</span>
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-brand-gold" />
+                  <span>Gerar Wedding Financial Book</span>
                 </button>
 
                 <a
@@ -1481,6 +1485,63 @@ export default function BudgetTrackerPage() {
                   >
                     Extrair & Preencher
                   </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal 3: Wedding Financial Book Auth Gate Modal */}
+        <AnimatePresence>
+          {isAuthGateOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-black/75 backdrop-blur-xs">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white border border-brand-champagne/60 rounded-sm p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6 text-brand-text-dark text-left"
+              >
+                <div className="flex items-start justify-between border-b border-brand-champagne/30 pb-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-brand-gold font-mono text-[8.5px] uppercase tracking-[0.35em] font-semibold">
+                      <FileSpreadsheet className="w-4 h-4 text-brand-gold shrink-0" />
+                      <span>HAXR Wedding Financial Book</span>
+                    </div>
+                    <h3 className="font-serif text-2xl font-light text-brand-text-dark">
+                      O Livro Financeiro do Vosso Casamento
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAuthGateOpen(false)}
+                    className="text-brand-text-dark/40 hover:text-brand-text-dark p-1 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 font-sans text-xs text-brand-text-dark/75 font-light leading-relaxed">
+                  <p>
+                    O workbook oficial <strong>The Wedding Ledger (.xlsx)</strong> é gerado exclusivamente a partir do orçamento real e dos contratos formalizados do vosso evento.
+                  </p>
+                  <p className="text-brand-text-dark/60 text-[11px]">
+                    Para aceder ao livro financeiro oficial, registar despesas reais com sincronização em nuvem e exportar o balanço de auditoria, entre na vossa área privada.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch gap-3">
+                  <Link
+                    href="/sign-up?redirect=/app/dashboard"
+                    className="flex-1 py-3 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[9px] uppercase tracking-widest font-bold shadow-xs text-center transition"
+                  >
+                    Criar conta
+                  </Link>
+                  <Link
+                    href="/sign-in?redirect=/app/dashboard"
+                    className="flex-1 py-3 rounded-sm border border-brand-champagne/60 bg-white hover:border-brand-gold text-brand-text-dark font-mono text-[9px] uppercase tracking-widest text-center transition"
+                  >
+                    Já tenho conta
+                  </Link>
                 </div>
               </motion.div>
             </div>
