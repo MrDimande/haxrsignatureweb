@@ -101,7 +101,10 @@ export function buildNormalizedFinancialLedger(input: {
       (typeof vendor.contractedAmount === "number" && vendor.contractedAmount > 0);
 
     const proposedAmount = vendor.proposal?.amount || 0;
-    const contractedAmount = isContracted ? (vendor.contractedAmount || vendor.proposal?.amount || 0) : 0;
+    const contractedAmount =
+      typeof vendor.contractedAmount === "number" && vendor.contractedAmount > 0
+        ? vendor.contractedAmount
+        : 0;
     const initialPlanned = proposedAmount > 0 ? proposedAmount : (contractedAmount > 0 ? contractedAmount : 0);
 
     // ID-based reconciliation: match strictly by vendor.id or vendor.contract.id

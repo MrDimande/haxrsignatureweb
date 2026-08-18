@@ -2,6 +2,7 @@ import { getCurrentAppSession } from "@/lib/auth/app-session";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import type { BudgetModuleData, ModuleDataResult } from "@/lib/event-modules/types";
 import {
+  getClientEventFinancialLedger,
   getClientEventPaymentsData,
   type ClientEventPaymentsAuthClient,
 } from "@/lib/payments/client-event-payments-service";
@@ -13,6 +14,8 @@ import {
 } from "@/lib/supabase/config";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
+import { generateWeddingFinancialReportBuffer } from "@/lib/export/wedding-financial-report/pdf-generator";
+import { generateWeddingFinancialReportFilename } from "@/lib/export/wedding-financial-report/report-formatters";
 
 export type HandleClientEventPaymentsRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;
@@ -189,3 +192,104 @@ export async function loadClientEventPaymentsModuleData(
 
   return result.body;
 }
+
+export type FinancialReportApiResult = {
+  status: number;
+  buffer?: Buffer;
+  filename?: string;
+  error?: string;
+};
+
+export async function handleClientEventFinancialReportRequest(
+  deps: HandleClientEventPaymentsRequestDeps,
+): Promise<FinancialReportApiResult> {
+  if (!deps.envCheck.ok) {
+    return {
+      status: 503,
+      error: deps.envCheck.message,
+    };
+  }
+
+  if (!deps.user) {
+    return {
+      status: 401,
+      error: "Sessão inválida ou expirada.",
+    };
+  }
+
+  if (!isRealClientEventId(deps.eventId)) {
+    return {
+      status: 404,
+      error: "Relatórios oficiais apenas disponíveis para eventos reais autenticados.",
+    };
+  }
+
+  if (!deps.authClient) {
+    return {
+      status: 503,
+      error: "Cliente Supabase indisponível.",
+    };
+  }
+
+  if (!deps.serviceRoleCheck.ok) {
+    return {
+      status: 503,
+      error: deps.serviceRoleCheck.message,
+    };
+  }
+
+  const rpcClient =
+    deps.rpcClient ?? (createAdminClient() as unknown as ClientEventPaymentsRpcClient);
+
+  try {
+    const result = await getClientEventFinancialLedger({
+      authClient: deps.authClient,
+      rpcClient,
+      userId: deps.user.id,
+      eventId: deps.eventId,
+    });
+
+    if (result.kind === "not_found") {
+      return {
+        status: 404,
+        error: "Evento não encontrado.",
+      };
+    }
+
+    if (result.kind === "forbidden") {
+      return {
+        status: 403,
+        error: "Não tens permissão para aceder aos dados deste evento.",
+      };
+    }
+
+    if (result.kind === "operational_not_linked") {
+      return {
+        status: 409,
+        error: "Evento operacional não associado.",
+      };
+    }
+
+    if (result.kind === "unavailable") {
+      return {
+        status: 503,
+        error: result.message,
+      };
+    }
+
+    const buffer = await generateWeddingFinancialReportBuffer(result.ledger);
+    const filename = generateWeddingFinancialReportFilename(result.ledger);
+
+    return {
+      status: 200,
+      buffer,
+      filename,
+    };
+  } catch (err) {
+    return {
+      status: 500,
+      error: "Falha na geração do relatório financeiro.",
+    };
+  }
+}
+

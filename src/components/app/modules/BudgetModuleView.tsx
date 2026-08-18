@@ -13,6 +13,7 @@ import {
 } from "@/components/app/modules/ModuleShell";
 import {
   FileSpreadsheet,
+  FileText,
   Wallet,
   CheckCircle2,
   TrendingUp,
@@ -21,79 +22,19 @@ import {
 } from "lucide-react";
 import { downloadOfficialWeddingLedger } from "@/lib/export/excel-wedding-ledger";
 import type { NormalizedEventFinancialLedger } from "@/lib/finance/wedding-financial-engine";
-import {
-  calculateCategoryBreakdown,
-  calculateExecutiveFinancialSummary,
-} from "@/lib/finance/wedding-financial-engine";
 
 export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
   const [activeTab, setActiveTab] = useState<"master" | "schedule" | "payments">("master");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  // Canonical Ledger: use direct ledger if passed by server, or synthesize fallback without demo mocks
-  const canonicalLedger: NormalizedEventFinancialLedger = useMemo(() => {
-    if (data.ledger) {
-      return data.ledger;
-    }
+  // Canonical Ledger: use direct ledger provided by the server. No fallback synthesis.
+  const canonicalLedger: NormalizedEventFinancialLedger | undefined = data.ledger;
+  const items = useMemo(() => canonicalLedger?.items ?? [], [canonicalLedger]);
 
-    // Fallback if data.ledger was not provided
-    const items = data.items.map((item) => ({
-      id: item.id,
-      categoryId: item.categoryId,
-      category: item.category,
-      vendorOrItem: item.vendorOrItem,
-      initialPlanned: item.initialPlanned ?? item.plannedAmount,
-      proposedAmount: item.proposedAmount ?? item.plannedAmount,
-      contractedAmount: item.contractedAmount ?? (item.status === "pago" || item.status === "parcial" ? item.actualAmount : 0),
-      actualAmount: item.actualAmount,
-      paidAmount: item.paidAmount,
-      balance: item.balance,
-      variance: item.variance ?? 0,
-      dueDate: item.dueDate,
-      dueDateIso: item.dueDateIso,
-      status: item.status,
-      notes: item.notes,
-      isDayOfWedding: item.isDayOfWedding,
-    }));
-
-    const summary = calculateExecutiveFinancialSummary({
-      estimatedBudget: data.summary.estimated || 0,
-      approvedBudget: null,
-      guestCount: data.summary.guestCount || 0,
-      items,
-      installments: [],
-      recordedPayments: data.recentPayments.map((p) => ({
-        amount: p.amount,
-        paidAt: p.paidAt,
-        vendorOrItem: p.vendorOrItem,
-      })),
-    });
-
-    const categories = calculateCategoryBreakdown(items);
-
-    return {
-      context: data.context,
-      summary,
-      categories,
-      items,
-      installments: [],
-      recentPayments: data.recentPayments,
-      clientNames: data.context.eventOverview.name,
-      eventTitle: data.context.eventOverview.name,
-      eventDateFormatted: data.context.eventOverview.date,
-      eventDateIso: null,
-      eventLocation: data.context.eventOverview.location || "Local por definir",
-      guestCount: data.summary.guestCount || 0,
-      currency: "MZN",
-      currencySymbol: data.context.currency || "MT",
-    };
-  }, [data]);
-
-  const { context, summary, items, installments, recentPayments, currencySymbol } = canonicalLedger;
-
-  // Filtered Master Items
+  // Filtered Master Items (unconditional hook)
   const filteredMasterItems = useMemo(() => {
     return items.filter((item) => {
       const matchSearch =
@@ -105,8 +46,8 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
     });
   }, [items, searchQuery, statusFilter]);
 
-  // Export handler — directly passes the canonical ledger to ExcelJS exporter
   const handleExportWeddingLedger = async () => {
+    if (!canonicalLedger) return;
     try {
       setIsExporting(true);
       await downloadOfficialWeddingLedger(canonicalLedger);
@@ -116,6 +57,44 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
       setIsExporting(false);
     }
   };
+
+  const handleGeneratePdf = async () => {
+    if (!canonicalLedger) return;
+    try {
+      setIsGeneratingPdf(true);
+      const res = await fetch(`/api/events/${data.context.eventId}/financial-report`);
+      if (!res.ok) throw new Error("Falha ao gerar relatório PDF.");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `HAXR_Wedding_Financial_Report_${data.context.eventOverview.slug || data.context.eventId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  if (!canonicalLedger) {
+    return (
+      <ModuleShell>
+        <EventContextBar context={data.context} />
+        <ModulePanel title="Orçamento & Pagamentos">
+          <ModuleEmptyState
+            title="Dados financeiros indisponíveis"
+            description="Não foi possível obter o ledger financeiro canónico para esta edição."
+          />
+        </ModulePanel>
+      </ModuleShell>
+    );
+  }
+
+  const { context, summary, installments, recentPayments, currencySymbol } = canonicalLedger;
 
   return (
     <ModuleShell>
@@ -127,12 +106,22 @@ export default function BudgetModuleView({ data }: { data: BudgetModuleData }) {
           description="Gestão integral de capital, contratos formalizados, pagamentos liquidados e auditoria do Wedding Financial Book."
         />
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={handleGeneratePdf}
+            disabled={isGeneratingPdf}
+            className="inline-flex items-center gap-2 rounded-sm border border-brand-gold/40 hover:border-brand-gold bg-zinc-900/80 hover:bg-zinc-800 text-brand-gold-light hover:text-white px-4 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.22em] transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+          >
+            <FileText className="w-4 h-4 text-brand-gold" />
+            <span>{isGeneratingPdf ? "A Gerar Relatório..." : "Gerar Wedding Financial Report (.pdf)"}</span>
+          </button>
+
           <button
             type="button"
             onClick={handleExportWeddingLedger}
             disabled={isExporting}
-            className="inline-flex items-center gap-2 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white px-5 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.22em] transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-sm bg-brand-gold hover:bg-brand-gold-light text-white px-4 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.22em] transition-all shadow-xs disabled:opacity-50 cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>{isExporting ? "A Gerar Livro..." : "Descarregar Wedding Financial Book (.xlsx)"}</span>

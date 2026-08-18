@@ -26,6 +26,7 @@ import {
   buildNormalizedFinancialLedger,
   convertNormalizedLedgerToBudgetModuleData,
 } from "@/lib/finance/normalized-financial-ledger";
+import type { NormalizedEventFinancialLedger } from "@/lib/finance/wedding-financial-engine";
 import { PAYMENT_METHOD_LABELS } from "@/lib/finance/constants";
 import type { PaymentMethod } from "@/lib/finance/types";
 
@@ -137,12 +138,19 @@ export function mapRpcPayloadToBudgetModuleData(
   return convertNormalizedLedgerToBudgetModuleData(ledger);
 }
 
-export async function getClientEventPaymentsData(input: {
+export type ClientEventFinancialLedgerAccessResult =
+  | { kind: "not_found" }
+  | { kind: "forbidden" }
+  | { kind: "operational_not_linked"; event: ClientEventRow }
+  | { kind: "unavailable"; message: string }
+  | { kind: "ok"; ledger: NormalizedEventFinancialLedger; event: ClientEventRow };
+
+export async function getClientEventFinancialLedger(input: {
   authClient: ClientEventPaymentsAuthClient;
   rpcClient: ClientEventPaymentsRpcClient;
   userId: string;
   eventId: string;
-}): Promise<ClientEventPaymentsAccessResult> {
+}): Promise<ClientEventFinancialLedgerAccessResult> {
   const access = await resolveClientEventDashboardAccess(
     input.authClient,
     input.userId,
@@ -180,9 +188,16 @@ export async function getClientEventPaymentsData(input: {
       // Vendors optional or not present
     }
 
+    const ledger = buildNormalizedFinancialLedger({
+      event: access.event,
+      paymentsPayload,
+      vendors,
+    });
+
     return {
       kind: "ok",
-      data: mapRpcPayloadToBudgetModuleData(access.event, paymentsPayload, vendors),
+      ledger,
+      event: access.event,
     };
   } catch (error) {
     if (error instanceof ClientEventPaymentsRpcError) {
@@ -199,4 +214,21 @@ export async function getClientEventPaymentsData(input: {
       message: "Não foi possível carregar os pagamentos operacionais.",
     };
   }
+}
+
+export async function getClientEventPaymentsData(input: {
+  authClient: ClientEventPaymentsAuthClient;
+  rpcClient: ClientEventPaymentsRpcClient;
+  userId: string;
+  eventId: string;
+}): Promise<ClientEventPaymentsAccessResult> {
+  const ledgerResult = await getClientEventFinancialLedger(input);
+  if (ledgerResult.kind !== "ok") {
+    return ledgerResult;
+  }
+
+  return {
+    kind: "ok",
+    data: convertNormalizedLedgerToBudgetModuleData(ledgerResult.ledger),
+  };
 }
