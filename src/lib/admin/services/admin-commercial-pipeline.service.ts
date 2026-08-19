@@ -1,5 +1,7 @@
 import type { ContactInquiry, InquiryStatus } from "@/lib/contact/types";
 
+export type AdminActiveCommercialStage = "new" | "contacted";
+
 export type AdminCommercialStage = InquiryStatus;
 
 export type AdminCommercialPipelineItem = {
@@ -9,7 +11,7 @@ export type AdminCommercialPipelineItem = {
   projectType: string;
   packageLabel: string | null;
   intent: string;
-  status: InquiryStatus;
+  status: AdminActiveCommercialStage;
   createdAt: string;
   updatedAt: string;
 };
@@ -27,6 +29,12 @@ export type AdminCommercialPipeline = {
   summary: AdminCommercialPipelineSummary;
   items: AdminCommercialPipelineItem[];
 };
+
+function isActiveInquiry(
+  inquiry: ContactInquiry
+): inquiry is ContactInquiry & { status: AdminActiveCommercialStage } {
+  return inquiry.status === "new" || inquiry.status === "contacted";
+}
 
 /**
  * Pure service that interprets canonical ContactInquiry records into a
@@ -52,9 +60,7 @@ export function buildAdminCommercialPipeline(
   };
 
   // Operational items: only active commercial demand ("new" and "contacted")
-  const activeInquiries = inquiries.filter(
-    (i) => i.status === "new" || i.status === "contacted"
-  );
+  const activeInquiries = inquiries.filter(isActiveInquiry);
 
   // Sorting:
   // 1. Stage: "new" first, then "contacted"

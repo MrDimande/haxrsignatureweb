@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Inbox } from "lucide-react";
 import { projectTypeLabels } from "@/lib/site-config";
-import { formatDatePtMZ } from "@/lib/formatters";
+import { formatDateTimePtMZ } from "@/lib/formatters";
 import type { AdminCommercialPipeline } from "@/lib/admin/services/admin-commercial-pipeline.service";
 
 type CommercialPipelinePanelProps = {
@@ -59,7 +59,7 @@ export default function CommercialPipelinePanel({
             {summary.active}
           </p>
           <p className="text-[10px] text-admin-gold/70 font-mono mt-0.5">
-            Em atendimento
+            Novos + contactados
           </p>
         </div>
 
@@ -85,7 +85,7 @@ export default function CommercialPipelinePanel({
             {summary.contacted}
           </p>
           <p className="text-[10px] text-grey/50 font-mono mt-0.5">
-            Em negociação
+            Contacto registado
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function CommercialPipelinePanel({
             {summary.converted}
           </p>
           <p className="text-[10px] text-grey/50 font-mono mt-0.5">
-            Clientes & eventos
+            Conversão registada
           </p>
         </div>
 
@@ -111,7 +111,7 @@ export default function CommercialPipelinePanel({
             {summary.archived}
           </p>
           <p className="text-[10px] text-grey/40 font-mono mt-0.5">
-            Sem seguimento
+            Fora do pipeline activo
           </p>
         </div>
       </div>
@@ -195,7 +195,7 @@ export default function CommercialPipelinePanel({
                   {/* Bottom Row: Date & Action */}
                   <div className="border-t border-white/[0.04] pt-4 mt-4 flex items-center justify-between">
                     <span className="text-[9px] font-mono text-grey/40">
-                      {formatDatePtMZ(inquiry.createdAt)}
+                      Actualizado · {formatDateTimePtMZ(inquiry.updatedAt)}
                     </span>
 
                     <Link

@@ -26,6 +26,8 @@ import {
   type AdminCommercialPipeline,
   type AdminCommercialPipelineItem,
   type AdminCommercialPipelineSummary,
+  type AdminActiveCommercialStage,
+  type AdminCommercialStage,
 } from "@/lib/admin/services/admin-commercial-pipeline.service";
 import * as analyticsRepo from "@/lib/admin/repositories/analytics.repository";
 import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
@@ -50,6 +52,8 @@ export type {
   AdminCommercialPipeline,
   AdminCommercialPipelineItem,
   AdminCommercialPipelineSummary,
+  AdminActiveCommercialStage,
+  AdminCommercialStage,
 };
 
 export type RevenueByBusiness = Awaited<ReturnType<typeof analyticsRepo.getRevenueByBusiness>>;
