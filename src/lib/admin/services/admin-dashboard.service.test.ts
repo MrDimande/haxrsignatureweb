@@ -6,141 +6,186 @@ import {
   type AdminDashboardSourceData,
 } from "./admin-dashboard.service";
 import type { DashboardStats, Business } from "@/lib/admin/types";
-import type { ManagedEvent } from "@/lib/events/types";
+import type { ManagedEvent, EventListGuestStats } from "@/lib/events/types";
 import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 
-function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>): AdminDashboardSourceData {
-  const documents: DashboardStats = {
-    totalDraft: 2,
+export function createBusiness(overrides?: Partial<Business>): Business {
+  return {
+    id: "haxr-signature",
+    name: "HAXR Signature",
+    logo: "/images/brand/logo.svg",
+    nuit: "123456789",
+    phone: "+258840000000",
+    email: "info@haxrsignature.com",
+    whatsapp: "+258840000000",
+    address: "Av. Julius Nyerere, Maputo",
+    bankAccounts: [
+      {
+        bankName: "BCI",
+        accountName: "HAXR Signature Lda",
+        accountNumber: "1234567890",
+        nib: "000800001234567890123",
+      },
+    ],
+    mobilePayments: [
+      {
+        provider: "M-Pesa",
+        number: "840000000",
+        accountName: "HAXR Signature",
+      },
+    ],
+    invoicePrefix: "HAXR",
+    theme: {
+      primaryColor: "#D4AF37",
+      accentColor: "#111111",
+    },
+    termsAndConditions: ["Pagamento a 30 dias"],
+    defaultCurrency: "MZN",
+    ...overrides,
+  };
+}
+
+export function createEvent(overrides?: Partial<ManagedEvent>): ManagedEvent {
+  return {
+    id: "evt-1",
+    businessId: "haxr-signature",
+    clientId: "cli-1",
+    clientName: "Vânia & Fabião",
+    name: "Casamento Vânia & Fabião",
+    type: "wedding",
+    date: "2026-12-20",
+    location: "Polana Serena Hotel",
+    notes: "Casamento completo",
+    isActive: true,
+    googleSheetUrl: "https://docs.google.com/spreadsheets/d/abc",
+    googleSheetGid: "0",
+    sheetsLastSyncedAt: "2026-08-19T10:00:00Z",
+    sheetsSyncSummary: "Sincronizado",
+    sheetsSyncMode: "master",
+    findSeatCode: "VF2026",
+    editionRegistryKey: "edition-vf-2026",
+    postEventReportSentAt: null,
+    dateHoldUntil: null,
+    createdAt: "2026-01-10T00:00:00Z",
+    updatedAt: "2026-01-10T00:00:00Z",
+    ...overrides,
+  };
+}
+
+export function createInquiry(overrides?: Partial<ContactInquiry>): ContactInquiry {
+  return {
+    id: "inq-1",
+    name: "Ana Silva",
+    email: "ana@example.com",
+    projectType: "Casamento",
+    packageLabel: "Silver",
+    intent: "Convites e website",
+    message: "Gostaria de saber mais sobre convites",
+    status: "new",
+    marketingOptIn: true,
+    source: "website_contact_form",
+    createdAt: "2026-08-19T10:00:00Z",
+    updatedAt: "2026-08-19T10:00:00Z",
+    brevoLeadWelcomeAt: null,
+    brevoPortfolioSentAt: null,
+    brevoExperiencesSentAt: null,
+    brevoMeetingSentAt: null,
+    brevoLastCallSentAt: null,
+    brevoNewsletterWelcomeAt: null,
+    ...overrides,
+  };
+}
+
+export function createFinanceOverview(overrides?: Partial<FinanceOverview>): FinanceOverview {
+  return {
+    totalReceived: 750000,
+    totalReceiptsAmount: 750000,
+    pendingInvoicesCount: 2,
+    pendingInvoicesAmount: 250000,
+    sentProformasCount: 3,
+    pendingProformasAmount: 400000,
+    thisMonthReceived: 80000,
+    thisMonthReceiptsCount: 2,
+    recentReceipts: [],
+    pendingCollection: [],
+    ...overrides,
+  };
+}
+
+export function createDashboardStats(overrides?: Partial<DashboardStats>): DashboardStats {
+  return {
     totalProformas: 5,
     totalInvoices: 10,
     totalReceipts: 8,
+    totalDraft: 2,
     totalPaid: 8,
-    totalCancelled: 1,
-    totalOverdue: 0,
-    draftDocuments: [],
     recentDocuments: [],
+    ...overrides,
   };
+}
 
-  const businesses: Business[] = [
-    {
-      id: "biz-1",
-      name: "HAXR Signature",
-      legalName: "HAXR Signature Lda",
-      nuit: "123456789",
-      email: "info@haxrsignature.com",
-      phone: "+258840000000",
-      address: "Maputo",
-      city: "Maputo",
-      country: "Moçambique",
-      currency: "MZN",
-      invoicePrefix: "HAXR",
-      nextInvoiceNumber: 100,
-      bankDetails: { bankName: "BCI", accountNumber: "123", iban: "", swift: "" },
-      createdAt: "2026-01-01T00:00:00Z",
-      updatedAt: "2026-01-01T00:00:00Z",
-    },
-  ];
+export function createEventListGuestStats(
+  overrides?: Partial<EventListGuestStats>
+): EventListGuestStats {
+  return {
+    totalGuests: 250,
+    confirmed: 200,
+    checkedIn: 0,
+    unassigned: 0,
+    ...overrides,
+  };
+}
 
-  const events: ManagedEvent[] = [
-    {
+function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>): AdminDashboardSourceData {
+  const documents = createDashboardStats();
+  const businesses = [createBusiness()];
+  const events = [
+    createEvent({
       id: "evt-1",
       name: "Casamento Vânia & Fabião",
       type: "wedding",
-      businessId: "biz-1",
       date: "2026-12-20",
-      location: "Polana Serena Hotel",
-      estimatedGuests: 250,
-      budget: 500000,
-      currency: "MZN",
-      isActive: true,
-      createdAt: "2026-01-10T00:00:00Z",
-      updatedAt: "2026-01-10T00:00:00Z",
-    },
-    {
+    }),
+    createEvent({
       id: "evt-2",
-      name: "Gala de Fim de Ano",
+      name: "Gala Corporativa",
       type: "corporate",
-      businessId: "biz-1",
       date: null,
-      location: "Maputo",
-      estimatedGuests: 100,
-      budget: 150000,
-      currency: "MZN",
-      isActive: true,
-      createdAt: "2026-01-15T00:00:00Z",
-      updatedAt: "2026-01-15T00:00:00Z",
-    },
-    {
+    }),
+    createEvent({
       id: "evt-3",
-      name: "Evento Passado",
-      type: "private",
-      businessId: "biz-1",
+      name: "Evento Realizado",
+      type: "other",
       date: "2025-05-10",
-      location: "Matola",
-      estimatedGuests: 50,
-      budget: 50000,
-      currency: "MZN",
-      isActive: true,
-      createdAt: "2025-01-01T00:00:00Z",
-      updatedAt: "2025-01-01T00:00:00Z",
-    },
+    }),
   ];
-
-  const finance: FinanceOverview = {
-    totalInvoiced: 1000000,
-    totalReceived: 750000,
-    totalPending: 250000,
-    thisMonthReceived: 80000,
-    recentPayments: [],
-  };
-
-  const inquiries: ContactInquiry[] = [
-    {
+  const finance = createFinanceOverview();
+  const inquiries = [
+    createInquiry({
       id: "inq-1",
       name: "Ana Silva",
-      email: "ana@example.com",
-      projectType: "Casamento",
-      intent: "Convites e website",
       status: "new",
-      marketingOptIn: true,
       createdAt: "2026-08-19T10:00:00Z",
-      updatedAt: "2026-08-19T10:00:00Z",
-    },
-    {
+    }),
+    createInquiry({
       id: "inq-2",
       name: "Carlos Santos",
-      email: "carlos@example.com",
-      projectType: "Corporativo",
-      intent: "RSVP platform",
-      status: "replied",
-      marketingOptIn: false,
+      status: "contacted",
       createdAt: "2026-08-18T15:00:00Z",
-      updatedAt: "2026-08-18T16:00:00Z",
-    },
-    {
+    }),
+    createInquiry({
       id: "inq-3",
       name: "Mariana Costa",
-      email: "mariana@example.com",
-      projectType: "Casamento",
-      intent: "Identidade visual",
       status: "new",
-      marketingOptIn: true,
       createdAt: "2026-08-17T09:00:00Z",
-      updatedAt: "2026-08-17T09:00:00Z",
-    },
-    {
+    }),
+    createInquiry({
       id: "inq-4",
       name: "João Pereira",
-      email: "joao@example.com",
-      projectType: "Privado",
-      intent: "Aniversário",
       status: "new",
-      marketingOptIn: false,
       createdAt: "2026-08-16T12:00:00Z",
-      updatedAt: "2026-08-16T12:00:00Z",
-    },
+    }),
   ];
 
   return {
@@ -149,17 +194,17 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
     businesses,
     events,
     guestStats: {
-      "evt-1": { totalGuests: 250, confirmed: 200, declined: 20, pending: 30, checkedIn: 0, seated: 250, unassigned: 0 },
+      "evt-1": createEventListGuestStats(),
     },
     finance,
     inquiries,
-    revenueByBusiness: [{ businessId: "biz-1", businessName: "HAXR Signature", total: 750000 }],
+    revenueByBusiness: [{ businessId: "haxr-signature", businessName: "HAXR Signature", total: 750000 }],
     revenueByMonth: [{ month: 8, total: 80000, count: 2 }],
     ...overrides,
   };
 }
 
-describe("admin-dashboard.service", () => {
+describe("admin-dashboard.service (type-safe tests)", () => {
   describe("getMaputoFiscalYear", () => {
     it("correctly extracts year from UTC/Maputo dates", () => {
       const date = new Date("2026-12-31T23:30:00Z"); // In Maputo (UTC+2), this is 2027-01-01 01:30
@@ -189,7 +234,7 @@ describe("admin-dashboard.service", () => {
       const source = createFixtureSourceData();
       const snapshot = buildAdminDashboardSnapshot(source);
 
-      // Inquiries: 3 'new' (inq-1, inq-3, inq-4) and 1 'replied' (inq-2)
+      // Inquiries: 3 'new' (inq-1, inq-3, inq-4) and 1 'contacted' (inq-2)
       assert.equal(snapshot.commercial.newLeads, 3);
     });
 
