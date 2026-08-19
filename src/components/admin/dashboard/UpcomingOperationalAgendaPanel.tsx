@@ -290,11 +290,11 @@ export default function UpcomingOperationalAgendaPanel({
                       <div className="min-w-0 flex-1">
                         <Link
                           href={item.href}
-                          className="text-xs font-serif font-light text-white/90 hover:text-admin-gold transition-colors block truncate"
+                          className="text-xs font-serif font-light text-white/90 hover:text-admin-gold transition-colors block break-words"
                         >
                           {item.eventName}
                         </Link>
-                        <p className="text-[10px] font-mono text-grey/50 truncate">
+                        <p className="text-[10px] font-mono text-grey/50 break-words">
                           {eventTypeLabel}
                         </p>
                       </div>

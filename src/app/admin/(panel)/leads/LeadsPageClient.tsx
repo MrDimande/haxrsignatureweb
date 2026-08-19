@@ -10,16 +10,14 @@ import ConvertLeadButton from "@/components/admin/leads/ConvertLeadButton";
 import {
   INQUIRY_STATUS_LABELS,
   INQUIRY_STATUS_STYLES,
+  MANUAL_INQUIRY_STATUSES,
 } from "@/lib/contact/constants";
 import { projectTypeLabels } from "@/lib/site-config";
-import type { ContactInquiry, InquiryStatus } from "@/lib/contact/types";
-
-const STATUS_OPTIONS: InquiryStatus[] = [
-  "new",
-  "contacted",
-  "converted",
-  "archived",
-];
+import type {
+  ContactInquiry,
+  InquiryStatus,
+  ManualInquiryStatus,
+} from "@/lib/contact/types";
 
 type LeadsPageClientProps = {
   initialInquiries: ContactInquiry[];
@@ -40,7 +38,7 @@ export default function LeadsPageClient({
   const [inquiries, setInquiries] = useState(initialInquiries);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  async function handleStatusChange(id: string, status: InquiryStatus) {
+  async function handleStatusChange(id: string, status: ManualInquiryStatus) {
     setUpdatingId(id);
     const result = await updateInquiryStatusAction(id, status);
     setUpdatingId(null);
@@ -91,24 +89,36 @@ export default function LeadsPageClient({
     {
       key: "status",
       header: "Estado",
-      render: (row: ContactInquiry) => (
-        <select
-          value={row.status}
-          disabled={updatingId === row.id}
-          onChange={(e) =>
-            handleStatusChange(row.id, e.target.value as InquiryStatus)
-          }
-          onClick={(e) => e.stopPropagation()}
-          className={`text-[10px] font-mono tracking-[0.15em] uppercase px-2 py-1 border rounded-sm bg-transparent cursor-pointer disabled:opacity-50 ${INQUIRY_STATUS_STYLES[row.status]}`}
-          aria-label={`Estado de ${row.name}`}
-        >
-          {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status} className="bg-black text-white">
-              {INQUIRY_STATUS_LABELS[status]}
-            </option>
-          ))}
-        </select>
-      ),
+      render: (row: ContactInquiry) => {
+        if (row.status === "converted") {
+          return (
+            <span
+              className={`text-[10px] font-mono tracking-[0.15em] uppercase px-2 py-1 border rounded-sm ${INQUIRY_STATUS_STYLES.converted}`}
+            >
+              {INQUIRY_STATUS_LABELS.converted}
+            </span>
+          );
+        }
+
+        return (
+          <select
+            value={row.status}
+            disabled={updatingId === row.id}
+            onChange={(e) =>
+              handleStatusChange(row.id, e.target.value as ManualInquiryStatus)
+            }
+            onClick={(e) => e.stopPropagation()}
+            className={`text-[10px] font-mono tracking-[0.15em] uppercase px-2 py-1 border rounded-sm bg-transparent cursor-pointer disabled:opacity-50 ${INQUIRY_STATUS_STYLES[row.status]}`}
+            aria-label={`Estado de ${row.name}`}
+          >
+            {MANUAL_INQUIRY_STATUSES.map((status) => (
+              <option key={status} value={status} className="bg-black text-white">
+                {INQUIRY_STATUS_LABELS[status]}
+              </option>
+            ))}
+          </select>
+        );
+      },
     },
     {
       key: "date",

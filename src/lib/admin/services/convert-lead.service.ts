@@ -1,6 +1,7 @@
 import * as clientsRepo from "@/lib/admin/repositories/clients.repository";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import * as inquiriesRepo from "@/lib/contact/inquiries.repository";
+import { assertInquiryCanConvert } from "@/lib/contact/constants";
 import type { ContactInquiry } from "@/lib/contact/types";
 import type { Client, EventType } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
@@ -38,6 +39,7 @@ export async function convertLeadToClientAndEvent(
   if (!inquiry) {
     throw new Error("Lead não encontrado.");
   }
+  assertInquiryCanConvert(inquiry);
 
   const client = await clientsRepo.upsertClient({
     fullName: inquiry.name.trim(),

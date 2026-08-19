@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/admin/actions/auth";
 import * as inquiriesRepo from "@/lib/contact/inquiries.repository";
-import type { ContactInquiry, InquiryStatus } from "@/lib/contact/types";
+import { assertManualInquiryStatus } from "@/lib/contact/constants";
+import type {
+  ContactInquiry,
+  InquiryStatus,
+  ManualInquiryStatus,
+} from "@/lib/contact/types";
 
 export async function getInquiriesAction() {
   return runAction(() => inquiriesRepo.listInquiries());
@@ -11,13 +16,15 @@ export async function getInquiriesAction() {
 
 export async function updateInquiryStatusAction(
   id: string,
-  status: InquiryStatus
+  status: InquiryStatus | ManualInquiryStatus
 ) {
-  const result = await runAction(() =>
-    inquiriesRepo.updateInquiryStatus(id, status)
-  );
+  const result = await runAction(async () => {
+    assertManualInquiryStatus(status);
+    return inquiriesRepo.updateInquiryStatus(id, status);
+  });
   if (result.success) {
     revalidatePath("/admin/leads");
+    revalidatePath("/admin/dashboard");
   }
   return result;
 }
@@ -33,10 +40,11 @@ export async function convertLeadAction(inquiryId: string) {
     revalidatePath("/admin/leads");
     revalidatePath("/admin/clients");
     revalidatePath("/admin/events");
+    revalidatePath("/admin/dashboard");
     revalidatePath(`/admin/clients/${result.data.client.id}`);
     revalidatePath(`/admin/events/${result.data.event.id}`);
   }
   return result;
 }
 
-export type { ContactInquiry, InquiryStatus };
+export type { ContactInquiry, InquiryStatus, ManualInquiryStatus };

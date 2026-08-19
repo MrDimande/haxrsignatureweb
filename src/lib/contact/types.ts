@@ -1,4 +1,5 @@
 export type InquiryStatus = "new" | "contacted" | "converted" | "archived";
+export type ManualInquiryStatus = Exclude<InquiryStatus, "converted">;
 
 export interface ContactInquiry {
   id: string;
