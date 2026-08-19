@@ -6,7 +6,7 @@ import {
   buildPortalApprovalAlerts,
 } from "@/lib/admin/services/portal-approval-alerts";
 import * as portalPremiumRepo from "@/lib/portal/repositories/portal-premium.repository";
-import type { InvoiceDocument } from "@/lib/admin/types";
+import type { AdminOperationalDocument, InvoiceDocument } from "@/lib/admin/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 
 export type AdminAttentionSource =
@@ -56,7 +56,7 @@ export async function getAdminBadgeCounts(): Promise<AdminBadgeCounts> {
     portalPaymentProofsPending,
   ] = await Promise.all([
     inquiriesRepo.countNewInquiries(),
-    documentsRepo.listDocuments({ limit: 200 }),
+    documentsRepo.listOperationalDocuments(),
     countPendingConciergeReviews(),
     documentsRepo.countPortalApprovalsPending(),
     documentsRepo.countPortalClientResponses(),
@@ -77,7 +77,7 @@ export async function getAdminBadgeCounts(): Promise<AdminBadgeCounts> {
 
 export type BuildCanonicalAdminAlertsInput = {
   inquiries: ContactInquiry[];
-  documents: InvoiceDocument[];
+  documents: readonly AdminOperationalDocument[];
   conciergePending: number;
   pendingProofs: number;
   options?: {
@@ -176,7 +176,7 @@ export function buildCanonicalAdminAlerts(
  */
 export function buildAdminAlerts(input: {
   inquiries: ContactInquiry[];
-  documents: InvoiceDocument[];
+  documents: readonly AdminOperationalDocument[];
   conciergePending: number;
   pendingProofs: number;
 }): AdminAlert[] {
@@ -193,12 +193,28 @@ export function buildAdminAlerts(input: {
 const PRIORITY_ORDER = { high: 0, normal: 1 } as const;
 
 /**
+ * Pure builder that builds canonical alerts, filters requiresAction === true,
+ * ranks by operational priority (high before normal with stable ordering),
+ * and applies the display limit.
+ */
+export function buildAdminAttentionFeed(
+  source: BuildCanonicalAdminAlertsInput,
+  limit = 8
+): AdminAlert[] {
+  const canonicalAlerts = buildCanonicalAdminAlerts(source);
+  return canonicalAlerts
+    .filter((alert) => alert.requiresAction)
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+    .slice(0, limit);
+}
+
+/**
  * Loads all canonical admin alerts for the Header notification drawer (with category feed caps).
  */
 export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
   const [inquiries, documents, conciergePending, pendingProofs] = await Promise.all([
     inquiriesRepo.listInquiries(),
-    documentsRepo.listDocuments({ limit: 100 }),
+    documentsRepo.listOperationalDocuments(),
     countPendingConciergeReviews(),
     portalPremiumRepo.countPendingPaymentProofs(),
   ]);
@@ -223,20 +239,18 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
 export async function getAdminAttentionAlerts(limit = 8): Promise<AdminAlert[]> {
   const [inquiries, documents, conciergePending, pendingProofs] = await Promise.all([
     inquiriesRepo.listInquiries(),
-    documentsRepo.listDocuments({ limit: 100 }),
+    documentsRepo.listOperationalDocuments(),
     countPendingConciergeReviews(),
     portalPremiumRepo.countPendingPaymentProofs(),
   ]);
 
-  const canonicalAlerts = buildCanonicalAdminAlerts({
-    inquiries,
-    documents,
-    conciergePending,
-    pendingProofs,
-  });
-
-  return canonicalAlerts
-    .filter((alert) => alert.requiresAction)
-    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
-    .slice(0, limit);
+  return buildAdminAttentionFeed(
+    {
+      inquiries,
+      documents,
+      conciergePending,
+      pendingProofs,
+    },
+    limit
+  );
 }

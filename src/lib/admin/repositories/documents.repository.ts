@@ -2,15 +2,19 @@ import { VAT_RATE } from "@/lib/admin/constants";
 import { parseSignatureDataUrl } from "@/lib/admin/signatures";
 import { upsertClient } from "@/lib/admin/repositories/clients.repository";
 import { mapDocument } from "@/lib/admin/db/mappers";
-import type { TablesInsert } from "@/lib/supabase/database.types";
+import type { Tables, TablesInsert } from "@/lib/supabase/database.types";
 import { createAdminClient } from "@/lib/supabase/server";
 import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import { calculateLineItems, calculateTotals } from "@/lib/calculations";
 import type {
+  AdminOperationalDocument,
   BusinessId,
   Client,
+  Currency,
   DashboardStats,
+  DocumentStatus,
   DocumentType,
+  EventType,
   InvoiceDocument,
   InvoiceFormData,
 } from "@/lib/admin/types";
@@ -20,6 +24,72 @@ export type SaveDocumentOptions = {
   convertedFromDocumentId?: string;
   createClientIfMissing?: boolean;
 };
+
+function mapOperationalDocument(row: Tables<"documents">): AdminOperationalDocument {
+  return {
+    id: row.id,
+    documentType: row.document_type as DocumentType,
+    documentNumber: row.document_number,
+    businessId: row.business_id as BusinessId,
+    status: row.status as DocumentStatus,
+    currency: row.currency as Currency,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    event: {
+      eventId: row.event_id ?? null,
+      eventType: (row.event_type as EventType | null) ?? null,
+      eventName: row.event_name,
+      eventDate: row.event_date,
+      eventLocation: row.event_location,
+    },
+    issueDate: row.issue_date,
+    expiryDate: row.expiry_date,
+    totals: {
+      subtotal: Number(row.subtotal),
+      vatRate: Number(row.vat_rate),
+      vatAmount: Number(row.vat_amount),
+      grandTotal: Number(row.grand_total),
+      includeVat: row.include_vat,
+      currency: row.currency as Currency,
+    },
+    convertedFromDocumentId:
+      "converted_from_document_id" in row &&
+      typeof row.converted_from_document_id === "string"
+        ? row.converted_from_document_id
+        : null,
+    clientApprovalStatus:
+      "client_approval_status" in row &&
+      typeof row.client_approval_status === "string"
+        ? (row.client_approval_status as InvoiceDocument["clientApprovalStatus"])
+        : null,
+    clientApprovedAt:
+      "client_approved_at" in row && typeof row.client_approved_at === "string"
+        ? row.client_approved_at
+        : null,
+    clientApprovalNote:
+      "client_approval_note" in row && typeof row.client_approval_note === "string"
+        ? row.client_approval_note
+        : null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    emailSentAt:
+      "email_sent_at" in row && typeof row.email_sent_at === "string"
+        ? row.email_sent_at
+        : null,
+  };
+}
+
+export async function listOperationalDocuments(): Promise<AdminOperationalDocument[]> {
+  const supabase = createAdminClient();
+  const { data: docs, error } = await supabase
+    .from("documents")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  const rows = asTableRows<"documents">(docs);
+  return rows.map(mapOperationalDocument);
+}
 
 async function fetchLineItems(documentIds: string[]) {
   if (!documentIds.length) return [];

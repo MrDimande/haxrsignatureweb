@@ -1,4 +1,4 @@
-import type { InvoiceDocument } from "@/lib/admin/types";
+import type { InvoiceDocument, OverdueDocumentInput } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
 import type {
   ExpenseRecord,
@@ -31,14 +31,14 @@ function daysBetween(start: string, end: Date): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-function defaultDueDate(doc: InvoiceDocument): string {
+function defaultDueDate(doc: OverdueDocumentInput): string {
   const issue = parseDate(doc.issueDate);
   issue.setUTCDate(issue.getUTCDate() + OVERDUE_GRACE_DAYS);
   return issue.toISOString().slice(0, 10);
 }
 
 export function buildOverdueAlerts(
-  documents: InvoiceDocument[],
+  documents: readonly OverdueDocumentInput[],
   now: Date = new Date()
 ): OverdueAlert[] {
   return documents

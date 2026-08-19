@@ -178,6 +178,41 @@ export interface InvoiceDocument {
   clientApprovalNote: string | null;
 }
 
+export type AdminOperationalDocument = Pick<
+  InvoiceDocument,
+  | "id"
+  | "documentType"
+  | "documentNumber"
+  | "businessId"
+  | "status"
+  | "currency"
+  | "clientId"
+  | "clientName"
+  | "event"
+  | "issueDate"
+  | "expiryDate"
+  | "totals"
+  | "convertedFromDocumentId"
+  | "clientApprovalStatus"
+  | "clientApprovedAt"
+  | "clientApprovalNote"
+  | "createdAt"
+  | "updatedAt"
+  | "emailSentAt"
+>;
+
+export type OverdueDocumentInput = Pick<
+  InvoiceDocument,
+  | "id"
+  | "documentType"
+  | "documentNumber"
+  | "status"
+  | "clientName"
+  | "issueDate"
+  | "expiryDate"
+  | "totals"
+>;
+
 export type ClientFormData = Omit<
   Client,
   "id" | "createdAt" | "updatedAt" | "portalToken"

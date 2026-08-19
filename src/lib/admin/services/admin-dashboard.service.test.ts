@@ -6,13 +6,17 @@ import {
   getMaputoFiscalYear,
   type AdminDashboardSourceData,
 } from "./admin-dashboard.service";
-import type { DashboardStats, Business } from "@/lib/admin/types";
+import type { DashboardStats, Business, AdminOperationalDocument } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
 import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 import type { AdminAlert } from "@/lib/admin/services/admin-alerts.service";
 import type { EventPortfolioOperationalSnapshot } from "@/lib/admin/services/event-portfolio.service";
-import type { PortalTimelineItem } from "@/lib/portal/portal-premium.types";
+import type {
+  PortalCreativeApproval,
+  PortalPaymentProof,
+  PortalTimelineItem,
+} from "@/lib/portal/portal-premium.types";
 
 export function createAdminAlert(overrides?: Partial<AdminAlert>): AdminAlert {
   return {
@@ -24,6 +28,46 @@ export function createAdminAlert(overrides?: Partial<AdminAlert>): AdminAlert {
     priority: "high",
     source: "commercial",
     requiresAction: true,
+    ...overrides,
+  };
+}
+
+export function createOperationalDocument(
+  overrides?: Partial<AdminOperationalDocument>
+): AdminOperationalDocument {
+  return {
+    id: "doc-1",
+    documentType: "proforma",
+    documentNumber: "PF-2026-001",
+    businessId: "haxr-signature",
+    status: "sent",
+    currency: "MZN",
+    clientId: "cli-1",
+    clientName: "Ana Silva",
+    event: {
+      eventId: "evt-1",
+      eventType: "wedding",
+      eventName: "Casamento Vânia & Fabião",
+      eventDate: "2026-12-20",
+      eventLocation: "Polana Serena Hotel",
+    },
+    issueDate: "2026-08-19",
+    expiryDate: "2026-08-25",
+    totals: {
+      subtotal: 100000,
+      vatRate: 0.16,
+      vatAmount: 16000,
+      grandTotal: 116000,
+      includeVat: true,
+      currency: "MZN",
+    },
+    convertedFromDocumentId: null,
+    clientApprovalStatus: "approved",
+    clientApprovedAt: "2026-08-19T11:00:00Z",
+    clientApprovalNote: null,
+    createdAt: "2026-08-19T10:00:00Z",
+    updatedAt: "2026-08-19T10:00:00Z",
+    emailSentAt: "2026-08-19T10:05:00Z",
     ...overrides,
   };
 }
@@ -210,42 +254,20 @@ export function createTimelineItem(
 }
 
 function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>): AdminDashboardSourceData {
-  const alerts: AdminAlert[] = [
-    createAdminAlert({
-      id: "lead-inq-1",
-      text: "Novo lead: Ana Silva",
-      time: "Há 5 min",
-      href: "/admin/leads",
-      priority: "high",
-      source: "commercial",
-      requiresAction: true,
+  const operationalDocuments = [
+    createOperationalDocument({
+      id: "doc-1",
+      documentNumber: "PF-2026-001",
+      clientApprovalStatus: "approved",
+      clientApprovedAt: "2026-08-19T11:00:00Z",
     }),
-    createAdminAlert({
-      id: "portal-approved-doc-1",
-      text: "Ana Silva aprovou a proposta PF-2026-001",
-      time: "Há 1 h",
-      href: "/admin/documents/doc-1",
-      priority: "high",
-      source: "portal",
-      requiresAction: true,
-    }),
-    createAdminAlert({
-      id: "overdue-doc-2",
-      text: "INV-014 em atraso (6 dias)",
-      time: "Há 6 dias",
-      href: "/admin/documents/doc-2",
-      priority: "high",
-      source: "finance",
-      requiresAction: true,
-    }),
-    createAdminAlert({
-      id: "concierge-pending",
-      text: "2 documento(s) Concierge por rever",
-      time: "Operações",
-      href: "/admin/events",
-      priority: "normal",
-      source: "operations",
-      requiresAction: true,
+    createOperationalDocument({
+      id: "doc-2",
+      documentType: "invoice",
+      documentNumber: "INV-014",
+      status: "sent",
+      issueDate: "2026-07-01",
+      expiryDate: "2026-08-13",
     }),
   ];
   const documents = createDashboardStats();
@@ -292,6 +314,14 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       }),
     ],
   };
+  const paymentProofsBatch = {
+    available: true,
+    items: [] as PortalPaymentProof[],
+  };
+  const creativeApprovalsBatch = {
+    available: true,
+    items: [] as PortalCreativeApproval[],
+  };
   const finance = createFinanceOverview();
   const inquiries = [
     createInquiry({
@@ -322,14 +352,17 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
 
   return {
     fiscalYear: 2026,
-    alerts,
+    operationalDocuments,
+    inquiries,
+    conciergePending: 2,
+    paymentProofsBatch,
+    creativeApprovalsBatch,
     portfolioSnapshots,
     timelineBatch,
     documents,
     businesses,
     events,
     finance,
-    inquiries,
     revenueByBusiness: [{ businessId: "haxr-signature", businessName: "HAXR Signature", total: 750000 }],
     revenueByMonth: [{ month: 8, total: 80000, count: 2 }],
     ...overrides,
@@ -495,7 +528,10 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       assert.deepEqual(snapshot.analytics.revenueByBusiness, source.revenueByBusiness);
       assert.deepEqual(snapshot.analytics.revenueByMonth, source.revenueByMonth);
       assert.equal(snapshot.fiscalYear, 2026);
-      assert.equal(snapshot.attention.items.length, 4);
+      assert.equal(snapshot.attention.items.length, 6);
+      assert.equal(snapshot.clientDecisions.coverage.complete, true);
+      assert.equal(snapshot.clientDecisions.awaitingHaxr.length, 1);
+      assert.equal(snapshot.clientDecisions.awaitingHaxr[0].id, "proforma-conversion-doc-1");
       assert.equal(snapshot.portfolio.items.length, 1);
       assert.equal(snapshot.portfolio.summary.total, 1);
       assert.equal(snapshot.upcoming.available, true);

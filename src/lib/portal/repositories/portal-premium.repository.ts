@@ -210,6 +210,67 @@ export async function listCreativeApprovalsForClient(
   }));
 }
 
+export type CreativeApprovalsBatchResult = {
+  available: boolean;
+  items: PortalCreativeApproval[];
+};
+
+export async function listCreativeApprovalsByEventIds(
+  eventIds: string[]
+): Promise<CreativeApprovalsBatchResult> {
+  if (eventIds.length === 0) {
+    return { available: true, items: [] };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("portal_approvals")
+    .select("*")
+    .in("event_id", eventIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (
+      error.message.includes("portal_approvals") ||
+      error.message.includes("does not exist")
+    ) {
+      return { available: false, items: [] };
+    }
+    throw new Error(error.message);
+  }
+
+  return {
+    available: true,
+    items: asGenericRows<{
+      id: string;
+      event_id: string;
+      client_id: string | null;
+      approval_type: PortalCreativeApproval["approvalType"];
+      title: string;
+      description: string | null;
+      status: PortalCreativeApproval["status"];
+      due_at: string | null;
+      decided_at: string | null;
+      decided_note: string | null;
+      attachment_url: string | null;
+      created_at: string;
+    }>(data).map((row) => ({
+      id: row.id,
+      eventId: row.event_id,
+      clientId: row.client_id,
+      approvalType: row.approval_type,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      dueAt: row.due_at,
+      decidedAt: row.decided_at,
+      decidedNote: row.decided_note,
+      attachmentUrl: row.attachment_url,
+      createdAt: row.created_at,
+    })),
+  };
+}
+
 export async function decideCreativeApproval(
   approvalId: string,
   status: "approved" | "changes_requested",
@@ -454,6 +515,61 @@ export async function listPendingPaymentProofs(limit = 50): Promise<PortalPaymen
     status: row.status,
     createdAt: row.created_at,
   }));
+}
+
+export type PaymentProofsBatchResult = {
+  available: boolean;
+  items: PortalPaymentProof[];
+};
+
+export async function listPendingPaymentProofsBatch(): Promise<PaymentProofsBatchResult> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("portal_payment_proofs")
+    .select("*")
+    .eq("status", "pending_review")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (
+      error.message.includes("portal_payment_proofs") ||
+      error.message.includes("does not exist")
+    ) {
+      return { available: false, items: [] };
+    }
+    throw new Error(error.message);
+  }
+
+  return {
+    available: true,
+    items: asGenericRows<{
+      id: string;
+      client_id: string;
+      event_id: string | null;
+      document_id: string | null;
+      amount: number | null;
+      currency: string;
+      payment_method: string;
+      reference: string | null;
+      notes: string | null;
+      file_name: string | null;
+      status: PortalPaymentProof["status"];
+      created_at: string;
+    }>(data).map((row) => ({
+      id: row.id,
+      clientId: row.client_id,
+      eventId: row.event_id,
+      documentId: row.document_id,
+      amount: row.amount,
+      currency: row.currency,
+      paymentMethod: row.payment_method,
+      reference: row.reference,
+      notes: row.notes,
+      fileName: row.file_name,
+      status: row.status,
+      createdAt: row.created_at,
+    })),
+  };
 }
 
 export async function getPaymentProofById(

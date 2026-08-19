@@ -1,6 +1,13 @@
 import type { ClientApprovalStatus, InvoiceDocument } from "@/lib/admin/types";
 
-export function isPortalApprovalPending(document: InvoiceDocument): boolean {
+export type PortalApprovalDocumentInput = Pick<
+  InvoiceDocument,
+  "documentType" | "status" | "clientApprovalStatus"
+>;
+
+export function isPortalApprovalPending(
+  document: PortalApprovalDocumentInput
+): boolean {
   if (document.documentType !== "proforma") return false;
   if (document.status !== "sent") return false;
   if (document.clientApprovalStatus === "approved") return false;
@@ -8,7 +15,9 @@ export function isPortalApprovalPending(document: InvoiceDocument): boolean {
   return true;
 }
 
-export function canPortalApproveDocument(document: InvoiceDocument): boolean {
+export function canPortalApproveDocument(
+  document: PortalApprovalDocumentInput
+): boolean {
   return isPortalApprovalPending(document);
 }
 

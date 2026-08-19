@@ -1,8 +1,8 @@
-import type { InvoiceDocument } from "@/lib/admin/types";
+import type { AdminOperationalDocument, InvoiceDocument } from "@/lib/admin/types";
 import type { AdminAlert } from "@/lib/admin/services/admin-alerts.service";
 
 type BuildPortalApprovalAlertsInput = {
-  documents: InvoiceDocument[];
+  documents: readonly AdminOperationalDocument[];
   relativeTime: (iso: string) => string;
   limit?: number;
 };
@@ -68,7 +68,7 @@ export function buildPortalApprovalAlerts({
 }
 
 export function countPortalApprovalsPending(
-  documents: InvoiceDocument[]
+  documents: readonly AdminOperationalDocument[]
 ): number {
   return documents.filter(
     (document) =>
@@ -79,7 +79,7 @@ export function countPortalApprovalsPending(
 }
 
 export function countPortalClientResponses(
-  documents: InvoiceDocument[]
+  documents: readonly AdminOperationalDocument[]
 ): number {
   return documents.filter(
     (document) =>
