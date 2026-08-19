@@ -475,12 +475,12 @@ describe("event-portfolio.service (buildEventPortfolioHealth)", () => {
     assert.equal(result.items[4].operational.event.id, "1"); // clear distant
   });
 
-  it("M. summary counts reflect full dataset accurately", () => {
+  it("M. summary counts reflect full dataset accurately with clearComplete", () => {
     const snapshots = [
-      createOperationalSnapshot("1", { documents: { openCount: 0, overdueCount: 1 } }),
-      createOperationalSnapshot("2", { concierge: { available: true, pendingReviewCount: 1 } }),
-      createOperationalSnapshot("3", {}),
-      createOperationalSnapshot("4", { concierge: { available: false, pendingReviewCount: null } }),
+      createOperationalSnapshot("1", { documents: { openCount: 0, overdueCount: 1 } }), // priority, complete
+      createOperationalSnapshot("2", { concierge: { available: true, pendingReviewCount: 1 } }), // attention, complete
+      createOperationalSnapshot("3", {}), // clear, complete
+      createOperationalSnapshot("4", { concierge: { available: false, pendingReviewCount: null } }), // clear, partial
     ];
 
     const result = buildEventPortfolioHealth(snapshots);
@@ -488,8 +488,34 @@ describe("event-portfolio.service (buildEventPortfolioHealth)", () => {
     assert.equal(result.summary.total, 4);
     assert.equal(result.summary.priority, 1);
     assert.equal(result.summary.attention, 1);
-    assert.equal(result.summary.clear, 2);
-    assert.equal(result.summary.partialCoverage, 1);
+    assert.equal(result.summary.clearComplete, 1); // Only snapshot 3 (clear + complete)
+    assert.equal(result.summary.partialCoverage, 1); // Snapshot 4 (partial)
+  });
+
+  it("N. partial coverage semantics across statuses (clear+partial, priority+partial, attention+partial)", () => {
+    const clearComplete = createOperationalSnapshot("1", {});
+    const clearPartial = createOperationalSnapshot("2", { concierge: { available: false, pendingReviewCount: null } });
+    const priorityPartial = createOperationalSnapshot("3", {
+      documents: { openCount: 0, overdueCount: 1 },
+      paymentProofs: { available: false, pendingCount: null },
+    });
+    const attentionPartial = createOperationalSnapshot("4", {
+      concierge: { available: true, pendingReviewCount: 2 },
+      paymentProofs: { available: false, pendingCount: null },
+    });
+
+    const result = buildEventPortfolioHealth([clearComplete, clearPartial, priorityPartial, attentionPartial]);
+
+    // A. clear + complete contributes to clearComplete
+    // B. clear + partial does NOT contribute to clearComplete
+    assert.equal(result.summary.clearComplete, 1);
+
+    // C. clear + partial contributes to partialCoverage
+    // D. priority + partial remains priority and contributes to partialCoverage
+    // E. attention + partial remains attention and contributes to partialCoverage
+    assert.equal(result.summary.priority, 1);
+    assert.equal(result.summary.attention, 1);
+    assert.equal(result.summary.partialCoverage, 3); // clearPartial, priorityPartial, attentionPartial
   });
 
   it("O. input operational snapshots are not mutated", () => {

@@ -77,7 +77,7 @@ export default function PortfolioHealthPanel({
           <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span className="font-mono text-[9px] font-medium tracking-wider uppercase text-emerald-300">
-              {summary.clear} Sem Pendências
+              {summary.clearComplete} Sem Pendências
             </span>
           </div>
 
@@ -122,7 +122,7 @@ export default function PortfolioHealthPanel({
                     Operação & Convidados
                   </th>
                   <th className="px-6 py-4 text-right font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
-                    Ação
+                    Acção
                   </th>
                 </tr>
               </thead>
@@ -235,7 +235,7 @@ export default function PortfolioHealthPanel({
                           </span>
                         ) : (
                           <span className="text-xs text-emerald-400/80 font-mono">
-                            Fluxos canónicos em dia
+                            Sem pendências nos fluxos avaliados
                           </span>
                         )}
                       </td>
@@ -251,7 +251,7 @@ export default function PortfolioHealthPanel({
                           </div>
                           {guests.unassigned > 0 && (
                             <p className="text-[10.5px] text-amber-400/80">
-                              ⚠ {guests.unassigned} sem mesa
+                              ⚠ {guests.unassigned} sem lugar
                             </p>
                           )}
                           {documents.openCount > 0 && (
@@ -262,7 +262,7 @@ export default function PortfolioHealthPanel({
                         </div>
                       </td>
 
-                      {/* Ação */}
+                      {/* Acção */}
                       <td className="px-6 py-5 text-right">
                         <Link
                           href={`/admin/events/${event.id}`}
@@ -300,7 +300,7 @@ export default function PortfolioHealthPanel({
               href="/admin/events"
               className="text-[10px] font-mono text-admin-gold hover:underline inline-flex items-center gap-1"
             >
-              <span>Ver todos os projectos no arquivo completo</span>
+              <span>Ver todos os eventos</span>
               <ArrowUpRight className="w-3 h-3" />
             </Link>
           </div>

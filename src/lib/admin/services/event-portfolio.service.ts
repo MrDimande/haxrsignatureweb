@@ -92,7 +92,7 @@ export type EventPortfolioHealthSummary = {
   total: number;
   priority: number;
   attention: number;
-  clear: number;
+  clearComplete: number;
   partialCoverage: number;
 };
 
@@ -219,7 +219,9 @@ export function buildEventPortfolioHealth(
     total: items.length,
     priority: items.filter((i) => i.status === "priority").length,
     attention: items.filter((i) => i.status === "attention").length,
-    clear: items.filter((i) => i.status === "clear").length,
+    clearComplete: items.filter(
+      (i) => i.status === "clear" && i.coverage === "complete"
+    ).length,
     partialCoverage: items.filter((i) => i.coverage === "partial").length,
   };
 
