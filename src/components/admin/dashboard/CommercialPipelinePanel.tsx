@@ -11,7 +11,7 @@ type CommercialPipelinePanelProps = {
 
 export default function CommercialPipelinePanel({
   commercial,
-  maxVisible = 6,
+  maxVisible = 4,
 }: CommercialPipelinePanelProps) {
   const { summary, items } = commercial;
   const visibleItems = items.slice(0, maxVisible);
@@ -48,71 +48,73 @@ export default function CommercialPipelinePanel({
         </Link>
       </div>
 
-      {/* Summary Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {/* Activos */}
-        <div className="admin-card p-3.5 border border-admin-gold/20 bg-admin-gold/[0.04]">
-          <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-admin-gold">
-            Activos
-          </p>
-          <p className="font-serif text-2xl font-light text-white mt-1">
-            {summary.active}
-          </p>
-          <p className="text-[10px] text-admin-gold/70 font-mono mt-0.5">
-            Novos + contactados
-          </p>
-        </div>
+      {/* Summary Strip — unified editorial surface */}
+      <div className="admin-card overflow-hidden border border-white/[0.06] bg-gradient-to-b from-[#0e0c0a] to-[#080706] rounded-xl">
+        <div className="grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.04]">
+          {/* Activos */}
+          <div className="col-span-2 sm:col-span-1 px-5 py-4 bg-admin-gold/[0.03]">
+            <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-admin-gold">
+              Activos
+            </p>
+            <p className="font-serif text-3xl font-light text-white mt-1.5">
+              {summary.active}
+            </p>
+            <p className="text-[10px] text-admin-gold/60 font-mono mt-1">
+              Novos + contactados
+            </p>
+          </div>
 
-        {/* Novos */}
-        <div className="admin-card p-3.5 border border-white/[0.06] bg-[#0c0a09]/50">
-          <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium">
-            Novos
-          </p>
-          <p className="font-serif text-2xl font-light text-amber-400 mt-1">
-            {summary.new}
-          </p>
-          <p className="text-[10px] text-grey/50 font-mono mt-0.5">
-            Aguardam resposta
-          </p>
-        </div>
+          {/* Novos */}
+          <div className="px-5 py-4">
+            <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-grey-medium">
+              Novos
+            </p>
+            <p className="font-serif text-3xl font-light text-amber-400 mt-1.5">
+              {summary.new}
+            </p>
+            <p className="text-[10px] text-grey/50 font-mono mt-1">
+              Aguardam resposta
+            </p>
+          </div>
 
-        {/* Contactados */}
-        <div className="admin-card p-3.5 border border-white/[0.06] bg-[#0c0a09]/50">
-          <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium">
-            Contactados
-          </p>
-          <p className="font-serif text-2xl font-light text-white/90 mt-1">
-            {summary.contacted}
-          </p>
-          <p className="text-[10px] text-grey/50 font-mono mt-0.5">
-            Contacto registado
-          </p>
-        </div>
+          {/* Contactados */}
+          <div className="px-5 py-4">
+            <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-grey-medium">
+              Contactados
+            </p>
+            <p className="font-serif text-3xl font-light text-white/90 mt-1.5">
+              {summary.contacted}
+            </p>
+            <p className="text-[10px] text-grey/50 font-mono mt-1">
+              Contacto registado
+            </p>
+          </div>
 
-        {/* Convertidos */}
-        <div className="admin-card p-3.5 border border-white/[0.06] bg-[#0c0a09]/50">
-          <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium">
-            Convertidos
-          </p>
-          <p className="font-serif text-2xl font-light text-emerald-400/90 mt-1">
-            {summary.converted}
-          </p>
-          <p className="text-[10px] text-grey/50 font-mono mt-0.5">
-            Conversão registada
-          </p>
-        </div>
+          {/* Convertidos */}
+          <div className="px-5 py-4">
+            <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-grey-medium">
+              Convertidos
+            </p>
+            <p className="font-serif text-3xl font-light text-emerald-400/90 mt-1.5">
+              {summary.converted}
+            </p>
+            <p className="text-[10px] text-grey/50 font-mono mt-1">
+              Conversão registada
+            </p>
+          </div>
 
-        {/* Arquivados */}
-        <div className="admin-card p-3.5 border border-white/[0.06] bg-[#0c0a09]/50 col-span-2 sm:col-span-1">
-          <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium">
-            Arquivados
-          </p>
-          <p className="font-serif text-2xl font-light text-grey/60 mt-1">
-            {summary.archived}
-          </p>
-          <p className="text-[10px] text-grey/40 font-mono mt-0.5">
-            Fora do pipeline activo
-          </p>
+          {/* Arquivados */}
+          <div className="px-5 py-4">
+            <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-grey-medium">
+              Arquivados
+            </p>
+            <p className="font-serif text-3xl font-light text-grey/60 mt-1.5">
+              {summary.archived}
+            </p>
+            <p className="text-[10px] text-grey/40 font-mono mt-1">
+              Fora do pipeline activo
+            </p>
+          </div>
         </div>
       </div>
 

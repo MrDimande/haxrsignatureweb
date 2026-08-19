@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calendar } from "lucide-react";
+import { Calendar, ArrowUpRight } from "lucide-react";
 import { EVENT_TYPE_LABELS } from "@/lib/admin/constants";
 import {
   EVENT_PIPELINE_HINTS,
@@ -19,10 +19,14 @@ const PIPELINE_ORDER: EventPipelineStatus[] = [
   "completed",
 ];
 
+// Point 4: No blue. Planning → warm ivory/champagne; Active → HAXR gold; Completed → graphite/warm neutral
 const PIPELINE_STYLES: Record<EventPipelineStatus, string> = {
-  planning: "border-blue-500/15 bg-gradient-to-b from-blue-500/[0.03] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.3)]",
-  active: "border-admin-gold/25 bg-gradient-to-b from-admin-gold/[0.04] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)]",
-  completed: "border-white/[0.06] bg-gradient-to-b from-white/[0.01] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.2)]",
+  planning:
+    "border-[#c8b89a]/15 bg-gradient-to-b from-[#c8b89a]/[0.025] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.3)]",
+  active:
+    "border-admin-gold/25 bg-gradient-to-b from-admin-gold/[0.04] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)]",
+  completed:
+    "border-white/[0.06] bg-gradient-to-b from-white/[0.01] to-[#0a0908] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.2)]",
 };
 
 function formatEventDate(date: string | null): string {
@@ -46,21 +50,24 @@ export default function EventPipelinePanel({
           <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/50">
             Pipeline de eventos
           </h2>
+          {/* Point 3: updated supporting copy */}
           <p className="mt-2 text-sm text-grey/55">
-            Novos, em produção e finalizados — num relance.
+            Distribuição temporal dos eventos registados.
           </p>
         </div>
         <Link
           href="/admin/events"
-          className="font-mono text-[9px] tracking-[0.3em] uppercase text-admin-gold hover:opacity-80 shrink-0"
+          className="font-mono text-[9px] tracking-[0.3em] uppercase text-admin-gold hover:opacity-80 shrink-0 inline-flex items-center gap-1"
         >
-          Ver todos →
+          <span>Ver todos</span>
+          <ArrowUpRight className="w-3 h-3" />
         </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {PIPELINE_ORDER.map((status) => {
-          const events = groups[status].slice(0, 5);
+          // Point 3: slice(0, 2) instead of slice(0, 5)
+          const events = groups[status].slice(0, 2);
           return (
             <div
               key={status}

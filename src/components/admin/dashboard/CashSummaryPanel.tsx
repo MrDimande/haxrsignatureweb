@@ -72,8 +72,8 @@ export default function CashSummaryPanel({
             Caixa
           </h2>
           <p className="mt-2 text-sm text-grey/55 max-w-xl">
-            Contabilidade automática a partir dos recibos e facturas emitidos —
-            cada documento pago entra no registo financeiro.
+            Registo financeiro consolidado a partir dos documentos e movimentos
+            registados na HAXR.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -142,7 +142,7 @@ export default function CashSummaryPanel({
           </p>
           <p className="text-xs text-grey/50 mt-2 max-w-sm mx-auto">
             Emita o primeiro recibo com estado «Pago» — o valor entra
-            automaticamente na contabilidade.
+            no registo financeiro da HAXR.
           </p>
           <Link
             href="/admin/documents/new?type=receipt"

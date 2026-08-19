@@ -61,9 +61,7 @@ export default function DocumentAnalyticsPanel({
             Análise documental · {fiscalYear}
           </h2>
           <p className="mt-2 text-sm text-grey/55 max-w-xl">
-            Receita consolidada a partir da view{" "}
-            <span className="font-mono text-xs text-grey/70">document_analytics</span>{" "}
-            — documentos pagos por empresa e mês fiscal.
+            Visão consolidada dos documentos pagos por empresa e período.
           </p>
         </div>
         <Link href="/admin/documents" className="admin-btn-secondary">

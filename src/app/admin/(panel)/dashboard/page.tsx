@@ -104,7 +104,7 @@ export default async function DashboardPage() {
                 Executive Spotlight
               </span>
               <h2 className="font-serif text-2xl font-light text-white mt-1">
-                Olá, Direcção HAXR 👋
+                Direcção HAXR
               </h2>
               <p className="text-xs text-grey-medium mt-1 leading-relaxed">
                 Visão consolidada da operação, eventos e facturação da HAXR.
@@ -211,7 +211,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main Panels Section */}
-      <div className="space-y-12">
+      <div className="space-y-10">
         <PortfolioHealthPanel
           items={snapshot.portfolio.items}
           summary={snapshot.portfolio.summary}
@@ -236,14 +236,17 @@ export default async function DashboardPage() {
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-grey/50">
-              Documentos recentes
-            </h2>
+            <div>
+              <span className="font-mono text-[8.5px] tracking-[0.4em] uppercase text-grey/50">
+                Documentos recentes
+              </span>
+            </div>
             <Link
               href="/admin/documents"
-              className="font-mono text-[9px] tracking-[0.3em] uppercase text-admin-gold hover:opacity-80"
+              className="font-mono text-[9px] tracking-[0.3em] uppercase text-admin-gold hover:opacity-80 inline-flex items-center gap-1"
             >
-              Ver todos →
+              <span>Ver todos</span>
+              <ArrowUpRight className="w-3 h-3" />
             </Link>
           </div>
 

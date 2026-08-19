@@ -124,7 +124,7 @@ export default function ClientDecisionsPanel({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-[8.5px] tracking-[0.4em] uppercase text-admin-gold">
               Client Decisions
             </span>
@@ -143,15 +143,15 @@ export default function ClientDecisionsPanel({
             )}
           </div>
           <h2 className="font-serif text-2xl font-light text-white mt-1">
-            Decisões de Clientes
+            Decisões &amp; Dependências
           </h2>
           <p className="mt-1 text-xs text-grey-medium leading-relaxed">
             Fila factual de dependências e decisões activas entre o cliente e a HAXR.
           </p>
         </div>
 
-        {/* Summary Pills */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Summary Pills — safe 2-column grid on mobile */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0">
           <div className="px-3 py-1.5 rounded-lg border border-admin-gold/20 bg-admin-gold/[0.06] text-center">
             <p className="text-[9px] font-mono uppercase tracking-wider text-admin-gold">
               Aguarda Cliente
@@ -183,9 +183,6 @@ export default function ClientDecisionsPanel({
                   Aguarda Cliente
                 </h3>
               </div>
-              <span className="text-[11px] font-mono text-grey/50">
-                {summary.awaitingClient} {summary.awaitingClient === 1 ? "item" : "itens"}
-              </span>
             </div>
 
             {visibleAwaitingClient.length === 0 ? (
@@ -223,9 +220,6 @@ export default function ClientDecisionsPanel({
                   Aguarda HAXR
                 </h3>
               </div>
-              <span className="text-[11px] font-mono text-grey/50">
-                {summary.awaitingHaxr} {summary.awaitingHaxr === 1 ? "item" : "itens"}
-              </span>
             </div>
 
             {visibleAwaitingHaxr.length === 0 ? (
