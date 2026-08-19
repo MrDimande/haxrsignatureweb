@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import AttentionRequiredPanel from "@/components/admin/dashboard/AttentionRequiredPanel";
-import ActiveEventsOverviewPanel from "@/components/admin/dashboard/ActiveEventsOverviewPanel";
+import PortfolioHealthPanel from "@/components/admin/dashboard/PortfolioHealthPanel";
 import CashSummaryPanel from "@/components/admin/dashboard/CashSummaryPanel";
 import DocumentAnalyticsPanel from "@/components/admin/dashboard/DocumentAnalyticsPanel";
 import EventPipelinePanel from "@/components/admin/dashboard/EventPipelinePanel";
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
                 Olá, Direcção HAXR 👋
               </h2>
               <p className="text-xs text-grey-medium mt-1 leading-relaxed">
-                A actividade de eventos e facturação continua com forte tração este mês.
+                Visão consolidada da operação, eventos e facturação da HAXR.
               </p>
             </div>
 
@@ -139,63 +139,75 @@ export default async function DashboardPage() {
                 <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
                   Eventos activos
                 </p>
-                <p className="font-serif text-3xl font-light text-white mt-1.5">
+                <p className="font-serif text-2xl font-light text-white mt-1">
                   {snapshot.eventGroups.active.length}
                 </p>
+              </div>
+              <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-admin-gold group-hover:bg-admin-gold/10 group-hover:border-admin-gold/30 transition-all duration-300">
+                <Calendar className="w-4 h-4" strokeWidth={1.25} />
               </div>
             </div>
 
             <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
-              {snapshot.eventGroups.planning.length} planeamento · {snapshot.eventGroups.completed.length} concluídos
+              {snapshot.eventGroups.planning.length} em planeamento
             </p>
           </Link>
 
-          {/* Card 2: Leads Novos */}
+          {/* Card 2: Novos Leads */}
           <Link href="/admin/leads" className="admin-stat-card group relative overflow-hidden block">
             <div className="flex items-start justify-between relative z-10 mb-2">
               <div>
                 <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
-                  Leads novos
+                  Novos leads
                 </p>
-                <p className="font-serif text-3xl font-light text-white mt-1.5">
+                <p className="font-serif text-2xl font-light text-white mt-1">
                   {snapshot.commercial.newLeads}
                 </p>
               </div>
-            </div>
-
-            <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
-              Pedidos do site aguardando resposta
-            </p>
-          </Link>
-
-          {/* Card 3: Recebido (Este Mês) */}
-          <Link href="/admin/cash" className="admin-stat-card group relative overflow-hidden block">
-            <div className="flex items-start justify-between relative z-10 mb-2">
-              <div>
-                <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
-                  Recebido este mês
-                </p>
-                <p className="font-serif text-[22px] md:text-2xl font-light text-white mt-1.5 truncate">
-                  {formatCurrency(snapshot.finance.thisMonthReceived)}
-                </p>
+              <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-admin-gold group-hover:bg-admin-gold/10 group-hover:border-admin-gold/30 transition-all duration-300">
+                <FileCheck className="w-4 h-4" strokeWidth={1.25} />
               </div>
             </div>
 
             <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
-              Entradas de tesouraria consolidadas
+              {snapshot.commercial.recentInquiries.length} pedidos recentes
             </p>
           </Link>
 
-          {/* Card 4: Documentos Emitidos */}
+          {/* Card 3: Facturas Emitidas */}
           <Link href="/admin/documents" className="admin-stat-card group relative overflow-hidden block">
             <div className="flex items-start justify-between relative z-10 mb-2">
               <div>
                 <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
-                  Total Documentos
+                  Facturas emitidas
                 </p>
-                <p className="font-serif text-3xl font-light text-white mt-1.5">
-                  {snapshot.documents.totalProformas + snapshot.documents.totalInvoices + snapshot.documents.totalReceipts}
+                <p className="font-serif text-2xl font-light text-white mt-1">
+                  {snapshot.documents.totalInvoices}
                 </p>
+              </div>
+              <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-admin-gold group-hover:bg-admin-gold/10 group-hover:border-admin-gold/30 transition-all duration-300">
+                <FileCheck className="w-4 h-4" strokeWidth={1.25} />
+              </div>
+            </div>
+
+            <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
+              {snapshot.documents.totalProformas} proformas activas
+            </p>
+          </Link>
+
+          {/* Card 4: Recibos Emitidos */}
+          <Link href="/admin/documents" className="admin-stat-card group relative overflow-hidden block">
+            <div className="flex items-start justify-between relative z-10 mb-2">
+              <div>
+                <p className="font-mono text-[8.5px] tracking-[0.2em] uppercase text-grey-medium opacity-70">
+                  Recibos emitidos
+                </p>
+                <p className="font-serif text-2xl font-light text-white mt-1">
+                  {snapshot.documents.totalReceipts}
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-admin-gold group-hover:bg-admin-gold/10 group-hover:border-admin-gold/30 transition-all duration-300">
+                <FileCheck className="w-4 h-4" strokeWidth={1.25} />
               </div>
             </div>
 
@@ -209,9 +221,9 @@ export default async function DashboardPage() {
 
       {/* Main Panels Section */}
       <div className="space-y-12">
-        <ActiveEventsOverviewPanel
-          events={snapshot.events}
-          guestStats={snapshot.guestStats}
+        <PortfolioHealthPanel
+          items={snapshot.portfolio.items}
+          summary={snapshot.portfolio.summary}
           businessMap={businessMap}
         />
 

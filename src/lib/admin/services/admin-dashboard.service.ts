@@ -1,5 +1,5 @@
 import type { Business, DashboardStats } from "@/lib/admin/types";
-import type { ManagedEvent, EventListGuestStats } from "@/lib/events/types";
+import type { ManagedEvent } from "@/lib/events/types";
 import type { EventPipelineStatus } from "@/lib/events/pipeline";
 import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
@@ -8,16 +8,27 @@ import {
   type AdminAlert,
   type AdminAttentionSource,
 } from "@/lib/admin/services/admin-alerts.service";
+import {
+  getEventPortfolioOperationalSnapshots,
+  buildEventPortfolioHealth,
+  type EventPortfolioHealthItem,
+  type EventPortfolioHealthSummary,
+  type EventPortfolioOperationalSnapshot,
+} from "@/lib/admin/services/event-portfolio.service";
 import * as analyticsRepo from "@/lib/admin/repositories/analytics.repository";
 import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
 import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 import * as inquiriesRepo from "@/lib/contact/inquiries.repository";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
-import * as guestsRepo from "@/lib/events/repositories/guests.repository";
 import * as financeRepo from "@/lib/finance/repositories/overview.repository";
 import { groupEventsByPipeline } from "@/lib/events/pipeline";
 
 export type { AdminAttentionSource } from "@/lib/admin/services/admin-alerts.service";
+export type {
+  EventPortfolioHealthItem,
+  EventPortfolioHealthSummary,
+  EventPortfolioOperationalSnapshot,
+};
 
 export type RevenueByBusiness = Awaited<ReturnType<typeof analyticsRepo.getRevenueByBusiness>>;
 export type RevenueByMonth = Awaited<ReturnType<typeof analyticsRepo.getRevenueByMonth>>;
@@ -37,11 +48,14 @@ export type AdminDashboardSnapshot = {
   attention: {
     items: AdminAttentionItem[];
   };
+  portfolio: {
+    items: EventPortfolioHealthItem[];
+    summary: EventPortfolioHealthSummary;
+  };
   documents: DashboardStats;
   businesses: Business[];
   events: ManagedEvent[];
   eventGroups: Record<EventPipelineStatus, ManagedEvent[]>;
-  guestStats: Record<string, EventListGuestStats>;
   finance: FinanceOverview;
   commercial: {
     newLeads: number;
@@ -56,10 +70,10 @@ export type AdminDashboardSnapshot = {
 export type AdminDashboardSourceData = {
   fiscalYear: number;
   alerts: AdminAlert[];
+  portfolioSnapshots: EventPortfolioOperationalSnapshot[];
   documents: DashboardStats;
   businesses: Business[];
   events: ManagedEvent[];
-  guestStats: Record<string, EventListGuestStats>;
   finance: FinanceOverview;
   inquiries: ContactInquiry[];
   revenueByBusiness: RevenueByBusiness;
@@ -103,12 +117,14 @@ export function buildAdminDashboardSnapshot(
   source: AdminDashboardSourceData,
   options?: { now?: Date }
 ): AdminDashboardSnapshot {
-  const generatedAt = (options?.now ?? new Date()).toISOString();
-  const eventGroups = groupEventsByPipeline(source.events);
+  const now = options?.now ?? new Date();
+  const generatedAt = now.toISOString();
+  const eventGroups = groupEventsByPipeline(source.events, now);
 
   const newLeads = source.inquiries.filter((inquiry) => inquiry.status === "new").length;
   const recentInquiries = source.inquiries.slice(0, 3);
   const attentionItems = buildAdminAttentionItems(source.alerts);
+  const portfolio = buildEventPortfolioHealth(source.portfolioSnapshots);
 
   return {
     generatedAt,
@@ -116,11 +132,11 @@ export function buildAdminDashboardSnapshot(
     attention: {
       items: attentionItems,
     },
+    portfolio,
     documents: source.documents,
     businesses: source.businesses,
     events: source.events,
     eventGroups,
-    guestStats: source.guestStats,
     finance: source.finance,
     commercial: {
       newLeads,
@@ -162,19 +178,16 @@ export async function getAdminDashboardSnapshot(
     inquiriesRepo.listInquiries(),
   ]);
 
-  const guestStats =
-    events.length > 0
-      ? await guestsRepo.listGuestStatsByEventIds(events.map((event) => event.id))
-      : {};
+  const portfolioSnapshots = await getEventPortfolioOperationalSnapshots(events, { now });
 
   return buildAdminDashboardSnapshot(
     {
       fiscalYear,
       alerts,
+      portfolioSnapshots,
       documents,
       businesses,
       events,
-      guestStats,
       finance,
       inquiries,
       revenueByBusiness,

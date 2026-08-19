@@ -7,10 +7,11 @@ import {
   type AdminDashboardSourceData,
 } from "./admin-dashboard.service";
 import type { DashboardStats, Business } from "@/lib/admin/types";
-import type { ManagedEvent, EventListGuestStats } from "@/lib/events/types";
+import type { ManagedEvent } from "@/lib/events/types";
 import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 import type { AdminAlert } from "@/lib/admin/services/admin-alerts.service";
+import type { EventPortfolioOperationalSnapshot } from "@/lib/admin/services/event-portfolio.service";
 
 export function createAdminAlert(overrides?: Partial<AdminAlert>): AdminAlert {
   return {
@@ -141,14 +142,46 @@ export function createDashboardStats(overrides?: Partial<DashboardStats>): Dashb
   };
 }
 
-export function createEventListGuestStats(
-  overrides?: Partial<EventListGuestStats>
-): EventListGuestStats {
+export function createOperationalSnapshot(
+  id: string,
+  overrides?: Partial<EventPortfolioOperationalSnapshot>
+): EventPortfolioOperationalSnapshot {
   return {
-    totalGuests: 250,
-    confirmed: 200,
-    checkedIn: 0,
-    unassigned: 0,
+    event: {
+      id,
+      businessId: "haxr-signature",
+      type: "wedding",
+      name: `Evento ${id}`,
+      clientName: `Cliente ${id}`,
+      date: "2026-12-20",
+      pipeline: "active",
+    },
+    guests: {
+      totalGuests: 250,
+      confirmed: 200,
+      checkedIn: 0,
+      unassigned: 0,
+    },
+    concierge: {
+      available: true,
+      pendingReviewCount: 0,
+    },
+    paymentProofs: {
+      available: true,
+      pendingCount: 0,
+    },
+    documents: {
+      openCount: 0,
+      overdueCount: 0,
+    },
+    dateHold: {
+      active: false,
+      dateHoldUntil: null,
+    },
+    sheets: {
+      configured: true,
+      lastSyncedAt: "2026-08-19T10:00:00Z",
+    },
     ...overrides,
   };
 }
@@ -214,6 +247,19 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       date: "2025-05-10",
     }),
   ];
+  const portfolioSnapshots = [
+    createOperationalSnapshot("evt-1", {
+      event: {
+        id: "evt-1",
+        businessId: "haxr-signature",
+        type: "wedding",
+        name: "Casamento Vânia & Fabião",
+        clientName: "Vânia & Fabião",
+        date: "2026-12-20",
+        pipeline: "active",
+      },
+    }),
+  ];
   const finance = createFinanceOverview();
   const inquiries = [
     createInquiry({
@@ -245,12 +291,10 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
   return {
     fiscalYear: 2026,
     alerts,
+    portfolioSnapshots,
     documents,
     businesses,
     events,
-    guestStats: {
-      "evt-1": createEventListGuestStats(),
-    },
     finance,
     inquiries,
     revenueByBusiness: [{ businessId: "haxr-signature", businessName: "HAXR Signature", total: 750000 }],
@@ -355,7 +399,7 @@ describe("admin-dashboard.service (actionability semantics)", () => {
   });
 
   describe("buildAdminDashboardSnapshot", () => {
-    it("groups events using canonical pipeline semantics (active, planning, completed)", () => {
+    it("groups events using canonical pipeline semantics with injected now consistently", () => {
       const source = createFixtureSourceData();
       const snapshot = buildAdminDashboardSnapshot(source, { now: new Date("2026-08-19T12:00:00Z") });
 
@@ -388,17 +432,18 @@ describe("admin-dashboard.service (actionability semantics)", () => {
     });
 
     it("handles empty events safely without errors", () => {
-      const source = createFixtureSourceData({ events: [], guestStats: {} });
+      const source = createFixtureSourceData({ events: [], portfolioSnapshots: [] });
       const snapshot = buildAdminDashboardSnapshot(source);
 
       assert.deepEqual(snapshot.events, []);
       assert.deepEqual(snapshot.eventGroups.active, []);
       assert.deepEqual(snapshot.eventGroups.planning, []);
       assert.deepEqual(snapshot.eventGroups.completed, []);
-      assert.deepEqual(snapshot.guestStats, {});
+      assert.deepEqual(snapshot.portfolio.items, []);
+      assert.equal(snapshot.portfolio.summary.total, 0);
     });
 
-    it("passes through documents, finance, analytics and attention data without mutation", () => {
+    it("passes through documents, finance, analytics, attention and portfolio data without mutation", () => {
       const source = createFixtureSourceData();
       const snapshot = buildAdminDashboardSnapshot(source);
 
@@ -409,6 +454,8 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       assert.deepEqual(snapshot.analytics.revenueByMonth, source.revenueByMonth);
       assert.equal(snapshot.fiscalYear, 2026);
       assert.equal(snapshot.attention.items.length, 4);
+      assert.equal(snapshot.portfolio.items.length, 1);
+      assert.equal(snapshot.portfolio.summary.total, 1);
     });
 
     it("generates deterministic snapshot structure with injected now timestamp", () => {

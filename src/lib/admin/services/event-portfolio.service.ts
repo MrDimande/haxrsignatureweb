@@ -65,6 +65,167 @@ export type BuildEventPortfolioOptions = {
   now?: Date;
 };
 
+export type EventPortfolioHealthStatus = "priority" | "attention" | "clear";
+
+export type EventPortfolioCoverage = "complete" | "partial";
+
+export type EventPortfolioHealthReasonCode =
+  | "overdue_documents"
+  | "pending_payment_proofs"
+  | "active_date_hold"
+  | "concierge_pending";
+
+export type EventPortfolioHealthReason = {
+  code: EventPortfolioHealthReasonCode;
+  priority: "high" | "medium";
+  label: string;
+};
+
+export type EventPortfolioHealthItem = {
+  operational: EventPortfolioOperationalSnapshot;
+  status: EventPortfolioHealthStatus;
+  coverage: EventPortfolioCoverage;
+  reasons: EventPortfolioHealthReason[];
+};
+
+export type EventPortfolioHealthSummary = {
+  total: number;
+  priority: number;
+  attention: number;
+  clear: number;
+  partialCoverage: number;
+};
+
+export type EventPortfolioHealthResult = {
+  items: EventPortfolioHealthItem[];
+  summary: EventPortfolioHealthSummary;
+};
+
+/**
+ * Pure interpretation layer transforming factual operational snapshots into
+ * explainable, ranked Portfolio Health items.
+ *
+ * Free of side-effects, deterministic and without fake numeric scores.
+ */
+export function buildEventPortfolioHealth(
+  snapshots: EventPortfolioOperationalSnapshot[]
+): EventPortfolioHealthResult {
+  const items: EventPortfolioHealthItem[] = snapshots.map((operational) => {
+    const reasons: EventPortfolioHealthReason[] = [];
+
+    // Coverage is complete only if all optional evaluated domains are available
+    const coverage: EventPortfolioCoverage =
+      operational.concierge.available && operational.paymentProofs.available
+        ? "complete"
+        : "partial";
+
+    // 1. High-priority checks (status = "priority")
+    if (operational.documents.overdueCount > 0) {
+      reasons.push({
+        code: "overdue_documents",
+        priority: "high",
+        label:
+          operational.documents.overdueCount === 1
+            ? "1 documento vencido"
+            : `${operational.documents.overdueCount} documentos vencidos`,
+      });
+    }
+
+    if (
+      operational.paymentProofs.available &&
+      (operational.paymentProofs.pendingCount ?? 0) > 0
+    ) {
+      const count = operational.paymentProofs.pendingCount!;
+      reasons.push({
+        code: "pending_payment_proofs",
+        priority: "high",
+        label:
+          count === 1
+            ? "1 comprovativo por validar"
+            : `${count} comprovativos por validar`,
+      });
+    }
+
+    if (operational.dateHold.active) {
+      reasons.push({
+        code: "active_date_hold",
+        priority: "high",
+        label: "Reserva de data activa",
+      });
+    }
+
+    // 2. Medium-priority checks (status = "attention" if no high reasons)
+    if (
+      operational.concierge.available &&
+      (operational.concierge.pendingReviewCount ?? 0) > 0
+    ) {
+      const count = operational.concierge.pendingReviewCount!;
+      reasons.push({
+        code: "concierge_pending",
+        priority: "medium",
+        label:
+          count === 1
+            ? "1 item Concierge por rever"
+            : `${count} itens Concierge por rever`,
+      });
+    }
+
+    // Status resolution
+    let status: EventPortfolioHealthStatus = "clear";
+    if (reasons.some((r) => r.priority === "high")) {
+      status = "priority";
+    } else if (reasons.some((r) => r.priority === "medium")) {
+      status = "attention";
+    }
+
+    return {
+      operational,
+      status,
+      coverage,
+      reasons,
+    };
+  });
+
+  // Deterministic sorting:
+  // 1. Priority > Attention > Clear
+  // 2. Nearest event date first (dated before planning)
+  // 3. Name tie-breaker
+  const statusRank: Record<EventPortfolioHealthStatus, number> = {
+    priority: 0,
+    attention: 1,
+    clear: 2,
+  };
+
+  items.sort((a, b) => {
+    const rankDiff = statusRank[a.status] - statusRank[b.status];
+    if (rankDiff !== 0) return rankDiff;
+
+    const dateA = a.operational.event.date;
+    const dateB = b.operational.event.date;
+
+    if (dateA && dateB) {
+      const dateDiff = dateA.localeCompare(dateB);
+      if (dateDiff !== 0) return dateDiff;
+    } else if (dateA && !dateB) {
+      return -1;
+    } else if (!dateA && dateB) {
+      return 1;
+    }
+
+    return a.operational.event.name.localeCompare(b.operational.event.name);
+  });
+
+  const summary: EventPortfolioHealthSummary = {
+    total: items.length,
+    priority: items.filter((i) => i.status === "priority").length,
+    attention: items.filter((i) => i.status === "attention").length,
+    clear: items.filter((i) => i.status === "clear").length,
+    partialCoverage: items.filter((i) => i.coverage === "partial").length,
+  };
+
+  return { items, summary };
+}
+
 /**
  * Pure builder that transforms batch source data into EventPortfolioOperationalSnapshot[]
  * for all planning and active events.
