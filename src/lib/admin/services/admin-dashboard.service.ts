@@ -4,7 +4,7 @@ import type { EventPipelineStatus } from "@/lib/events/pipeline";
 import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 import {
-  getAdminAlerts,
+  getAdminAttentionAlerts,
   type AdminAlert,
   type AdminAttentionSource,
 } from "@/lib/admin/services/admin-alerts.service";
@@ -67,31 +67,20 @@ export type AdminDashboardSourceData = {
 };
 
 /**
- * Resolves the operational source domain for an AdminAlert.
- */
-export function resolveAttentionSource(alert: AdminAlert): AdminAttentionSource {
-  if (alert.source) return alert.source;
-  if (alert.id.startsWith("lead-") || alert.href === "/admin/leads") return "commercial";
-  if (alert.id.startsWith("portal-approved-") || alert.id.startsWith("portal-changes-")) return "portal";
-  if (alert.id.startsWith("overdue-") || alert.id === "portal-payment-proofs" || alert.href.startsWith("/admin/cash")) {
-    return "finance";
-  }
-  if (alert.id === "concierge-pending" || alert.href === "/admin/events") return "operations";
-  return "operations";
-}
-
-/**
  * Pure transformer from canonical AdminAlerts to dashboard operational action items.
+ * Defensively ensures only actionable items (requiresAction === true) enter the operational surface.
  */
 export function buildAdminAttentionItems(alerts: AdminAlert[]): AdminAttentionItem[] {
-  return alerts.map((alert) => ({
-    id: alert.id,
-    label: alert.text,
-    context: alert.time,
-    href: alert.href,
-    priority: alert.priority,
-    source: resolveAttentionSource(alert),
-  }));
+  return alerts
+    .filter((alert) => alert.requiresAction)
+    .map((alert) => ({
+      id: alert.id,
+      label: alert.text,
+      context: alert.time,
+      href: alert.href,
+      priority: alert.priority,
+      source: alert.source,
+    }));
 }
 
 /**
@@ -163,7 +152,7 @@ export async function getAdminDashboardSnapshot(
     revenueByMonth,
     inquiries,
   ] = await Promise.all([
-    getAdminAlerts(8),
+    getAdminAttentionAlerts(8),
     documentsRepo.getDashboardStats(),
     businessesRepo.listBusinesses(),
     eventsRepo.listAllEvents(),

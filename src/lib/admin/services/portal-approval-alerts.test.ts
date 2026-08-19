@@ -62,7 +62,7 @@ function baseDocument(
 }
 
 describe("buildPortalApprovalAlerts", () => {
-  it("cria alerta quando cliente aprova proposta", () => {
+  it("cria alerta com requiresAction=true quando cliente aprova proposta ainda não convertida", () => {
     const alerts = buildPortalApprovalAlerts({
       documents: [
         baseDocument({
@@ -77,9 +77,36 @@ describe("buildPortalApprovalAlerts", () => {
     assert.equal(alerts[0].id, "portal-approved-doc-1");
     assert.match(alerts[0].text, /aprovou a proposta/);
     assert.equal(alerts[0].href, "/admin/documents/doc-1");
+    assert.equal(alerts[0].source, "portal");
+    assert.equal(alerts[0].requiresAction, true);
   });
 
-  it("cria alerta quando cliente pede alterações", () => {
+  it("cria alerta com requiresAction=false quando proposta aprovada já tem factura convertida", () => {
+    const alerts = buildPortalApprovalAlerts({
+      documents: [
+        baseDocument({
+          id: "doc-proforma-1",
+          documentType: "proforma",
+          clientApprovalStatus: "approved",
+          clientApprovedAt: "2026-01-15T10:00:00.000Z",
+        }),
+        baseDocument({
+          id: "doc-invoice-1",
+          documentType: "invoice",
+          convertedFromDocumentId: "doc-proforma-1",
+          clientApprovalStatus: null,
+          clientApprovedAt: null,
+        }),
+      ],
+      relativeTime: () => "Há 2 h",
+    });
+
+    assert.equal(alerts.length, 1);
+    assert.equal(alerts[0].id, "portal-approved-doc-proforma-1");
+    assert.equal(alerts[0].requiresAction, false);
+  });
+
+  it("cria alerta com requiresAction=true quando cliente pede alterações", () => {
     const alerts = buildPortalApprovalAlerts({
       documents: [
         baseDocument({
@@ -95,6 +122,8 @@ describe("buildPortalApprovalAlerts", () => {
     assert.equal(alerts[0].id, "portal-changes-doc-1");
     assert.match(alerts[0].text, /pediu alterações/);
     assert.match(alerts[0].text, /Ajustar data/);
+    assert.equal(alerts[0].source, "portal");
+    assert.equal(alerts[0].requiresAction, true);
   });
 });
 

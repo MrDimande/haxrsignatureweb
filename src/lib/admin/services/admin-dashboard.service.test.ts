@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   buildAdminDashboardSnapshot,
   buildAdminAttentionItems,
-  resolveAttentionSource,
   getMaputoFiscalYear,
   type AdminDashboardSourceData,
 } from "./admin-dashboard.service";
@@ -22,6 +21,7 @@ export function createAdminAlert(overrides?: Partial<AdminAlert>): AdminAlert {
     href: "/admin/leads",
     priority: "high",
     source: "commercial",
+    requiresAction: true,
     ...overrides,
   };
 }
@@ -162,6 +162,7 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       href: "/admin/leads",
       priority: "high",
       source: "commercial",
+      requiresAction: true,
     }),
     createAdminAlert({
       id: "portal-approved-doc-1",
@@ -170,6 +171,7 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       href: "/admin/documents/doc-1",
       priority: "high",
       source: "portal",
+      requiresAction: true,
     }),
     createAdminAlert({
       id: "overdue-doc-2",
@@ -178,6 +180,7 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       href: "/admin/documents/doc-2",
       priority: "high",
       source: "finance",
+      requiresAction: true,
     }),
     createAdminAlert({
       id: "concierge-pending",
@@ -186,6 +189,7 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       href: "/admin/events",
       priority: "normal",
       source: "operations",
+      requiresAction: true,
     }),
   ];
   const documents = createDashboardStats();
@@ -255,7 +259,7 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
   };
 }
 
-describe("admin-dashboard.service (type-safe tests)", () => {
+describe("admin-dashboard.service (actionability semantics)", () => {
   describe("getMaputoFiscalYear", () => {
     it("correctly extracts year from UTC/Maputo dates", () => {
       const date = new Date("2026-12-31T23:30:00Z"); // In Maputo (UTC+2), this is 2027-01-01 01:30
@@ -266,11 +270,24 @@ describe("admin-dashboard.service (type-safe tests)", () => {
     });
   });
 
-  describe("buildAdminAttentionItems & resolveAttentionSource", () => {
-    it("passes through high and normal priorities correctly", () => {
+  describe("buildAdminAttentionItems", () => {
+    it("includes only actionable alerts (requiresAction === true) and excludes informational ones", () => {
       const alerts: AdminAlert[] = [
-        createAdminAlert({ id: "1", priority: "high" }),
-        createAdminAlert({ id: "2", priority: "normal" }),
+        createAdminAlert({ id: "actionable-1", requiresAction: true, priority: "high" }),
+        createAdminAlert({ id: "informational-1", requiresAction: false, priority: "high" }),
+        createAdminAlert({ id: "actionable-2", requiresAction: true, priority: "normal" }),
+      ];
+      const items = buildAdminAttentionItems(alerts);
+
+      assert.equal(items.length, 2);
+      assert.equal(items[0].id, "actionable-1");
+      assert.equal(items[1].id, "actionable-2");
+    });
+
+    it("passes through high and normal priorities correctly for actionable items", () => {
+      const alerts: AdminAlert[] = [
+        createAdminAlert({ id: "1", priority: "high", requiresAction: true }),
+        createAdminAlert({ id: "2", priority: "normal", requiresAction: true }),
       ];
       const items = buildAdminAttentionItems(alerts);
 
@@ -280,31 +297,30 @@ describe("admin-dashboard.service (type-safe tests)", () => {
 
     it("does not let read=true or read=false affect operational existence", () => {
       const alerts: AdminAlert[] = [
-        createAdminAlert({ id: "1", read: true }),
-        createAdminAlert({ id: "2", read: false }),
+        createAdminAlert({ id: "1", read: true, requiresAction: true }),
+        createAdminAlert({ id: "2", read: false, requiresAction: true }),
       ];
       const items = buildAdminAttentionItems(alerts);
 
       assert.equal(items.length, 2);
     });
 
-    it("resolves sources deterministically for all categories", () => {
+    it("maps sources directly from typed alert.source", () => {
       const alerts: AdminAlert[] = [
-        createAdminAlert({ id: "lead-123", href: "/admin/leads", source: undefined }),
-        createAdminAlert({ id: "portal-approved-456", href: "/admin/documents/456", source: undefined }),
-        createAdminAlert({ id: "overdue-789", href: "/admin/documents/789", source: undefined }),
-        createAdminAlert({ id: "concierge-pending", href: "/admin/events", source: undefined }),
-        createAdminAlert({ id: "custom", href: "/admin/custom", source: "finance" }),
+        createAdminAlert({ id: "1", source: "commercial", requiresAction: true }),
+        createAdminAlert({ id: "2", source: "portal", requiresAction: true }),
+        createAdminAlert({ id: "3", source: "finance", requiresAction: true }),
+        createAdminAlert({ id: "4", source: "operations", requiresAction: true }),
       ];
+      const items = buildAdminAttentionItems(alerts);
 
-      assert.equal(resolveAttentionSource(alerts[0]), "commercial");
-      assert.equal(resolveAttentionSource(alerts[1]), "portal");
-      assert.equal(resolveAttentionSource(alerts[2]), "finance");
-      assert.equal(resolveAttentionSource(alerts[3]), "operations");
-      assert.equal(resolveAttentionSource(alerts[4]), "finance");
+      assert.equal(items[0].source, "commercial");
+      assert.equal(items[1].source, "portal");
+      assert.equal(items[2].source, "finance");
+      assert.equal(items[3].source, "operations");
     });
 
-    it("preserves canonical href and context exactly", () => {
+    it("preserves canonical href, label, and context exactly", () => {
       const alert = createAdminAlert({
         id: "portal-changes-1",
         text: "Cliente pediu alterações",
@@ -312,6 +328,7 @@ describe("admin-dashboard.service (type-safe tests)", () => {
         href: "/admin/documents/doc-99",
         priority: "high",
         source: "portal",
+        requiresAction: true,
       });
       const [item] = buildAdminAttentionItems([alert]);
 

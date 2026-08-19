@@ -12,6 +12,12 @@ export function buildPortalApprovalAlerts({
   relativeTime,
   limit = 4,
 }: BuildPortalApprovalAlertsInput): AdminAlert[] {
+  const convertedProformaIds = new Set(
+    documents
+      .filter((d) => d.convertedFromDocumentId)
+      .map((d) => d.convertedFromDocumentId!)
+  );
+
   const responseDocuments = documents
     .filter(
       (document) =>
@@ -30,6 +36,7 @@ export function buildPortalApprovalAlerts({
 
   return responseDocuments.map((document) => {
     if (document.clientApprovalStatus === "approved") {
+      const isConverted = convertedProformaIds.has(document.id);
       return {
         id: `portal-approved-${document.id}`,
         text: `${document.clientName} aprovou a proposta ${document.documentNumber}`,
@@ -38,6 +45,7 @@ export function buildPortalApprovalAlerts({
         href: `/admin/documents/${document.id}`,
         priority: "high" as const,
         source: "portal" as const,
+        requiresAction: !isConverted,
       };
     }
 
@@ -52,6 +60,7 @@ export function buildPortalApprovalAlerts({
       href: `/admin/documents/${document.id}`,
       priority: "high" as const,
       source: "portal" as const,
+      requiresAction: true,
     };
   });
 }

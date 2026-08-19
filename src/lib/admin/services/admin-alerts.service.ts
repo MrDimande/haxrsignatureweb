@@ -6,6 +6,8 @@ import {
   buildPortalApprovalAlerts,
 } from "@/lib/admin/services/portal-approval-alerts";
 import * as portalPremiumRepo from "@/lib/portal/repositories/portal-premium.repository";
+import type { InvoiceDocument } from "@/lib/admin/types";
+import type { ContactInquiry } from "@/lib/contact/types";
 
 export type AdminAttentionSource =
   | "commercial"
@@ -20,7 +22,8 @@ export type AdminAlert = {
   read: boolean;
   href: string;
   priority: "high" | "normal";
-  source?: AdminAttentionSource;
+  source: AdminAttentionSource;
+  requiresAction: boolean;
 };
 
 export type AdminBadgeCounts = {
@@ -72,16 +75,15 @@ export async function getAdminBadgeCounts(): Promise<AdminBadgeCounts> {
   };
 }
 
-export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
-  const [inquiries, documents, conciergePending] = await Promise.all([
-    inquiriesRepo.listInquiries(),
-    documentsRepo.listDocuments({ limit: 100 }),
-    countPendingConciergeReviews(),
-  ]);
-
+export function buildAdminAlerts(input: {
+  inquiries: ContactInquiry[];
+  documents: InvoiceDocument[];
+  conciergePending: number;
+  pendingProofs: number;
+}): AdminAlert[] {
   const alerts: AdminAlert[] = [];
 
-  for (const inquiry of inquiries.filter((i) => i.status === "new").slice(0, 3)) {
+  for (const inquiry of input.inquiries.filter((i) => i.status === "new").slice(0, 3)) {
     alerts.push({
       id: `lead-${inquiry.id}`,
       text: `Novo lead: ${inquiry.name}`,
@@ -90,18 +92,19 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
       href: "/admin/leads",
       priority: "high",
       source: "commercial",
+      requiresAction: true,
     });
   }
 
   alerts.push(
     ...buildPortalApprovalAlerts({
-      documents,
+      documents: input.documents,
       relativeTime,
       limit: 4,
     })
   );
 
-  for (const alert of buildOverdueAlerts(documents).slice(0, 3)) {
+  for (const alert of buildOverdueAlerts(input.documents).slice(0, 3)) {
     alerts.push({
       id: `overdue-${alert.documentId}`,
       text: `${alert.documentNumber} em atraso (${alert.daysOverdue} dias)`,
@@ -110,36 +113,85 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
       href: `/admin/documents/${alert.documentId}`,
       priority: "high",
       source: "finance",
+      requiresAction: true,
     });
   }
 
-  if (conciergePending > 0) {
+  if (input.conciergePending > 0) {
     alerts.push({
       id: "concierge-pending",
-      text: `${conciergePending} documento(s) Concierge por rever`,
+      text: `${input.conciergePending} documento(s) Concierge por rever`,
       time: "Operações",
       read: false,
       href: "/admin/events",
       priority: "normal",
       source: "operations",
+      requiresAction: true,
     });
   }
 
-  const pendingProofs = await portalPremiumRepo.countPendingPaymentProofs();
-  if (pendingProofs > 0) {
+  if (input.pendingProofs > 0) {
     alerts.push({
       id: "portal-payment-proofs",
-      text: `${pendingProofs} comprovativo(s) do portal por validar`,
+      text: `${input.pendingProofs} comprovativo(s) do portal por validar`,
       time: "Financeiro",
       read: false,
       href: "/admin/cash",
       priority: "high",
       source: "finance",
+      requiresAction: true,
     });
   }
 
+  return alerts;
+}
+
+/**
+ * Loads all canonical admin alerts for the Header notification drawer.
+ */
+export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
+  const [inquiries, documents, conciergePending, pendingProofs] = await Promise.all([
+    inquiriesRepo.listInquiries(),
+    documentsRepo.listDocuments({ limit: 100 }),
+    countPendingConciergeReviews(),
+    portalPremiumRepo.countPendingPaymentProofs(),
+  ]);
+
+  const alerts = buildAdminAlerts({
+    inquiries,
+    documents,
+    conciergePending,
+    pendingProofs,
+  });
+
   const priorityOrder = { high: 0, normal: 1 } as const;
   return alerts
+    .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+    .slice(0, limit);
+}
+
+/**
+ * Loads actionable admin alerts for the Attention Required operational surface.
+ * Filters requiresAction === true BEFORE applying the display limit.
+ */
+export async function getAdminAttentionAlerts(limit = 8): Promise<AdminAlert[]> {
+  const [inquiries, documents, conciergePending, pendingProofs] = await Promise.all([
+    inquiriesRepo.listInquiries(),
+    documentsRepo.listDocuments({ limit: 100 }),
+    countPendingConciergeReviews(),
+    portalPremiumRepo.countPendingPaymentProofs(),
+  ]);
+
+  const alerts = buildAdminAlerts({
+    inquiries,
+    documents,
+    conciergePending,
+    pendingProofs,
+  });
+
+  const priorityOrder = { high: 0, normal: 1 } as const;
+  return alerts
+    .filter((alert) => alert.requiresAction)
     .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
     .slice(0, limit);
 }
