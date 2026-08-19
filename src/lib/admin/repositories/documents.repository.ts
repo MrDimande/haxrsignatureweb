@@ -82,6 +82,31 @@ export async function listDocuments(filters?: {
   );
 }
 
+export async function listDocumentsByEventIds(
+  eventIds: string[]
+): Promise<InvoiceDocument[]> {
+  if (!eventIds.length) return [];
+  const supabase = createAdminClient();
+  const { data: docs, error } = await supabase
+    .from("documents")
+    .select("*")
+    .in("event_id", eventIds)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const rows = asTableRows<"documents">(docs);
+  if (rows.length === 0) return [];
+
+  const lineItems = await fetchLineItems(rows.map((d) => d.id));
+  return rows.map((doc) =>
+    mapDocument(
+      doc,
+      lineItems.filter((li) => li.document_id === doc.id)
+    )
+  );
+}
+
 export async function listPortalDocumentsForClient(
   client: Pick<Client, "id" | "fullName">
 ): Promise<InvoiceDocument[]> {
