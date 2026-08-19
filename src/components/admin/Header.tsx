@@ -1,9 +1,9 @@
 "use client";
 
-import { Bell, ExternalLink, Grid, LogOut, Menu, ShieldCheck, X } from "lucide-react";
+import { Bell, LogOut, Menu, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getAdminAlertsAction } from "@/lib/admin/actions/admin-alerts.actions";
 
 type HeaderProps = {
@@ -23,14 +23,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   // Dialog and panel states
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [modulesOpen, setModulesOpen] = useState(false);
 
   // Data states
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
-
-  // Refs for clicking outside
-  const modulesRef = useRef<HTMLDivElement>(null);
 
   // Load profile avatar from localStorage and listen for updates
   useEffect(() => {
@@ -80,25 +76,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
     localStorage.setItem("haxr_admin_notifications_read", JSON.stringify(readIds));
   };
 
+  const markNotificationRead = (id: string) => {
+    const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+    saveNotifications(updated);
+  };
+
   const markAllNotificationsRead = () => {
     const updated = notifications.map((n) => ({ ...n, read: true }));
     saveNotifications(updated);
   };
-
-  const clearNotifications = () => {
-    saveNotifications([]);
-  };
-
-  // Close modules dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (modulesRef.current && !modulesRef.current.contains(event.target as Node)) {
-        setModulesOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Logout trigger
   async function handleLogout() {
@@ -131,46 +117,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.04] text-[10px] font-mono tracking-wider uppercase text-grey-medium">
             <span>🇲🇿</span>
             <span className="text-[9px] text-grey/60 font-semibold font-mono">MZ</span>
-          </div>
-
-          {/* Grid Popover Module Selector */}
-          <div className="relative" ref={modulesRef}>
-            <button
-              onClick={() => setModulesOpen(!modulesOpen)}
-              className="hidden sm:flex w-8 h-8 rounded-full bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] items-center justify-center text-grey-medium hover:text-white transition-colors"
-              title="Módulos Concierge"
-            >
-              <Grid className="w-4 h-4" strokeWidth={1.25} />
-            </button>
-
-            {modulesOpen && (
-              <div className="absolute right-0 mt-3.5 w-64 rounded-xl border border-white/[0.06] bg-[#0c0a09] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.8)] z-40 space-y-3.5">
-                <p className="font-mono text-[8px] tracking-[0.25em] text-grey-medium uppercase opacity-55">
-                  Módulos HAXR Suite
-                </p>
-                <div className="grid grid-cols-1 gap-2.5">
-                  {[
-                    { name: "HAXR Signature", desc: "Gestão contratos digitais", link: "/admin/documents" },
-                    { name: "HAXR Concierge AI", desc: "Atendimento e assistente virtual", link: "/" },
-                    { name: "RSVP Engine", desc: "Confirmação convidados", link: "/admin/events" },
-                    { name: "HAXR Invoices", desc: "Contabilidade e Caixa", link: "/admin/cash" },
-                  ].map((mod) => (
-                    <Link
-                      key={mod.name}
-                      href={mod.link}
-                      onClick={() => setModulesOpen(false)}
-                      className="p-2.5 rounded-lg border border-white/[0.02] hover:border-admin-gold/15 bg-white/[0.01] hover:bg-admin-gold/5 flex items-center justify-between group transition-all duration-300"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-mono text-white/95 uppercase tracking-wider group-hover:text-admin-gold transition-colors">{mod.name}</p>
-                        <p className="text-[8.5px] text-grey/55 truncate mt-0.5">{mod.desc}</p>
-                      </div>
-                      <ExternalLink className="w-3 h-3 text-grey/40 group-hover:text-admin-gold transition-colors shrink-0" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Notification Bell with Reactive Badge */}
@@ -276,7 +222,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
                         <Link
                           key={notif.id}
                           href={notif.href}
-                          onClick={() => setNotificationsOpen(false)}
+                          onClick={() => {
+                            markNotificationRead(notif.id);
+                            setNotificationsOpen(false);
+                          }}
                           className={`p-4 rounded-xl border flex flex-col justify-between transition-all duration-300 ${
                             notif.read
                               ? "bg-white/[0.01] border-white/[0.02] text-grey/40"
@@ -288,7 +237,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
                       ) : (
                         <div
                           key={notif.id}
-                          className={`p-4 rounded-xl border flex flex-col justify-between transition-all duration-300 ${
+                          onClick={() => markNotificationRead(notif.id)}
+                          className={`p-4 rounded-xl border flex flex-col justify-between transition-all duration-300 cursor-pointer ${
                             notif.read
                               ? "bg-white/[0.01] border-white/[0.02] text-grey/40"
                               : "bg-white/[0.02] border-white/[0.04] text-white/95 hover:border-admin-gold/25"
@@ -314,12 +264,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
                         className="font-mono text-[9.5px] tracking-wider uppercase text-grey-medium hover:text-white transition-colors"
                       >
                         Lidas todas
-                      </button>
-                      <button
-                        onClick={clearNotifications}
-                        className="font-mono text-[9.5px] tracking-wider uppercase text-admin-gold hover:opacity-85 transition-opacity"
-                      >
-                        Limpar histórico
                       </button>
                     </div>
                   )}

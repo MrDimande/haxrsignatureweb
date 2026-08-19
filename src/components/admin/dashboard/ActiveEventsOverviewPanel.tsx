@@ -166,7 +166,7 @@ export default function ActiveEventsOverviewPanel({
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-mono tracking-[0.08em] uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_2px_10px_rgba(16,185,129,0.05)]">
-                            ✓ Perfeito
+                            ✓ Sem pendências de lugares
                           </span>
                         )}
                       </td>
@@ -183,7 +183,7 @@ export default function ActiveEventsOverviewPanel({
               Nenhum evento activo neste momento.
             </p>
             <p className="text-xs text-grey/50 mt-1">
-              Todos os seus eventos finalizados ou inativos aparecem no arquivo.
+              Todos os seus eventos finalizados ou inactivos aparecem no arquivo.
             </p>
           </div>
         )}
