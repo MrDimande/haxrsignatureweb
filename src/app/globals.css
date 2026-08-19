@@ -72,6 +72,23 @@ html.lenis body {
   overflow: hidden;
 }
 
+/* Supressão total de scrollbars em seções e mockups de ecrã/iframe */
+iframe,
+iframe.hide-scrollbar,
+.hide-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+iframe::-webkit-scrollbar,
+iframe.hide-scrollbar::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
 body {
   background-color: var(--color-brand-ivory);
   color: var(--color-brand-text-dark);

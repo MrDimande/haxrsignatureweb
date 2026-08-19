@@ -1,14 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import IPhone17Frame from "@/components/ui/IPhone17Frame";
 import LivePhoneScreen from "@/components/ui/LivePhoneScreen";
+import InvitationViewer from "@/components/ui/InvitationViewer";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
-import { invitationShowcase, portfolioCopy } from "@/lib/site-config";
-import { ArrowRight, Heart, ShieldCheck } from "lucide-react";
+import { invitationShowcase, portfolioCopy, type InvitationProject } from "@/lib/site-config";
+import { ArrowRight, ExternalLink, Heart, ShieldCheck, Smartphone } from "lucide-react";
 import Link from "next/link";
 
 export default function DigitalInvitations() {
   const { convites } = portfolioCopy;
+  const [activeViewerProject, setActiveViewerProject] = useState<InvitationProject | null>(null);
 
   const luxuryFeatures = [
     {
@@ -108,7 +111,7 @@ export default function DigitalInvitations() {
                   &ldquo;Quando os nossos convidados abriram o convite digital, o feedback foi imediato: nunca tinham visto nada tão sofisticado. Ali soubemos que a HAXR era o parceiro certo.&rdquo;
                 </p>
                 <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-gold/80">
-                  — Vania Lucky & Fabião Dimande, Casamento em 2026
+                  — Vânia Lucky & Fabião Dimande, Casamento em 2026
                 </p>
               </div>
             </RevealOnScroll>
@@ -133,35 +136,46 @@ export default function DigitalInvitations() {
           {/* Coluna Direita: Showroom Interativo (7 de 12 colunas) */}
           <div className="lg:col-span-7">
             <RevealOnScroll delay={0.08}>
-              <div className="relative bg-zinc-950/60 backdrop-blur-md border border-brand-champagne/10 p-8 sm:p-10 md:p-12 rounded-[2rem] overflow-hidden shadow-2xl">
+              <div className="relative bg-zinc-950/60 backdrop-blur-md border border-brand-champagne/10 p-5 sm:p-8 md:p-10 rounded-[2rem] overflow-hidden shadow-2xl">
                 {/* Decorações art-deco de canto */}
                 <div className="absolute top-4 left-4 w-4 h-4 border-t border-l border-gold/25" />
                 <div className="absolute bottom-4 right-4 w-4 h-4 border-b border-r border-gold/25" />
 
-                <div className="mb-10 text-center max-w-md mx-auto">
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[8px] tracking-[0.45em] uppercase text-brand-gold mb-2.5 border border-brand-gold/30 px-3 py-1 rounded-full bg-gold/5">
+                <div className="mb-8 text-center max-w-md mx-auto">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[8px] tracking-[0.45em] uppercase text-brand-gold mb-2 border border-brand-gold/30 px-3 py-1 rounded-full bg-gold/5">
                     <Heart className="w-2.5 h-2.5 animate-pulse" />
                     Experiência Interativa
                   </span>
-                  <h3 className="font-serif text-lg sm:text-2xl font-light text-white mb-2">
+                  <h3 className="font-serif text-lg sm:text-2xl font-light text-white mb-1.5">
                     O Toque da Sofisticação
                   </h3>
                   <p className="font-sans text-[10px] text-white/50 leading-relaxed max-w-xs mx-auto">
-                    Navegue livremente pelos ecrãs em tempo real. Teste a música, a rolagem e os botões como no vosso telemóvel.
+                    Navegue no telemóvel em tempo real ou abra em ecrã completo com áudio e interacção nativa.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-6 lg:gap-12">
-                  {invitationShowcase.map((project, index) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-6 lg:gap-10">
+                  {invitationShowcase.map((project) => (
                     <div key={project.id} className="flex flex-col items-center">
 
-                      <div className="w-full max-w-[270px] xl:max-w-[285px] transition-transform duration-500 hover:scale-[1.01] hover:shadow-[0_20px_50px_rgba(184,138,42,0.12)]" data-lenis-prevent>
+                      <div
+                        className="w-full max-w-[270px] xl:max-w-[285px] transition-transform duration-500 hover:scale-[1.02] cursor-pointer group relative"
+                        data-lenis-prevent
+                        onClick={() => setActiveViewerProject(project)}
+                      >
                         <IPhone17Frame showLabel={false} variant="compact" className="mx-auto">
                           <LivePhoneScreen project={project} />
                         </IPhone17Frame>
+
+                        <div className="absolute inset-x-0 bottom-6 flex justify-center opacity-95 group-hover:opacity-100 transition-opacity pointer-events-none z-30 px-3">
+                          <span className="bg-black/85 backdrop-blur-md border border-gold/50 text-gold text-[9px] font-mono tracking-widest uppercase py-1.5 px-3 rounded-full flex items-center gap-1.5 shadow-xl">
+                            <Smartphone className="w-3 h-3 text-gold animate-bounce" />
+                            Abrir no Telemóvel
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="mt-6 text-center max-w-[250px] space-y-1">
+                      <div className="mt-5 text-center max-w-[260px] space-y-2">
                         <h4 className="font-serif text-md font-light text-white leading-tight">
                           {project.caption}
                         </h4>
@@ -171,6 +185,26 @@ export default function DigitalInvitations() {
                         <p className="font-serif text-[11px] font-light italic text-white/50 leading-relaxed line-clamp-2">
                           {project.editorialNote}
                         </p>
+
+                        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveViewerProject(project)}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border border-gold/40 bg-gold/15 hover:bg-gold/30 text-gold font-mono text-[9px] tracking-widest uppercase font-bold transition-all duration-300 shadow-md hover:scale-105 cursor-pointer"
+                          >
+                            <Smartphone className="w-3 h-3" />
+                            <span>Abrir no Telemóvel 📱</span>
+                          </button>
+                          <a
+                            href={project.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-1.5 text-white/50 hover:text-gold font-mono text-[8px] tracking-wider uppercase transition-colors"
+                          >
+                            <span>Link Directo</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -181,6 +215,14 @@ export default function DigitalInvitations() {
 
         </div>
       </div>
+
+      {activeViewerProject && (
+        <InvitationViewer
+          open={!!activeViewerProject}
+          onClose={() => setActiveViewerProject(null)}
+          project={activeViewerProject}
+        />
+      )}
     </section>
   );
 }

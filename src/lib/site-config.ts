@@ -3,9 +3,9 @@ import { demoCatalog } from "@/lib/demos/catalog";
 import { portfolioAssets } from "@/lib/assets";
 
 export const IPHONE_17_VIEWPORT = {
-  width: 402,
-  height: 874,
-  aspect: 402 / 874,
+  width: 414,
+  height: 896,
+  aspect: 414 / 896,
 } as const;
 
 /** Textos oficiais extraídos do portfólio HAXR Signature */

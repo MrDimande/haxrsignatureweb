@@ -35,7 +35,7 @@ export default function InvitationIframe({
       const h = el.clientHeight;
       const s = w / viewportW;
       setScale(s);
-      setIframeHeight(h / s);
+      setIframeHeight(Math.max(IPHONE_17_VIEWPORT.height, h / s));
     };
 
     update();
@@ -47,7 +47,8 @@ export default function InvitationIframe({
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 overflow-hidden bg-black touch-pan-y"
+      className="absolute inset-0 overflow-hidden bg-black touch-pan-y hide-scrollbar"
+      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       data-lenis-prevent
       onWheel={(e) => e.stopPropagation()}
     >
@@ -56,12 +57,14 @@ export default function InvitationIframe({
       <iframe
         src={src}
         title={title}
-        className="absolute top-0 left-1/2 border-0 bg-black pointer-events-auto"
+        className="absolute top-0 left-1/2 border-0 bg-black pointer-events-auto hide-scrollbar"
         style={{
-          width: viewportW,
+          width: viewportW + 18,
           height: iframeHeight,
           transform: `translateX(-50%) scale(${scale})`,
           transformOrigin: "top center",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
         allow="autoplay; fullscreen"
         loading="eager"

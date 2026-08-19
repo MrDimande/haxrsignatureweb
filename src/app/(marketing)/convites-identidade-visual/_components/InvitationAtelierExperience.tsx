@@ -7,6 +7,7 @@ import {
   Crown,
   Feather,
   Fingerprint,
+  Gift,
   Images,
   Layers,
   MapPin,
@@ -14,7 +15,6 @@ import {
   Music,
   QrCode,
   Search,
-  Sparkles,
   Upload,
   UserCheck,
   Video,
@@ -24,6 +24,7 @@ import Link from "next/link";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useRef, useState } from "react";
 import styles from "./invitation-atelier.module.css";
+import IPhone17Frame from "@/components/ui/IPhone17Frame";
 
 type Project = {
   number: string;
@@ -104,7 +105,7 @@ const coreCapabilities = [
   { icon: Clock3, label: "Contagem Regressiva", note: "O tempo exato até ao grande encontro, com contagem viva até aos segundos." },
   { icon: MapPin, label: "Localização Maps", note: "Acesso direto a rotas no Google Maps e Waze para a cerimónia e recepção." },
   { icon: Images, label: "Galeria Editorial", note: "Fotografias do casal apresentadas com diagrama de moda e ritmo de revista." },
-  { icon: Sparkles, label: "Presentes & Dress Code", note: "Informações completas e elegantes sobre presentes e recomendações de vestuário." },
+  { icon: Gift, label: "Presentes & Dress Code", note: "Informações completas e elegantes sobre presentes e recomendações de vestuário." },
 ] as const;
 
 /** Extensões do Ecossistema HAXR que ampliam a celebração */
@@ -303,7 +304,7 @@ function EditorialLabel({ children, light = false }: { children: React.ReactNode
   );
 }
 
-/** Mockup de iPhone 17 Pro de Nível Artboard Studio */
+/** Mockup Sleek HAXR Signature (Estilo Dash Limintso & Artboard Studio Edition) */
 function ArtboardIphone17Mockup({
   embedUrl,
   title,
@@ -322,35 +323,9 @@ function ArtboardIphone17Mockup({
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
   return (
-    <div className={styles.artboardIphoneWrapper}>
-      <div className={styles.iphoneStudioShadow} aria-hidden="true" />
-
-      <div className={styles.iphone17Chassis}>
-        <span className={`${styles.iphoneAntenna} ${styles.antennaTopLeft}`} aria-hidden="true" />
-        <span className={`${styles.iphoneAntenna} ${styles.antennaBottomRight}`} aria-hidden="true" />
-
-        <span className={styles.iphoneBtnAction} aria-hidden="true" title="Action Button" />
-        <span className={styles.iphoneBtnVolumeUp} aria-hidden="true" />
-        <span className={styles.iphoneBtnVolumeDown} aria-hidden="true" />
-        <span className={styles.iphoneBtnPower} aria-hidden="true" />
-
-        <div className={styles.iphone17Screen}>
-          <div className={styles.iphoneDynamicIsland} aria-hidden="true">
-            <span className={styles.cameraLens} />
-            <span className={styles.faceIdSensor} />
-          </div>
-
-          <div className={styles.iphoneStatusBar} aria-hidden="true">
-            <span className={styles.iphoneTime}>9:41</span>
-            <div className={styles.iphoneStatusIcons}>
-              <span className={styles.signalBar} />
-              <span className={styles.wifiIcon} />
-              <span className={styles.batteryIcon}>
-                <i />
-              </span>
-            </div>
-          </div>
-
+    <div className="w-full max-w-[245px] sm:max-w-[265px] mx-auto z-20">
+      <IPhone17Frame showLabel={false} className="mx-auto">
+        <div className="relative h-full w-full bg-black rounded-[1.8rem] overflow-hidden">
           {isInteractive ? (
             <div className={styles.iphoneIframeWrap}>
               {!iframeLoaded && image ? (
@@ -365,15 +340,16 @@ function ArtboardIphone17Mockup({
                   />
                   <div className={styles.iphoneSpinnerOverlay}>
                     <div className={styles.spinnerRing} />
-                    <span>A carregar no iPhone 17 Pro...</span>
+                    <span>A carregar no Viewport...</span>
                   </div>
                 </div>
               ) : null}
 
               <iframe
                 src={embedUrl}
-                title={`Web-Convite HAXR no iPhone 17 Pro: ${title}`}
-                className={styles.iphoneIframe}
+                title={`Web-Convite HAXR: ${title}`}
+                className={`${styles.iphoneIframe} hide-scrollbar`}
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 onLoad={() => setIframeLoaded(true)}
                 tabIndex={isActive ? 0 : -1}
               />
@@ -389,11 +365,8 @@ function ArtboardIphone17Mockup({
               />
             </div>
           ) : null}
-
-          <div className={styles.iphoneStudioGlassGlow} aria-hidden="true" />
-          <div className={styles.iphoneHomeBar} aria-hidden="true" />
         </div>
-      </div>
+      </IPhone17Frame>
     </div>
   );
 }
@@ -433,69 +406,62 @@ function HeroSection() {
       </div>
 
       <div className={styles.heroHeaderContainer}>
-        <div className={styles.heroTopBar}>
-          <EditorialLabel light>ATELIER HAXR SIGNATURE · ALTA-COSTURA DIGITAL</EditorialLabel>
-          <div className={styles.heroLiveStatus}>
-            <span className={styles.statusDot} />
-            <span>Maputo · Lisboa · Atelier Aberto</span>
+        {/* Coluna Esquerda: Texto & Seletor de Projetos */}
+        <div className={styles.heroLeftCol}>
+          <div className={styles.heroTopBar}>
+            <EditorialLabel light>ATELIER HAXR SIGNATURE · ALTA-COSTURA DIGITAL</EditorialLabel>
+            <div className={styles.heroLiveStatus}>
+              <span className={styles.statusDot} />
+              <span>Maputo · Lisboa · Atelier Aberto</span>
+            </div>
+          </div>
+
+          <div className={styles.heroHeadlineBlock}>
+            <h1>A Arte do Primeiro Encontro.</h1>
+            <p className={styles.heroSubtitle}>
+              Web-Convites & Identidades Visuais concebidos como obras de alta-costura digital para celebrações memoráveis.
+            </p>
+          </div>
+
+          {/* Seletor Rápido de Projetos no Viewport */}
+          <div className={styles.heroProjectSelector}>
+            <div className={styles.selectorPills}>
+              {projects.map((p, idx) => (
+                <button
+                  key={p.title}
+                  type="button"
+                  className={`${styles.selectorPill} ${heroProjectIndex === idx ? styles.selectorPillActive : ""}`}
+                  onClick={() => setHeroProjectIndex(idx)}
+                >
+                  <span>0{idx + 1}</span> {p.title}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className={styles.heroHeadlineBlock}>
-          <h1>A Arte do Primeiro Encontro.</h1>
-          <p className={styles.heroSubtitle}>
-            Web-Convites & Identidades Visuais concebidos como obras de alta-costura digital para celebrações memoráveis.
-          </p>
-        </div>
+        {/* Coluna Direita: Viewport Mobile Stage */}
+        <div className={styles.heroRightCol}>
+          <div
+            ref={heroVisualRef}
+            className={styles.heroStageWrapper}
+            onPointerMove={handleHeroPointer}
+            onPointerLeave={resetHeroPointer}
+          >
+            {/* Envelope de Papel em Relevo */}
+            <div className={styles.heroPaperCardBacking} aria-hidden="true">
+              <div className={styles.paperGoldFoilLogo}>H & H</div>
+              <div className={styles.paperEmbossedPattern} />
+              <span className={styles.waxSealStamp}>HAXR</span>
+            </div>
 
-        <div
-          ref={heroVisualRef}
-          className={styles.heroStageWrapper}
-          onPointerMove={handleHeroPointer}
-          onPointerLeave={resetHeroPointer}
-        >
-          {/* Envelope de Papel em Relevo */}
-          <div className={styles.heroPaperCardBacking} aria-hidden="true">
-            <div className={styles.paperGoldFoilLogo}>H & H</div>
-            <div className={styles.paperEmbossedPattern} />
-            <span className={styles.waxSealStamp}>HAXR</span>
-          </div>
-
-          {/* Chip Flutuante Esquerdo Afastado */}
-          <div className={styles.heroFloatingChipLeft}>
-            <span className={styles.chipGoldDot} />
-            <span>Abertura Sonora · RSVP · Maps</span>
-          </div>
-
-          {/* iPhone 17 Pro Artboard Studio Mockup */}
-          <ArtboardIphone17Mockup
-            embedUrl={currentHeroProject.embedUrl}
-            title={currentHeroProject.title}
-            image={currentHeroProject.image}
-            imageAlt={currentHeroProject.imageAlt}
-          />
-
-          {/* Chip Flutuante Direito Afastado */}
-          <div className={styles.heroFloatingChipRight}>
-            <span className={styles.chipEditionTag}>{currentHeroProject.edition}</span>
-            <strong>{currentHeroProject.title}</strong>
-          </div>
-        </div>
-
-        {/* Seletor Rápido de Projetos no iPhone da Hero */}
-        <div className={styles.heroProjectSelector}>
-          <span className={styles.selectorLabel}>Navegar ao vivo no iPhone 17 Pro:</span>
-          <div className={styles.selectorPills}>
-            {projects.map((p, idx) => (
-              <button
-                key={p.title}
-                type="button"
-                className={`${styles.selectorPill} ${heroProjectIndex === idx ? styles.selectorPillActive : ""}`}
-                onClick={() => setHeroProjectIndex(idx)}
-              >
-                <span>0{idx + 1}</span> {p.title}
-              </button>
-            ))}
+            {/* Viewport Mobile Mockup */}
+            <ArtboardIphone17Mockup
+              embedUrl={currentHeroProject.embedUrl}
+              title={currentHeroProject.title}
+              image={currentHeroProject.image}
+              imageAlt={currentHeroProject.imageAlt}
+            />
           </div>
         </div>
 

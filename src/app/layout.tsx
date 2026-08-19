@@ -35,8 +35,12 @@ export default function RootLayout({
     <html
       lang="pt-MZ"
       className={`${fraunces.variable} ${sourceSans.variable}`}
+      suppressHydrationWarning
     >
-      <body className="bg-brand-ivory text-brand-text-dark font-sans antialiased">
+      <body
+        className="bg-brand-ivory text-brand-text-dark font-sans antialiased"
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>

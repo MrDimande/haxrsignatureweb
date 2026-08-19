@@ -1,7 +1,7 @@
 import { portfolioAssets } from "@/lib/assets";
 import { siteUrl } from "@/lib/seo/site-meta";
 
-const IPHONE_17_WIDTH = 402;
+const IPHONE_17_WIDTH = 414;
 
 export type DemoProject = {
   id: string;

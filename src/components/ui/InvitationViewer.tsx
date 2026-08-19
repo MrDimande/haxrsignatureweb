@@ -7,6 +7,7 @@ import { siteConfig, type InvitationProject } from "@/lib/site-config";
 import IPhone17Frame from "@/components/ui/IPhone17Frame";
 import InvitationIframe from "@/components/ui/InvitationIframe";
 import InvitationLoading from "@/components/ui/InvitationLoading";
+import { getDemoById } from "@/lib/demos/catalog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface InvitationViewerProps {
@@ -20,7 +21,9 @@ export default function InvitationViewer({
   onClose,
   project,
 }: InvitationViewerProps) {
-  const { href, label, caption } = project;
+  const demo = getDemoById(project.id);
+  const embedUrl = demo?.embedUrl ?? project.href;
+  const { label, caption } = project;
   const [mounted, setMounted] = useState(false);
   const [iframeBlocked, setIframeBlocked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,7 +67,7 @@ export default function InvitationViewer({
         A pré-visualização não está disponível neste formato.
       </p>
       <a
-        href={href}
+        href={embedUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="border border-gold-dim px-6 py-3 font-sans text-[10px] tracking-[0.35em] uppercase text-gold transition-colors duration-500 hover:border-gold"
@@ -90,29 +93,35 @@ export default function InvitationViewer({
         >
           {isFullscreen ? (
             <>
-              <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                <p className="truncate pr-3 font-serif text-sm font-light tracking-wide text-white/70">
-                  {caption}
-                </p>
+              <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-black/90 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
+                <div>
+                  <p className="truncate font-serif text-sm font-light tracking-wide text-white/90">
+                    {caption}
+                  </p>
+                  <p className="font-mono text-[8px] tracking-widest uppercase text-gold/70">
+                    Modo Telemóvel Real
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="shrink-0 font-mono text-[10px] tracking-[0.35em] uppercase text-grey transition-colors hover:text-gold"
+                  className="shrink-0 font-mono text-[10px] tracking-[0.35em] uppercase text-grey transition-colors hover:text-gold px-3 py-1.5 rounded-full border border-white/10"
                 >
-                  Fechar
+                  Fechar ✕
                 </button>
               </header>
 
-              <div className="relative min-h-0 flex-1 overflow-hidden">
+              <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
                 {iframeBlocked ? (
                   blockedFallback
                 ) : (
                   <>
                     {loading && <InvitationLoading />}
                     <iframe
-                      src={href}
+                      src={embedUrl}
                       title={label}
-                      className="h-full w-full border-0 bg-black"
+                      className="h-full w-full border-0 bg-black hide-scrollbar"
+                      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                       allow="autoplay; fullscreen"
                       onLoad={() => setLoading(false)}
                       onError={() => {
@@ -124,14 +133,14 @@ export default function InvitationViewer({
                 )}
               </div>
 
-              <footer className="shrink-0 border-t border-white/[0.06] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center">
+              <footer className="shrink-0 border-t border-white/[0.08] bg-black/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center">
                 <a
-                  href={href}
+                  href={embedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-mono text-[9px] tracking-[0.35em] uppercase text-grey/60"
+                  className="font-mono text-[9px] tracking-[0.35em] uppercase text-gold hover:underline"
                 >
-                  Abrir em separador →
+                  Abrir directamente em ecrã completo ↗
                 </a>
               </footer>
             </>
@@ -169,7 +178,7 @@ export default function InvitationViewer({
                     blockedFallback
                   ) : (
                     <InvitationIframe
-                      src={href}
+                      src={embedUrl}
                       title={label}
                       viewportWidth={project.mobileViewportWidth}
                       onBlocked={() => setIframeBlocked(true)}
@@ -179,7 +188,7 @@ export default function InvitationViewer({
                 </IPhone17Frame>
 
                 <a
-                  href={href}
+                  href={embedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-6 font-mono text-[9px] tracking-[0.4em] uppercase text-grey/60 transition-colors hover:text-gold/80"

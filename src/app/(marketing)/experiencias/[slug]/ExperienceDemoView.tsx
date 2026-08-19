@@ -137,12 +137,24 @@ export default function ExperienceDemoView({ demo }: ExperienceDemoViewProps) {
               </div>
             </div>
 
-            <div className="md:hidden relative w-full aspect-[402/874] max-h-[78vh] rounded-[2rem] overflow-hidden border border-grey-dark/80 bg-black">
-              <InvitationIframe
-                src={demo.embedUrl}
-                title={demo.title}
-                viewportWidth={demo.mobileViewportWidth}
-              />
+            <div className="md:hidden space-y-4">
+              <div className="relative w-full aspect-[402/874] max-h-[75vh] rounded-[2rem] overflow-hidden border border-grey-dark/40 bg-black">
+                <InvitationIframe
+                  src={demo.embedUrl}
+                  title={demo.title}
+                  viewportWidth={demo.mobileViewportWidth}
+                />
+              </div>
+              <div className="text-center">
+                <a
+                  href={demo.embedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-gold/40 bg-gold/15 hover:bg-gold/30 text-gold font-mono text-[10px] tracking-widest uppercase font-bold transition-all shadow-md"
+                >
+                  <span>Abrir Convite no Telemóvel 📱</span>
+                </a>
+              </div>
             </div>
           </RevealOnScroll>
         </div>
