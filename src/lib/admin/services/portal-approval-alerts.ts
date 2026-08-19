@@ -10,7 +10,7 @@ type BuildPortalApprovalAlertsInput = {
 export function buildPortalApprovalAlerts({
   documents,
   relativeTime,
-  limit = 4,
+  limit,
 }: BuildPortalApprovalAlertsInput): AdminAlert[] {
   const convertedProformaIds = new Set(
     documents
@@ -18,7 +18,7 @@ export function buildPortalApprovalAlerts({
       .map((d) => d.convertedFromDocumentId!)
   );
 
-  const responseDocuments = documents
+  const sortedDocuments = documents
     .filter(
       (document) =>
         document.documentType === "proforma" &&
@@ -31,8 +31,10 @@ export function buildPortalApprovalAlerts({
       (a, b) =>
         new Date(b.clientApprovedAt ?? 0).getTime() -
         new Date(a.clientApprovedAt ?? 0).getTime()
-    )
-    .slice(0, limit);
+    );
+
+  const responseDocuments =
+    typeof limit === "number" ? sortedDocuments.slice(0, limit) : sortedDocuments;
 
   return responseDocuments.map((document) => {
     if (document.clientApprovalStatus === "approved") {

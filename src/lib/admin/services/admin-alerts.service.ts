@@ -75,15 +75,34 @@ export async function getAdminBadgeCounts(): Promise<AdminBadgeCounts> {
   };
 }
 
-export function buildAdminAlerts(input: {
+export type BuildCanonicalAdminAlertsInput = {
   inquiries: ContactInquiry[];
   documents: InvoiceDocument[];
   conciergePending: number;
   pendingProofs: number;
-}): AdminAlert[] {
+  options?: {
+    maxLeads?: number;
+    maxPortalApprovals?: number;
+    maxOverdue?: number;
+  };
+};
+
+/**
+ * Pure builder that generates all canonical alerts from loaded source data.
+ * When options are omitted, produces the uncapped set of all canonical operational signals.
+ */
+export function buildCanonicalAdminAlerts(
+  input: BuildCanonicalAdminAlertsInput
+): AdminAlert[] {
   const alerts: AdminAlert[] = [];
 
-  for (const inquiry of input.inquiries.filter((i) => i.status === "new").slice(0, 3)) {
+  const newInquiries = input.inquiries.filter((i) => i.status === "new");
+  const filteredInquiries =
+    typeof input.options?.maxLeads === "number"
+      ? newInquiries.slice(0, input.options.maxLeads)
+      : newInquiries;
+
+  for (const inquiry of filteredInquiries) {
     alerts.push({
       id: `lead-${inquiry.id}`,
       text: `Novo lead: ${inquiry.name}`,
@@ -100,11 +119,17 @@ export function buildAdminAlerts(input: {
     ...buildPortalApprovalAlerts({
       documents: input.documents,
       relativeTime,
-      limit: 4,
+      limit: input.options?.maxPortalApprovals,
     })
   );
 
-  for (const alert of buildOverdueAlerts(input.documents).slice(0, 3)) {
+  const overdueAlerts = buildOverdueAlerts(input.documents);
+  const filteredOverdue =
+    typeof input.options?.maxOverdue === "number"
+      ? overdueAlerts.slice(0, input.options.maxOverdue)
+      : overdueAlerts;
+
+  for (const alert of filteredOverdue) {
     alerts.push({
       id: `overdue-${alert.documentId}`,
       text: `${alert.documentNumber} em atraso (${alert.daysOverdue} dias)`,
@@ -147,7 +172,28 @@ export function buildAdminAlerts(input: {
 }
 
 /**
- * Loads all canonical admin alerts for the Header notification drawer.
+ * Builds canonical alerts with standard per-category feed caps for the Header notification drawer.
+ */
+export function buildAdminAlerts(input: {
+  inquiries: ContactInquiry[];
+  documents: InvoiceDocument[];
+  conciergePending: number;
+  pendingProofs: number;
+}): AdminAlert[] {
+  return buildCanonicalAdminAlerts({
+    ...input,
+    options: {
+      maxLeads: 3,
+      maxPortalApprovals: 4,
+      maxOverdue: 3,
+    },
+  });
+}
+
+const PRIORITY_ORDER = { high: 0, normal: 1 } as const;
+
+/**
+ * Loads all canonical admin alerts for the Header notification drawer (with category feed caps).
  */
 export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
   const [inquiries, documents, conciergePending, pendingProofs] = await Promise.all([
@@ -164,15 +210,15 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
     pendingProofs,
   });
 
-  const priorityOrder = { high: 0, normal: 1 } as const;
   return alerts
-    .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
     .slice(0, limit);
 }
 
 /**
  * Loads actionable admin alerts for the Attention Required operational surface.
- * Filters requiresAction === true BEFORE applying the display limit.
+ * Performs UNCAPPED canonical signal construction, filters requiresAction === true,
+ * ranks by operational priority (high before normal with stable ordering), and applies the display limit.
  */
 export async function getAdminAttentionAlerts(limit = 8): Promise<AdminAlert[]> {
   const [inquiries, documents, conciergePending, pendingProofs] = await Promise.all([
@@ -182,16 +228,15 @@ export async function getAdminAttentionAlerts(limit = 8): Promise<AdminAlert[]> 
     portalPremiumRepo.countPendingPaymentProofs(),
   ]);
 
-  const alerts = buildAdminAlerts({
+  const canonicalAlerts = buildCanonicalAdminAlerts({
     inquiries,
     documents,
     conciergePending,
     pendingProofs,
   });
 
-  const priorityOrder = { high: 0, normal: 1 } as const;
-  return alerts
+  return canonicalAlerts
     .filter((alert) => alert.requiresAction)
-    .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
     .slice(0, limit);
 }
