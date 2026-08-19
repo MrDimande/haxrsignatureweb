@@ -229,7 +229,7 @@ describe("admin-upcoming-agenda.service (Master Operational Agenda)", () => {
     assert.equal(result.items[0].id, "t-known");
   });
 
-  it("P. sorting is deterministic: startsAt ascending, eventName, title, id", () => {
+  it("P. sorting is deterministic: startsAt ascending, eventName, sortOrder (overriding title), id", () => {
     const evtA = createEvent("evt-a", { name: "Casamento A" });
     const evtB = createEvent("evt-b", { name: "Casamento B" });
 
@@ -238,23 +238,53 @@ describe("admin-upcoming-agenda.service (Master Operational Agenda)", () => {
       timeline: {
         available: true,
         items: [
-          createTimelineItem("t-late", "evt-a", { title: "Z", startsAt: "2026-08-25T10:00:00.000Z" }),
-          createTimelineItem("t-early-b", "evt-b", { title: "Briefing", startsAt: "2026-08-20T10:00:00.000Z" }),
-          createTimelineItem("t-early-a", "evt-a", { title: "Briefing", startsAt: "2026-08-20T10:00:00.000Z" }),
+          createTimelineItem("t-late", "evt-a", { title: "Z", startsAt: "2026-08-25T10:00:00.000Z", sortOrder: 50 }),
+          createTimelineItem("t-early-b", "evt-b", { title: "Briefing", startsAt: "2026-08-20T10:00:00.000Z", sortOrder: 10 }),
+          // In event A, "Zebra" has sortOrder 10 and "Alinhamento" has sortOrder 20
+          createTimelineItem("t-early-a2", "evt-a", { title: "Alinhamento", startsAt: "2026-08-20T10:00:00.000Z", sortOrder: 20 }),
+          createTimelineItem("t-early-a1", "evt-a", { title: "Zebra", startsAt: "2026-08-20T10:00:00.000Z", sortOrder: 10 }),
         ],
       },
     };
 
     const result = buildAdminUpcomingAgenda(source, { now: REFERENCE_NOW });
-    assert.equal(result.items.length, 3);
-    assert.equal(result.items[0].id, "t-early-a"); // startsAt 20th, Casamento A
-    assert.equal(result.items[1].id, "t-early-b"); // startsAt 20th, Casamento B
-    assert.equal(result.items[2].id, "t-late"); // startsAt 25th
+    assert.equal(result.items.length, 4);
+    // startsAt 20th: evt-a (Casamento A) comes before evt-b (Casamento B)
+    // Within evt-a: sortOrder 10 ("Zebra") comes before sortOrder 20 ("Alinhamento") despite alphabetical order
+    assert.equal(result.items[0].id, "t-early-a1");
+    assert.equal(result.items[0].title, "Zebra");
+    assert.equal(result.items[0].sortOrder, 10);
+
+    assert.equal(result.items[1].id, "t-early-a2");
+    assert.equal(result.items[1].title, "Alinhamento");
+    assert.equal(result.items[1].sortOrder, 20);
+
+    assert.equal(result.items[2].id, "t-early-b");
+    assert.equal(result.items[3].id, "t-late");
   });
 
-  it("Q. inputs are not mutated", () => {
+  it("P.1. id tie-breaker works deterministically when startsAt, event and sortOrder are identical", () => {
     const event = createEvent("evt-1");
-    const item = createTimelineItem("t-1", "evt-1");
+    const source: BuildAdminUpcomingAgendaSource = {
+      events: [event],
+      timeline: {
+        available: true,
+        items: [
+          createTimelineItem("t-beta", "evt-1", { startsAt: "2026-08-20T10:00:00.000Z", sortOrder: 10 }),
+          createTimelineItem("t-alpha", "evt-1", { startsAt: "2026-08-20T10:00:00.000Z", sortOrder: 10 }),
+        ],
+      },
+    };
+
+    const result = buildAdminUpcomingAgenda(source, { now: REFERENCE_NOW });
+    assert.equal(result.items.length, 2);
+    assert.equal(result.items[0].id, "t-alpha");
+    assert.equal(result.items[1].id, "t-beta");
+  });
+
+  it("Q. inputs are not mutated and sortOrder is preserved in items", () => {
+    const event = createEvent("evt-1");
+    const item = createTimelineItem("t-1", "evt-1", { sortOrder: 42 });
     const eventClone = JSON.parse(JSON.stringify(event));
     const itemClone = JSON.parse(JSON.stringify(item));
 
@@ -266,8 +296,9 @@ describe("admin-upcoming-agenda.service (Master Operational Agenda)", () => {
       },
     };
 
-    buildAdminUpcomingAgenda(source, { now: REFERENCE_NOW });
+    const result = buildAdminUpcomingAgenda(source, { now: REFERENCE_NOW });
     assert.deepEqual(event, eventClone);
     assert.deepEqual(item, itemClone);
+    assert.equal(result.items[0].sortOrder, 42);
   });
 });

@@ -102,126 +102,216 @@ export default function UpcomingOperationalAgendaPanel({
             </p>
           </div>
         ) : (
-          /* Populated Table Surface */
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] border-collapse">
-              <thead>
-                <tr className="border-b border-white/[0.04] bg-white/[0.01]">
-                  <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
-                    Data & Hora
-                  </th>
-                  <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
-                    Marco Operacional
-                  </th>
-                  <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
-                    Projecto
-                  </th>
-                  <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
-                    Categoria & Estado
-                  </th>
-                  <th className="px-6 py-4 text-right font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
-                    Acção
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.02]">
-                {visibleItems.map((item) => {
-                  const isDelayed = item.status === "delayed";
-                  const categoryLabel =
-                    TIMELINE_CATEGORY_LABELS[item.category] || item.category;
-                  const statusLabel =
-                    AGENDA_STATUS_LABELS[item.status] || item.status;
+          <>
+            {/* Desktop Surface: Table (md+) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.04] bg-white/[0.01]">
+                    <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
+                      Data & Hora
+                    </th>
+                    <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
+                      Marco Operacional
+                    </th>
+                    <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
+                      Projecto
+                    </th>
+                    <th className="px-6 py-4 text-left font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
+                      Categoria & Estado
+                    </th>
+                    <th className="px-6 py-4 text-right font-mono text-[8.5px] font-semibold tracking-[0.25em] uppercase text-grey-medium">
+                      Acção
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.02]">
+                  {visibleItems.map((item) => {
+                    const isDelayed = item.status === "delayed";
+                    const categoryLabel =
+                      TIMELINE_CATEGORY_LABELS[item.category] || item.category;
+                    const statusLabel =
+                      AGENDA_STATUS_LABELS[item.status] || item.status;
 
-                  return (
-                    <tr
-                      key={item.id}
-                      className="group transition-all duration-300 hover:bg-white/[0.02]"
-                    >
-                      {/* Data & Hora */}
-                      <td className="px-6 py-4.5 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 font-mono text-xs text-grey-dark/90">
-                          <Calendar
-                            className="w-3.5 h-3.5 text-admin-gold/70 shrink-0"
-                            strokeWidth={1.5}
-                          />
-                          <span>{formatDateTimePtMZ(item.startsAt)}</span>
-                        </div>
-                      </td>
+                    return (
+                      <tr
+                        key={item.id}
+                        className="group transition-all duration-300 hover:bg-white/[0.02]"
+                      >
+                        {/* Data & Hora */}
+                        <td className="px-6 py-4.5 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 font-mono text-xs text-grey-dark/90">
+                            <Calendar
+                              className="w-3.5 h-3.5 text-admin-gold/70 shrink-0"
+                              strokeWidth={1.5}
+                            />
+                            <span>{formatDateTimePtMZ(item.startsAt)}</span>
+                          </div>
+                        </td>
 
-                      {/* Marco Operacional */}
-                      <td className="px-6 py-4.5">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[13.5px] font-serif font-light text-white group-hover:text-admin-gold transition-colors duration-300">
-                              {item.title}
-                            </span>
-                            {item.visibility === "internal" && (
-                              <span className="px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider uppercase bg-neutral-800 text-neutral-400 border border-neutral-700">
-                                Interno
+                        {/* Marco Operacional */}
+                        <td className="px-6 py-4.5">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[13.5px] font-serif font-light text-white group-hover:text-admin-gold transition-colors duration-300">
+                                {item.title}
                               </span>
+                              {item.visibility === "internal" && (
+                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider uppercase bg-neutral-800 text-neutral-400 border border-neutral-700">
+                                  Interno
+                                </span>
+                              )}
+                            </div>
+                            {item.description && (
+                              <p className="text-[10.5px] text-grey/50 font-mono line-clamp-1">
+                                {item.description}
+                              </p>
                             )}
                           </div>
-                          {item.description && (
-                            <p className="text-[10.5px] text-grey/50 font-mono line-clamp-1">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Projecto */}
-                      <td className="px-6 py-4.5">
+                        {/* Projecto */}
+                        <td className="px-6 py-4.5">
+                          <Link
+                            href={item.href}
+                            className="text-xs font-serif font-light text-white/90 hover:text-admin-gold transition-colors block"
+                          >
+                            {item.eventName}
+                          </Link>
+                          <p className="text-[10px] font-mono text-grey/50 mt-0.5">
+                            {EVENT_TYPE_LABELS[item.eventType] || item.eventType}
+                          </p>
+                        </td>
+
+                        {/* Categoria & Estado */}
+                        <td className="px-6 py-4.5 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[8.5px] font-mono tracking-wider uppercase bg-white/[0.04] text-grey-medium border border-white/[0.08]">
+                              {categoryLabel}
+                            </span>
+
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[8px] font-mono tracking-wider uppercase flex items-center gap-1 ${
+                                isDelayed
+                                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/25"
+                                  : "bg-admin-gold/10 text-admin-gold border border-admin-gold/20"
+                              }`}
+                            >
+                              <span
+                                className={`w-1 h-1 rounded-full ${
+                                  isDelayed ? "bg-amber-400" : "bg-admin-gold"
+                                }`}
+                              />
+                              {statusLabel}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Acção */}
+                        <td className="px-6 py-4.5 text-right whitespace-nowrap">
+                          <Link
+                            href={item.href}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-mono tracking-wider uppercase text-admin-gold border border-admin-gold/20 bg-admin-gold/5 hover:bg-admin-gold/15 hover:border-admin-gold/40 transition-all duration-200"
+                          >
+                            <span>Abrir projecto</span>
+                            <ArrowUpRight className="w-3 h-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Surface: Vertical Agenda (< md) */}
+            <div className="md:hidden divide-y divide-white/[0.04]">
+              {visibleItems.map((item) => {
+                const isDelayed = item.status === "delayed";
+                const categoryLabel =
+                  TIMELINE_CATEGORY_LABELS[item.category] || item.category;
+                const statusLabel =
+                  AGENDA_STATUS_LABELS[item.status] || item.status;
+                const eventTypeLabel =
+                  EVENT_TYPE_LABELS[item.eventType] || item.eventType;
+
+                return (
+                  <div key={item.id} className="p-4 space-y-3">
+                    {/* Top Row: Date/Time & Status */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-mono text-xs text-grey-dark/90 min-w-0">
+                        <Calendar
+                          className="w-3.5 h-3.5 text-admin-gold/70 shrink-0"
+                          strokeWidth={1.5}
+                        />
+                        <span className="truncate">{formatDateTimePtMZ(item.startsAt)}</span>
+                      </div>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[8px] font-mono tracking-wider uppercase flex items-center gap-1 shrink-0 ${
+                          isDelayed
+                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/25"
+                            : "bg-admin-gold/10 text-admin-gold border border-admin-gold/20"
+                        }`}
+                      >
+                        <span
+                          className={`w-1 h-1 rounded-full ${
+                            isDelayed ? "bg-amber-400" : "bg-admin-gold"
+                          }`}
+                        />
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    {/* Milestone & Badges */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider uppercase bg-white/[0.04] text-grey-medium border border-white/[0.08]">
+                          {categoryLabel}
+                        </span>
+                        {item.visibility === "internal" && (
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider uppercase bg-neutral-800 text-neutral-400 border border-neutral-700">
+                            Interno
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-serif font-light text-white break-words">
+                        {item.title}
+                      </h3>
+                      {item.description && (
+                        <p className="text-[11px] text-grey/50 font-mono break-words leading-relaxed">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Project & Action */}
+                    <div className="flex items-center justify-between gap-3 pt-1 border-t border-white/[0.02]">
+                      <div className="min-w-0 flex-1">
                         <Link
                           href={item.href}
-                          className="text-xs font-serif font-light text-white/90 hover:text-admin-gold transition-colors block"
+                          className="text-xs font-serif font-light text-white/90 hover:text-admin-gold transition-colors block truncate"
                         >
                           {item.eventName}
                         </Link>
-                        <p className="text-[10px] font-mono text-grey/50 mt-0.5">
-                          {EVENT_TYPE_LABELS[item.eventType] || item.eventType}
+                        <p className="text-[10px] font-mono text-grey/50 truncate">
+                          {eventTypeLabel}
                         </p>
-                      </td>
+                      </div>
 
-                      {/* Categoria & Estado */}
-                      <td className="px-6 py-4.5 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[8.5px] font-mono tracking-wider uppercase bg-white/[0.04] text-grey-medium border border-white/[0.08]">
-                            {categoryLabel}
-                          </span>
-
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[8px] font-mono tracking-wider uppercase flex items-center gap-1 ${
-                              isDelayed
-                                ? "bg-amber-500/10 text-amber-400 border border-amber-500/25"
-                                : "bg-admin-gold/10 text-admin-gold border border-admin-gold/20"
-                            }`}
-                          >
-                            <span
-                              className={`w-1 h-1 rounded-full ${
-                                isDelayed ? "bg-amber-400" : "bg-admin-gold"
-                              }`}
-                            />
-                            {statusLabel}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Acção */}
-                      <td className="px-6 py-4.5 text-right whitespace-nowrap">
-                        <Link
-                          href={item.href}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-mono tracking-wider uppercase text-admin-gold border border-admin-gold/20 bg-admin-gold/5 hover:bg-admin-gold/15 hover:border-admin-gold/40 transition-all duration-200"
-                        >
-                          <span>Abrir projecto</span>
-                          <ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      <Link
+                        href={item.href}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[8.5px] font-mono tracking-wider uppercase text-admin-gold border border-admin-gold/20 bg-admin-gold/5 hover:bg-admin-gold/15 transition-all shrink-0"
+                      >
+                        <span>Abrir projecto</span>
+                        <ArrowUpRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Footer when items exceed display limit */}

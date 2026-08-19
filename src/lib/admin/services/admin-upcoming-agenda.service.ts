@@ -22,6 +22,7 @@ export type AdminUpcomingAgendaItem = {
   category: PortalTimelineCategory;
   visibility: "client" | "internal";
   status: "scheduled" | "delayed";
+  sortOrder: number;
 
   href: string;
 };
@@ -112,14 +113,15 @@ export function buildAdminUpcomingAgenda(
       category: item.category,
       visibility: item.visibility,
       status: item.status,
+      sortOrder: item.sortOrder,
       href: `/admin/events/${event.id}`,
     });
   }
 
-  // Deterministic sorting:
+  // Deterministic canonical sorting:
   // 1. startsAt ascending (earliest milestone first)
   // 2. eventName ascending
-  // 3. title ascending
+  // 3. sortOrder ascending
   // 4. id tie-breaker
   items.sort((a, b) => {
     const timeDiff = new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
@@ -128,8 +130,8 @@ export function buildAdminUpcomingAgenda(
     const nameDiff = a.eventName.localeCompare(b.eventName);
     if (nameDiff !== 0) return nameDiff;
 
-    const titleDiff = a.title.localeCompare(b.title);
-    if (titleDiff !== 0) return titleDiff;
+    const orderDiff = a.sortOrder - b.sortOrder;
+    if (orderDiff !== 0) return orderDiff;
 
     return a.id.localeCompare(b.id);
   });
