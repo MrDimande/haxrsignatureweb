@@ -3,6 +3,7 @@ import type { ManagedEvent } from "@/lib/events/types";
 import type { EventPipelineStatus } from "@/lib/events/pipeline";
 import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
+import type { PortalTimelineItem } from "@/lib/portal/portal-premium.types";
 import {
   getAdminAttentionAlerts,
   type AdminAlert,
@@ -15,19 +16,29 @@ import {
   type EventPortfolioHealthSummary,
   type EventPortfolioOperationalSnapshot,
 } from "@/lib/admin/services/event-portfolio.service";
+import {
+  buildAdminUpcomingAgenda,
+  type AdminUpcomingAgendaItem,
+  type AdminUpcomingAgenda,
+} from "@/lib/admin/services/admin-upcoming-agenda.service";
 import * as analyticsRepo from "@/lib/admin/repositories/analytics.repository";
 import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
 import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 import * as inquiriesRepo from "@/lib/contact/inquiries.repository";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import * as financeRepo from "@/lib/finance/repositories/overview.repository";
-import { groupEventsByPipeline } from "@/lib/events/pipeline";
+import * as portalPremiumRepo from "@/lib/portal/repositories/portal-premium.repository";
+import { groupEventsByPipeline, resolveEventPipelineStatus } from "@/lib/events/pipeline";
 
 export type { AdminAttentionSource } from "@/lib/admin/services/admin-alerts.service";
 export type {
   EventPortfolioHealthItem,
   EventPortfolioHealthSummary,
   EventPortfolioOperationalSnapshot,
+};
+export type {
+  AdminUpcomingAgendaItem,
+  AdminUpcomingAgenda,
 };
 
 export type RevenueByBusiness = Awaited<ReturnType<typeof analyticsRepo.getRevenueByBusiness>>;
@@ -52,6 +63,7 @@ export type AdminDashboardSnapshot = {
     items: EventPortfolioHealthItem[];
     summary: EventPortfolioHealthSummary;
   };
+  upcoming: AdminUpcomingAgenda;
   documents: DashboardStats;
   businesses: Business[];
   events: ManagedEvent[];
@@ -71,6 +83,10 @@ export type AdminDashboardSourceData = {
   fiscalYear: number;
   alerts: AdminAlert[];
   portfolioSnapshots: EventPortfolioOperationalSnapshot[];
+  timelineBatch: {
+    available: boolean;
+    items: PortalTimelineItem[];
+  };
   documents: DashboardStats;
   businesses: Business[];
   events: ManagedEvent[];
@@ -125,6 +141,13 @@ export function buildAdminDashboardSnapshot(
   const recentInquiries = source.inquiries.slice(0, 3);
   const attentionItems = buildAdminAttentionItems(source.alerts);
   const portfolio = buildEventPortfolioHealth(source.portfolioSnapshots);
+  const upcoming = buildAdminUpcomingAgenda(
+    {
+      events: source.events,
+      timeline: source.timelineBatch,
+    },
+    { now }
+  );
 
   return {
     generatedAt,
@@ -133,6 +156,7 @@ export function buildAdminDashboardSnapshot(
       items: attentionItems,
     },
     portfolio,
+    upcoming,
     documents: source.documents,
     businesses: source.businesses,
     events: source.events,
@@ -178,13 +202,23 @@ export async function getAdminDashboardSnapshot(
     inquiriesRepo.listInquiries(),
   ]);
 
-  const portfolioSnapshots = await getEventPortfolioOperationalSnapshots(events, { now });
+  const operationalEvents = events.filter((event) => {
+    const pipeline = resolveEventPipelineStatus(event, now);
+    return pipeline === "planning" || pipeline === "active";
+  });
+  const operationalEventIds = operationalEvents.map((e) => e.id);
+
+  const [portfolioSnapshots, timelineBatch] = await Promise.all([
+    getEventPortfolioOperationalSnapshots(events, { now }),
+    portalPremiumRepo.listTimelineByEventIds(operationalEventIds),
+  ]);
 
   return buildAdminDashboardSnapshot(
     {
       fiscalYear,
       alerts,
       portfolioSnapshots,
+      timelineBatch,
       documents,
       businesses,
       events,

@@ -12,6 +12,7 @@ import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 import type { AdminAlert } from "@/lib/admin/services/admin-alerts.service";
 import type { EventPortfolioOperationalSnapshot } from "@/lib/admin/services/event-portfolio.service";
+import type { PortalTimelineItem } from "@/lib/portal/portal-premium.types";
 
 export function createAdminAlert(overrides?: Partial<AdminAlert>): AdminAlert {
   return {
@@ -186,6 +187,28 @@ export function createOperationalSnapshot(
   };
 }
 
+export function createTimelineItem(
+  id: string,
+  eventId: string,
+  overrides?: Partial<PortalTimelineItem>
+): PortalTimelineItem {
+  return {
+    id,
+    eventId,
+    clientId: `cli-${eventId}`,
+    title: `Marco ${id}`,
+    description: null,
+    startsAt: "2026-08-22T10:00:00.000Z",
+    endsAt: null,
+    category: "milestone",
+    visibility: "client",
+    status: "scheduled",
+    sortOrder: 10,
+    createdAt: "2026-08-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
 function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>): AdminDashboardSourceData {
   const alerts: AdminAlert[] = [
     createAdminAlert({
@@ -260,6 +283,15 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       },
     }),
   ];
+  const timelineBatch = {
+    available: true,
+    items: [
+      createTimelineItem("t-1", "evt-1", {
+        startsAt: "2026-08-22T10:00:00.000Z",
+        title: "Revisão de Proposta",
+      }),
+    ],
+  };
   const finance = createFinanceOverview();
   const inquiries = [
     createInquiry({
@@ -292,6 +324,7 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
     fiscalYear: 2026,
     alerts,
     portfolioSnapshots,
+    timelineBatch,
     documents,
     businesses,
     events,
@@ -432,7 +465,7 @@ describe("admin-dashboard.service (actionability semantics)", () => {
     });
 
     it("handles empty events safely without errors", () => {
-      const source = createFixtureSourceData({ events: [], portfolioSnapshots: [] });
+      const source = createFixtureSourceData({ events: [], portfolioSnapshots: [], timelineBatch: { available: true, items: [] } });
       const snapshot = buildAdminDashboardSnapshot(source);
 
       assert.deepEqual(snapshot.events, []);
@@ -441,11 +474,13 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       assert.deepEqual(snapshot.eventGroups.completed, []);
       assert.deepEqual(snapshot.portfolio.items, []);
       assert.equal(snapshot.portfolio.summary.total, 0);
+      assert.equal(snapshot.upcoming.available, true);
+      assert.deepEqual(snapshot.upcoming.items, []);
     });
 
-    it("passes through documents, finance, analytics, attention and portfolio data without mutation", () => {
+    it("passes through documents, finance, analytics, attention, portfolio and upcoming data without mutation", () => {
       const source = createFixtureSourceData();
-      const snapshot = buildAdminDashboardSnapshot(source);
+      const snapshot = buildAdminDashboardSnapshot(source, { now: new Date("2026-08-19T12:00:00Z") });
 
       assert.deepEqual(snapshot.documents, source.documents);
       assert.deepEqual(snapshot.businesses, source.businesses);
@@ -456,6 +491,9 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       assert.equal(snapshot.attention.items.length, 4);
       assert.equal(snapshot.portfolio.items.length, 1);
       assert.equal(snapshot.portfolio.summary.total, 1);
+      assert.equal(snapshot.upcoming.available, true);
+      assert.equal(snapshot.upcoming.items.length, 1);
+      assert.equal(snapshot.upcoming.items[0].title, "Revisão de Proposta");
     });
 
     it("generates deterministic snapshot structure with injected now timestamp", () => {

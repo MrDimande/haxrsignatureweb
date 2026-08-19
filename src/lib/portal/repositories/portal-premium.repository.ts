@@ -75,6 +75,42 @@ export async function listTimelineForEvent(
   return asGenericRows<TimelineRow>(data).map(mapTimeline);
 }
 
+export type TimelineBatchResult = {
+  available: boolean;
+  items: PortalTimelineItem[];
+};
+
+export async function listTimelineByEventIds(
+  eventIds: string[]
+): Promise<TimelineBatchResult> {
+  if (eventIds.length === 0) {
+    return { available: true, items: [] };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("portal_timeline_items")
+    .select("*")
+    .in("event_id", eventIds)
+    .order("starts_at", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    if (
+      error.message.includes("portal_timeline_items") ||
+      error.message.includes("does not exist")
+    ) {
+      return { available: false, items: [] };
+    }
+    throw new Error(error.message);
+  }
+
+  return {
+    available: true,
+    items: asGenericRows<TimelineRow>(data).map(mapTimeline),
+  };
+}
+
 export async function upsertOperationalTimelineForEvent(
   eventId: string,
   clientId: string | null

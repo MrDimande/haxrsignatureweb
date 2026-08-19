@@ -7,6 +7,7 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import AttentionRequiredPanel from "@/components/admin/dashboard/AttentionRequiredPanel";
 import PortfolioHealthPanel from "@/components/admin/dashboard/PortfolioHealthPanel";
+import UpcomingOperationalAgendaPanel from "@/components/admin/dashboard/UpcomingOperationalAgendaPanel";
 import CashSummaryPanel from "@/components/admin/dashboard/CashSummaryPanel";
 import DocumentAnalyticsPanel from "@/components/admin/dashboard/DocumentAnalyticsPanel";
 import EventPipelinePanel from "@/components/admin/dashboard/EventPipelinePanel";
@@ -214,6 +215,8 @@ export default async function DashboardPage() {
           summary={snapshot.portfolio.summary}
           businessMap={businessMap}
         />
+
+        <UpcomingOperationalAgendaPanel upcoming={snapshot.upcoming} />
 
         <EventPipelinePanel groups={snapshot.eventGroups} businessMap={businessMap} />
 
