@@ -431,12 +431,12 @@ export async function countPendingConciergeReviews(): Promise<number> {
 
 export async function countPendingConciergeReviewsByEventIds(
   eventIds: string[]
-): Promise<Record<string, number>> {
-  const result: Record<string, number> = {};
-  if (!eventIds.length) return result;
+): Promise<{ available: boolean; counts: Record<string, number> }> {
+  const counts: Record<string, number> = {};
+  if (!eventIds.length) return { available: true, counts };
 
   for (const id of eventIds) {
-    result[id] = 0;
+    counts[id] = 0;
   }
 
   const supabase = createAdminClient();
@@ -447,15 +447,20 @@ export async function countPendingConciergeReviewsByEventIds(
     .eq("status", "pending_review");
 
   if (error) {
-    if (error.message.includes("does not exist")) return result;
+    if (
+      error.message.includes("does not exist") ||
+      error.message.includes("concierge_review_items")
+    ) {
+      return { available: false, counts: {} };
+    }
     throw new Error(error.message);
   }
 
   for (const row of (data as Array<{ event_id: string }> | null) ?? []) {
-    if (row.event_id && row.event_id in result) {
-      result[row.event_id] = (result[row.event_id] ?? 0) + 1;
+    if (row.event_id && row.event_id in counts) {
+      counts[row.event_id] = (counts[row.event_id] ?? 0) + 1;
     }
   }
 
-  return result;
+  return { available: true, counts };
 }

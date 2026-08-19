@@ -14,8 +14,7 @@ export const EVENT_PIPELINE_HINTS: Record<EventPipelineStatus, string> = {
   completed: "Evento realizado ou arquivado",
 };
 
-function startOfTodayMaputo(): Date {
-  const now = new Date();
+function startOfTodayMaputo(now: Date = new Date()): Date {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Maputo",
     year: "numeric",
@@ -36,19 +35,23 @@ function parseEventDate(date: string): Date {
 }
 
 export function resolveEventPipelineStatus(
-  event: ManagedEvent
+  event: ManagedEvent,
+  now: Date = new Date()
 ): EventPipelineStatus {
   if (!event.isActive) return "completed";
   if (!event.date) return "planning";
 
-  const today = startOfTodayMaputo();
+  const today = startOfTodayMaputo(now);
   const eventDate = parseEventDate(event.date);
 
   if (eventDate < today) return "completed";
   return "active";
 }
 
-export function groupEventsByPipeline(events: ManagedEvent[]) {
+export function groupEventsByPipeline(
+  events: ManagedEvent[],
+  now: Date = new Date()
+) {
   const groups: Record<EventPipelineStatus, ManagedEvent[]> = {
     planning: [],
     active: [],
@@ -56,7 +59,7 @@ export function groupEventsByPipeline(events: ManagedEvent[]) {
   };
 
   for (const event of events) {
-    groups[resolveEventPipelineStatus(event)].push(event);
+    groups[resolveEventPipelineStatus(event, now)].push(event);
   }
 
   const sortByDate = (a: ManagedEvent, b: ManagedEvent) => {
@@ -73,8 +76,11 @@ export function groupEventsByPipeline(events: ManagedEvent[]) {
   return groups;
 }
 
-export function countEventsByPipeline(events: ManagedEvent[]) {
-  const groups = groupEventsByPipeline(events);
+export function countEventsByPipeline(
+  events: ManagedEvent[],
+  now: Date = new Date()
+) {
+  const groups = groupEventsByPipeline(events, now);
   return {
     planning: groups.planning.length,
     active: groups.active.length,

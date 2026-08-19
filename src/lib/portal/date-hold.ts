@@ -1,6 +1,9 @@
-export function isDateHoldActive(holdUntil: string | null | undefined): boolean {
+export function isDateHoldActive(
+  holdUntil: string | null | undefined,
+  now: Date = new Date()
+): boolean {
   if (!holdUntil) return false;
-  return new Date(holdUntil).getTime() > Date.now();
+  return new Date(holdUntil).getTime() > now.getTime();
 }
 
 export function formatDateHoldUntil(holdUntil: string): string {
@@ -12,7 +15,10 @@ export function formatDateHoldUntil(holdUntil: string): string {
   });
 }
 
-export function daysUntilDateHold(holdUntil: string): number {
-  const ms = new Date(holdUntil).getTime() - Date.now();
+export function daysUntilDateHold(
+  holdUntil: string,
+  now: Date = new Date()
+): number {
+  const ms = new Date(holdUntil).getTime() - now.getTime();
   return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
 }

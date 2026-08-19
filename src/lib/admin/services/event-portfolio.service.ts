@@ -1,5 +1,5 @@
 import type { ManagedEvent, EventListGuestStats } from "@/lib/events/types";
-import type { InvoiceDocument } from "@/lib/admin/types";
+import type { BusinessId, EventType, InvoiceDocument } from "@/lib/admin/types";
 import { resolveEventPipelineStatus } from "@/lib/events/pipeline";
 import { isDateHoldActive } from "@/lib/portal/date-hold";
 import { buildOverdueAlerts } from "@/lib/finance/extended-analytics";
@@ -12,6 +12,8 @@ import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 export type EventPortfolioOperationalSnapshot = {
   event: {
     id: string;
+    businessId: BusinessId;
+    type: EventType;
     name: string;
     clientName: string | null;
     date: string | null;
@@ -24,10 +26,12 @@ export type EventPortfolioOperationalSnapshot = {
     unassigned: number;
   };
   concierge: {
-    pendingReviewCount: number;
+    available: boolean;
+    pendingReviewCount: number | null;
   };
   paymentProofs: {
-    pendingCount: number;
+    available: boolean;
+    pendingCount: number | null;
   };
   documents: {
     openCount: number;
@@ -46,24 +50,36 @@ export type EventPortfolioOperationalSnapshot = {
 export type EventPortfolioSourceData = {
   events: ManagedEvent[];
   guestStats: Record<string, EventListGuestStats>;
-  conciergePendingByEvent: Record<string, number>;
-  paymentProofsPendingByEvent: Record<string, number>;
+  conciergeReviews: {
+    available: boolean;
+    counts: Record<string, number>;
+  };
+  paymentProofs: {
+    available: boolean;
+    counts: Record<string, number>;
+  };
   documentsByEvent: Record<string, InvoiceDocument[]>;
+};
+
+export type BuildEventPortfolioOptions = {
+  now?: Date;
 };
 
 /**
  * Pure builder that transforms batch source data into EventPortfolioOperationalSnapshot[]
  * for all planning and active events.
  *
- * Deterministic and free of side-effects.
+ * Deterministic and free of side-effects. Supports time injection for full temporal determinism.
  */
 export function buildEventPortfolioOperationalSnapshot(
-  source: EventPortfolioSourceData
+  source: EventPortfolioSourceData,
+  options?: BuildEventPortfolioOptions
 ): EventPortfolioOperationalSnapshot[] {
+  const now = options?.now ?? new Date();
   const snapshots: EventPortfolioOperationalSnapshot[] = [];
 
   for (const event of source.events) {
-    const pipeline = resolveEventPipelineStatus(event);
+    const pipeline = resolveEventPipelineStatus(event, now);
     if (pipeline === "completed") {
       continue;
     }
@@ -75,8 +91,16 @@ export function buildEventPortfolioOperationalSnapshot(
       unassigned: 0,
     };
 
-    const pendingConcierge = source.conciergePendingByEvent[event.id] ?? 0;
-    const pendingProofs = source.paymentProofsPendingByEvent[event.id] ?? 0;
+    const conciergeAvailable = source.conciergeReviews.available;
+    const pendingConcierge = conciergeAvailable
+      ? source.conciergeReviews.counts[event.id] ?? 0
+      : null;
+
+    const paymentProofsAvailable = source.paymentProofs.available;
+    const pendingProofs = paymentProofsAvailable
+      ? source.paymentProofs.counts[event.id] ?? 0
+      : null;
+
     const eventDocs = source.documentsByEvent[event.id] ?? [];
 
     const openCount = eventDocs.filter(
@@ -85,8 +109,8 @@ export function buildEventPortfolioOperationalSnapshot(
         (doc.documentType === "invoice" || doc.documentType === "proforma")
     ).length;
 
-    const overdueCount = buildOverdueAlerts(eventDocs).length;
-    const isDateHold = isDateHoldActive(event.dateHoldUntil);
+    const overdueCount = buildOverdueAlerts(eventDocs, now).length;
+    const isDateHold = isDateHoldActive(event.dateHoldUntil, now);
     const sheetsConfigured = Boolean(
       event.googleSheetUrl && event.googleSheetUrl.trim()
     );
@@ -94,6 +118,8 @@ export function buildEventPortfolioOperationalSnapshot(
     snapshots.push({
       event: {
         id: event.id,
+        businessId: event.businessId,
+        type: event.type,
         name: event.name,
         clientName: event.clientName,
         date: event.date,
@@ -106,9 +132,11 @@ export function buildEventPortfolioOperationalSnapshot(
         unassigned: eventGuests.unassigned,
       },
       concierge: {
+        available: conciergeAvailable,
         pendingReviewCount: pendingConcierge,
       },
       paymentProofs: {
+        available: paymentProofsAvailable,
         pendingCount: pendingProofs,
       },
       documents: {
@@ -132,13 +160,16 @@ export function buildEventPortfolioOperationalSnapshot(
 /**
  * Loads batch operational data for events and builds operational snapshots.
  * Guaranteed O(1) database queries relative to the number of events.
+ * Uses a single unified clock for filtering and snapshot building.
  */
 export async function getEventPortfolioOperationalSnapshots(
-  targetEvents?: ManagedEvent[]
+  targetEvents?: ManagedEvent[],
+  options?: BuildEventPortfolioOptions
 ): Promise<EventPortfolioOperationalSnapshot[]> {
+  const now = options?.now ?? new Date();
   const events = targetEvents ?? (await eventsRepo.listAllEvents());
   const operationalEvents = events.filter((event) => {
-    const pipeline = resolveEventPipelineStatus(event);
+    const pipeline = resolveEventPipelineStatus(event, now);
     return pipeline === "planning" || pipeline === "active";
   });
 
@@ -148,7 +179,7 @@ export async function getEventPortfolioOperationalSnapshots(
 
   const eventIds = operationalEvents.map((e) => e.id);
 
-  const [guestStats, conciergeCounts, proofCounts, documents] = await Promise.all([
+  const [guestStats, conciergeBatch, proofBatch, documents] = await Promise.all([
     guestsRepo.listGuestStatsByEventIds(eventIds),
     conciergeRepo.countPendingConciergeReviewsByEventIds(eventIds),
     portalPremiumRepo.countPendingPaymentProofsByEventIds(eventIds),
@@ -165,11 +196,14 @@ export async function getEventPortfolioOperationalSnapshots(
     }
   }
 
-  return buildEventPortfolioOperationalSnapshot({
-    events: operationalEvents,
-    guestStats,
-    conciergePendingByEvent: conciergeCounts,
-    paymentProofsPendingByEvent: proofCounts,
-    documentsByEvent,
-  });
+  return buildEventPortfolioOperationalSnapshot(
+    {
+      events: operationalEvents,
+      guestStats,
+      conciergeReviews: conciergeBatch,
+      paymentProofs: proofBatch,
+      documentsByEvent,
+    },
+    { now }
+  );
 }

@@ -38,10 +38,9 @@ function defaultDueDate(doc: InvoiceDocument): string {
 }
 
 export function buildOverdueAlerts(
-  documents: InvoiceDocument[]
+  documents: InvoiceDocument[],
+  now: Date = new Date()
 ): OverdueAlert[] {
-  const now = new Date();
-
   return documents
     .filter(
       (doc) =>

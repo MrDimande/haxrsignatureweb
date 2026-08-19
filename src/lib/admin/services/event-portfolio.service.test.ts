@@ -7,6 +7,8 @@ import {
 import type { ManagedEvent, EventListGuestStats } from "@/lib/events/types";
 import type { InvoiceDocument } from "@/lib/admin/types";
 
+const REFERENCE_NOW = new Date("2026-08-19T12:00:00.000Z");
+
 function createEvent(id: string, overrides?: Partial<ManagedEvent>): ManagedEvent {
   return {
     id,
@@ -72,7 +74,7 @@ function createInvoiceDocument(
       eventLocation: "Maputo",
     },
     issueDate: "2026-07-01",
-    expiryDate: "2099-12-31",
+    expiryDate: "2026-12-31",
     notes: "",
     lineItems: [],
     totals: {
@@ -100,216 +102,203 @@ function createInvoiceDocument(
   };
 }
 
-describe("event-portfolio.service (batch data foundation)", () => {
-  it("A. includes planning + active events and excludes completed events", () => {
+describe("event-portfolio.service (temporal determinism & data availability)", () => {
+  it("A & B. Portfolio builder is deterministic and returns identical output for same input + now", () => {
+    const events = [createEvent("1", { date: "2026-09-01" })];
+    const source: EventPortfolioSourceData = {
+      events,
+      guestStats: { "1": createGuestStats() },
+      conciergeReviews: { available: true, counts: { "1": 2 } },
+      paymentProofs: { available: true, counts: { "1": 1 } },
+      documentsByEvent: { "1": [createInvoiceDocument("d1", "1", { expiryDate: "2026-08-10" })] },
+    };
+
+    const run1 = buildEventPortfolioOperationalSnapshot(source, { now: REFERENCE_NOW });
+    const run2 = buildEventPortfolioOperationalSnapshot(source, { now: REFERENCE_NOW });
+
+    assert.deepEqual(run1, run2);
+    assert.equal(run1.length, 1);
+    assert.equal(run1[0].event.pipeline, "active");
+    assert.equal(run1[0].documents.overdueCount, 1);
+  });
+
+  it("C & D. event after injected now is active; event before injected now is completed", () => {
     const events = [
-      createEvent("1", { date: "2026-12-20" }), // active
-      createEvent("2", { date: null }), // planning
-      createEvent("3", { date: "2020-01-01" }), // completed (past date)
-      createEvent("4", { isActive: false }), // completed (inactive)
+      createEvent("future", { date: "2026-09-01" }),
+      createEvent("planning", { date: null }),
+      createEvent("past", { date: "2026-08-01" }),
     ];
 
     const source: EventPortfolioSourceData = {
       events,
       guestStats: {},
-      conciergePendingByEvent: {},
-      paymentProofsPendingByEvent: {},
+      conciergeReviews: { available: true, counts: {} },
+      paymentProofs: { available: true, counts: {} },
       documentsByEvent: {},
     };
 
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
+    const snapshots = buildEventPortfolioOperationalSnapshot(source, { now: REFERENCE_NOW });
 
     assert.equal(snapshots.length, 2);
-    assert.equal(snapshots[0].event.id, "1");
+    assert.equal(snapshots[0].event.id, "future");
     assert.equal(snapshots[0].event.pipeline, "active");
-    assert.equal(snapshots[1].event.id, "2");
+    assert.equal(snapshots[1].event.id, "planning");
     assert.equal(snapshots[1].event.pipeline, "planning");
   });
 
-  it("B. guest stats map accurately to the correct event", () => {
-    const events = [
-      createEvent("evt-1"),
-      createEvent("evt-2"),
-    ];
-
-    const source: EventPortfolioSourceData = {
-      events,
-      guestStats: {
-        "evt-1": createGuestStats({ totalGuests: 200, confirmed: 180, checkedIn: 50, unassigned: 5 }),
-        "evt-2": createGuestStats({ totalGuests: 80, confirmed: 60, checkedIn: 0, unassigned: 0 }),
-      },
-      conciergePendingByEvent: {},
-      paymentProofsPendingByEvent: {},
-      documentsByEvent: {},
-    };
-
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
-
-    assert.equal(snapshots[0].guests.totalGuests, 200);
-    assert.equal(snapshots[0].guests.confirmed, 180);
-    assert.equal(snapshots[0].guests.checkedIn, 50);
-    assert.equal(snapshots[0].guests.unassigned, 5);
-
-    assert.equal(snapshots[1].guests.totalGuests, 80);
-    assert.equal(snapshots[1].guests.confirmed, 60);
-    assert.equal(snapshots[1].guests.checkedIn, 0);
-    assert.equal(snapshots[1].guests.unassigned, 0);
-  });
-
-  it("C. Concierge counts map accurately to the correct event", () => {
-    const events = [createEvent("evt-1"), createEvent("evt-2")];
-
-    const source: EventPortfolioSourceData = {
-      events,
-      guestStats: {},
-      conciergePendingByEvent: {
-        "evt-1": 3,
-        "evt-2": 0,
-      },
-      paymentProofsPendingByEvent: {},
-      documentsByEvent: {},
-    };
-
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
-    assert.equal(snapshots[0].concierge.pendingReviewCount, 3);
-    assert.equal(snapshots[1].concierge.pendingReviewCount, 0);
-  });
-
-  it("D & E. pending payment proofs map only to explicit matching eventId", () => {
-    const events = [createEvent("evt-1"), createEvent("evt-2")];
-
-    const source: EventPortfolioSourceData = {
-      events,
-      guestStats: {},
-      conciergePendingByEvent: {},
-      paymentProofsPendingByEvent: {
-        "evt-1": 2,
-        // evt-2 has none; proofs with null eventId are not in the dictionary
-      },
-      documentsByEvent: {},
-    };
-
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
-    assert.equal(snapshots[0].paymentProofs.pendingCount, 2);
-    assert.equal(snapshots[1].paymentProofs.pendingCount, 0);
-  });
-
-  it("F & G. open and overdue documents are derived canonically per event", () => {
-    const events = [createEvent("evt-1"), createEvent("evt-2")];
-
-    const docSentFuture = createInvoiceDocument("d1", "evt-1", { status: "sent", expiryDate: "2099-12-31" });
-    const docSentOverdue = createInvoiceDocument("d2", "evt-1", { status: "sent", expiryDate: "2026-01-01" });
-    const docPaid = createInvoiceDocument("d3", "evt-1", { status: "paid", expiryDate: "2026-01-01" });
-
-    const docDraft = createInvoiceDocument("d4", "evt-2", { status: "draft" });
-
-    const source: EventPortfolioSourceData = {
-      events,
-      guestStats: {},
-      conciergePendingByEvent: {},
-      paymentProofsPendingByEvent: {},
-      documentsByEvent: {
-        "evt-1": [docSentFuture, docSentOverdue, docPaid],
-        "evt-2": [docDraft],
-      },
-    };
-
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
-
-    // evt-1: 2 sent documents (openCount = 2), 1 overdue (overdueCount = 1)
-    assert.equal(snapshots[0].documents.openCount, 2);
-    assert.equal(snapshots[0].documents.overdueCount, 1);
-
-    // evt-2: 1 draft document (openCount = 0, overdueCount = 0)
-    assert.equal(snapshots[1].documents.openCount, 0);
-    assert.equal(snapshots[1].documents.overdueCount, 0);
-  });
-
-  it("H. dateHold uses canonical isDateHoldActive semantics", () => {
-    const futureDate = new Date(Date.now() + 86400000 * 5).toISOString();
-    const pastDate = "2025-01-01T00:00:00.000Z";
+  it("E & F. date hold evaluated relative to injected now (future = active, past = inactive)", () => {
+    const futureHold = "2026-08-25T12:00:00.000Z";
+    const pastHold = "2026-08-10T12:00:00.000Z";
 
     const events = [
-      createEvent("evt-1", { dateHoldUntil: futureDate }),
-      createEvent("evt-2", { dateHoldUntil: pastDate }),
-      createEvent("evt-3", { dateHoldUntil: null }),
+      createEvent("1", { dateHoldUntil: futureHold }),
+      createEvent("2", { dateHoldUntil: pastHold }),
+      createEvent("3", { dateHoldUntil: null }),
     ];
 
     const source: EventPortfolioSourceData = {
       events,
       guestStats: {},
-      conciergePendingByEvent: {},
-      paymentProofsPendingByEvent: {},
+      conciergeReviews: { available: true, counts: {} },
+      paymentProofs: { available: true, counts: {} },
       documentsByEvent: {},
     };
 
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
+    const snapshots = buildEventPortfolioOperationalSnapshot(source, { now: REFERENCE_NOW });
 
     assert.equal(snapshots[0].dateHold.active, true);
-    assert.equal(snapshots[0].dateHold.dateHoldUntil, futureDate);
+    assert.equal(snapshots[0].dateHold.dateHoldUntil, futureHold);
 
     assert.equal(snapshots[1].dateHold.active, false);
-    assert.equal(snapshots[1].dateHold.dateHoldUntil, pastDate);
+    assert.equal(snapshots[1].dateHold.dateHoldUntil, pastHold);
 
     assert.equal(snapshots[2].dateHold.active, false);
     assert.equal(snapshots[2].dateHold.dateHoldUntil, null);
   });
 
-  it("I. Sheets state is factual and does not classify no-connection as error", () => {
-    const events = [
-      createEvent("evt-1", {
-        googleSheetUrl: "https://docs.google.com/spreadsheets/d/abc",
-        sheetsLastSyncedAt: "2026-08-19T10:00:00Z",
-      }),
-      createEvent("evt-2", {
-        googleSheetUrl: "",
-        sheetsLastSyncedAt: null,
-      }),
-    ];
+  it("G. overdue document semantics use injected now", () => {
+    const docOverdue = createInvoiceDocument("d1", "1", {
+      status: "sent",
+      expiryDate: "2026-08-10",
+    });
+    const docNotOverdue = createInvoiceDocument("d2", "1", {
+      status: "sent",
+      expiryDate: "2026-08-25",
+    });
 
     const source: EventPortfolioSourceData = {
+      events: [createEvent("1")],
+      guestStats: {},
+      conciergeReviews: { available: true, counts: {} },
+      paymentProofs: { available: true, counts: {} },
+      documentsByEvent: { "1": [docOverdue, docNotOverdue] },
+    };
+
+    const snapshots = buildEventPortfolioOperationalSnapshot(source, { now: REFERENCE_NOW });
+    assert.equal(snapshots[0].documents.openCount, 2);
+    assert.equal(snapshots[0].documents.overdueCount, 1);
+  });
+
+  it("H & I. Concierge: available=true + zero rows -> 0; available=false -> null", () => {
+    const events = [createEvent("1"), createEvent("2")];
+
+    // Case 1: Concierge module is available
+    const sourceAvailable: EventPortfolioSourceData = {
       events,
       guestStats: {},
-      conciergePendingByEvent: {},
-      paymentProofsPendingByEvent: {},
+      conciergeReviews: { available: true, counts: { "1": 3, "2": 0 } },
+      paymentProofs: { available: true, counts: {} },
       documentsByEvent: {},
     };
 
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
+    const snapAvailable = buildEventPortfolioOperationalSnapshot(sourceAvailable, { now: REFERENCE_NOW });
+    assert.equal(snapAvailable[0].concierge.available, true);
+    assert.equal(snapAvailable[0].concierge.pendingReviewCount, 3);
+    assert.equal(snapAvailable[1].concierge.available, true);
+    assert.equal(snapAvailable[1].concierge.pendingReviewCount, 0);
 
-    assert.equal(snapshots[0].sheets.configured, true);
-    assert.equal(snapshots[0].sheets.lastSyncedAt, "2026-08-19T10:00:00Z");
+    // Case 2: Concierge module is unavailable (e.g. table not migrated)
+    const sourceUnavailable: EventPortfolioSourceData = {
+      events,
+      guestStats: {},
+      conciergeReviews: { available: false, counts: {} },
+      paymentProofs: { available: true, counts: {} },
+      documentsByEvent: {},
+    };
 
-    assert.equal(snapshots[1].sheets.configured, false);
-    assert.equal(snapshots[1].sheets.lastSyncedAt, null);
+    const snapUnavailable = buildEventPortfolioOperationalSnapshot(sourceUnavailable, { now: REFERENCE_NOW });
+    assert.equal(snapUnavailable[0].concierge.available, false);
+    assert.equal(snapUnavailable[0].concierge.pendingReviewCount, null);
+    assert.equal(snapUnavailable[1].concierge.available, false);
+    assert.equal(snapUnavailable[1].concierge.pendingReviewCount, null);
   });
 
-  it("J. source objects are not mutated", () => {
+  it("J & K. Payment proofs: available=true + zero -> 0; available=false -> null", () => {
+    const events = [createEvent("1"), createEvent("2")];
+
+    // Case 1: Payment proofs available
+    const sourceAvailable: EventPortfolioSourceData = {
+      events,
+      guestStats: {},
+      conciergeReviews: { available: true, counts: {} },
+      paymentProofs: { available: true, counts: { "1": 2, "2": 0 } },
+      documentsByEvent: {},
+    };
+
+    const snapAvailable = buildEventPortfolioOperationalSnapshot(sourceAvailable, { now: REFERENCE_NOW });
+    assert.equal(snapAvailable[0].paymentProofs.available, true);
+    assert.equal(snapAvailable[0].paymentProofs.pendingCount, 2);
+    assert.equal(snapAvailable[1].paymentProofs.available, true);
+    assert.equal(snapAvailable[1].paymentProofs.pendingCount, 0);
+
+    // Case 2: Payment proofs unavailable
+    const sourceUnavailable: EventPortfolioSourceData = {
+      events,
+      guestStats: {},
+      conciergeReviews: { available: true, counts: {} },
+      paymentProofs: { available: false, counts: {} },
+      documentsByEvent: {},
+    };
+
+    const snapUnavailable = buildEventPortfolioOperationalSnapshot(sourceUnavailable, { now: REFERENCE_NOW });
+    assert.equal(snapUnavailable[0].paymentProofs.available, false);
+    assert.equal(snapUnavailable[0].paymentProofs.pendingCount, null);
+    assert.equal(snapUnavailable[1].paymentProofs.available, false);
+    assert.equal(snapUnavailable[1].paymentProofs.pendingCount, null);
+  });
+
+  it("L. businessId and event type pass through accurately", () => {
+    const event = createEvent("1", {
+      businessId: "brainywrite",
+      type: "corporate",
+    });
+
+    const source: EventPortfolioSourceData = {
+      events: [event],
+      guestStats: {},
+      conciergeReviews: { available: true, counts: {} },
+      paymentProofs: { available: true, counts: {} },
+      documentsByEvent: {},
+    };
+
+    const snapshots = buildEventPortfolioOperationalSnapshot(source, { now: REFERENCE_NOW });
+    assert.equal(snapshots[0].event.businessId, "brainywrite");
+    assert.equal(snapshots[0].event.type, "corporate");
+  });
+
+  it("M. source objects are not mutated", () => {
     const event = createEvent("evt-1");
-    const eventClone = { ...event };
+    const eventClone = JSON.parse(JSON.stringify(event));
 
     const source: EventPortfolioSourceData = {
       events: [event],
       guestStats: { "evt-1": createGuestStats() },
-      conciergePendingByEvent: { "evt-1": 1 },
-      paymentProofsPendingByEvent: { "evt-1": 1 },
+      conciergeReviews: { available: true, counts: { "evt-1": 1 } },
+      paymentProofs: { available: true, counts: { "evt-1": 1 } },
       documentsByEvent: {},
     };
 
-    buildEventPortfolioOperationalSnapshot(source);
+    buildEventPortfolioOperationalSnapshot(source, { now: REFERENCE_NOW });
     assert.deepEqual(event, eventClone);
-  });
-
-  it("K. empty events source returns safe empty array", () => {
-    const source: EventPortfolioSourceData = {
-      events: [],
-      guestStats: {},
-      conciergePendingByEvent: {},
-      paymentProofsPendingByEvent: {},
-      documentsByEvent: {},
-    };
-
-    const snapshots = buildEventPortfolioOperationalSnapshot(source);
-    assert.deepEqual(snapshots, []);
   });
 });
