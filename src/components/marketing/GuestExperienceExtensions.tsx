@@ -88,21 +88,21 @@ export default function GuestExperienceExtensions() {
             </RevealOnScroll>
           </div>
 
-          {/* Right: Real Editorial Photo of 'Eu espio...' Card */}
+          {/* Right: Real Editorial Photo of 'Eu espio...' Card (Full & Uncropped) */}
           <div className="lg:col-span-6 order-1 lg:order-2">
             <RevealOnScroll delay={0.15}>
-              <div className="rounded-3xl overflow-hidden aspect-[4/5] sm:aspect-[4/3] bg-[#FAF8F5] relative border border-brand-champagne/40 shadow-xl p-4 sm:p-6 flex items-center justify-center">
-                <div className="max-w-xs w-full rounded-2xl overflow-hidden border border-brand-champagne/30 shadow-md">
+              <div className="rounded-3xl bg-[#FAF8F5] border border-brand-champagne/40 shadow-xl p-6 sm:p-8 flex flex-col items-center justify-center">
+                <div className="w-full max-w-sm rounded-2xl overflow-hidden border border-brand-champagne/30 shadow-2xl bg-white">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/images/portfolio/mosaic-eu-espio-qr.webp"
-                    alt="Placa interactiva Eu espio com QR Code para participação dos convidados HAXR"
-                    className="w-full h-auto object-contain mx-auto"
+                    alt="Desafio interactivo Eu espio com QR Code para participação dos convidados HAXR"
+                    className="w-full h-auto object-contain block"
                   />
                 </div>
-                <div className="absolute bottom-3 left-3 right-3 bg-brand-black/65 backdrop-blur-md px-3.5 py-2 rounded-xl text-[8px] font-mono text-brand-ivory/90 flex justify-between items-center">
-                  <span>PLACA INTERACTIVA · EU ESPIO...</span>
-                  <span className="text-brand-gold">QR CODE DINÂMICO</span>
+                <div className="w-full max-w-sm mt-4 px-4 py-2.5 rounded-xl bg-brand-black/90 border border-brand-champagne/30 text-[8.5px] font-mono text-brand-ivory flex justify-between items-center">
+                  <span>PLACA INTERACTIVA · DESAFIO FOTOGRÁFICO</span>
+                  <span className="text-brand-gold font-bold">QR CODE DINÂMICO</span>
                 </div>
               </div>
             </RevealOnScroll>

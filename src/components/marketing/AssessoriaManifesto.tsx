@@ -2,10 +2,10 @@
 
 import { haxrStandardPillars } from "@/lib/marketing/editorial";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
-import { ShieldCheck, Compass, Sparkles } from "lucide-react";
+import { ShieldCheck, Compass, PenTool } from "lucide-react";
 
 export default function AssessoriaManifesto() {
-  const pillarIcons = [ShieldCheck, Compass, Sparkles];
+  const pillarIcons = [ShieldCheck, Compass, PenTool];
 
   return (
     <section className="relative py-16 md:py-24 bg-[#0d0c0a] text-brand-ivory overflow-hidden border-y border-brand-champagne/20">

@@ -9,7 +9,7 @@ import {
   LayoutGrid,
   UserCheck,
   RotateCcw,
-  Sparkles,
+  SlidersHorizontal,
   Check,
 } from "lucide-react";
 
@@ -185,9 +185,9 @@ export default function GuestInteractiveShowcase() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center bg-[#151312] border border-brand-champagne/30 rounded-3xl p-6 md:p-10 shadow-2xl backdrop-blur-xl">
           {/* Left Column: Context & Editorial Explanation */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/25 text-[8.5px] font-mono uppercase tracking-widest text-brand-gold font-bold">
-              <Sparkles className="w-3 h-3" />
-              <span>EXPERIÊNCIA DEMONSTRATIVA PÚBLICA</span>
+            <div className="flex items-center gap-2.5 text-[9px] font-mono uppercase tracking-[0.25em] text-brand-gold font-bold">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-brand-gold" />
+              <span>SIMULADOR DE RECEPÇÃO · DEMONSTRAÇÃO VIVA</span>
             </div>
 
             {activeTab === "rsvp" && (

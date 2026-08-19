@@ -27,10 +27,10 @@ export default function GuestHeroInteractive() {
           {/* Left: Authority & Editorial Promise */}
           <div className="lg:col-span-7 space-y-8 text-left">
             <RevealOnScroll>
-              <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-brand-champagne/25 backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse" />
-                <span className="font-mono text-[9px] tracking-[0.35em] uppercase text-brand-champagne font-semibold">
-                  HAXR HOSPITALITY & PROTOCOL ENGINE
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-px bg-brand-gold/70" />
+                <span className="font-mono text-[9px] tracking-[0.35em] uppercase text-brand-gold font-bold">
+                  HAXR SIGNATURE · HOSPITALIDADE & PROTOCOLO PRIVADO
                 </span>
               </div>
             </RevealOnScroll>
