@@ -36,9 +36,14 @@ export default function AdminShell({
               <h1 className="font-serif text-2.5xl font-light text-white tracking-wide">
                 {title}
               </h1>
+              {subtitle && (
+                <p className="text-xs text-grey/65 font-sans leading-relaxed">
+                  {subtitle}
+                </p>
+              )}
 
               {/* Breadcrumb with Home icon */}
-              <div className="flex items-center gap-2 text-[9px] font-mono text-grey-medium opacity-60 uppercase tracking-widest">
+              <div className="flex items-center gap-2 text-[9px] font-mono text-grey-medium opacity-60 uppercase tracking-widest pt-0.5">
                 <Home className="w-3 h-3 text-admin-gold/75" strokeWidth={1.5} />
                 <span>Dashboard</span>
                 <span>/</span>

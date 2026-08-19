@@ -3,6 +3,7 @@ import { Calendar, Users } from "lucide-react";
 import { EVENT_TYPE_LABELS } from "@/lib/admin/constants";
 import {
   EVENT_PIPELINE_LABELS,
+  resolveEventPipelineStatus,
   type EventPipelineStatus,
 } from "@/lib/events/pipeline";
 import type { EventListGuestStats, ManagedEvent } from "@/lib/events/types";
@@ -31,13 +32,7 @@ export default function ActiveEventsOverviewPanel({
   statuses = ["planning", "active"],
 }: ActiveEventsOverviewPanelProps) {
   const filtered = events.filter((event) => {
-    if (!event.isActive) return false;
-    const today = new Date().toISOString().slice(0, 10);
-    const pipeline: EventPipelineStatus = !event.date
-      ? "planning"
-      : event.date >= today
-        ? "active"
-        : "completed";
+    const pipeline = resolveEventPipelineStatus(event);
     return statuses.includes(pipeline);
   });
 
@@ -81,12 +76,7 @@ export default function ActiveEventsOverviewPanel({
               <tbody className="divide-y divide-white/[0.02]">
                 {filtered.map((event) => {
                   const stats = guestStats[event.id];
-                  const today = new Date().toISOString().slice(0, 10);
-                  const pipeline: EventPipelineStatus = !event.date
-                    ? "planning"
-                    : event.date >= today
-                      ? "active"
-                      : "completed";
+                  const pipeline = resolveEventPipelineStatus(event);
 
                   // Calcular percentagem de RSVP confirmado
                   const total = stats?.totalGuests || 0;

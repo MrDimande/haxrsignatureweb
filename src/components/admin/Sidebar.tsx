@@ -16,7 +16,6 @@ import {
   Users,
   Wallet,
   X,
-  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import BrandLogo from "@/components/ui/BrandLogo";
@@ -25,7 +24,6 @@ type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  hasSubmenu?: boolean;
 };
 
 type NavSection = {
@@ -37,14 +35,14 @@ const navSections: NavSection[] = [
   {
     title: "Geral",
     items: [
-      { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, hasSubmenu: true },
+      { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
   },
   {
     title: "Operacional",
     items: [
-      { href: "/admin/events", label: "Eventos", icon: Calendar, hasSubmenu: true },
-      { href: "/admin/invitations", label: "Convites", icon: Mail, hasSubmenu: true },
+      { href: "/admin/events", label: "Eventos", icon: Calendar },
+      { href: "/admin/invitations", label: "Convites", icon: Mail },
       { href: "/admin/leads", label: "Leads", icon: Inbox },
       { href: "/admin/suppliers", label: "Fornecedores", icon: Store },
       { href: "/admin/clients", label: "Clientes", icon: Users },
@@ -181,7 +179,7 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
               </p>
 
               <div className="space-y-1">
-                {section.items.map(({ href, label, icon: Icon, hasSubmenu }) => {
+                {section.items.map(({ href, label, icon: Icon }) => {
                   const active =
                     pathname === href || (pathname?.startsWith(`${href}/`) ?? false);
                   const badge = badgeForHref(href);
@@ -210,11 +208,6 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
                           </span>
                         ) : null}
                       </div>
-
-                      {/* Dropdown Indicator Chevron */}
-                      {hasSubmenu && (
-                        <ChevronRight className={`w-3.5 h-3.5 text-grey/40 group-hover:text-white/60 transition-transform duration-300 ${active ? "rotate-90 text-admin-gold/60" : ""}`} />
-                      )}
                     </Link>
                   );
                 })}
@@ -226,9 +219,6 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Sidebar Footer */}
         <div className="px-6 py-5 border-t border-white/[0.03] bg-black/30 space-y-4">
           <MapClock />
-
-          {/* System Status Node */}
-          <SystemStatusNode />
 
           <div className="border-t border-white/[0.02] pt-3">
             <Link
@@ -249,21 +239,3 @@ function MapClock() {
   return <MaputoSidebarClock />;
 }
 
-function SystemStatusNode() {
-  return (
-    <div className="flex flex-col gap-1.5 text-[8px] font-mono text-grey/40 uppercase tracking-[0.2em] border-t border-white/[0.02] pt-3.5">
-      <div className="flex items-center justify-between">
-        <span>Concierge AI</span>
-        <span className="text-emerald-400 font-semibold lowercase">online</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>RSVP Engine</span>
-        <span className="text-emerald-400 font-semibold lowercase">active</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span>DB Latency</span>
-        <span className="text-admin-gold font-semibold lowercase">12ms</span>
-      </div>
-    </div>
-  );
-}

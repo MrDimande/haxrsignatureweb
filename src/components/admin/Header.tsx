@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckSquare, ExternalLink, Grid, LogOut, Menu, Search, ShieldCheck, X } from "lucide-react";
+import { Bell, ExternalLink, Grid, LogOut, Menu, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -8,12 +8,6 @@ import { getAdminAlertsAction } from "@/lib/admin/actions/admin-alerts.actions";
 
 type HeaderProps = {
   onMenuClick?: () => void;
-};
-
-type TaskItem = {
-  id: string;
-  text: string;
-  checked: boolean;
 };
 
 type NotificationItem = {
@@ -24,26 +18,14 @@ type NotificationItem = {
   href?: string;
 };
 
-const DEFAULT_TASKS: TaskItem[] = [
-  { id: "1", text: "Confirmar RSVP do Casamento de Sofia", checked: false },
-  { id: "2", text: "Rever faturas em atraso no painel Caixa", checked: false },
-  { id: "3", text: "Aprovar design do menu corporativo", checked: false },
-  { id: "4", text: "Responder ao novo lead no Quick Leads Hub", checked: false },
-  { id: "5", text: "Rever projecções de margem trimestral", checked: false },
-];
-
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [];
-
 export default function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
 
   // Dialog and panel states
-  const [checklistOpen, setChecklistOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
 
   // Data states
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
 
@@ -59,31 +41,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
     window.addEventListener("haxr_profile_updated", loadAvatar);
     return () => window.removeEventListener("haxr_profile_updated", loadAvatar);
   }, []);
-
-  // Load and save Checklist tasks
-  useEffect(() => {
-    const stored = localStorage.getItem("haxr_admin_tasks");
-    if (stored) {
-      try {
-        setTasks(JSON.parse(stored));
-      } catch (e) {
-        setTasks(DEFAULT_TASKS);
-      }
-    } else {
-      setTasks(DEFAULT_TASKS);
-      localStorage.setItem("haxr_admin_tasks", JSON.stringify(DEFAULT_TASKS));
-    }
-  }, []);
-
-  const saveTasks = (newTasks: TaskItem[]) => {
-    setTasks(newTasks);
-    localStorage.setItem("haxr_admin_tasks", JSON.stringify(newTasks));
-  };
-
-  const toggleTask = (id: string) => {
-    const updated = tasks.map((t) => (t.id === id ? { ...t, checked: !t.checked } : t));
-    saveTasks(updated);
-  };
 
   // Load operational notifications from server
   useEffect(() => {
@@ -151,13 +108,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
   }
 
   // Active badge counts
-  const pendingTasksCount = tasks.filter((t) => !t.checked).length;
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
   return (
     <>
       <header className="sticky top-0 z-30 bg-[#0c0a09]/95 backdrop-blur-md border-b border-white/[0.03] px-4 md:px-8 h-16 flex items-center justify-between">
-        {/* Left Side: Sidebar Toggle Menu button & Search bar */}
+        {/* Left Side: Sidebar Toggle Menu button */}
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -167,16 +123,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-
-          {/* Futuristic Search Bar */}
-          <div className="hidden md:flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/[0.02] border border-white/[0.04] text-white/40 focus-within:text-white/80 focus-within:border-admin-gold/30 focus-within:bg-white/[0.04] transition-all w-80">
-            <Search className="w-4 h-4 shrink-0 text-grey-medium opacity-60" strokeWidth={1.5} />
-            <input
-              type="text"
-              placeholder="Pesquisar no sistema..."
-              className="bg-transparent border-none outline-none text-xs w-full placeholder:text-white/20 text-white/95 font-mono tracking-wide"
-            />
-          </div>
         </div>
 
         {/* Right Side: Quick Action shortcuts, Bell Badge notification, Flag, User profile avatar */}
@@ -186,20 +132,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <span>🇲🇿</span>
             <span className="text-[9px] text-grey/60 font-semibold font-mono">MZ</span>
           </div>
-
-          {/* Checklist Shortcut with Reactive Badge */}
-          <button
-            onClick={() => setChecklistOpen(true)}
-            className="hidden sm:flex w-8 h-8 rounded-full bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] items-center justify-center text-grey-medium hover:text-white transition-colors relative"
-            title="Checklist tarefas"
-          >
-            <CheckSquare className="w-4 h-4" strokeWidth={1.25} />
-            {pendingTasksCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-[8.5px] font-mono font-bold text-white flex items-center justify-center shadow-[0_0_8px_rgba(239,68,68,0.5)]">
-                {pendingTasksCount}
-              </span>
-            )}
-          </button>
 
           {/* Grid Popover Module Selector */}
           <div className="relative" ref={modulesRef}>
@@ -290,79 +222,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
       </header>
-
-      {/* ------------------------------------------------------------- */}
-      {/* checklist / TASKS DRAWER (Slide-over panel)                   */}
-      {/* ------------------------------------------------------------- */}
-      {checklistOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 overflow-hidden">
-            {/* Overlay background */}
-            <div
-              onClick={() => setChecklistOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
-            />
-
-            <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-              <div className="pointer-events-auto w-screen max-w-md transform border-l border-white/[0.04] bg-[#0c0a09] shadow-[0_0_50px_rgba(0,0,0,0.9)] duration-300">
-                <div className="flex h-full flex-col overflow-y-scroll py-6 scrollbar-none">
-                  <div className="px-6 flex items-center justify-between border-b border-white/[0.03] pb-4">
-                    <div>
-                      <span className="font-mono text-[8px] tracking-[0.4em] uppercase text-admin-gold">
-                        Gestor de Operações
-                      </span>
-                      <h2 className="font-serif text-xl font-light text-white mt-1">Checklist do Dia</h2>
-                    </div>
-                    <button
-                      onClick={() => setChecklistOpen(false)}
-                      className="rounded-full p-1 text-grey hover:text-white hover:bg-white/5 transition-colors"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  {/* Tasks List */}
-                  <div className="relative mt-6 flex-1 px-6 space-y-4">
-                    {tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        onClick={() => toggleTask(task.id)}
-                        className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer flex items-start gap-3.5 ${
-                          task.checked
-                            ? "bg-white/[0.01] border-white/[0.02] text-grey/40"
-                            : "bg-white/[0.02] border-white/[0.04] text-white hover:border-admin-gold/25"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={task.checked}
-                          onChange={() => {}} // Controlled by div click
-                          className="mt-0.5 h-3.5 w-3.5 rounded-sm border-white/20 bg-transparent text-admin-gold focus:ring-0 focus:ring-offset-0 cursor-pointer"
-                        />
-                        <span className={`text-[11px] font-mono tracking-wide leading-relaxed ${task.checked ? "line-through" : ""}`}>
-                          {task.text}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t border-white/[0.03] px-6 pt-5 flex items-center justify-between">
-                    <span className="text-[9px] font-mono text-grey/40">
-                      {tasks.filter((t) => t.checked).length} de {tasks.length} concluídas
-                    </span>
-                    <button
-                      onClick={() => saveTasks(tasks.map(t => ({ ...t, checked: false })))}
-                      className="font-mono text-[9.5px] tracking-wider uppercase text-admin-gold hover:opacity-85 transition-opacity"
-                    >
-                      Reiniciar lista
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ------------------------------------------------------------- */}
       {/* notifications DRAWER (Slide-over panel)                       */}
