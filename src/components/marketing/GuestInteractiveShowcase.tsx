@@ -11,99 +11,46 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Check,
+  XCircle,
 } from "lucide-react";
+import {
+  DEMO_GUESTS,
+  DEMO_TABLES,
+  searchDemoGuest,
+  type DemoGuest,
+  type DemoTable,
+} from "@/lib/marketing/convidados-demo";
 
 type ShowcaseTab = "rsvp" | "seating" | "find-seat" | "checkin";
-
-// Demonstrative dataset for the public interactive showcase
-const DEMO_GUESTS = [
-  {
-    id: "1",
-    name: "Fabião Dimande",
-    table: "Mesa de Honra",
-    seat: "Lugar 02",
-    diet: "Sem restrições",
-    status: "confirmed",
-    checkedIn: true,
-    checkedInTime: "14:15",
-    companion: "Vânia Luky",
-  },
-  {
-    id: "2",
-    name: "Jessica Muege",
-    table: "Mesa 03 · Padrinhos",
-    seat: "Lugar 01",
-    diet: "Vegetariana",
-    status: "confirmed",
-    checkedIn: true,
-    checkedInTime: "14:22",
-    companion: "Samuel Govene",
-  },
-  {
-    id: "3",
-    name: "Samuel Govene",
-    table: "Mesa 03 · Padrinhos",
-    seat: "Lugar 02",
-    diet: "Sem restrições",
-    status: "confirmed",
-    checkedIn: false,
-    checkedInTime: null,
-    companion: "Jessica Muege",
-  },
-  {
-    id: "4",
-    name: "Dra. Elisa Macamo",
-    table: "Mesa 01 · Família Directa",
-    seat: "Lugar 04",
-    diet: "Sem glúten",
-    status: "confirmed",
-    checkedIn: false,
-    checkedInTime: null,
-    companion: "+1 Acompanhante",
-  },
-  {
-    id: "5",
-    name: "Eng. Carlos Sitoe",
-    table: "Mesa 04 · Amigos Maputo",
-    seat: "Lugar 06",
-    diet: "Sem restrições",
-    status: "pending",
-    checkedIn: false,
-    checkedInTime: null,
-    companion: "Sem acompanhante",
-  },
-];
-
-const DEMO_TABLES = [
-  { id: "T1", name: "Mesa de Honra", capacity: 8, occupied: 8, sector: "Palco Principal" },
-  { id: "T2", name: "Mesa 01 · Família Noiva", capacity: 10, occupied: 10, sector: "Ala Esquerda" },
-  { id: "T3", name: "Mesa 02 · Família Noivo", capacity: 10, occupied: 10, sector: "Ala Direita" },
-  { id: "T4", name: "Mesa 03 · Padrinhos & Damas", capacity: 12, occupied: 12, sector: "Ala Central" },
-  { id: "T5", name: "Mesa 04 · Amigos Maputo", capacity: 10, occupied: 8, sector: "Ala Jardim" },
-  { id: "T6", name: "Mesa 05 · Convidados Especiais", capacity: 10, occupied: 9, sector: "Ala Jardim" },
-];
 
 export default function GuestInteractiveShowcase() {
   const [activeTab, setActiveTab] = useState<ShowcaseTab>("rsvp");
 
   // Tab 1 (RSVP Demo State)
-  const rsvpGuest = "Vânia Luky";
+  const rsvpGuest = "Amélia Cossa";
+  const rsvpCompanionDefault = "Dr. Bernardo Langa";
   const [rsvpAttendance, setRsvpAttendance] = useState<"yes" | "no">("yes");
   const [rsvpPlusOne, setRsvpPlusOne] = useState(true);
-  const [rsvpDiet, setRsvpDiet] = useState("Nenhuma");
+  const [rsvpDiet, setRsvpDiet] = useState("Sem glúten");
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
 
+  const handleRsvpReset = () => {
+    setRsvpSubmitted(false);
+    setRsvpAttendance("yes");
+    setRsvpPlusOne(true);
+    setRsvpDiet("Sem glúten");
+  };
+
   // Tab 2 (Seating Demo State)
-  const [selectedTable, setSelectedTable] = useState(DEMO_TABLES[0]);
+  const [selectedTable, setSelectedTable] = useState<DemoTable>(DEMO_TABLES[1]); // Mesa 02
 
   // Tab 3 (Find Your Seat Demo State)
-  const [searchQuery, setSearchQuery] = useState("Fabião Dimande");
-  const searchResult = DEMO_GUESTS.find((g) =>
-    g.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-  );
+  const [searchQuery, setSearchQuery] = useState("Amélia");
+  const trimmedQuery = searchQuery.trim();
+  const searchResult: DemoGuest | undefined = trimmedQuery ? searchDemoGuest(trimmedQuery) : undefined;
 
   // Tab 4 (Check-in Hostess Demo State)
-  const [checkinList, setCheckinList] = useState(DEMO_GUESTS);
+  const [checkinList, setCheckinList] = useState<DemoGuest[]>(DEMO_GUESTS);
   const [checkinSuccessId, setCheckinSuccessId] = useState<string | null>(null);
 
   const handlePerformCheckin = (id: string) => {
@@ -125,12 +72,14 @@ export default function GuestInteractiveShowcase() {
     setTimeout(() => setCheckinSuccessId(null), 2500);
   };
 
-  const totalCheckedIn = checkinList.filter((g) => g.checkedIn).length;
+  // Initial checked in from demo dataset is 3
+  const extraCheckedIn = checkinList.filter((g) => g.checkedIn).length - 3;
+  const currentPresentCount = 162 + Math.max(0, extraCheckedIn);
 
   return (
     <section
       id="showcase-interactivo"
-      className="relative py-20 md:py-32 bg-[#0E0D0C] text-brand-ivory border-b border-brand-champagne/20"
+      className="relative py-20 md:py-32 bg-[#0E0D0C] text-brand-ivory border-b border-brand-champagne/20 pointer-events-auto"
     >
       <div className="site-container mx-auto space-y-12">
         {/* Header with Luxury Badge */}
@@ -149,7 +98,7 @@ export default function GuestInteractiveShowcase() {
 
             <p className="font-sans text-sm md:text-base text-brand-ivory/70 font-light leading-relaxed">
               Explore cada ferramenta do ecossistema HAXR em tempo real. Interaja com os simuladores
-              e sinta a precisão com que os seus convidados serão recebidos.
+              e observe a precisão com que as confirmações e o acolhimento são conduzidos.
             </p>
           </div>
         </RevealOnScroll>
@@ -197,13 +146,13 @@ export default function GuestInteractiveShowcase() {
                 </h3>
                 <p className="font-sans text-sm text-brand-ivory/75 font-light leading-relaxed">
                   O convidado responde directamente pelo telemóvel num formulário limpo e intuitivo.
-                  O sistema gere acompanhantes autorizados e recolhe intolerâncias alimentares para
-                  orientar a equipa de catering.
+                  O sistema acolhe acompanhantes autorizados e recolhe intolerâncias alimentares para
+                  orientar a coordenação com a equipa de catering.
                 </p>
                 <ul className="space-y-2 pt-2 text-xs font-sans text-brand-ivory/80 font-light">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Confirmação com 1 toque sem instalação de apps</span>
+                    <span>Confirmação intuitiva sem necessidade de registo</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
@@ -211,7 +160,7 @@ export default function GuestInteractiveShowcase() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Visibilidade instantânea para o casal e assessoria</span>
+                    <span>Visibilidade instantânea para o casal e a assessoria</span>
                   </li>
                 </ul>
               </div>
@@ -229,7 +178,7 @@ export default function GuestInteractiveShowcase() {
                 <ul className="space-y-2 pt-2 text-xs font-sans text-brand-ivory/80 font-light">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Mapeamento por sectores e afinidades</span>
+                    <span>Mapeamento por sectores e afinidades familiares</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
@@ -237,7 +186,7 @@ export default function GuestInteractiveShowcase() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Alimentação automática do sistema Find Your Seat</span>
+                    <span>Alimentação imediata da base do Find Your Seat</span>
                   </li>
                 </ul>
               </div>
@@ -250,20 +199,20 @@ export default function GuestInteractiveShowcase() {
                 </h3>
                 <p className="font-sans text-sm text-brand-ivory/75 font-light leading-relaxed">
                   À entrada do salão, o convidado digita o seu nome e descobre a sua mesa de forma
-                  privada e instantânea. Elimina aglomerações e listas impressas riscadas à caneta.
+                  privada e rápida. Apoia a recepção e substitui listas impressas dispersas.
                 </p>
                 <ul className="space-y-2 pt-2 text-xs font-sans text-brand-ivory/80 font-light">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Acesso imediato via QR Code na entrada</span>
+                    <span>Acesso por QR Code posicionado na entrada</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Pesquisa tolerante a erros de digitação</span>
+                    <span>Pesquisa rápida por nome com normalização</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Apresentação de número de mesa e croqui de sala</span>
+                    <span>Apresentação clara de número de mesa, sector e lugar atribuído</span>
                   </li>
                 </ul>
               </div>
@@ -281,7 +230,7 @@ export default function GuestInteractiveShowcase() {
                 <ul className="space-y-2 pt-2 text-xs font-sans text-brand-ivory/80 font-light">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
-                    <span>Contagem ao vivo de presentes e percentagem</span>
+                    <span>Contagem ao vivo de presenças e percentagem</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-brand-gold shrink-0" />
@@ -306,8 +255,8 @@ export default function GuestInteractiveShowcase() {
                     CONVITE DIGITAL · CONFIRMAÇÃO DE PRESENÇA
                   </span>
                   <button
-                    onClick={() => setRsvpSubmitted(false)}
-                    className="text-[8px] font-mono text-brand-ivory/40 hover:text-brand-gold flex items-center gap-1"
+                    onClick={handleRsvpReset}
+                    className="text-[8px] font-mono text-brand-ivory/40 hover:text-brand-gold flex items-center gap-1 transition-colors"
                   >
                     <RotateCcw className="w-2.5 h-2.5" /> Reiniciar
                   </button>
@@ -332,7 +281,7 @@ export default function GuestInteractiveShowcase() {
                           onClick={() => setRsvpAttendance("yes")}
                           className={`py-2 px-3 rounded-xl border text-xs font-sans transition-all ${
                             rsvpAttendance === "yes"
-                              ? "bg-emerald-950/40 border-emerald-500/60 text-emerald-200"
+                              ? "bg-emerald-950/40 border-emerald-500/60 text-emerald-200 font-medium"
                               : "bg-white/[0.03] border-brand-champagne/20 text-brand-ivory/60"
                           }`}
                         >
@@ -342,7 +291,7 @@ export default function GuestInteractiveShowcase() {
                           onClick={() => setRsvpAttendance("no")}
                           className={`py-2 px-3 rounded-xl border text-xs font-sans transition-all ${
                             rsvpAttendance === "no"
-                              ? "bg-rose-950/40 border-rose-500/60 text-rose-200"
+                              ? "bg-rose-950/40 border-rose-500/60 text-rose-200 font-medium"
                               : "bg-white/[0.03] border-brand-champagne/20 text-brand-ivory/60"
                           }`}
                         >
@@ -351,64 +300,93 @@ export default function GuestInteractiveShowcase() {
                       </div>
                     </div>
 
-                    {/* Companion Toggle */}
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-brand-champagne/15">
-                      <div>
-                        <p className="text-xs text-brand-ivory/90 font-medium">Acompanhante Autorizado</p>
-                        <p className="text-[9px] text-brand-ivory/50">Fabião Dimande</p>
+                    {/* Companion Toggle (Only relevant if attending) */}
+                    {rsvpAttendance === "yes" && (
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-brand-champagne/15 animate-in fade-in duration-200">
+                        <div>
+                          <p className="text-xs text-brand-ivory/90 font-medium">Acompanhante Autorizado</p>
+                          <p className="text-[9px] text-brand-ivory/50">{rsvpCompanionDefault}</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={rsvpPlusOne}
+                          onChange={(e) => setRsvpPlusOne(e.target.checked)}
+                          className="w-4 h-4 accent-brand-gold cursor-pointer"
+                        />
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={rsvpPlusOne}
-                        onChange={(e) => setRsvpPlusOne(e.target.checked)}
-                        className="w-4 h-4 accent-brand-gold cursor-pointer"
-                      />
-                    </div>
+                    )}
 
-                    {/* Dietary Option */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-mono uppercase text-brand-ivory/50">
-                        Restrição Alimentar
-                      </label>
-                      <select
-                        value={rsvpDiet}
-                        onChange={(e) => setRsvpDiet(e.target.value)}
-                        className="w-full bg-[#1A1817] border border-brand-champagne/25 rounded-xl px-3 py-2 text-xs text-brand-ivory outline-none"
-                      >
-                        <option value="Nenhuma">Nenhuma restrição</option>
-                        <option value="Vegetariana">Opção Vegetariana</option>
-                        <option value="Sem Glúten">Sem Glúten</option>
-                        <option value="Sem Marisco">Sem Marisco / Alérgenos</option>
-                      </select>
-                    </div>
+                    {/* Dietary Option (Only relevant if attending) */}
+                    {rsvpAttendance === "yes" && (
+                      <div className="space-y-1 animate-in fade-in duration-200">
+                        <label className="text-[9px] font-mono uppercase text-brand-ivory/50">
+                          Restrição Alimentar
+                        </label>
+                        <select
+                          value={rsvpDiet}
+                          onChange={(e) => setRsvpDiet(e.target.value)}
+                          className="w-full bg-[#1A1817] border border-brand-champagne/25 rounded-xl px-3 py-2 text-xs text-brand-ivory outline-none"
+                        >
+                          <option value="Sem restrições">Nenhuma restrição</option>
+                          <option value="Vegetariana">Opção Vegetariana</option>
+                          <option value="Sem glúten">Sem Glúten</option>
+                          <option value="Sem marisco">Sem Marisco / Alérgenos</option>
+                        </select>
+                      </div>
+                    )}
 
                     <button
                       onClick={() => setRsvpSubmitted(true)}
-                      className="w-full py-3 rounded-xl bg-brand-gold text-brand-black font-mono text-[9px] uppercase tracking-widest font-bold hover:bg-brand-champagne transition-all"
+                      className="w-full py-3 rounded-xl bg-brand-gold text-brand-black font-mono text-[9px] uppercase tracking-widest font-bold hover:bg-brand-champagne transition-all shadow-md shadow-brand-gold/20"
                     >
-                      Submeter Confirmação
+                      Submeter Resposta
                     </button>
                   </div>
                 ) : (
                   <div className="py-8 text-center space-y-4 animate-in zoom-in-95 duration-400">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 mx-auto flex items-center justify-center">
-                      <Check className="w-6 h-6" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="font-serif text-xl text-brand-ivory">Presença Registada com Sucesso</h4>
-                      <p className="text-xs text-brand-ivory/70">
-                        Obrigado, {rsvpGuest}. Esperamos por si no Evelyn Eventos.
-                      </p>
-                    </div>
-                    <div className="p-3 bg-white/[0.04] border border-brand-champagne/20 rounded-xl text-left text-xs space-y-1">
-                      <div className="flex justify-between text-[9px] font-mono text-brand-gold">
-                        <span>ESTADO: CONFIRMADO</span>
-                        <span>MESA 02</span>
-                      </div>
-                      <p className="text-brand-ivory/80 text-[11px]">
-                        Lugares: {rsvpPlusOne ? "2 Pessoas" : "1 Pessoa"} · Restrição: {rsvpDiet}
-                      </p>
-                    </div>
+                    {rsvpAttendance === "yes" ? (
+                      <>
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 mx-auto flex items-center justify-center">
+                          <Check className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-serif text-xl text-brand-ivory">Presença Registada</h4>
+                          <p className="text-xs text-brand-ivory/70">
+                            Obrigado, {rsvpGuest}. Esperamos por si na celebração.
+                          </p>
+                        </div>
+                        <div className="p-3 bg-white/[0.04] border border-brand-champagne/20 rounded-xl text-left text-xs space-y-1">
+                          <div className="flex justify-between text-[9px] font-mono text-brand-gold">
+                            <span>ESTADO: CONFIRMADO</span>
+                            <span>MESA 02</span>
+                          </div>
+                          <p className="text-brand-ivory/80 text-[11px]">
+                            Lugares: {rsvpPlusOne ? `2 Pessoas (${rsvpCompanionDefault})` : "1 Pessoa"} · Dieta: {rsvpDiet}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 mx-auto flex items-center justify-center">
+                          <XCircle className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-serif text-xl text-brand-ivory">Ausência Registada</h4>
+                          <p className="text-xs text-brand-ivory/70">
+                            Agradecemos o aviso, {rsvpGuest}. Registámos que não poderá comparecer à celebração.
+                          </p>
+                        </div>
+                        <div className="p-3 bg-white/[0.04] border border-brand-champagne/20 rounded-xl text-left text-xs space-y-1">
+                          <div className="flex justify-between text-[9px] font-mono text-rose-300">
+                            <span>ESTADO: AUSENTE</span>
+                            <span>0 LUGARES ALOCADOS</span>
+                          </div>
+                          <p className="text-brand-ivory/60 text-[11px]">
+                            Resposta arquivada no sistema de hospitalidade.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -421,7 +399,7 @@ export default function GuestInteractiveShowcase() {
                   <span className="font-mono text-[8px] uppercase tracking-widest text-brand-gold font-bold">
                     MAPA DE MESAS & SEATING PLAN HAXR
                   </span>
-                  <span className="font-mono text-[8px] text-brand-ivory/50">6 MESAS ATIVAS</span>
+                  <span className="font-mono text-[8px] text-brand-ivory/50">6 MESAS DEMONSTRATIVAS</span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -455,11 +433,11 @@ export default function GuestInteractiveShowcase() {
                   <div className="flex justify-between items-center">
                     <h4 className="font-serif text-base text-brand-gold">{selectedTable.name}</h4>
                     <span className="text-xs font-mono text-emerald-400">
-                      Ocupação: {selectedTable.occupied} / {selectedTable.capacity}
+                      Ocupação: {selectedTable.occupied} / {selectedTable.capacity} Lugares
                     </span>
                   </div>
                   <p className="text-xs text-brand-ivory/70 font-light">
-                    Sector: {selectedTable.sector} · Protocolo VIP com alertas dietéticos mapeados para o catering.
+                    Sector: {selectedTable.sector} · Gestão de restrições alimentares articulada com a equipa de catering.
                   </p>
                 </div>
               </div>
@@ -485,19 +463,19 @@ export default function GuestInteractiveShowcase() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Ex: Fabião, Jessica, Elisa..."
+                      placeholder="Ex: Amélia, Bernardo, Tânia, Rui..."
                       className="w-full bg-[#1A1817] border border-brand-champagne/35 rounded-xl pl-10 pr-4 py-2.5 text-xs text-brand-ivory outline-none focus:border-brand-gold"
                     />
                   </div>
 
                   {/* Suggestion Chips */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {["Fabião Dimande", "Jessica Muege", "Dra. Elisa Macamo", "Eng. Carlos"].map(
+                    {["Amélia Cossa", "Dr. Bernardo", "Tânia Mucavele", "Eng. Rui", "Dra. Inês"].map(
                       (name) => (
                         <button
                           key={name}
                           onClick={() => setSearchQuery(name)}
-                          className="text-[8px] font-mono bg-white/[0.05] border border-brand-champagne/20 px-2 py-0.5 rounded text-brand-ivory/60 hover:text-brand-gold hover:border-brand-gold/40"
+                          className="text-[8px] font-mono bg-white/[0.05] border border-brand-champagne/20 px-2 py-0.5 rounded text-brand-ivory/60 hover:text-brand-gold hover:border-brand-gold/40 transition-colors"
                         >
                           {name}
                         </button>
@@ -507,28 +485,37 @@ export default function GuestInteractiveShowcase() {
                 </div>
 
                 {/* Result Presentation */}
-                {searchResult ? (
-                  <div className="bg-brand-gold/10 border border-brand-gold/40 rounded-2xl p-5 text-center space-y-2 animate-in fade-in duration-300">
-                    <p className="text-xs text-brand-champagne font-light">Olá, {searchResult.name}</p>
-                    <p className="font-mono text-[8px] uppercase tracking-widest text-brand-gold font-bold">
-                      O SEU LUGAR FOI LOCALIZADO
-                    </p>
-                    <div className="py-2">
-                      <p className="font-serif text-3xl font-light text-brand-gold">
-                        {searchResult.table}
+                {trimmedQuery ? (
+                  searchResult ? (
+                    <div className="bg-brand-gold/10 border border-brand-gold/40 rounded-2xl p-5 text-center space-y-2 animate-in fade-in duration-300">
+                      <p className="text-xs text-brand-champagne font-light">Olá, {searchResult.name}</p>
+                      <p className="font-mono text-[8px] uppercase tracking-widest text-brand-gold font-bold">
+                        O SEU LUGAR FOI LOCALIZADO
                       </p>
-                      <p className="text-xs font-mono text-brand-ivory/70 mt-1">
-                        {searchResult.seat} · Evelyn Eventos
-                      </p>
+                      <div className="py-2">
+                        <p className="font-serif text-3xl font-light text-brand-gold">
+                          {searchResult.table}
+                        </p>
+                        <p className="text-xs font-mono text-brand-ivory/70 mt-1">
+                          {searchResult.seat} · {searchResult.sector}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-brand-champagne/20 flex items-center justify-between text-[8px] font-mono text-brand-ivory/50">
+                        <span>ACOMPANHANTE: {searchResult.companion}</span>
+                        <span>DIETA: {searchResult.diet}</span>
+                      </div>
                     </div>
-                    <div className="pt-2 border-t border-brand-champagne/20 flex items-center justify-between text-[8px] font-mono text-brand-ivory/50">
-                      <span>ACOMPANHANTE: {searchResult.companion}</span>
-                      <span>DIETA: {searchResult.diet}</span>
+                  ) : (
+                    <div className="p-4 bg-white/[0.02] border border-brand-champagne/15 rounded-xl text-center text-xs text-brand-ivory/50">
+                      Nenhum convidado encontrado com esse nome na demonstração.
                     </div>
-                  </div>
+                  )
                 ) : (
-                  <div className="p-4 bg-white/[0.02] border border-brand-champagne/15 rounded-xl text-center text-xs text-brand-ivory/50">
-                    Nenhum convidado encontrado com esse nome. Dirija-se à equipa de recepção.
+                  <div className="p-5 bg-white/[0.02] border border-brand-champagne/15 rounded-xl text-center text-xs text-brand-ivory/50 space-y-1">
+                    <p>Introduza o nome de um convidado para simular a pesquisa.</p>
+                    <p className="text-[10px] text-brand-ivory/30 font-mono">
+                      (Sugestões: Amélia, Bernardo, Tânia, Rui, Inês, Geraldo)
+                    </p>
                   </div>
                 )}
               </div>
@@ -544,25 +531,25 @@ export default function GuestInteractiveShowcase() {
                       CONSOLA DE ENTRADA · HOSTESS LIVE
                     </span>
                   </div>
-                  <span className="font-mono text-[8px] text-brand-ivory/50">MAPUTO · PORTA PRINCIPAL</span>
+                  <span className="font-mono text-[8px] text-brand-ivory/50">PORTA PRINCIPAL</span>
                 </div>
 
                 {/* Counter Metric */}
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="p-3 bg-white/[0.03] border border-brand-champagne/20 rounded-xl">
                     <span className="text-[7.5px] font-mono uppercase text-brand-ivory/50 block">Lista Total</span>
-                    <span className="font-serif text-xl text-brand-ivory">220</span>
+                    <span className="font-serif text-xl text-brand-ivory">200</span>
                   </div>
                   <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-xl">
                     <span className="text-[7.5px] font-mono uppercase text-emerald-400 block">Presentes</span>
                     <span className="font-serif text-xl text-emerald-200">
-                      {184 + totalCheckedIn - 2}
+                      {currentPresentCount}
                     </span>
                   </div>
                   <div className="p-3 bg-white/[0.03] border border-brand-champagne/20 rounded-xl">
                     <span className="text-[7.5px] font-mono uppercase text-brand-ivory/50 block">Taxa</span>
                     <span className="font-serif text-xl text-brand-gold">
-                      {Math.round(((184 + totalCheckedIn - 2) / 220) * 100)}%
+                      {Math.round((currentPresentCount / 200) * 100)}%
                     </span>
                   </div>
                 </div>
@@ -605,7 +592,7 @@ export default function GuestInteractiveShowcase() {
 
                 {checkinSuccessId && (
                   <div className="p-2 bg-emerald-950/40 border border-emerald-500/50 rounded-xl text-center text-xs text-emerald-300 font-mono animate-in fade-in duration-200">
-                    Entrada registada com sucesso! Protocolo notificado.
+                    Entrada registada nesta demonstração.
                   </div>
                 )}
               </div>

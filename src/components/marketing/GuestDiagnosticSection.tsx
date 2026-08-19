@@ -4,6 +4,7 @@ import { useState } from "react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import { MessageCircle, ShieldCheck } from "lucide-react";
 import { CTABand } from "@/components/marketing/PageHero";
+import { siteContact } from "@/lib/site-config";
 
 const GUEST_SCALES = [
   { id: "scale-100-200", label: "100 a 200 Convidados", sub: "Celebração Íntima & Média" },
@@ -41,7 +42,7 @@ export default function GuestDiagnosticSection() {
     `Olá HAXR Signature. Gostaria de solicitar um diagnóstico para a Gestão de Convidados & Recepção do meu evento.\n\n• Escala: ${currentScale.label}\n• Âmbito: ${currentScope.title}\n\nPodemos agendar uma sessão privada?`
   );
 
-  const whatsappUrl = `https://wa.me/258847620358?text=${whatsappMessage}`;
+  const whatsappUrl = `${siteContact.whatsapp.href}?text=${whatsappMessage}`;
 
   return (
     <>

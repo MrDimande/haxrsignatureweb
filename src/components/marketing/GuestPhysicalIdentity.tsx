@@ -1,12 +1,37 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 export default function GuestPhysicalIdentity() {
+  const [scrollY, setScrollY] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mediaQuery.matches) return;
+
+    const handleScroll = () => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      // Only compute when near viewport
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        setScrollY(window.scrollY);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const parallaxOffset = scrollY * 0.025;
+
   return (
-    <section className="relative py-20 md:py-32 bg-brand-ivory text-brand-text-dark border-b border-brand-champagne/30">
+    <section
+      ref={sectionRef}
+      className="relative py-20 md:py-32 bg-brand-ivory text-brand-text-dark border-b border-brand-champagne/30 pointer-events-auto"
+    >
       <div className="site-container mx-auto space-y-16">
         {/* Section Header */}
         <RevealOnScroll>
@@ -32,8 +57,11 @@ export default function GuestPhysicalIdentity() {
 
         {/* Feature Composition: Photography + Editorial Breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-          {/* Left: Real Event Styling Photo */}
-          <div className="lg:col-span-6">
+          {/* Left: Real Event Styling Photo with subtle parallax */}
+          <div
+            className="lg:col-span-6 transition-transform duration-75 ease-out"
+            style={{ transform: `translate3d(0, ${parallaxOffset}px, 0)` }}
+          >
             <RevealOnScroll delay={0.1}>
               <div className="rounded-3xl overflow-hidden aspect-[4/3] bg-brand-champagne/10 relative border border-brand-champagne/40 shadow-xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -89,7 +117,7 @@ export default function GuestPhysicalIdentity() {
                   </div>
                   <p className="font-sans text-xs text-brand-text-dark/75 font-light leading-relaxed">
                     Instalações físicas de entrada que dialogam com a arquitectura do espaço e
-                    complementam o acesso digital via QR Code para convidados de todas as gerações.
+                    complementam o acesso digital via QR Code para convidados de todas as idades.
                   </p>
                 </div>
 

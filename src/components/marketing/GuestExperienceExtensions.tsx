@@ -1,12 +1,36 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import { Camera, Heart, Share2, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 export default function GuestExperienceExtensions() {
+  const [scrollY, setScrollY] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mediaQuery.matches) return;
+
+    const handleScroll = () => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        setScrollY(window.scrollY);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const parallaxOffset = scrollY * 0.02;
+
   return (
-    <section className="relative py-20 md:py-32 bg-white text-brand-text-dark border-b border-brand-champagne/30">
+    <section
+      ref={sectionRef}
+      className="relative py-20 md:py-32 bg-white text-brand-text-dark border-b border-brand-champagne/30 pointer-events-auto"
+    >
       <div className="site-container mx-auto space-y-16">
         {/* Section Header */}
         <RevealOnScroll>
@@ -88,8 +112,11 @@ export default function GuestExperienceExtensions() {
             </RevealOnScroll>
           </div>
 
-          {/* Right: Real Editorial Photo of 'Eu espio...' Card (Full & Uncropped) */}
-          <div className="lg:col-span-6 order-1 lg:order-2">
+          {/* Right: Real Editorial Photo of 'Eu espio...' Card (Full & Uncropped with subtle parallax) */}
+          <div
+            className="lg:col-span-6 order-1 lg:order-2 transition-transform duration-75 ease-out"
+            style={{ transform: `translate3d(0, ${parallaxOffset}px, 0)` }}
+          >
             <RevealOnScroll delay={0.15}>
               <div className="rounded-3xl bg-[#FAF8F5] border border-brand-champagne/40 shadow-xl p-6 sm:p-8 flex flex-col items-center justify-center">
                 <div className="w-full max-w-sm rounded-2xl overflow-hidden border border-brand-champagne/30 shadow-2xl bg-white">

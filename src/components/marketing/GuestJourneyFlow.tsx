@@ -17,7 +17,7 @@ export const guestPhases = [
     title: "A Intenção Inicial & Estruturação",
     desc: "A base de convidados é organizada com rigor desde o primeiro momento. Mapeamento de grupos familiares, núcleos protocolares e contactos directos.",
     icon: UserPlus,
-    deliverable: "Base validada · Sem duplicações",
+    deliverable: "Base organizada · Redução de atrito",
   },
   {
     step: "02",
@@ -33,15 +33,15 @@ export const guestPhases = [
     title: "Arquitectura de Mesas & Seating Plan",
     desc: "Distribuição harmoniosa dos convidados pelas mesas do salão, articulando afinidades pessoais, visão estética e requisitos operacionais do catering.",
     icon: LayoutGrid,
-    deliverable: "Croqui de sala · Equilíbrio de mesas",
+    deliverable: "Arquitectura de sala · Equilíbrio de mesas",
   },
   {
     step: "04",
     label: "CHEGADA",
-    title: "Localização Instantânea Sem Filas",
-    desc: "À chegada ao espaço, o convidado aponta a câmara para o QR Code e descobre a sua mesa em menos de 2 segundos com o Find Your Seat.",
+    title: "Localização Rápida Sem Filas",
+    desc: "À chegada ao espaço, o convidado aponta a câmara para o QR Code e descobre rapidamente a sua mesa com o Find Your Seat.",
     icon: Search,
-    deliverable: "Acesso por QR · Zero constrangimento",
+    deliverable: "Acesso por QR · Recepção mais fluida",
   },
   {
     step: "05",
@@ -49,7 +49,7 @@ export const guestPhases = [
     title: "Recepção Serena & Check-in Invisível",
     desc: "A equipa de bastidores regista as entradas em tempo real no tablet ou telemóvel, garantindo acolhimento discreto e visibilidade de presenças.",
     icon: HeartHandshake,
-    deliverable: "Check-in em tempo real · Protocolo impecável",
+    deliverable: "Check-in em tempo real · Acolhimento sereno",
   },
 ] as const;
 

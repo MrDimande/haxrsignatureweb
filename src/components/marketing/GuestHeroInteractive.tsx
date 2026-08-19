@@ -1,25 +1,80 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Search, UserCheck } from "lucide-react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import Link from "next/link";
+import { DEMO_GUESTS } from "@/lib/marketing/convidados-demo";
 
 export default function GuestHeroInteractive() {
   const [activeStep, setActiveStep] = useState(0);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isInView, setIsInView] = useState(true);
+  const [scrollY, setScrollY] = useState(0);
+
+  // Respect prefers-reduced-motion
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mediaQuery.matches) return;
+
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Pause when out of view
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Subtle auto-progression loop in hero preview
   useEffect(() => {
+    if (isUserInteracting || !isInView) return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mediaQuery.matches) return;
+
     const timer = setInterval(() => {
       setActiveStep((prev) => (prev + 1) % 3);
-    }, 3800);
+    }, 4200);
     return () => clearInterval(timer);
-  }, []);
+  }, [isUserInteracting, isInView]);
+
+  const handleManualStepChange = (idx: number) => {
+    setActiveStep(idx);
+    setIsUserInteracting(true);
+    // Resume auto-rotation after 12s of inactivity
+    const resumeTimer = setTimeout(() => setIsUserInteracting(false), 12000);
+    return () => clearTimeout(resumeTimer);
+  };
+
+  const guestHero1 = DEMO_GUESTS[0]; // Amélia Cossa
+  const guestHero2 = DEMO_GUESTS[2]; // Tânia Mucavele
+
+  // Subtle parallax offsets
+  const parallaxGlow = scrollY * 0.08;
+  const parallaxMockup = scrollY * -0.04;
 
   return (
-    <section className="relative pt-32 pb-20 md:pt-44 md:pb-28 bg-[#0C0B0A] text-brand-ivory overflow-hidden border-b border-brand-champagne/20">
-      {/* Background Subtle Gradient & Mesh Glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-gold/15 via-[#0C0B0A] to-[#080707] pointer-events-none" />
+    <section
+      ref={sectionRef}
+      className="relative pt-32 pb-20 md:pt-44 md:pb-28 bg-[#0C0B0A] text-brand-ivory overflow-hidden border-b border-brand-champagne/20 pointer-events-auto"
+    >
+      {/* Background Subtle Gradient & Mesh Glow with gentle Parallax */}
+      <div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-gold/15 via-[#0C0B0A] to-[#080707] pointer-events-none transition-transform duration-75"
+        style={{ transform: `translate3d(0, ${parallaxGlow}px, 0)` }}
+      />
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-champagne/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="site-container mx-auto relative z-10">
@@ -85,20 +140,20 @@ export default function GuestHeroInteractive() {
             </RevealOnScroll>
           </div>
 
-          {/* Right: Floating Luxury Device Simulator */}
-          <div className="lg:col-span-5 relative">
+          {/* Right: Floating Luxury Device Simulator with subtle parallax */}
+          <div
+            className="lg:col-span-5 relative transition-transform duration-75 ease-out"
+            style={{ transform: `translate3d(0, ${parallaxMockup}px, 0)` }}
+          >
             <RevealOnScroll delay={0.2}>
               <div className="relative mx-auto max-w-sm rounded-3xl bg-[#141210] border border-brand-champagne/30 p-5 shadow-2xl shadow-black/80 backdrop-blur-xl">
                 {/* Header Bar */}
                 <div className="flex items-center justify-between border-b border-brand-champagne/20 pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
-                    <span className="font-mono text-[8px] tracking-[0.3em] uppercase text-brand-gold font-bold">
-                      DEMONSTRAÇÃO AO VIVO
-                    </span>
-                  </div>
+                  <span className="font-mono text-[8px] tracking-[0.25em] uppercase text-brand-gold font-bold">
+                    DEMONSTRAÇÃO EDITORIAL
+                  </span>
                   <span className="font-mono text-[7.5px] text-brand-ivory/40 uppercase">
-                    PROTOCOLO EM TEMPO REAL
+                    DADOS ILUSTRATIVOS
                   </span>
                 </div>
 
@@ -111,10 +166,10 @@ export default function GuestHeroInteractive() {
                           01 · RSVP Personalizado
                         </span>
                         <h4 className="font-serif text-lg font-light text-brand-ivory">
-                          Vânia Luky & Fabião Dimande
+                          {guestHero1.name}
                         </h4>
                         <p className="text-xs text-brand-ivory/60 font-light">
-                          Confirmação recebida com +1 acompanhante e preferência gastronómica.
+                          Confirmação registada com acompanhante ({guestHero1.companion}) e restrição alimentar.
                         </p>
                       </div>
 
@@ -123,11 +178,13 @@ export default function GuestHeroInteractive() {
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                           <div>
                             <p className="text-xs font-medium text-emerald-200">Presença Confirmada</p>
-                            <p className="text-[9px] text-emerald-400/70 font-mono">Mesa 01 · 2 Lugares</p>
+                            <p className="text-[9px] text-emerald-400/70 font-mono">
+                              {guestHero1.table} · 2 Lugares
+                            </p>
                           </div>
                         </div>
                         <span className="font-mono text-[8px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
-                          100% OK
+                          Confirmado
                         </span>
                       </div>
                     </div>
@@ -137,11 +194,11 @@ export default function GuestHeroInteractive() {
                     <div className="space-y-4 animate-in fade-in duration-500">
                       <div className="bg-white/[0.03] border border-brand-champagne/20 rounded-2xl p-4 space-y-2">
                         <span className="font-mono text-[8px] uppercase tracking-wider text-brand-gold block">
-                          02 · Find Your Seat Instantâneo
+                          02 · Localização de Mesa Instantânea
                         </span>
                         <div className="relative bg-black/40 border border-brand-champagne/30 rounded-lg p-2 flex items-center gap-2">
                           <Search className="w-3.5 h-3.5 text-brand-gold" />
-                          <span className="text-xs text-brand-ivory font-mono">Fabião Dimande</span>
+                          <span className="text-xs text-brand-ivory font-mono">{guestHero1.name}</span>
                         </div>
                       </div>
 
@@ -150,10 +207,10 @@ export default function GuestHeroInteractive() {
                           MESA ATRIBUÍDA
                         </p>
                         <p className="font-serif text-2xl font-light text-brand-gold">
-                          Mesa de Honra
+                          {guestHero1.table}
                         </p>
                         <p className="text-[9px] text-brand-ivory/60 font-mono">
-                          Lugar 02 · Evelyn Eventos
+                          {guestHero1.seat} · {guestHero1.sector}
                         </p>
                       </div>
                     </div>
@@ -167,35 +224,37 @@ export default function GuestHeroInteractive() {
                         </span>
                         <div className="flex items-center justify-between text-xs pt-1">
                           <span className="text-brand-ivory/70">Acolhimento no Salão</span>
-                          <span className="font-mono text-brand-gold font-bold">184 / 220 (84%)</span>
+                          <span className="font-mono text-brand-gold font-bold">162 / 200 (81%)</span>
                         </div>
                         <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-brand-gold h-full w-[84%]" />
+                          <div className="bg-brand-gold h-full w-[81%]" />
                         </div>
                       </div>
 
                       <div className="bg-white/[0.02] border border-brand-champagne/15 rounded-xl p-3 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <UserCheck className="w-3.5 h-3.5 text-brand-gold" />
-                          <span className="text-brand-ivory/90 text-xs">Entrada recente: Jessica Muege</span>
+                          <span className="text-brand-ivory/90 text-xs">
+                            Entrada recente: {guestHero2.name}
+                          </span>
                         </div>
-                        <span className="font-mono text-[8px] text-brand-ivory/40">Agora mesmo</span>
+                        <span className="font-mono text-[8px] text-brand-ivory/40">14:18</span>
                       </div>
                     </div>
                   )}
 
-                  {/* Step Switcher Indicators */}
+                  {/* Step Switcher Indicators with manual click handler */}
                   <div className="flex items-center justify-center gap-2 pt-2 border-t border-brand-champagne/15">
                     {[0, 1, 2].map((idx) => (
                       <button
                         key={idx}
-                        onClick={() => setActiveStep(idx)}
+                        onClick={() => handleManualStepChange(idx)}
                         className={`h-1.5 rounded-full transition-all duration-500 ${
                           activeStep === idx
                             ? "w-8 bg-brand-gold"
                             : "w-2 bg-brand-champagne/30 hover:bg-brand-champagne/50"
                         }`}
-                        aria-label={`Ver passo ${idx + 1}`}
+                        aria-label={`Ver demonstração passo ${idx + 1}`}
                       />
                     ))}
                   </div>

@@ -2,70 +2,11 @@
 
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import { FileSpreadsheet } from "lucide-react";
-
-const OPS_KPIS = [
-  { label: "LISTA TOTAL CONSOLIDADA", value: "220", sub: "Convidados convidados" },
-  { label: "TAXA DE CONFIRMAÇÃO", value: "94%", sub: "208 confirmados nominais" },
-  { label: "MESAS ATRIBUÍDAS", value: "100%", sub: "18 mesas equilibradas" },
-  { label: "ALERTAS GASTRONÓMICOS", value: "14", sub: "Mapeados para o catering" },
-];
-
-const OPS_ROWS = [
-  {
-    id: "GX-01",
-    name: "Vânia Luky",
-    phone: "+258 84 123 4567",
-    status: "Confirmado",
-    table: "Mesa 02 · Noivos",
-    plusOne: "Fabião Dimande",
-    diet: "Sem glúten",
-    checkin: "14:15",
-  },
-  {
-    id: "GX-02",
-    name: "Fabião Dimande",
-    phone: "+258 82 987 6543",
-    status: "Confirmado",
-    table: "Mesa 02 · Noivos",
-    plusOne: "—",
-    diet: "Nenhuma",
-    checkin: "14:15",
-  },
-  {
-    id: "GX-03",
-    name: "Jessica Muege",
-    phone: "+258 84 555 1212",
-    status: "Confirmado",
-    table: "Mesa 03 · Padrinhos",
-    plusOne: "Samuel Govene",
-    diet: "Vegetariana",
-    checkin: "14:22",
-  },
-  {
-    id: "GX-04",
-    name: "Dra. Elisa Macamo",
-    phone: "+258 87 333 4455",
-    status: "Confirmado",
-    table: "Mesa 01 · Família",
-    plusOne: "+1 Acompanhante",
-    diet: "Sem marisco",
-    checkin: "Pendente",
-  },
-  {
-    id: "GX-05",
-    name: "Eng. Carlos Sitoe",
-    phone: "+258 84 777 8899",
-    status: "Pendente",
-    table: "Mesa 04 · Amigos",
-    plusOne: "Sem acompanhante",
-    diet: "Nenhuma",
-    checkin: "—",
-  },
-];
+import { DEMO_GUESTS, DEMO_OPERATIONS_KPIS } from "@/lib/marketing/convidados-demo";
 
 export default function GuestOperationsConsole() {
   return (
-    <section className="relative py-20 md:py-32 bg-[#080707] text-brand-ivory border-b border-brand-champagne/20">
+    <section className="relative py-20 md:py-32 bg-[#080707] text-brand-ivory border-b border-brand-champagne/20 pointer-events-auto">
       <div className="site-container mx-auto space-y-16">
         {/* Section Header */}
         <RevealOnScroll>
@@ -85,15 +26,15 @@ export default function GuestOperationsConsole() {
             </h2>
 
             <p className="font-sans text-sm md:text-base text-brand-ivory/70 font-light leading-relaxed">
-              Enquanto os convidados desfrutam da música e do brinde, a assessoria e a equipa de
-              recepção operam sobre uma base de dados limpa, validada e sincronizada.
+              Enquanto os convidados desfrutam da recepção e do brinde, a assessoria e a equipa de
+              acolhimento operam sobre uma base de dados limpa, validada e organizada.
             </p>
           </div>
         </RevealOnScroll>
 
         {/* 4 Operations KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {OPS_KPIS.map((kpi, idx) => (
+          {DEMO_OPERATIONS_KPIS.map((kpi, idx) => (
             <RevealOnScroll key={kpi.label} delay={idx * 0.06}>
               <div className="bg-[#12100F] border border-brand-champagne/25 rounded-2xl p-5 md:p-6 space-y-2 hover:border-brand-gold/40 transition-colors">
                 <span className="font-mono text-[8px] tracking-[0.25em] uppercase text-brand-gold/80 block font-semibold">
@@ -118,12 +59,12 @@ export default function GuestOperationsConsole() {
               <div className="flex items-center gap-3">
                 <FileSpreadsheet className="w-4 h-4 text-brand-gold" />
                 <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-brand-ivory font-bold">
-                  BASE CONSOLIDADA DE CONVIDADOS · HAXR SIGNATURE
+                  PRIVATE CLIENT SYSTEM · DEMONSTRAÇÃO EDITORIAL · DADOS ILUSTRATIVOS
                 </span>
               </div>
               <div className="flex items-center gap-4 text-[8px] font-mono text-brand-ivory/50">
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" /> BASE VALIDADA
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" /> BASE DEMONSTRATIVA
                 </span>
                 <span>•</span>
                 <span>MOÇAMBIQUE (+258)</span>
@@ -148,7 +89,7 @@ export default function GuestOperationsConsole() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-champagne/10">
-                  {OPS_ROWS.map((row) => (
+                  {DEMO_GUESTS.map((row) => (
                     <tr key={row.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="py-3 px-5 font-mono text-[9px] text-brand-gold/70">{row.id}</td>
                       <td className="py-3 px-5 font-medium text-brand-ivory">{row.name}</td>
@@ -165,11 +106,11 @@ export default function GuestOperationsConsole() {
                         </span>
                       </td>
                       <td className="py-3 px-5 text-brand-ivory/80">{row.table}</td>
-                      <td className="py-3 px-5 text-brand-ivory/60 text-[11px]">{row.plusOne}</td>
+                      <td className="py-3 px-5 text-brand-ivory/60 text-[11px]">{row.companion}</td>
                       <td className="py-3 px-5">
                         <span
                           className={`text-[10px] ${
-                            row.diet !== "Nenhuma"
+                            row.diet !== "Sem restrições" && row.diet !== "Nenhuma"
                               ? "text-amber-200/90 font-medium bg-amber-500/10 px-1.5 py-0.5 rounded"
                               : "text-brand-ivory/40"
                           }`}
@@ -178,10 +119,10 @@ export default function GuestOperationsConsole() {
                         </span>
                       </td>
                       <td className="py-3 px-5 text-right font-mono text-[9px]">
-                        {row.checkin !== "Pendente" && row.checkin !== "—" ? (
-                          <span className="text-emerald-400 font-bold">✓ {row.checkin}</span>
+                        {row.checkedIn && row.checkedInTime ? (
+                          <span className="text-emerald-400 font-bold">✓ {row.checkedInTime}</span>
                         ) : (
-                          <span className="text-brand-ivory/30">{row.checkin}</span>
+                          <span className="text-brand-ivory/30">Pendente</span>
                         )}
                       </td>
                     </tr>
@@ -193,7 +134,7 @@ export default function GuestOperationsConsole() {
             {/* Footer Summary Bar */}
             <div className="bg-[#161413] px-6 py-3 border-t border-brand-champagne/15 flex flex-wrap items-center justify-between text-[9px] font-mono text-brand-ivory/60">
               <span>CONTROLO EM TEMPO REAL · PROTOCOLO DE ENTRADA HAXR</span>
-              <span>100% DAS RESTRIÇÕES NOTIFICADAS AO CHEF & CATERING</span>
+              <span>RESTRIÇÕES VISÍVEIS PARA COORDENAÇÃO COM O CATERING</span>
             </div>
           </div>
         </RevealOnScroll>
