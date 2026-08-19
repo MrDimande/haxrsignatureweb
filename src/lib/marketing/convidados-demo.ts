@@ -121,7 +121,7 @@ export const DEMO_GUESTS: DemoGuest[] = [
 export const DEMO_OPERATIONS_KPIS = [
   { label: "LISTA CONSOLIDADA", value: "200", sub: "Convidados convidados" },
   { label: "CONFIRMAÇÃO NOMINAL", value: "90%", sub: "180 presenças confirmadas" },
-  { label: "MESAS ATRIBUÍDAS", value: "16 / 16", sub: "100% de ocupação equilibrada" },
+  { label: "MESAS ATRIBUÍDAS", value: "16 / 16", sub: "Arquitectura de lugares concluída" },
   { label: "ALERTAS GASTRONÓMICOS", value: "14", sub: "Mapeados para o catering" },
 ] as const;
 

@@ -38,7 +38,7 @@ export const guestPhases = [
   {
     step: "04",
     label: "CHEGADA",
-    title: "Localização Rápida Sem Filas",
+    title: "O Lugar Certo, Logo à Chegada",
     desc: "À chegada ao espaço, o convidado aponta a câmara para o QR Code e descobre rapidamente a sua mesa com o Find Your Seat.",
     icon: Search,
     deliverable: "Acesso por QR · Recepção mais fluida",

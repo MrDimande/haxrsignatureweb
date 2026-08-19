@@ -38,6 +38,8 @@ export default function GuestHeroInteractive() {
     return () => observer.disconnect();
   }, []);
 
+  const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Subtle auto-progression loop in hero preview
   useEffect(() => {
     if (isUserInteracting || !isInView) return;
@@ -50,12 +52,25 @@ export default function GuestHeroInteractive() {
     return () => clearInterval(timer);
   }, [isUserInteracting, isInView]);
 
+  // Cleanup resume timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (resumeTimeoutRef.current) {
+        clearTimeout(resumeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleManualStepChange = (idx: number) => {
     setActiveStep(idx);
     setIsUserInteracting(true);
-    // Resume auto-rotation after 12s of inactivity
-    const resumeTimer = setTimeout(() => setIsUserInteracting(false), 12000);
-    return () => clearTimeout(resumeTimer);
+    if (resumeTimeoutRef.current) {
+      clearTimeout(resumeTimeoutRef.current);
+    }
+    resumeTimeoutRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+      resumeTimeoutRef.current = null;
+    }, 12000);
   };
 
   const guestHero1 = DEMO_GUESTS[0]; // Amélia Cossa

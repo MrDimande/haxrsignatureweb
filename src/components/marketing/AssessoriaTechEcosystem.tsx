@@ -46,7 +46,7 @@ export default function AssessoriaTechEcosystem() {
       title: "Live RSVP & Guest Concierge",
       description:
         "Confirmação de presenças automatizada com recolha de restrições alimentares, alojamento e marcação de lugares interactiva. A equipa sabe ao segundo quem confirmou e quem foi acolhido.",
-      highlight: "Recepção fluida no grande dia sem filas ou constrangimentos.",
+      highlight: "Recepção fluida e acolhimento sereno no grande dia.",
     },
   ] as const;
 
