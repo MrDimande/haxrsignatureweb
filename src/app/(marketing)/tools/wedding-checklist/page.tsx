@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import MarketingToolBanner from "@/components/marketing/MarketingToolBanner";
-import ToolProductionCta from "@/components/marketing/ToolProductionCta";
 import WeddingChecklistHeader from "@/components/marketing/wedding-checklist/WeddingChecklistHeader";
 import WeddingChecklistSetup from "@/components/marketing/wedding-checklist/WeddingChecklistSetup";
 import WeddingChecklistProgress from "@/components/marketing/wedding-checklist/WeddingChecklistProgress";
@@ -200,11 +199,6 @@ export default function WeddingChecklistPage() {
 
         {/* 6. Advisory Bridge */}
         <WeddingChecklistAdvisoryBridge />
-
-        {/* 7. Production CTA */}
-        <div className="mt-16">
-          <ToolProductionCta />
-        </div>
       </div>
     </main>
   );

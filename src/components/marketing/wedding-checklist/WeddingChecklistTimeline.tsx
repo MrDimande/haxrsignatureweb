@@ -8,6 +8,7 @@ import {
   ChecklistPhase,
   ChecklistCategory,
   WeddingJourney,
+  getChecklistPhaseFromDate,
 } from "@/lib/marketing/wedding-checklist-data";
 import WeddingChecklistTaskItem from "./WeddingChecklistTaskItem";
 
@@ -33,25 +34,8 @@ export default function WeddingChecklistTimeline({
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskCategory, setNewTaskCategory] = useState<ChecklistCategory>("Fundação & Visão");
 
-  // Determine current active phase based on date
-  const getActivePhaseId = (): ChecklistPhase | null => {
-    if (!weddingDate) return null;
-    const target = new Date(weddingDate);
-    if (isNaN(target.getTime())) return null;
-
-    const now = new Date();
-    const diffDays = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) return "pos_evento";
-    if (diffDays <= 7) return "celebracao";
-    if (diffDays <= 28) return "fecho";
-    if (diffDays <= 90) return "consolidacao";
-    if (diffDays <= 180) return "definicao";
-    if (diffDays <= 270) return "estrutura";
-    return "fundacao";
-  };
-
-  const currentPhaseId = getActivePhaseId();
+  const activePhaseInfo = getChecklistPhaseFromDate(weddingDate);
+  const currentPhaseId = activePhaseInfo ? activePhaseInfo.phaseId : null;
 
   // Filter tasks that apply to selected journeys
   const applicableTasks = tasks.filter((t) => {

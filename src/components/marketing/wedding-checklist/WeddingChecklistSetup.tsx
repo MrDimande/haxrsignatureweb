@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { Calendar, Layers, RotateCcw, Check } from "lucide-react";
-import { WeddingJourney, JOURNEY_OPTIONS } from "@/lib/marketing/wedding-checklist-data";
+import {
+  WeddingJourney,
+  JOURNEY_OPTIONS,
+  getChecklistPhaseFromDate,
+} from "@/lib/marketing/wedding-checklist-data";
 
 interface WeddingChecklistSetupProps {
   weddingDate: string | null;
@@ -21,51 +25,7 @@ export default function WeddingChecklistSetup({
 }: WeddingChecklistSetupProps) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Compute countdown metrics if date is set
-  const getCountdownLabel = () => {
-    if (!weddingDate) return null;
-    const target = new Date(weddingDate);
-    if (isNaN(target.getTime())) return null;
-
-    const now = new Date();
-    // Reset time for fair day calculation
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const eventDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-    const diffMs = eventDay.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      return {
-        label: "Celebração Realizada",
-        sub: "Fase VII · Pós-Celebração",
-        days: Math.abs(diffDays),
-        isPast: true,
-      };
-    }
-    if (diffDays === 0) {
-      return {
-        label: "Hoje é o Grande Dia",
-        sub: "Fase VI · Celebração & Viver o Momento",
-        days: 0,
-        isToday: true,
-      };
-    }
-    if (diffDays <= 28) {
-      return {
-        label: `Faltam ${diffDays} dias`,
-        sub: "Fase V · Fecho & Contagem Regressiva",
-        days: diffDays,
-      };
-    }
-    const months = Math.round(diffDays / 30);
-    return {
-      label: `Faltam ${diffDays} dias (~${months} meses)`,
-      sub: diffDays > 270 ? "Fase I · Fundação (12–9 meses)" : diffDays > 180 ? "Fase II · Estrutura (8–6 meses)" : diffDays > 90 ? "Fase III · Definição (5–3 meses)" : "Fase IV · Consolidação (2–1 meses)",
-      days: diffDays,
-    };
-  };
-
-  const countdown = getCountdownLabel();
+  const countdown = getChecklistPhaseFromDate(weddingDate);
 
   return (
     <div className="bg-white border border-brand-champagne/45 rounded-sm p-6 md:p-8 shadow-sm space-y-8 mb-10">
@@ -82,25 +42,34 @@ export default function WeddingChecklistSetup({
         {/* Inline Reset Control */}
         <div className="relative">
           {showResetConfirm ? (
-            <div className="flex items-center gap-2 bg-brand-ivory border border-red-200 px-3 py-1.5 rounded-sm animate-fade-in">
-              <span className="font-sans text-[11px] text-red-700">Repor tudo?</span>
-              <button
-                type="button"
-                onClick={() => {
-                  onReset();
-                  setShowResetConfirm(false);
-                }}
-                className="font-mono text-[9px] uppercase tracking-wider font-bold bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-xs transition-colors cursor-pointer"
-              >
-                Confirmar
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowResetConfirm(false)}
-                className="font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/50 hover:text-brand-text-dark px-2 py-1 transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-brand-ivory border border-brand-champagne/70 p-3 rounded-sm animate-fade-in shadow-xs">
+              <div className="space-y-0.5 pr-2">
+                <p className="font-serif text-xs text-brand-text-dark font-medium">
+                  Repor progresso e tarefas pessoais?
+                </p>
+                <p className="font-sans text-[10px] text-brand-text-dark/60 font-light">
+                  As tarefas concluídas e personalizadas serão repostas. A data e a configuração da jornada serão mantidas.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onReset();
+                    setShowResetConfirm(false);
+                  }}
+                  className="font-mono text-[9px] uppercase tracking-wider font-bold bg-brand-gold hover:bg-brand-gold-light text-white px-3 py-1.5 rounded-xs transition-colors cursor-pointer"
+                >
+                  Repor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(false)}
+                  className="font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/60 hover:text-brand-text-dark px-2 py-1.5 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           ) : (
             <button

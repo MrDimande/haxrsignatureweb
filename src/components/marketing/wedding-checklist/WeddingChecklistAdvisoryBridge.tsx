@@ -16,7 +16,7 @@ export default function WeddingChecklistAdvisoryBridge() {
           A Assessoria HAXR orienta e conduz.”
         </blockquote>
         <p className="font-sans text-xs md:text-sm text-brand-text-dark/65 font-light leading-relaxed max-w-xl mx-auto">
-          A Checklist pública estrutura a visão e os tempos do casal. A nossa equipa de Assessoria Completa assume a negociação técnica, a blindagem contratual e a regência minuciosa de bastidores no grande dia.
+          Na Assessoria Completa, a equipa HAXR acompanha fornecedores, compromissos, cronograma e operação de bastidores, de acordo com o âmbito definido para cada projecto.
         </p>
       </div>
 

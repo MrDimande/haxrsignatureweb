@@ -90,7 +90,7 @@ export const CHECKLIST_PHASES: PhaseMetadata[] = [
     roman: "V",
     title: "Fecho",
     period: "Últimas 4 semanas",
-    description: "Revisão final de trajes, confirmação de entregas e blindagem pessoal.",
+    description: "Revisão final de trajes, confirmação de entregas e preparação dos elementos essenciais.",
   },
   {
     id: "celebracao",
@@ -809,4 +809,108 @@ export function saveChecklistState(state: StoredChecklistState) {
   } catch (err) {
     console.error("[ChecklistStorage] Error saving state:", err);
   }
+}
+
+export interface ActivePhaseInfo {
+  phaseId: ChecklistPhase;
+  label: string;
+  sub: string;
+  days: number;
+  isPast?: boolean;
+  isToday?: boolean;
+}
+
+/**
+ * Função canónica única para derivar a fase cronológica a partir da data de casamento.
+ * Trata YYYY-MM-DD em hora local para evitar discrepâncias de fuso horário.
+ */
+export function getChecklistPhaseFromDate(weddingDate: string | null): ActivePhaseInfo | null {
+  if (!weddingDate) return null;
+  const parts = weddingDate.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+
+  const [year, month, day] = parts;
+  const eventDay = new Date(year, month - 1, day);
+  if (isNaN(eventDay.getTime())) return null;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffMs = eventDay.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      phaseId: "pos_evento",
+      label: "Celebração Realizada",
+      sub: "Fase VII · Pós-Celebração",
+      days: Math.abs(diffDays),
+      isPast: true,
+    };
+  }
+
+  if (diffDays === 0) {
+    return {
+      phaseId: "celebracao",
+      label: "Hoje é a Celebração",
+      sub: "Fase VI · Celebração & Viver o Momento",
+      days: 0,
+      isToday: true,
+    };
+  }
+
+  if (diffDays <= 7) {
+    return {
+      phaseId: "celebracao",
+      label: `Faltam ${diffDays} ${diffDays === 1 ? "dia" : "dias"}`,
+      sub: "Fase VI · Celebração (Últimos dias & Dia-D)",
+      days: diffDays,
+    };
+  }
+
+  if (diffDays <= 28) {
+    return {
+      phaseId: "fecho",
+      label: `Faltam ${diffDays} dias`,
+      sub: "Fase V · Fecho (Últimas 4 semanas)",
+      days: diffDays,
+    };
+  }
+
+  if (diffDays <= 90) {
+    const months = Math.max(1, Math.round(diffDays / 30));
+    return {
+      phaseId: "consolidacao",
+      label: `Faltam ${diffDays} dias (~${months} meses)`,
+      sub: "Fase IV · Consolidação (2–1 meses)",
+      days: diffDays,
+    };
+  }
+
+  if (diffDays <= 180) {
+    const months = Math.round(diffDays / 30);
+    return {
+      phaseId: "definicao",
+      label: `Faltam ${diffDays} dias (~${months} meses)`,
+      sub: "Fase III · Definição (5–3 meses)",
+      days: diffDays,
+    };
+  }
+
+  if (diffDays <= 270) {
+    const months = Math.round(diffDays / 30);
+    return {
+      phaseId: "estrutura",
+      label: `Faltam ${diffDays} dias (~${months} meses)`,
+      sub: "Fase II · Estrutura (8–6 meses)",
+      days: diffDays,
+    };
+  }
+
+  const months = Math.round(diffDays / 30);
+  return {
+    phaseId: "fundacao",
+    label: `Faltam ${diffDays} dias (~${months} meses)`,
+    sub: "Fase I · Fundação (12–9 meses)",
+    days: diffDays,
+  };
 }

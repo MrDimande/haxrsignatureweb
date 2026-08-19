@@ -82,15 +82,19 @@ export default function WeddingChecklistPrivatePreview() {
             </li>
             <li className="flex items-center gap-2.5">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold shrink-0" />
-              <span>Prazos dinâmicos e alerta de tarefas em atraso</span>
+              <span>Prazos definidos para o projecto</span>
             </li>
             <li className="flex items-center gap-2.5">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold shrink-0" />
-              <span>Níveis de prioridade e criticidade de execução</span>
+              <span>Prioridades e estados operacionais</span>
             </li>
             <li className="flex items-center gap-2.5">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold shrink-0" />
-              <span>Ligação directa a Orçamento, Convidados e Fornecedores</span>
+              <span>Visibilidade de tarefas em atraso</span>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-brand-gold shrink-0" />
+              <span>Ligações contextuais aos módulos do evento, quando configuradas</span>
             </li>
             <li className="flex items-center gap-2.5">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold shrink-0" />
