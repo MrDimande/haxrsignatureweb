@@ -2,9 +2,6 @@ import Link from "next/link";
 import {
   Calendar,
   FileCheck,
-  FileText,
-  Inbox,
-  Receipt,
   ArrowUpRight,
 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
@@ -16,38 +13,13 @@ import DataTable from "@/components/admin/DataTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { formatCurrency } from "@/lib/calculations";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/admin/constants";
-import * as analyticsRepo from "@/lib/admin/repositories/analytics.repository";
-import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
-import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
-import * as inquiriesRepo from "@/lib/contact/inquiries.repository";
-import * as eventsRepo from "@/lib/events/repositories/events.repository";
-import * as guestsRepo from "@/lib/events/repositories/guests.repository";
-import { groupEventsByPipeline } from "@/lib/events/pipeline";
-import * as financeRepo from "@/lib/finance/repositories/overview.repository";
+import { getAdminDashboardSnapshot } from "@/lib/admin/services/admin-dashboard.service";
 import type { InvoiceDocument } from "@/lib/admin/types";
 
 export default async function DashboardPage() {
-  const fiscalYear = new Date().getFullYear();
+  const snapshot = await getAdminDashboardSnapshot();
 
-  const [stats, businesses, events, finance, newLeads, revenueByBusiness, revenueByMonth, allInquiries] =
-    await Promise.all([
-    documentsRepo.getDashboardStats(),
-    businessesRepo.listBusinesses(),
-    eventsRepo.listAllEvents(),
-    financeRepo.getFinanceOverview(),
-    inquiriesRepo.countNewInquiries(),
-    analyticsRepo.getRevenueByBusiness(fiscalYear),
-    analyticsRepo.getRevenueByMonth(fiscalYear),
-    inquiriesRepo.listInquiries(),
-  ]);
-
-  const businessMap = new Map(businesses.map((b) => [b.id, b.name]));
-  const eventGroups = groupEventsByPipeline(events);
-  const guestStats = await guestsRepo.listGuestStatsByEventIds(
-    events.map((event) => event.id)
-  );
-
-  const recentInquiries = allInquiries.slice(0, 3);
+  const businessMap = new Map(snapshot.businesses.map((b) => [b.id, b.name]));
 
   const columns = [
     {
@@ -132,10 +104,10 @@ export default async function DashboardPage() {
 
             <div className="pt-2">
               <p className="font-mono text-[8px] tracking-[0.2em] uppercase text-grey/60">
-                Facturação Anual Acumulada
+                Total Recebido Acumulado
               </p>
               <p className="font-serif text-3xl font-light text-admin-gold mt-1">
-                {formatCurrency(finance.totalReceived)}
+                {formatCurrency(snapshot.finance.totalReceived)}
               </p>
             </div>
           </div>
@@ -162,13 +134,13 @@ export default async function DashboardPage() {
                   Eventos activos
                 </p>
                 <p className="font-serif text-3xl font-light text-white mt-1.5">
-                  {eventGroups.active.length}
+                  {snapshot.eventGroups.active.length}
                 </p>
               </div>
             </div>
 
             <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
-              {eventGroups.planning.length} planeamento · {eventGroups.completed.length} concluídos
+              {snapshot.eventGroups.planning.length} planeamento · {snapshot.eventGroups.completed.length} concluídos
             </p>
           </Link>
 
@@ -180,7 +152,7 @@ export default async function DashboardPage() {
                   Leads novos
                 </p>
                 <p className="font-serif text-3xl font-light text-white mt-1.5">
-                  {newLeads}
+                  {snapshot.commercial.newLeads}
                 </p>
               </div>
             </div>
@@ -198,7 +170,7 @@ export default async function DashboardPage() {
                   Recebido este mês
                 </p>
                 <p className="font-serif text-[22px] md:text-2xl font-light text-white mt-1.5 truncate">
-                  {formatCurrency(finance.thisMonthReceived)}
+                  {formatCurrency(snapshot.finance.thisMonthReceived)}
                 </p>
               </div>
             </div>
@@ -216,13 +188,13 @@ export default async function DashboardPage() {
                   Total Documentos
                 </p>
                 <p className="font-serif text-3xl font-light text-white mt-1.5">
-                  {stats.totalProformas + stats.totalInvoices + stats.totalReceipts}
+                  {snapshot.documents.totalProformas + snapshot.documents.totalInvoices + snapshot.documents.totalReceipts}
                 </p>
               </div>
             </div>
 
             <p className="text-[10px] text-grey/50 font-mono tracking-wide relative z-10">
-              {stats.totalDraft} rascunhos em preparação
+              {snapshot.documents.totalDraft} rascunhos em preparação
             </p>
           </Link>
 
@@ -232,12 +204,12 @@ export default async function DashboardPage() {
       {/* Main Panels Section */}
       <div className="space-y-12">
         <ActiveEventsOverviewPanel
-          events={events}
-          guestStats={guestStats}
+          events={snapshot.events}
+          guestStats={snapshot.guestStats}
           businessMap={businessMap}
         />
 
-        <EventPipelinePanel groups={eventGroups} businessMap={businessMap} />
+        <EventPipelinePanel groups={snapshot.eventGroups} businessMap={businessMap} />
 
         {/* Executive Inbox / Quick Leads Hub */}
         <section className="space-y-4">
@@ -259,7 +231,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {recentInquiries.map((inquiry) => (
+            {snapshot.commercial.recentInquiries.map((inquiry) => (
               <div
                 key={inquiry.id}
                 className="admin-card p-5 border border-white/[0.03] bg-[#0c0a09]/40 hover:border-admin-gold/25 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden"
@@ -317,7 +289,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
             ))}
-            {recentInquiries.length === 0 && (
+            {snapshot.commercial.recentInquiries.length === 0 && (
               <div className="col-span-3 text-center p-8 border border-dashed border-white/5 rounded-xl">
                 <p className="text-sm text-grey/45 italic font-mono">Sem novos leads recebidos.</p>
               </div>
@@ -325,12 +297,12 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <CashSummaryPanel finance={finance} />
+        <CashSummaryPanel finance={snapshot.finance} />
 
         <DocumentAnalyticsPanel
-          fiscalYear={fiscalYear}
-          revenueByBusiness={revenueByBusiness}
-          revenueByMonth={revenueByMonth}
+          fiscalYear={snapshot.fiscalYear}
+          revenueByBusiness={snapshot.analytics.revenueByBusiness}
+          revenueByMonth={snapshot.analytics.revenueByMonth}
         />
 
         <section className="space-y-4">
@@ -348,7 +320,7 @@ export default async function DashboardPage() {
 
           <DataTable
             columns={columns}
-            data={stats.recentDocuments}
+            data={snapshot.documents.recentDocuments}
             keyExtractor={(row) => row.id}
             rowHref={(row) => `/admin/documents/${row.id}`}
             emptyMessage="Ainda não há documentos. Crie o primeiro."
