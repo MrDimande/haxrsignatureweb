@@ -2,6 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildAdminDashboardSnapshot,
+  buildAdminAttentionItems,
+  resolveAttentionSource,
   getMaputoFiscalYear,
   type AdminDashboardSourceData,
 } from "./admin-dashboard.service";
@@ -9,6 +11,20 @@ import type { DashboardStats, Business } from "@/lib/admin/types";
 import type { ManagedEvent, EventListGuestStats } from "@/lib/events/types";
 import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
+import type { AdminAlert } from "@/lib/admin/services/admin-alerts.service";
+
+export function createAdminAlert(overrides?: Partial<AdminAlert>): AdminAlert {
+  return {
+    id: "lead-inq-1",
+    text: "Novo lead: Ana Silva",
+    time: "Há 5 min",
+    read: false,
+    href: "/admin/leads",
+    priority: "high",
+    source: "commercial",
+    ...overrides,
+  };
+}
 
 export function createBusiness(overrides?: Partial<Business>): Business {
   return {
@@ -138,6 +154,40 @@ export function createEventListGuestStats(
 }
 
 function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>): AdminDashboardSourceData {
+  const alerts: AdminAlert[] = [
+    createAdminAlert({
+      id: "lead-inq-1",
+      text: "Novo lead: Ana Silva",
+      time: "Há 5 min",
+      href: "/admin/leads",
+      priority: "high",
+      source: "commercial",
+    }),
+    createAdminAlert({
+      id: "portal-approved-doc-1",
+      text: "Ana Silva aprovou a proposta PF-2026-001",
+      time: "Há 1 h",
+      href: "/admin/documents/doc-1",
+      priority: "high",
+      source: "portal",
+    }),
+    createAdminAlert({
+      id: "overdue-doc-2",
+      text: "INV-014 em atraso (6 dias)",
+      time: "Há 6 dias",
+      href: "/admin/documents/doc-2",
+      priority: "high",
+      source: "finance",
+    }),
+    createAdminAlert({
+      id: "concierge-pending",
+      text: "2 documento(s) Concierge por rever",
+      time: "Operações",
+      href: "/admin/events",
+      priority: "normal",
+      source: "operations",
+    }),
+  ];
   const documents = createDashboardStats();
   const businesses = [createBusiness()];
   const events = [
@@ -190,6 +240,7 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
 
   return {
     fiscalYear: 2026,
+    alerts,
     documents,
     businesses,
     events,
@@ -212,6 +263,77 @@ describe("admin-dashboard.service (type-safe tests)", () => {
 
       const midYear = new Date("2026-08-19T12:00:00Z");
       assert.equal(getMaputoFiscalYear(midYear), 2026);
+    });
+  });
+
+  describe("buildAdminAttentionItems & resolveAttentionSource", () => {
+    it("passes through high and normal priorities correctly", () => {
+      const alerts: AdminAlert[] = [
+        createAdminAlert({ id: "1", priority: "high" }),
+        createAdminAlert({ id: "2", priority: "normal" }),
+      ];
+      const items = buildAdminAttentionItems(alerts);
+
+      assert.equal(items[0].priority, "high");
+      assert.equal(items[1].priority, "normal");
+    });
+
+    it("does not let read=true or read=false affect operational existence", () => {
+      const alerts: AdminAlert[] = [
+        createAdminAlert({ id: "1", read: true }),
+        createAdminAlert({ id: "2", read: false }),
+      ];
+      const items = buildAdminAttentionItems(alerts);
+
+      assert.equal(items.length, 2);
+    });
+
+    it("resolves sources deterministically for all categories", () => {
+      const alerts: AdminAlert[] = [
+        createAdminAlert({ id: "lead-123", href: "/admin/leads", source: undefined }),
+        createAdminAlert({ id: "portal-approved-456", href: "/admin/documents/456", source: undefined }),
+        createAdminAlert({ id: "overdue-789", href: "/admin/documents/789", source: undefined }),
+        createAdminAlert({ id: "concierge-pending", href: "/admin/events", source: undefined }),
+        createAdminAlert({ id: "custom", href: "/admin/custom", source: "finance" }),
+      ];
+
+      assert.equal(resolveAttentionSource(alerts[0]), "commercial");
+      assert.equal(resolveAttentionSource(alerts[1]), "portal");
+      assert.equal(resolveAttentionSource(alerts[2]), "finance");
+      assert.equal(resolveAttentionSource(alerts[3]), "operations");
+      assert.equal(resolveAttentionSource(alerts[4]), "finance");
+    });
+
+    it("preserves canonical href and context exactly", () => {
+      const alert = createAdminAlert({
+        id: "portal-changes-1",
+        text: "Cliente pediu alterações",
+        time: "Há 2 h",
+        href: "/admin/documents/doc-99",
+        priority: "high",
+        source: "portal",
+      });
+      const [item] = buildAdminAttentionItems([alert]);
+
+      assert.equal(item.id, "portal-changes-1");
+      assert.equal(item.label, "Cliente pediu alterações");
+      assert.equal(item.context, "Há 2 h");
+      assert.equal(item.href, "/admin/documents/doc-99");
+      assert.equal(item.source, "portal");
+      assert.equal(item.priority, "high");
+    });
+
+    it("handles empty alerts list safely", () => {
+      const items = buildAdminAttentionItems([]);
+      assert.deepEqual(items, []);
+    });
+
+    it("does not mutate original alert objects", () => {
+      const original: AdminAlert = createAdminAlert();
+      const clone = { ...original };
+      buildAdminAttentionItems([original]);
+
+      assert.deepEqual(original, clone);
     });
   });
 
@@ -259,7 +381,7 @@ describe("admin-dashboard.service (type-safe tests)", () => {
       assert.deepEqual(snapshot.guestStats, {});
     });
 
-    it("passes through documents, finance and analytics data without mutation", () => {
+    it("passes through documents, finance, analytics and attention data without mutation", () => {
       const source = createFixtureSourceData();
       const snapshot = buildAdminDashboardSnapshot(source);
 
@@ -269,6 +391,7 @@ describe("admin-dashboard.service (type-safe tests)", () => {
       assert.deepEqual(snapshot.analytics.revenueByBusiness, source.revenueByBusiness);
       assert.deepEqual(snapshot.analytics.revenueByMonth, source.revenueByMonth);
       assert.equal(snapshot.fiscalYear, 2026);
+      assert.equal(snapshot.attention.items.length, 4);
     });
 
     it("generates deterministic snapshot structure with injected now timestamp", () => {

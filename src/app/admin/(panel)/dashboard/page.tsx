@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
+import AttentionRequiredPanel from "@/components/admin/dashboard/AttentionRequiredPanel";
 import ActiveEventsOverviewPanel from "@/components/admin/dashboard/ActiveEventsOverviewPanel";
 import CashSummaryPanel from "@/components/admin/dashboard/CashSummaryPanel";
 import DocumentAnalyticsPanel from "@/components/admin/dashboard/DocumentAnalyticsPanel";
@@ -75,6 +76,11 @@ export default async function DashboardPage() {
         </div>
       }
     >
+      {/* Attention Required Panel — Top priority operational action surface */}
+      <div className="mb-10">
+        <AttentionRequiredPanel items={snapshot.attention.items} />
+      </div>
+
       {/* Upper Grid: Welcome Card + 4 Real KPI cards */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-10">
 

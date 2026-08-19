@@ -7,6 +7,12 @@ import {
 } from "@/lib/admin/services/portal-approval-alerts";
 import * as portalPremiumRepo from "@/lib/portal/repositories/portal-premium.repository";
 
+export type AdminAttentionSource =
+  | "commercial"
+  | "finance"
+  | "portal"
+  | "operations";
+
 export type AdminAlert = {
   id: string;
   text: string;
@@ -14,6 +20,7 @@ export type AdminAlert = {
   read: boolean;
   href: string;
   priority: "high" | "normal";
+  source?: AdminAttentionSource;
 };
 
 export type AdminBadgeCounts = {
@@ -82,6 +89,7 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
       read: false,
       href: "/admin/leads",
       priority: "high",
+      source: "commercial",
     });
   }
 
@@ -101,6 +109,7 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
       read: false,
       href: `/admin/documents/${alert.documentId}`,
       priority: "high",
+      source: "finance",
     });
   }
 
@@ -112,6 +121,7 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
       read: false,
       href: "/admin/events",
       priority: "normal",
+      source: "operations",
     });
   }
 
@@ -124,6 +134,7 @@ export async function getAdminAlerts(limit = 8): Promise<AdminAlert[]> {
       read: false,
       href: "/admin/cash",
       priority: "high",
+      source: "finance",
     });
   }
 

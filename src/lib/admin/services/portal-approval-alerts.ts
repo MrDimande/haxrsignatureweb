@@ -37,6 +37,7 @@ export function buildPortalApprovalAlerts({
         read: false,
         href: `/admin/documents/${document.id}`,
         priority: "high" as const,
+        source: "portal" as const,
       };
     }
 
@@ -50,6 +51,7 @@ export function buildPortalApprovalAlerts({
       read: false,
       href: `/admin/documents/${document.id}`,
       priority: "high" as const,
+      source: "portal" as const,
     };
   });
 }
