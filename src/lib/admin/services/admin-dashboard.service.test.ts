@@ -446,22 +446,29 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       assert.equal(snapshot.eventGroups.completed[0].id, "evt-3");
     });
 
-    it("derives newLeads count accurately from inquiries status", () => {
+    it("derives commercial pipeline summary accurately from inquiries", () => {
       const source = createFixtureSourceData();
       const snapshot = buildAdminDashboardSnapshot(source);
 
       // Inquiries: 3 'new' (inq-1, inq-3, inq-4) and 1 'contacted' (inq-2)
-      assert.equal(snapshot.commercial.newLeads, 3);
+      assert.equal(snapshot.commercial.summary.total, 4);
+      assert.equal(snapshot.commercial.summary.new, 3);
+      assert.equal(snapshot.commercial.summary.contacted, 1);
+      assert.equal(snapshot.commercial.summary.active, 4);
+      assert.equal(snapshot.commercial.summary.converted, 0);
+      assert.equal(snapshot.commercial.summary.archived, 0);
     });
 
-    it("slices recentInquiries to at most 3 items preserving order", () => {
+    it("populates commercial active items sorted canonically with new before contacted", () => {
       const source = createFixtureSourceData();
       const snapshot = buildAdminDashboardSnapshot(source);
 
-      assert.equal(snapshot.commercial.recentInquiries.length, 3);
-      assert.equal(snapshot.commercial.recentInquiries[0].id, "inq-1");
-      assert.equal(snapshot.commercial.recentInquiries[1].id, "inq-2");
-      assert.equal(snapshot.commercial.recentInquiries[2].id, "inq-3");
+      assert.equal(snapshot.commercial.items.length, 4);
+      // New leads rank first, then contacted
+      assert.equal(snapshot.commercial.items[0].status, "new");
+      assert.equal(snapshot.commercial.items[1].status, "new");
+      assert.equal(snapshot.commercial.items[2].status, "new");
+      assert.equal(snapshot.commercial.items[3].status, "contacted");
     });
 
     it("handles empty events safely without errors", () => {

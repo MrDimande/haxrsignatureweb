@@ -8,6 +8,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import AttentionRequiredPanel from "@/components/admin/dashboard/AttentionRequiredPanel";
 import PortfolioHealthPanel from "@/components/admin/dashboard/PortfolioHealthPanel";
 import UpcomingOperationalAgendaPanel from "@/components/admin/dashboard/UpcomingOperationalAgendaPanel";
+import CommercialPipelinePanel from "@/components/admin/dashboard/CommercialPipelinePanel";
 import CashSummaryPanel from "@/components/admin/dashboard/CashSummaryPanel";
 import DocumentAnalyticsPanel from "@/components/admin/dashboard/DocumentAnalyticsPanel";
 import EventPipelinePanel from "@/components/admin/dashboard/EventPipelinePanel";
@@ -159,7 +160,7 @@ export default async function DashboardPage() {
                   Leads novos
                 </p>
                 <p className="font-serif text-3xl font-light text-white mt-1.5">
-                  {snapshot.commercial.newLeads}
+                  {snapshot.commercial.summary.new}
                 </p>
               </div>
             </div>
@@ -220,91 +221,7 @@ export default async function DashboardPage() {
 
         <EventPipelinePanel groups={snapshot.eventGroups} businessMap={businessMap} />
 
-        {/* Executive Inbox / Quick Leads Hub */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-mono text-[8px] tracking-[0.4em] uppercase text-grey/50">
-                Inbox Executivo
-              </p>
-              <h2 className="font-serif text-xl font-light text-white mt-1">
-                Quick Leads Hub
-              </h2>
-            </div>
-            <Link
-              href="/admin/leads"
-              className="font-mono text-[9px] tracking-[0.3em] uppercase text-admin-gold hover:opacity-80"
-            >
-              Ver todos os leads →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {snapshot.commercial.recentInquiries.map((inquiry) => (
-              <div
-                key={inquiry.id}
-                className="admin-card p-5 border border-white/[0.03] bg-[#0c0a09]/40 hover:border-admin-gold/25 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden"
-              >
-                {/* Micro glow on hover */}
-                <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-admin-gold/5 blur-xl group-hover:bg-admin-gold/10 transition-colors duration-300" />
-
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-3.5 relative z-10">
-                    <span className="font-mono text-[9px] text-admin-gold font-medium">
-                      {inquiry.projectType || "Geral"}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono tracking-wider uppercase ${
-                      inquiry.status === "new"
-                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    }`}>
-                      {inquiry.status === "new" ? "pendente" : "respondido"}
-                    </span>
-                  </div>
-
-                  <p className="font-serif text-lg font-light text-white group-hover:text-admin-gold transition-colors truncate relative z-10">
-                    {inquiry.name}
-                  </p>
-                  <p className="text-[10px] text-grey/65 font-mono truncate mt-1 relative z-10">
-                    {inquiry.email}
-                  </p>
-
-                  <p className="text-xs text-grey-dark/85 italic line-clamp-2 mt-3 leading-relaxed relative z-10">
-                    &ldquo;{inquiry.intent || inquiry.message || "Sem mensagem complementar."}&rdquo;
-                  </p>
-                </div>
-
-                <div className="border-t border-white/[0.04] pt-4 mt-5 flex items-center justify-between relative z-10">
-                  <span className="text-[9px] font-mono text-grey/40">
-                    {new Date(inquiry.createdAt).toLocaleDateString("pt-PT")}
-                  </span>
-
-                  <div className="flex items-center gap-3">
-                    <a
-                      href={`mailto:${inquiry.email}?subject=Contacto HAXR Signature`}
-                      className="font-mono text-[9px] tracking-wider uppercase text-grey-medium hover:text-white transition-colors"
-                    >
-                      Email
-                    </a>
-                    <a
-                      href={`https://wa.me/?text=Olá ${encodeURIComponent(inquiry.name)}, agradecemos o seu contacto na HAXR Signature...`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-[9px] tracking-wider uppercase text-emerald-400 hover:text-emerald-300 transition-colors"
-                    >
-                      WhatsApp
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {snapshot.commercial.recentInquiries.length === 0 && (
-              <div className="col-span-3 text-center p-8 border border-dashed border-white/5 rounded-xl">
-                <p className="text-sm text-grey/45 italic font-mono">Sem novos leads recebidos.</p>
-              </div>
-            )}
-          </div>
-        </section>
+        <CommercialPipelinePanel commercial={snapshot.commercial} />
 
         <CashSummaryPanel finance={snapshot.finance} />
 

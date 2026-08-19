@@ -21,6 +21,12 @@ import {
   type AdminUpcomingAgendaItem,
   type AdminUpcomingAgenda,
 } from "@/lib/admin/services/admin-upcoming-agenda.service";
+import {
+  buildAdminCommercialPipeline,
+  type AdminCommercialPipeline,
+  type AdminCommercialPipelineItem,
+  type AdminCommercialPipelineSummary,
+} from "@/lib/admin/services/admin-commercial-pipeline.service";
 import * as analyticsRepo from "@/lib/admin/repositories/analytics.repository";
 import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
 import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
@@ -39,6 +45,11 @@ export type {
 export type {
   AdminUpcomingAgendaItem,
   AdminUpcomingAgenda,
+};
+export type {
+  AdminCommercialPipeline,
+  AdminCommercialPipelineItem,
+  AdminCommercialPipelineSummary,
 };
 
 export type RevenueByBusiness = Awaited<ReturnType<typeof analyticsRepo.getRevenueByBusiness>>;
@@ -69,10 +80,7 @@ export type AdminDashboardSnapshot = {
   events: ManagedEvent[];
   eventGroups: Record<EventPipelineStatus, ManagedEvent[]>;
   finance: FinanceOverview;
-  commercial: {
-    newLeads: number;
-    recentInquiries: ContactInquiry[];
-  };
+  commercial: AdminCommercialPipeline;
   analytics: {
     revenueByBusiness: RevenueByBusiness;
     revenueByMonth: RevenueByMonth;
@@ -137,8 +145,6 @@ export function buildAdminDashboardSnapshot(
   const generatedAt = now.toISOString();
   const eventGroups = groupEventsByPipeline(source.events, now);
 
-  const newLeads = source.inquiries.filter((inquiry) => inquiry.status === "new").length;
-  const recentInquiries = source.inquiries.slice(0, 3);
   const attentionItems = buildAdminAttentionItems(source.alerts);
   const portfolio = buildEventPortfolioHealth(source.portfolioSnapshots);
   const upcoming = buildAdminUpcomingAgenda(
@@ -148,6 +154,7 @@ export function buildAdminDashboardSnapshot(
     },
     { now }
   );
+  const commercial = buildAdminCommercialPipeline(source.inquiries);
 
   return {
     generatedAt,
@@ -162,10 +169,7 @@ export function buildAdminDashboardSnapshot(
     events: source.events,
     eventGroups,
     finance: source.finance,
-    commercial: {
-      newLeads,
-      recentInquiries,
-    },
+    commercial,
     analytics: {
       revenueByBusiness: source.revenueByBusiness,
       revenueByMonth: source.revenueByMonth,
