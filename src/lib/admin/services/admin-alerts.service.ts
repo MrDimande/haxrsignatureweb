@@ -35,8 +35,8 @@ export type AdminBadgeCounts = {
   portalPaymentProofsPending: number;
 };
 
-function relativeTime(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
+function relativeTime(iso: string, now: Date = new Date()): string {
+  const diffMs = now.getTime() - new Date(iso).getTime();
   const minutes = Math.floor(diffMs / 60000);
   if (minutes < 1) return "Agora";
   if (minutes < 60) return `Há ${minutes} min`;
@@ -84,6 +84,7 @@ export type BuildCanonicalAdminAlertsInput = {
     maxLeads?: number;
     maxPortalApprovals?: number;
     maxOverdue?: number;
+    now?: Date;
   };
 };
 
@@ -94,6 +95,8 @@ export type BuildCanonicalAdminAlertsInput = {
 export function buildCanonicalAdminAlerts(
   input: BuildCanonicalAdminAlertsInput
 ): AdminAlert[] {
+  const now = input.options?.now ?? new Date();
+  const formatTime = (iso: string) => relativeTime(iso, now);
   const alerts: AdminAlert[] = [];
 
   const newInquiries = input.inquiries.filter((i) => i.status === "new");
@@ -106,7 +109,7 @@ export function buildCanonicalAdminAlerts(
     alerts.push({
       id: `lead-${inquiry.id}`,
       text: `Novo lead: ${inquiry.name}`,
-      time: relativeTime(inquiry.createdAt),
+      time: formatTime(inquiry.createdAt),
       read: false,
       href: "/admin/leads",
       priority: "high",
@@ -118,12 +121,12 @@ export function buildCanonicalAdminAlerts(
   alerts.push(
     ...buildPortalApprovalAlerts({
       documents: input.documents,
-      relativeTime,
+      relativeTime: formatTime,
       limit: input.options?.maxPortalApprovals,
     })
   );
 
-  const overdueAlerts = buildOverdueAlerts(input.documents);
+  const overdueAlerts = buildOverdueAlerts(input.documents, now);
   const filteredOverdue =
     typeof input.options?.maxOverdue === "number"
       ? overdueAlerts.slice(0, input.options.maxOverdue)
@@ -133,7 +136,7 @@ export function buildCanonicalAdminAlerts(
     alerts.push({
       id: `overdue-${alert.documentId}`,
       text: `${alert.documentNumber} em atraso (${alert.daysOverdue} dias)`,
-      time: relativeTime(alert.dueDate),
+      time: formatTime(alert.dueDate),
       read: false,
       href: `/admin/documents/${alert.documentId}`,
       priority: "high",
@@ -174,18 +177,22 @@ export function buildCanonicalAdminAlerts(
 /**
  * Builds canonical alerts with standard per-category feed caps for the Header notification drawer.
  */
-export function buildAdminAlerts(input: {
-  inquiries: ContactInquiry[];
-  documents: readonly AdminOperationalDocument[];
-  conciergePending: number;
-  pendingProofs: number;
-}): AdminAlert[] {
+export function buildAdminAlerts(
+  input: {
+    inquiries: ContactInquiry[];
+    documents: readonly AdminOperationalDocument[];
+    conciergePending: number;
+    pendingProofs: number;
+  },
+  options?: { now?: Date }
+): AdminAlert[] {
   return buildCanonicalAdminAlerts({
     ...input,
     options: {
       maxLeads: 3,
       maxPortalApprovals: 4,
       maxOverdue: 3,
+      ...(options?.now ? { now: options.now } : {}),
     },
   });
 }
@@ -199,9 +206,17 @@ const PRIORITY_ORDER = { high: 0, normal: 1 } as const;
  */
 export function buildAdminAttentionFeed(
   source: BuildCanonicalAdminAlertsInput,
-  limit = 8
+  limit = 8,
+  options?: { now?: Date }
 ): AdminAlert[] {
-  const canonicalAlerts = buildCanonicalAdminAlerts(source);
+  const resolvedNow = options?.now ?? source.options?.now;
+  const canonicalAlerts = buildCanonicalAdminAlerts({
+    ...source,
+    options: {
+      ...source.options,
+      ...(resolvedNow ? { now: resolvedNow } : {}),
+    },
+  });
   return canonicalAlerts
     .filter((alert) => alert.requiresAction)
     .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])

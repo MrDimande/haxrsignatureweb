@@ -190,7 +190,8 @@ export function buildAdminDashboardSnapshot(
         ? source.paymentProofsBatch.items.length
         : 0,
     },
-    8
+    8,
+    { now }
   );
   const attentionItems = buildAdminAttentionItems(attentionAlerts);
 

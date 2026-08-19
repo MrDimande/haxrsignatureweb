@@ -240,30 +240,35 @@ export function buildAdminClientDecisions(
   }
 
   // 4. Date Holds (Awaiting Client) with Critical Suppression Rule
-  for (const event of input.events) {
-    if (!isDateHoldActive(event.dateHoldUntil, now)) {
-      continue;
-    }
+  // Date-hold ownership requires payment-proof coverage to be safely established.
+  // If paymentProofs.available === false, we cannot verify whether a proof was already submitted,
+  // so we do not emit date_hold decisions (coverage.paymentProofs and coverage.complete will be false).
+  if (input.paymentProofs.available) {
+    for (const event of input.events) {
+      if (!isDateHoldActive(event.dateHoldUntil, now)) {
+        continue;
+      }
 
-    // Critical Rule: If a pending_review payment proof exists for this event,
-    // the client already submitted it -> suppress date hold from awaitingClient!
-    if (pendingProofEventIds.has(event.id)) {
-      continue;
-    }
+      // Critical Rule: If a pending_review payment proof exists for this event,
+      // the client already submitted it -> suppress date hold from awaitingClient!
+      if (pendingProofEventIds.has(event.id)) {
+        continue;
+      }
 
-    awaitingClient.push({
-      id: `date-hold-${event.id}`,
-      owner: "client",
-      kind: "date_hold",
-      title: "Reserva de data activa · aguarda sinal",
-      detail: event.name,
-      clientName: event.clientName ?? null,
-      eventId: event.id,
-      eventName: event.name,
-      href: `/admin/events/${event.id}`,
-      occurredAt: event.dateHoldUntil!,
-      dueAt: event.dateHoldUntil!,
-    });
+      awaitingClient.push({
+        id: `date-hold-${event.id}`,
+        owner: "client",
+        kind: "date_hold",
+        title: "Reserva de data activa · aguarda sinal",
+        detail: event.name,
+        clientName: event.clientName ?? null,
+        eventId: event.id,
+        eventName: event.name,
+        href: `/admin/events/${event.id}`,
+        occurredAt: event.dateHoldUntil!,
+        dueAt: event.dateHoldUntil!,
+      });
+    }
   }
 
   // Sorting:

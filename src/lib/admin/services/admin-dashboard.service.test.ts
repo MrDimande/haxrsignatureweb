@@ -546,5 +546,50 @@ describe("admin-dashboard.service (actionability semantics)", () => {
 
       assert.equal(snapshot.generatedAt, "2026-08-19T14:30:00.000Z");
     });
+
+    it("forwards the single injected now clock across Attention, Client Decisions, Upcoming and Pipeline", () => {
+      const testDate = new Date("2026-08-19T14:30:00.000Z");
+      const doc = createOperationalDocument({
+        id: "doc-overdue",
+        documentType: "invoice",
+        status: "sent",
+        expiryDate: "2026-08-10",
+      });
+      const inq: ContactInquiry = {
+        id: "inq-single-clock",
+        name: "Lead Relativo",
+        email: "lead@example.com",
+        projectType: "Casamento",
+        packageLabel: null,
+        intent: "Info",
+        message: "Ola",
+        status: "new",
+        marketingOptIn: false,
+        source: "website_contact_form",
+        createdAt: "2026-08-19T14:00:00.000Z", // 30 min before testDate
+        updatedAt: "2026-08-19T14:00:00.000Z",
+        brevoLeadWelcomeAt: null,
+        brevoPortfolioSentAt: null,
+        brevoExperiencesSentAt: null,
+        brevoMeetingSentAt: null,
+        brevoLastCallSentAt: null,
+        brevoNewsletterWelcomeAt: null,
+      };
+      const source = createFixtureSourceData({
+        operationalDocuments: [doc],
+        inquiries: [inq],
+      });
+
+      const snapshot = buildAdminDashboardSnapshot(source, { now: testDate });
+
+      // Check Attention has deterministic relative time driven by testDate
+      const leadAttention = snapshot.attention.items.find((i) => i.id === "lead-inq-single-clock");
+      assert.ok(leadAttention);
+      assert.equal(leadAttention.context, "Há 30 min");
+
+      const overdueAttention = snapshot.attention.items.find((i) => i.id === "overdue-doc-overdue");
+      assert.ok(overdueAttention);
+      assert.match(overdueAttention.label, /9 dias/);
+    });
   });
 });

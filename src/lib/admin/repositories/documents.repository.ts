@@ -79,11 +79,41 @@ function mapOperationalDocument(row: Tables<"documents">): AdminOperationalDocum
   };
 }
 
+const OPERATIONAL_DOCUMENT_FIELDS = `
+  id,
+  document_type,
+  document_number,
+  business_id,
+  status,
+  currency,
+  client_id,
+  client_name,
+  event_id,
+  event_type,
+  event_name,
+  event_date,
+  event_location,
+  issue_date,
+  expiry_date,
+  subtotal,
+  vat_rate,
+  vat_amount,
+  grand_total,
+  include_vat,
+  converted_from_document_id,
+  client_approval_status,
+  client_approved_at,
+  client_approval_note,
+  created_at,
+  updated_at,
+  email_sent_at
+` as const;
+
 export async function listOperationalDocuments(): Promise<AdminOperationalDocument[]> {
   const supabase = createAdminClient();
   const { data: docs, error } = await supabase
     .from("documents")
-    .select("*")
+    .select(OPERATIONAL_DOCUMENT_FIELDS)
     .order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);

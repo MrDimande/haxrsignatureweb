@@ -578,4 +578,24 @@ describe("admin-client-decisions.service (Canonical Handoff Queue)", () => {
     assert.deepEqual(approvals, cloneApprovals);
     assert.deepEqual(proofs, cloneProofs);
   });
+
+  it("V. active date hold + paymentProofs.available === false -> no date_hold in awaitingClient, coverage reflects unavailability", () => {
+    const event = createEvent("1", {
+      id: "event-1",
+      dateHoldUntil: "2026-08-25T23:59:59Z",
+    });
+
+    const result = buildAdminClientDecisions({
+      documents: [],
+      events: [event],
+      creativeApprovals: { available: true, items: [] },
+      paymentProofs: { available: false, items: [] },
+      options: { now: defaultNow },
+    });
+
+    // Date hold decision is NOT emitted because proof status cannot be established
+    assert.equal(result.awaitingClient.filter((i) => i.kind === "date_hold").length, 0);
+    assert.equal(result.coverage.paymentProofs, false);
+    assert.equal(result.coverage.complete, false);
+  });
 });

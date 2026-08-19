@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildCanonicalAdminAlerts,
   buildAdminAlerts,
+  buildAdminAttentionFeed,
 } from "./admin-alerts.service";
 import type { InvoiceDocument } from "@/lib/admin/types";
 import type { ContactInquiry } from "@/lib/contact/types";
@@ -270,5 +271,86 @@ describe("admin-alerts.service (canonical alerts vs header feed)", () => {
 
     assert.deepEqual(inquiry, inquiryClone);
     assert.deepEqual(doc, docClone);
+  });
+
+  it("G. buildAdminAttentionFeed with fixed now produces deterministic relative times", () => {
+    const fixedNow = new Date("2026-08-19T12:00:00Z");
+    const inquiryRecent = createInquiry("1", "Lead Recente");
+    inquiryRecent.createdAt = "2026-08-19T11:45:00Z"; // 15 min ago
+
+    const inquiryOlder = createInquiry("2", "Lead Antigo");
+    inquiryOlder.createdAt = "2026-08-19T09:00:00Z"; // 3 hours ago
+
+    const feed = buildAdminAttentionFeed(
+      {
+        inquiries: [inquiryRecent, inquiryOlder],
+        documents: [],
+        conciergePending: 0,
+        pendingProofs: 0,
+      },
+      8,
+      { now: fixedNow }
+    );
+
+    assert.equal(feed.length, 2);
+    assert.equal(feed[0].time, "Há 15 min");
+    assert.equal(feed[1].time, "Há 3 h");
+  });
+
+  it("H. overdue days use the injected now timestamp", () => {
+    const fixedNow = new Date("2026-08-19T12:00:00Z");
+    const doc = createInvoiceDocument("1", {
+      expiryDate: "2026-08-10",
+      status: "sent",
+      documentType: "invoice",
+    });
+
+    const feed = buildAdminAttentionFeed(
+      {
+        inquiries: [],
+        documents: [doc],
+        conciergePending: 0,
+        pendingProofs: 0,
+      },
+      8,
+      { now: fixedNow }
+    );
+
+    assert.equal(feed.length, 1);
+    assert.equal(feed[0].id, "overdue-1");
+    assert.match(feed[0].text, /9 dias/);
+    assert.equal(feed[0].time, "Há 9 dias");
+  });
+
+  it("I. default no-now callers remain fully supported", () => {
+    const inquiry = createInquiry("1", "Lead Default");
+    const doc = createInvoiceDocument("1", {
+      expiryDate: "2026-01-01",
+      status: "sent",
+    });
+
+    const alerts = buildCanonicalAdminAlerts({
+      inquiries: [inquiry],
+      documents: [doc],
+      conciergePending: 0,
+      pendingProofs: 0,
+    });
+    assert.equal(alerts.length, 2);
+
+    const feed = buildAdminAttentionFeed({
+      inquiries: [inquiry],
+      documents: [doc],
+      conciergePending: 0,
+      pendingProofs: 0,
+    });
+    assert.equal(feed.length, 2);
+
+    const header = buildAdminAlerts({
+      inquiries: [inquiry],
+      documents: [doc],
+      conciergePending: 0,
+      pendingProofs: 0,
+    });
+    assert.equal(header.length, 2);
   });
 });
