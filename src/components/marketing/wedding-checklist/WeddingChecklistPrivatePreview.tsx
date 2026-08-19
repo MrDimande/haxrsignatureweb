@@ -98,7 +98,7 @@ export default function WeddingChecklistPrivatePreview() {
             </li>
             <li className="flex items-center gap-2.5">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-gold shrink-0" />
-              <span>Validação e acompanhamento pela equipa HAXR</span>
+              <span>Tarefas validadas no contexto do projecto, quando aplicável</span>
             </li>
           </ul>
 
