@@ -96,6 +96,8 @@ export async function registerPayment(
       issuerName: "",
       issuerRole: "",
       issuerSignatureImage: "",
+      pdfTemplate: sourceDocument?.pdfTemplate ?? "editorial_ivory",
+      contactChannel: sourceDocument?.contactChannel ?? "financeiro",
       ...(defaultSignature ? signatureToFormFields(defaultSignature) : {}),
     };
 

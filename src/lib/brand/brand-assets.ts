@@ -1,41 +1,56 @@
 /**
  * Caminhos canónicos dos assets de marca HAXR Signature.
  *
- * public/images/brand/:
+ * Preferred canonical names in public/images/brand/:
+ * - haxr-horizontal-gold.png
+ * - haxr-horizontal-dark.png
+ * - haxr-horizontal-white.png
+ * - haxr-vertical-gold.png
+ * - haxr-vertical-dark.png
+ * - haxr-vertical-white.png
  * - haxr-mark-gold.png
- * - logo-horizontal-gold.png
- * - logo-vertical-gold.png
- * - logo-horizontal-light.png (fundos claros)
- *
- * Pendentes (adicionar quando exportados):
- * - haxr-mark-light.png
- * - haxr-logo-dark.png
  */
 
 export const HAXR_BRAND_ALT = "HAXR Signature" as const;
 
 export const HAXR_BRAND_ASSETS = {
-  markGold: "/images/brand/logo-horizontal-gold.png",
+  // Explicit canonical naming
+  horizontalGold: "/images/brand/haxr-horizontal-gold.png",
+  horizontalDark: "/images/brand/haxr-horizontal-dark.png",
+  horizontalWhite: "/images/brand/haxr-horizontal-white.png",
+  verticalGold: "/images/brand/haxr-vertical-gold.png",
+  verticalDark: "/images/brand/haxr-vertical-dark.png",
+  verticalWhite: "/images/brand/haxr-vertical-white.png",
+  markGold: "/images/brand/haxr-mark-gold.png",
   markLight: "/images/brand/haxr-mark-light.png",
-  logoHorizontalGold: "/images/brand/logo-horizontal-gold.png",
-  logoHorizontalLight: "/images/brand/logo-horizontal-light.png",
-  logoVerticalGold: "/images/brand/logo-vertical-gold.png",
-  logoDark: "/images/brand/haxr-logo-dark.png",
+
+  // Backward compatibility aliases for existing callers
+  logoHorizontalGold: "/images/brand/haxr-horizontal-gold.png",
+  logoHorizontalLight: "/images/brand/haxr-horizontal-dark.png",
+  logoVerticalGold: "/images/brand/haxr-vertical-gold.png",
+  logoDark: "/images/brand/haxr-horizontal-dark.png",
+
   /** Email — horizontal preferido; mark como fallback */
-  emailHorizontal: "/images/brand/logo-horizontal-gold.png",
+  emailHorizontal: "/images/brand/haxr-horizontal-gold.png",
   emailHorizontalCropped: "/images/brand/logo-horizontal-gold-email.png",
-  emailMark: "/images/brand/logo-horizontal-gold.png",
+  emailMark: "/images/brand/haxr-horizontal-gold.png",
 } as const;
 
 /** Ficheiros confirmados em public/ */
 export const HAXR_BRAND_ASSETS_AVAILABLE = {
+  horizontalGold: true,
+  horizontalDark: true,
+  horizontalWhite: true,
+  verticalGold: true,
+  verticalDark: true,
+  verticalWhite: true,
   markGold: true,
   markLight: false,
   logoHorizontalGold: true,
   logoHorizontalLight: true,
   logoVerticalGold: true,
   logoHorizontalGoldEmail: false,
-  logoDark: false,
+  logoDark: true,
 } as const;
 
 export type HaxrLogoVariant = "full" | "mark" | "wordmark";
@@ -51,14 +66,9 @@ export function getBrandAssetPath(
 /** Asset horizontal para UI conforme tom de fundo */
 export function resolveHorizontalLogoPath(tone: HaxrLogoTone): string {
   if (tone === "light") {
-    if (HAXR_BRAND_ASSETS_AVAILABLE.logoDark) {
-      return HAXR_BRAND_ASSETS.logoDark;
-    }
-    if (HAXR_BRAND_ASSETS_AVAILABLE.logoHorizontalLight) {
-      return HAXR_BRAND_ASSETS.logoHorizontalLight;
-    }
+    return HAXR_BRAND_ASSETS.horizontalDark;
   }
-  return HAXR_BRAND_ASSETS.logoHorizontalGold;
+  return HAXR_BRAND_ASSETS.horizontalGold;
 }
 
 /** Monograma conforme tom de fundo */
@@ -74,16 +84,13 @@ export function resolveEmailLogoPath(): string {
   if (HAXR_BRAND_ASSETS_AVAILABLE.logoHorizontalGoldEmail) {
     return HAXR_BRAND_ASSETS.emailHorizontalCropped;
   }
-  if (HAXR_BRAND_ASSETS_AVAILABLE.logoHorizontalGold) {
-    return HAXR_BRAND_ASSETS.emailHorizontal;
-  }
-  return HAXR_BRAND_ASSETS.emailMark;
+  return HAXR_BRAND_ASSETS.horizontalGold;
 }
 
 export function isHorizontalLogoAvailable(): boolean {
-  return HAXR_BRAND_ASSETS_AVAILABLE.logoHorizontalGold;
+  return HAXR_BRAND_ASSETS_AVAILABLE.horizontalGold;
 }
 
 export function isVerticalLogoAvailable(): boolean {
-  return HAXR_BRAND_ASSETS_AVAILABLE.logoVerticalGold;
+  return HAXR_BRAND_ASSETS_AVAILABLE.verticalGold;
 }

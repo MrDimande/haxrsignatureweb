@@ -5,6 +5,8 @@ import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 import { formatCurrency } from "@/lib/calculations";
 import { getPdfFilename } from "@/lib/admin/pdf-assets";
 import { isResendConfigured, sendHaxrEmail } from "@/lib/email/resend";
+import type { EmailChannel } from "@/lib/email/addresses";
+import { resolveDocumentContactProfile } from "@/lib/admin/commercial-pdf/document-pdf-contact";
 import type { InvoiceDocument } from "@/lib/admin/types";
 
 function buildDocumentEmailHtml(document: InvoiceDocument): string {
@@ -48,12 +50,21 @@ export async function sendDocumentByEmail(
   const pdfBuffer = await generateInvoicePDFBuffer(document, business);
   const typeLabel = DOCUMENT_TYPE_LABELS[document.documentType];
 
+  const contactProfile = resolveDocumentContactProfile({
+    business,
+    contactChannel: document.contactChannel,
+  });
+
+  const channel: EmailChannel = contactProfile.isHaxr
+    ? (contactProfile.channel as EmailChannel)
+    : "financeiro";
+
   const sent = await sendHaxrEmail({
-    channel: "financeiro",
+    channel,
     to: email,
     subject: `${typeLabel} ${document.documentNumber} — ${business.name}`,
     html: buildDocumentEmailHtml(document),
-    replyTo: business.email,
+    replyTo: contactProfile.email,
     attachments: [
       {
         filename: getPdfFilename(document),

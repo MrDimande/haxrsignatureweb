@@ -1,8 +1,13 @@
 "use client";
 
+import React from "react";
 import { pdf } from "@react-pdf/renderer";
 import { getBusiness } from "@/lib/admin/businesses";
-import { resolvePdfLogoUrl, getPdfFilename } from "@/lib/admin/pdf-assets";
+import {
+  resolvePdfLogoUrl,
+  resolveDocumentLogoPath,
+  getPdfFilename,
+} from "@/lib/admin/pdf-assets";
 import type { Business, InvoiceDocument } from "@/lib/admin/types";
 import InvoicePDFDocument from "@/components/admin/InvoicePDFDocument";
 
@@ -12,10 +17,14 @@ export async function generateInvoicePDF(
 ): Promise<Blob> {
   const resolvedBusiness =
     business ?? getBusiness(invoiceDoc.businessId);
+  const logoPath = resolveDocumentLogoPath(
+    resolvedBusiness,
+    invoiceDoc.pdfTemplate
+  );
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
   const logoUrl = origin
-    ? resolvePdfLogoUrl(resolvedBusiness.logo, origin)
+    ? resolvePdfLogoUrl(logoPath, origin)
     : undefined;
 
   return pdf(

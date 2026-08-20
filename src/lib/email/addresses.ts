@@ -16,6 +16,7 @@ export const haxrMailboxes = {
   rsvp: `rsvp@${DOMAIN}`,
   noreply: `noreply@${DOMAIN}`,
   info: `info@${DOMAIN}`,
+  geral: `geral@${DOMAIN}`,
 } as const;
 
 export type EmailChannel = keyof typeof haxrMailboxes;
@@ -28,6 +29,7 @@ const channelLabels: Record<EmailChannel, string> = {
   rsvp: `${BRAND} · RSVP`,
   noreply: BRAND,
   info: `${BRAND} · Informações`,
+  geral: `${BRAND} · Geral`,
 };
 
 /** Formato aceite pelo Resend: `Nome <email@dominio.com>` */

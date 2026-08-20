@@ -142,6 +142,25 @@ export function mapDocument(
     issuerName: row.issuer_name,
     issuerRole: row.issuer_role,
     issuerSignatureImage: row.issuer_signature_image ?? "",
+    pdfTemplate:
+      "pdf_template" in row &&
+      typeof row.pdf_template === "string" &&
+      (row.pdf_template === "editorial_ivory" ||
+        row.pdf_template === "signature_noir" ||
+        row.pdf_template === "executive" ||
+        row.pdf_template === "atelier_blanc" ||
+        row.pdf_template === "maison_signature")
+        ? row.pdf_template
+        : "editorial_ivory",
+    contactChannel:
+      "contact_channel" in row &&
+      typeof row.contact_channel === "string" &&
+      (row.contact_channel === "financeiro" ||
+        row.contact_channel === "convites" ||
+        row.contact_channel === "info" ||
+        row.contact_channel === "geral")
+        ? row.contact_channel
+        : "financeiro",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     pdfGeneratedAt: row.pdf_generated_at,

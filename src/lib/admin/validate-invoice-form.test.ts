@@ -20,6 +20,8 @@ function baseForm(overrides: Partial<InvoiceFormData> = {}): InvoiceFormData {
     businessId: "haxr-signature",
     status: "draft",
     currency: "MZN",
+    pdfTemplate: "editorial_ivory",
+    contactChannel: "financeiro",
     clientId: null,
     clientType: "individual",
     clientName: "Cliente Teste",
@@ -57,15 +59,15 @@ function baseForm(overrides: Partial<InvoiceFormData> = {}): InvoiceFormData {
 describe("pdf-assets", () => {
   it("usa fallback quando o logo horizontal não existe", () => {
     assert.equal(
-      normalizePdfLogoPath("/images/brand/logo-horizontal-gold.png"),
+      normalizePdfLogoPath(""),
       PDF_LOGO_FALLBACK
     );
   });
 
   it("resolve URL absoluta para assets relativos", () => {
     assert.equal(
-      resolvePublicAssetUrl("/images/brand/logo-horizontal-gold.png", "http://localhost:3000"),
-      "http://localhost:3000/images/brand/logo-horizontal-gold.png"
+      resolvePublicAssetUrl("/images/brand/haxr-horizontal-gold.png", "http://localhost:3000"),
+      "http://localhost:3000/images/brand/haxr-horizontal-gold.png"
     );
   });
 });

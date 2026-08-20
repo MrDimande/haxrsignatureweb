@@ -240,6 +240,8 @@ export interface Database {
           issuer_role: string;
           issuer_signature_image: string;
           pdf_generated_at: string | null;
+          pdf_template: "editorial_ivory" | "signature_noir" | "executive";
+          contact_channel: "financeiro" | "convites" | "info" | "geral";
           converted_from_document_id: string | null;
           email_sent_at: string | null;
           whatsapp_shared_at: string | null;
@@ -289,6 +291,8 @@ export interface Database {
           issuer_role?: string;
           issuer_signature_image?: string;
           pdf_generated_at?: string | null;
+          pdf_template?: "editorial_ivory" | "signature_noir" | "executive";
+          contact_channel?: "financeiro" | "convites" | "info" | "geral";
           created_at?: string;
           updated_at?: string;
         };

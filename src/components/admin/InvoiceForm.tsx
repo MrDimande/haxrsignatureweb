@@ -18,6 +18,8 @@ import { calculateLineItems, calculateTotals, formatCurrency } from "@/lib/calcu
 import {
   CLIENT_TYPE_LABELS,
   CURRENCY_LABELS,
+  DOCUMENT_CONTACT_CHANNEL_LABELS,
+  DOCUMENT_PDF_TEMPLATE_LABELS,
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_TYPE_LABELS,
   EVENT_TYPE_LABELS,
@@ -42,11 +44,14 @@ import {
   validateDocumentWhatsApp,
   validateInvoiceForm,
 } from "@/lib/admin/validate-invoice-form";
+import { resolveDocumentContactProfile } from "@/lib/admin/commercial-pdf/document-pdf-contact";
 import type {
   Business,
   BusinessSignature,
   Client,
   ClientType,
+  DocumentContactChannel,
+  DocumentPdfTemplate,
   DocumentType,
   EventType,
   InvoiceDocument,
@@ -588,6 +593,122 @@ export default function InvoiceForm({
               onChange={(e) => updateForm({ expiryDate: e.target.value })}
             />
           </div>
+        </section>
+
+        <section className="admin-card p-6 space-y-5">
+          <h2 className="font-mono text-[9px] tracking-[0.4em] uppercase text-admin-gold">
+            Apresentação do Documento
+          </h2>
+
+          <div>
+            <label className="block font-mono text-[9px] tracking-[0.35em] uppercase text-grey/70 mb-3">
+              Modelo Visual do PDF
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+              {[
+                {
+                  id: "editorial_ivory" as const,
+                  name: "Editorial Marfim",
+                  desc: "Elegância editorial, marfim e ouro discreto",
+                  badge: "Padrão",
+                },
+                {
+                  id: "signature_noir" as const,
+                  name: "Signature Noir",
+                  desc: "Edição escura luxuosa e alto contraste",
+                  badge: "Noir",
+                },
+                {
+                  id: "executive" as const,
+                  name: "Executive",
+                  desc: "Corporativo minimalista e alta densidade",
+                  badge: "Minimal",
+                },
+                {
+                  id: "atelier_blanc" as const,
+                  name: "Atelier Blanc",
+                  desc: "Papel branco puro e hairlines de alta-costura",
+                  badge: "Atelier",
+                },
+                {
+                  id: "maison_signature" as const,
+                  name: "Maison Signature",
+                  desc: "Composição artística em alabastro e ouro nobre",
+                  badge: "Maison",
+                },
+              ].map((tmpl) => {
+                const isSelected = (form.pdfTemplate ?? "editorial_ivory") === tmpl.id;
+                return (
+                  <button
+                    key={tmpl.id}
+                    type="button"
+                    onClick={() => updateForm({ pdfTemplate: tmpl.id })}
+                    className={`text-left p-3 rounded-sm border transition-all ${
+                      isSelected
+                        ? "bg-black-soft border-admin-gold text-white shadow-md shadow-admin-gold/5"
+                        : "bg-black-soft/40 border-grey-dark/60 text-grey/70 hover:border-grey-dark hover:text-grey"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1.5 mb-1">
+                      <span
+                        className={`text-xs font-medium ${
+                          isSelected ? "text-admin-gold" : "text-white"
+                        }`}
+                      >
+                        {tmpl.name}
+                      </span>
+                      <span className="font-mono text-[7.5px] uppercase tracking-wider text-grey/50 px-1 py-0.5 rounded bg-white/5">
+                        {tmpl.badge}
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-grey/50 leading-snug">
+                      {tmpl.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {activeBusiness?.id === "haxr-signature" ? (
+            <div className="pt-2 border-t border-grey-dark/40 space-y-3">
+              <AdminSelect
+                label="Canal Oficial de Contacto no Documento"
+                value={form.contactChannel ?? "financeiro"}
+                onChange={(e) =>
+                  updateForm({
+                    contactChannel: e.target.value as DocumentContactChannel,
+                  })
+                }
+              >
+                {(
+                  Object.entries(DOCUMENT_CONTACT_CHANNEL_LABELS) as [
+                    DocumentContactChannel,
+                    string,
+                  ][]
+                ).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label} ({key === "financeiro" ? "financeiro@haxrsignature.com" : key === "convites" ? "convites@haxrsignature.com" : key === "info" ? "info@haxrsignature.com" : "geral@haxrsignature.com"})
+                  </option>
+                ))}
+              </AdminSelect>
+              <div className="p-3 bg-black-soft/60 border border-grey-dark/60 rounded-sm flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-grey/60 font-mono text-[10px]">
+                  Contacto Apresentado no PDF:
+                </span>
+                <span className="text-admin-gold font-mono text-[11px]">
+                  {form.contactChannel === "convites"
+                    ? "convites@haxrsignature.com"
+                    : form.contactChannel === "info"
+                      ? "info@haxrsignature.com"
+                      : form.contactChannel === "geral"
+                        ? "geral@haxrsignature.com"
+                        : "financeiro@haxrsignature.com"}{" "}
+                  · +258 87 088 3428
+                </span>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="admin-card p-6 space-y-5">

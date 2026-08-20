@@ -142,6 +142,19 @@ export interface BusinessSignature {
   createdAt: string;
 }
 
+export type DocumentPdfTemplate =
+  | "editorial_ivory"
+  | "signature_noir"
+  | "executive"
+  | "atelier_blanc"
+  | "maison_signature";
+
+export type DocumentContactChannel =
+  | "financeiro"
+  | "convites"
+  | "info"
+  | "geral";
+
 export interface InvoiceDocument {
   id: string;
   documentType: DocumentType;
@@ -167,6 +180,8 @@ export interface InvoiceDocument {
   issuerName: string;
   issuerRole: string;
   issuerSignatureImage: string;
+  pdfTemplate?: DocumentPdfTemplate;
+  contactChannel?: DocumentContactChannel;
   createdAt: string;
   updatedAt: string;
   pdfGeneratedAt: string | null;
@@ -248,6 +263,8 @@ export type InvoiceFormData = {
   issuerName: string;
   issuerRole: string;
   issuerSignatureImage: string;
+  pdfTemplate: DocumentPdfTemplate;
+  contactChannel: DocumentContactChannel;
 };
 
 export type UploadSignatureInput = {

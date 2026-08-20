@@ -357,6 +357,8 @@ export async function saveDocument(
     issuer_name: form.issuerName.trim(),
     issuer_role: form.issuerRole.trim(),
     issuer_signature_image: form.issuerSignatureImage,
+    pdf_template: form.pdfTemplate ?? "editorial_ivory",
+    contact_channel: form.contactChannel ?? "financeiro",
     ...(options?.convertedFromDocumentId
       ? {
           converted_from_document_id: options.convertedFromDocumentId,

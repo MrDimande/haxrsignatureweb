@@ -48,6 +48,8 @@ function baseDocument(
     issuerName: "",
     issuerRole: "",
     issuerSignatureImage: "",
+    pdfTemplate: "editorial_ivory",
+    contactChannel: "financeiro",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     pdfGeneratedAt: null,

@@ -104,6 +104,8 @@ export function createDefaultInvoiceForm(
     issuerName: "",
     issuerRole: "",
     issuerSignatureImage: "",
+    pdfTemplate: "editorial_ivory",
+    contactChannel: "financeiro",
   };
 }
 
@@ -181,6 +183,8 @@ export function buildInvoiceDocument(
     issuerName: form.issuerName.trim(),
     issuerRole: form.issuerRole.trim(),
     issuerSignatureImage: form.issuerSignatureImage,
+    pdfTemplate: form.pdfTemplate ?? existing?.pdfTemplate ?? "editorial_ivory",
+    contactChannel: form.contactChannel ?? existing?.contactChannel ?? "financeiro",
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     pdfGeneratedAt: existing?.pdfGeneratedAt ?? null,
@@ -224,6 +228,8 @@ export function documentToForm(document: InvoiceDocument): InvoiceFormData {
     issuerName: document.issuerName,
     issuerRole: document.issuerRole,
     issuerSignatureImage: document.issuerSignatureImage,
+    pdfTemplate: document.pdfTemplate ?? "editorial_ivory",
+    contactChannel: document.contactChannel ?? "financeiro",
   };
 }
 

@@ -1,10 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { ReactElement } from "react";
+import React, { type ReactElement } from "react";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import InvoicePDFDocument from "@/components/admin/InvoicePDFDocument";
 import {
   normalizePdfLogoPath,
+  resolveDocumentLogoPath,
   resolvePublicAssetUrl,
 } from "@/lib/admin/pdf-assets";
 import { getBusiness } from "@/lib/admin/businesses";
@@ -47,13 +48,23 @@ export async function generateInvoicePDFBuffer(
 ): Promise<Buffer> {
   const resolvedBusiness =
     business ?? getBusiness(invoiceDoc.businessId);
-  const logoUrl = await loadLogoDataUrl(resolvedBusiness.logo);
+  const logoPath = resolveDocumentLogoPath(
+    resolvedBusiness,
+    invoiceDoc.pdfTemplate
+  );
+  const logoUrl = await loadLogoDataUrl(logoPath);
+
+  const watermarkUrl =
+    invoiceDoc.pdfTemplate === "maison_signature"
+      ? await loadLogoDataUrl("/images/brand/haxr-mark-gold.png")
+      : undefined;
 
   const element = (
     <InvoicePDFDocument
       document={invoiceDoc}
       business={resolvedBusiness}
       logoUrl={logoUrl}
+      watermarkUrl={watermarkUrl}
     />
   ) as ReactElement<DocumentProps>;
 
