@@ -35,6 +35,10 @@ export const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
   "stan-5-anos": "stanturns5",
   /** Nian — alias RSVP → canónico público /nianwebnight */
   nian: "nianwebnight",
+  "queen-kailane": "queenkailanecrisma",
+  queenkailane: "queenkailanecrisma",
+  "crisma-queen": "queenkailanecrisma",
+  "queen-kailane-luz-da-graca": "queenkailanecrisma",
 };
 
 export const ALIAS_INDEX: Record<string, string> = {};
@@ -92,6 +96,12 @@ const SLUG_BINDINGS: Record<string, EditionSlugBinding> = {
     adminEventName: "Edition · Aniversário · Stan",
     clientName: "Stan",
     envVar: "EDITION_EVENT_STAN_ID",
+  },
+    queenkailanecrisma: {
+    slug: "queenkailanecrisma",
+    adminEventName: "Edition · Crisma · Queen Kailane Cande",
+    clientName: "Queen Kailane Cande",
+    envVar: "EDITION_EVENT_QUEEN_KAILANE_ID",
   },
   nianwebnight: {
     slug: "nianwebnight",

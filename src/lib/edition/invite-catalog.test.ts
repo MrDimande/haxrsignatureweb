@@ -35,6 +35,24 @@ describe("Edition invite catalog", () => {
       "jessicasamuelwedding"
     );
   });
+  it("maps queen-kailane-luz-da-graca to public slug queenkailanecrisma as active invitation", () => {
+    assert.equal(
+      resolveEditionInviteSlug("queen-kailane-luz-da-graca"),
+      "queenkailanecrisma"
+    );
+    const ref = getEditionInviteRef("queen-kailane-luz-da-graca");
+    assert.ok(ref);
+    assert.equal(ref.registryKey, "queen-kailane-luz-da-graca");
+    assert.equal(ref.inviteSlug, "queenkailanecrisma");
+    assert.equal(ref.status, "active");
+    assert.equal(ref.experienceType, "invitation");
+    assert.equal(ref.label, "Edition · Crisma · Queen Kailane Cande");
+    assert.equal(
+      buildEditionInviteUrl("queen-kailane-luz-da-graca"),
+      "https://edition.haxrsignature.com/queenkailanecrisma"
+    );
+  });
+
   it("maps nian-night-of-the-web to public slug nianwebnight as active invitation", () => {
     assert.equal(
       resolveEditionInviteSlug("nian-night-of-the-web"),

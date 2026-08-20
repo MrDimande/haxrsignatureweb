@@ -75,6 +75,19 @@ describe("Core Event Registry Alignment", () => {
     assert.equal(resolveEditionSlug("nianwebnight"), "nianwebnight");
   });
 
+  it("binds queenkailanecrisma exclusively to EDITION_EVENT_QUEEN_KAILANE_ID", () => {
+    process.env.EDITION_EVENT_QUEEN_KAILANE_ID = "test-queen-event";
+    try {
+      const binding = getEditionEventBinding("queenkailanecrisma");
+      assert.ok(binding);
+      assert.equal(binding.slug, "queenkailanecrisma");
+      assert.equal(binding.envVar, "EDITION_EVENT_QUEEN_KAILANE_ID");
+      assert.equal(binding.eventId, "test-queen-event");
+    } finally {
+      delete process.env.EDITION_EVENT_QUEEN_KAILANE_ID;
+    }
+  });
+
   it("binds nianwebnight exclusively to EDITION_EVENT_NIAN_ID", () => {
     process.env.EDITION_EVENT_NIAN_ID = "test-nian-event";
     process.env.EDITION_EVENT_STAN_ID = "test-stan-event";

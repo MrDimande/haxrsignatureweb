@@ -97,6 +97,20 @@ export const EDITION_INVITE_CATALOG: Readonly<
     status: "active",
     experienceType: "invitation",
   },
+    "queen-kailane-luz-da-graca": {
+    registryKey: "queen-kailane-luz-da-graca",
+    inviteSlug: "queenkailanecrisma",
+    label: "Edition · Crisma · Queen Kailane Cande",
+    status: "active",
+    experienceType: "invitation",
+  },
+  queenkailanecrisma: {
+    registryKey: "queenkailanecrisma",
+    inviteSlug: "queenkailanecrisma",
+    label: "Edition · Crisma · Queen Kailane Cande",
+    status: "active",
+    experienceType: "invitation",
+  },
   "nian-night-of-the-web": {
     registryKey: "nian-night-of-the-web",
     inviteSlug: "nianwebnight",
