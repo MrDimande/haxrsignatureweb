@@ -383,4 +383,46 @@ await renderToFile(
   path.join(outputDir, "08_stress_multipage_long_terms_notes.pdf")
 );
 
-console.log("All 8 PDF fixtures generated successfully in .qa-pdf-output/!");
+// ── FIXTURE 09: Long Observations Flow Proof (Pagination Stress Gate) ──
+console.log("Generating 09_stress_long_observations_flow.pdf...");
+const logo09 = await loadLocalLogoBase64(
+  resolveDocumentLogoPath(haxrBusiness, "editorial_ivory")
+);
+const longObsParagraphs = Array.from({ length: 8 }, (_, i) => 
+  `Cláusula Operacional Nº ${i + 1}: Esta proposta contempla curadoria e direção de arte completa para o evento, integrando design gráfico de alta distinção, consultoria de materiais nobres, tipografia refinada e acabamentos manuais personalizados. Todos os detalhes foram concebidos sob medida para garantir a máxima excelência institucional e conformidade com as diretrizes acordadas.`
+).join("\n\n");
+
+await renderToFile(
+  React.createElement(InvoicePDFDocument, {
+    document: {
+      ...baseDoc,
+      documentType: "proforma",
+      documentNumber: "HAXR-PRO-2026-LONG-OBS-01",
+      pdfTemplate: "editorial_ivory",
+      contactChannel: "financeiro",
+      status: "sent",
+      notes: longObsParagraphs,
+      lineItems: Array.from({ length: 8 }, (_, i) => ({
+        id: `li-obs-${i + 1}`,
+        description: `Serviço de Curadoria Editorial e Direção de Arte Nº ${i + 1}`,
+        quantity: 1,
+        unitPrice: 15000,
+        total: 15000,
+        source: "catalog",
+      })),
+      totals: {
+        subtotal: 120000,
+        vatRate: 0.16,
+        vatAmount: 19200,
+        grandTotal: 139200,
+        includeVat: true,
+        currency: "MZN",
+      },
+    },
+    business: haxrBusiness,
+    logoUrl: logo09,
+  }),
+  path.join(outputDir, "09_stress_long_observations_flow.pdf")
+);
+
+console.log("All 9 PDF fixtures generated successfully in .qa-pdf-output/!");

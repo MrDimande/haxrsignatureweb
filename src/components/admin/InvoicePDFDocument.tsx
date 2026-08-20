@@ -70,6 +70,12 @@ export default function InvoicePDFDocument({
       doc.event.eventLocation
   );
 
+  const hasPayment = Boolean(primaryBank || paymentDetails.mobilePayments.length > 0);
+  const hasNotes = Boolean(doc.notes && doc.notes.trim().length > 0);
+  const isLongNotes =
+    hasNotes &&
+    ((doc.notes?.length ?? 0) > 280 || (doc.notes?.split("\n").length ?? 0) > 3);
+
   const statusBadgeStyle = (() => {
     switch (doc.status) {
       case "draft":
@@ -297,11 +303,50 @@ export default function InvoicePDFDocument({
             <Image src={watermarkSrc} style={styles.maisonWatermark} />
           ) : null}
 
-          {/* Payment Details & Notes (Moves to Page 2 when space is insufficient) */}
-          {(primaryBank || paymentDetails.mobilePayments.length > 0 || doc.notes) && (
-            <View style={styles.paymentNotesRow} wrap={false}>
-              {primaryBank || paymentDetails.mobilePayments.length > 0 ? (
-                <View style={styles.paymentBox} wrap={false}>
+          {/* Payment Details & Notes (Independently page-safe with 2-col fallback when concise) */}
+          {hasPayment && hasNotes && !isLongNotes ? (
+            <View style={styles.paymentNotesRow}>
+              <View style={styles.paymentBox} wrap={false}>
+                <Text style={styles.sectionMiniHeader}>
+                  Dados para Pagamento
+                </Text>
+                {primaryBank ? (
+                  <View style={{ marginBottom: 3 }}>
+                    <Text style={styles.paymentItemBold}>
+                      {primaryBank.bankName}
+                    </Text>
+                    <Text style={styles.paymentItem}>
+                      Titular: {primaryBank.accountName}
+                    </Text>
+                    <Text style={styles.paymentItem}>
+                      Conta: {primaryBank.accountNumber}
+                    </Text>
+                    <Text style={styles.paymentItem}>
+                      NIB: {primaryBank.nib}
+                    </Text>
+                    {primaryBank.swift ? (
+                      <Text style={styles.paymentItem}>
+                        SWIFT: {primaryBank.swift}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+                {paymentDetails.mobilePayments.map((payment) => (
+                  <Text key={payment.provider} style={styles.paymentItem}>
+                    {payment.provider}: {payment.number} · {payment.accountName}
+                  </Text>
+                ))}
+              </View>
+
+              <View style={styles.notesBox}>
+                <Text style={styles.sectionMiniHeader}>Observações</Text>
+                <Text style={styles.notesText}>{doc.notes}</Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              {hasPayment ? (
+                <View style={styles.paymentBoxFull} wrap={false}>
                   <Text style={styles.sectionMiniHeader}>
                     Dados para Pagamento
                   </Text>
@@ -334,13 +379,13 @@ export default function InvoicePDFDocument({
                 </View>
               ) : null}
 
-              {doc.notes ? (
-                <View style={styles.notesBox}>
+              {hasNotes ? (
+                <View style={styles.notesBoxFull}>
                   <Text style={styles.sectionMiniHeader}>Observações</Text>
                   <Text style={styles.notesText}>{doc.notes}</Text>
                 </View>
               ) : null}
-            </View>
+            </>
           )}
 
           {/* Commercial Terms (Splits cleanly between items when genuinely necessary) */}

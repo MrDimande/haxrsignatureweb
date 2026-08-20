@@ -379,4 +379,30 @@ describe("HAXR Commercial PDF Foundation & Multi-Template System", () => {
     assert.ok(migrationContent.includes("atelier_blanc"));
     assert.ok(migrationContent.includes("maison_signature"));
   });
+
+  it("Test Long Observations Pagination: generates valid PDF buffer when observations are exceptionally long and flow across pages", async () => {
+    const { generateInvoicePDFBuffer } = await import("@/lib/admin/pdf-server");
+
+    const longNotes = Array.from({ length: 8 }, (_, i) =>
+      `Cláusula Operacional Nº ${i + 1}: Esta proposta contempla curadoria e direção de arte completa para o evento, integrando design gráfico de alta distinção, consultoria de materiais nobres, tipografia refinada e acabamentos manuais personalizados. Todos os detalhes foram concebidos sob medida para garantir a máxima excelência institucional e conformidade com as diretrizes acordadas.`
+    ).join("\n\n");
+
+    const doc = createMockInvoiceDocument({
+      pdfTemplate: "editorial_ivory",
+      notes: longNotes,
+      lineItems: Array.from({ length: 8 }, (_, i) => ({
+        id: `li-obs-${i + 1}`,
+        description: `Serviço de Curadoria Editorial e Direção de Arte Nº ${i + 1}`,
+        quantity: 1,
+        unitPrice: 15000,
+        total: 15000,
+        source: "catalog",
+      })),
+    });
+
+    const buffer = await generateInvoicePDFBuffer(doc, mockHaxrBusiness);
+    assert.ok(Buffer.isBuffer(buffer));
+    assert.ok(buffer.length > 5000);
+    assert.equal(buffer.subarray(0, 4).toString("utf-8"), "%PDF");
+  });
 });
