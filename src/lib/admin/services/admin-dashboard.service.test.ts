@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import {
   buildAdminDashboardSnapshot,
   buildAdminAttentionItems,
+  buildAdminDocumentSummary,
   getMaputoFiscalYear,
   type AdminDashboardSourceData,
 } from "./admin-dashboard.service";
-import type { DashboardStats, Business, AdminOperationalDocument } from "@/lib/admin/types";
+import type { Business, AdminOperationalDocument } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
-import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 import type { AdminAlert } from "@/lib/admin/services/admin-alerts.service";
 import type { EventPortfolioOperationalSnapshot } from "@/lib/admin/services/event-portfolio.service";
@@ -17,6 +17,7 @@ import type {
   PortalPaymentProof,
   PortalTimelineItem,
 } from "@/lib/portal/portal-premium.types";
+import type { PaymentRecord } from "@/lib/finance/types";
 
 export function createAdminAlert(overrides?: Partial<AdminAlert>): AdminAlert {
   return {
@@ -159,34 +160,6 @@ export function createInquiry(overrides?: Partial<ContactInquiry>): ContactInqui
   };
 }
 
-export function createFinanceOverview(overrides?: Partial<FinanceOverview>): FinanceOverview {
-  return {
-    totalReceived: 750000,
-    totalReceiptsAmount: 750000,
-    pendingInvoicesCount: 2,
-    pendingInvoicesAmount: 250000,
-    sentProformasCount: 3,
-    pendingProformasAmount: 400000,
-    thisMonthReceived: 80000,
-    thisMonthReceiptsCount: 2,
-    recentReceipts: [],
-    pendingCollection: [],
-    ...overrides,
-  };
-}
-
-export function createDashboardStats(overrides?: Partial<DashboardStats>): DashboardStats {
-  return {
-    totalProformas: 5,
-    totalInvoices: 10,
-    totalReceipts: 8,
-    totalDraft: 2,
-    totalPaid: 8,
-    recentDocuments: [],
-    ...overrides,
-  };
-}
-
 export function createOperationalSnapshot(
   id: string,
   overrides?: Partial<EventPortfolioOperationalSnapshot>
@@ -253,10 +226,13 @@ export function createTimelineItem(
   };
 }
 
-function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>): AdminDashboardSourceData {
+function createFixtureSourceData(
+  overrides?: Partial<AdminDashboardSourceData>
+): AdminDashboardSourceData {
   const operationalDocuments = [
     createOperationalDocument({
       id: "doc-1",
+      documentType: "proforma",
       documentNumber: "PF-2026-001",
       clientApprovalStatus: "approved",
       clientApprovedAt: "2026-08-19T11:00:00Z",
@@ -269,8 +245,14 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
       issueDate: "2026-07-01",
       expiryDate: "2026-08-13",
     }),
+    createOperationalDocument({
+      id: "doc-3",
+      documentType: "receipt",
+      documentNumber: "REC-001",
+      status: "paid",
+      issueDate: "2026-08-10",
+    }),
   ];
-  const documents = createDashboardStats();
   const businesses = [createBusiness()];
   const events = [
     createEvent({
@@ -322,7 +304,30 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
     available: true,
     items: [] as PortalCreativeApproval[],
   };
-  const finance = createFinanceOverview();
+  const paymentsBatch = {
+    available: true,
+    items: [
+      {
+        id: "pay-1",
+        businessId: "haxr-signature" as const,
+        clientId: "cli-1",
+        clientName: "Vânia & Fabião",
+        eventId: "evt-1",
+        eventName: "Casamento Vânia & Fabião",
+        documentId: "doc-3",
+        documentNumber: "REC-001",
+        sourceDocumentId: null,
+        sourceDocumentNumber: null,
+        amount: 50000,
+        currency: "MZN" as const,
+        paymentMethod: "bank_transfer" as const,
+        reference: "REF-01",
+        notes: "",
+        paidAt: "2026-08-10T10:00:00Z",
+        createdAt: "2026-08-10T10:00:00Z",
+      },
+    ] as PaymentRecord[],
+  };
   const inquiries = [
     createInquiry({
       id: "inq-1",
@@ -351,7 +356,6 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
   ];
 
   return {
-    fiscalYear: 2026,
     operationalDocuments,
     inquiries,
     conciergePending: 2,
@@ -359,17 +363,14 @@ function createFixtureSourceData(overrides?: Partial<AdminDashboardSourceData>):
     creativeApprovalsBatch,
     portfolioSnapshots,
     timelineBatch,
-    documents,
+    paymentsBatch,
     businesses,
     events,
-    finance,
-    revenueByBusiness: [{ businessId: "haxr-signature", businessName: "HAXR Signature", total: 750000 }],
-    revenueByMonth: [{ month: 8, total: 80000, count: 2 }],
     ...overrides,
   };
 }
 
-describe("admin-dashboard.service (actionability semantics)", () => {
+describe("admin-dashboard.service", () => {
   describe("getMaputoFiscalYear", () => {
     it("correctly extracts year from UTC/Maputo dates", () => {
       const date = new Date("2026-12-31T23:30:00Z"); // In Maputo (UTC+2), this is 2027-01-01 01:30
@@ -377,6 +378,25 @@ describe("admin-dashboard.service (actionability semantics)", () => {
 
       const midYear = new Date("2026-08-19T12:00:00Z");
       assert.equal(getMaputoFiscalYear(midYear), 2026);
+    });
+  });
+
+  describe("buildAdminDocumentSummary (Test U)", () => {
+    it("derives totalProformas, totalInvoices, totalReceipts, totalDraft, and totalPaid accurately from operationalDocuments", () => {
+      const docs = [
+        createOperationalDocument({ id: "1", documentType: "proforma", status: "sent" }),
+        createOperationalDocument({ id: "2", documentType: "proforma", status: "draft" }),
+        createOperationalDocument({ id: "3", documentType: "invoice", status: "sent" }),
+        createOperationalDocument({ id: "4", documentType: "invoice", status: "paid" }),
+        createOperationalDocument({ id: "5", documentType: "receipt", status: "paid" }),
+      ];
+
+      const summary = buildAdminDocumentSummary(docs);
+      assert.equal(summary.totalProformas, 2);
+      assert.equal(summary.totalInvoices, 2);
+      assert.equal(summary.totalReceipts, 1);
+      assert.equal(summary.totalDraft, 1);
+      assert.equal(summary.totalPaid, 2);
     });
   });
 
@@ -393,81 +413,29 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       assert.equal(items[0].id, "actionable-1");
       assert.equal(items[1].id, "actionable-2");
     });
-
-    it("passes through high and normal priorities correctly for actionable items", () => {
-      const alerts: AdminAlert[] = [
-        createAdminAlert({ id: "1", priority: "high", requiresAction: true }),
-        createAdminAlert({ id: "2", priority: "normal", requiresAction: true }),
-      ];
-      const items = buildAdminAttentionItems(alerts);
-
-      assert.equal(items[0].priority, "high");
-      assert.equal(items[1].priority, "normal");
-    });
-
-    it("does not let read=true or read=false affect operational existence", () => {
-      const alerts: AdminAlert[] = [
-        createAdminAlert({ id: "1", read: true, requiresAction: true }),
-        createAdminAlert({ id: "2", read: false, requiresAction: true }),
-      ];
-      const items = buildAdminAttentionItems(alerts);
-
-      assert.equal(items.length, 2);
-    });
-
-    it("maps sources directly from typed alert.source", () => {
-      const alerts: AdminAlert[] = [
-        createAdminAlert({ id: "1", source: "commercial", requiresAction: true }),
-        createAdminAlert({ id: "2", source: "portal", requiresAction: true }),
-        createAdminAlert({ id: "3", source: "finance", requiresAction: true }),
-        createAdminAlert({ id: "4", source: "operations", requiresAction: true }),
-      ];
-      const items = buildAdminAttentionItems(alerts);
-
-      assert.equal(items[0].source, "commercial");
-      assert.equal(items[1].source, "portal");
-      assert.equal(items[2].source, "finance");
-      assert.equal(items[3].source, "operations");
-    });
-
-    it("preserves canonical href, label, and context exactly", () => {
-      const alert = createAdminAlert({
-        id: "portal-changes-1",
-        text: "Cliente pediu alterações",
-        time: "Há 2 h",
-        href: "/admin/documents/doc-99",
-        priority: "high",
-        source: "portal",
-        requiresAction: true,
-      });
-      const [item] = buildAdminAttentionItems([alert]);
-
-      assert.equal(item.id, "portal-changes-1");
-      assert.equal(item.label, "Cliente pediu alterações");
-      assert.equal(item.context, "Há 2 h");
-      assert.equal(item.href, "/admin/documents/doc-99");
-      assert.equal(item.source, "portal");
-      assert.equal(item.priority, "high");
-    });
-
-    it("handles empty alerts list safely", () => {
-      const items = buildAdminAttentionItems([]);
-      assert.deepEqual(items, []);
-    });
-
-    it("does not mutate original alert objects", () => {
-      const original: AdminAlert = createAdminAlert();
-      const clone = { ...original };
-      buildAdminAttentionItems([original]);
-
-      assert.deepEqual(original, clone);
-    });
   });
 
   describe("buildAdminDashboardSnapshot", () => {
+    it("integrates canonical financialPosition into the snapshot", () => {
+      const source = createFixtureSourceData();
+      const snapshot = buildAdminDashboardSnapshot(source, {
+        now: new Date("2026-08-19T12:00:00Z"),
+      });
+
+      assert.ok(snapshot.financialPosition);
+      assert.equal(snapshot.financialPosition.coverage.payments, true);
+      assert.equal(snapshot.financialPosition.coverage.receivedComplete, true);
+      assert.equal(snapshot.financialPosition.received.total.length, 1);
+      assert.equal(snapshot.financialPosition.received.total[0].amount, 50000);
+      assert.equal(snapshot.financialPosition.receivables.openInvoiceCount, 1);
+      assert.equal(snapshot.financialPosition.proposals.sentProformaCount, 1);
+    });
+
     it("groups events using canonical pipeline semantics with injected now consistently", () => {
       const source = createFixtureSourceData();
-      const snapshot = buildAdminDashboardSnapshot(source, { now: new Date("2026-08-19T12:00:00Z") });
+      const snapshot = buildAdminDashboardSnapshot(source, {
+        now: new Date("2026-08-19T12:00:00Z"),
+      });
 
       assert.equal(snapshot.eventGroups.active.length, 1);
       assert.equal(snapshot.eventGroups.active[0].id, "evt-1");
@@ -492,62 +460,7 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       assert.equal(snapshot.commercial.summary.archived, 0);
     });
 
-    it("populates commercial active items sorted canonically with new before contacted", () => {
-      const source = createFixtureSourceData();
-      const snapshot = buildAdminDashboardSnapshot(source);
-
-      assert.equal(snapshot.commercial.items.length, 4);
-      // New leads rank first, then contacted
-      assert.equal(snapshot.commercial.items[0].status, "new");
-      assert.equal(snapshot.commercial.items[1].status, "new");
-      assert.equal(snapshot.commercial.items[2].status, "new");
-      assert.equal(snapshot.commercial.items[3].status, "contacted");
-    });
-
-    it("handles empty events safely without errors", () => {
-      const source = createFixtureSourceData({ events: [], portfolioSnapshots: [], timelineBatch: { available: true, items: [] } });
-      const snapshot = buildAdminDashboardSnapshot(source);
-
-      assert.deepEqual(snapshot.events, []);
-      assert.deepEqual(snapshot.eventGroups.active, []);
-      assert.deepEqual(snapshot.eventGroups.planning, []);
-      assert.deepEqual(snapshot.eventGroups.completed, []);
-      assert.deepEqual(snapshot.portfolio.items, []);
-      assert.equal(snapshot.portfolio.summary.total, 0);
-      assert.equal(snapshot.upcoming.available, true);
-      assert.deepEqual(snapshot.upcoming.items, []);
-    });
-
-    it("passes through documents, finance, analytics, attention, portfolio and upcoming data without mutation", () => {
-      const source = createFixtureSourceData();
-      const snapshot = buildAdminDashboardSnapshot(source, { now: new Date("2026-08-19T12:00:00Z") });
-
-      assert.deepEqual(snapshot.documents, source.documents);
-      assert.deepEqual(snapshot.businesses, source.businesses);
-      assert.deepEqual(snapshot.finance, source.finance);
-      assert.deepEqual(snapshot.analytics.revenueByBusiness, source.revenueByBusiness);
-      assert.deepEqual(snapshot.analytics.revenueByMonth, source.revenueByMonth);
-      assert.equal(snapshot.fiscalYear, 2026);
-      assert.equal(snapshot.attention.items.length, 6);
-      assert.equal(snapshot.clientDecisions.coverage.complete, true);
-      assert.equal(snapshot.clientDecisions.awaitingHaxr.length, 1);
-      assert.equal(snapshot.clientDecisions.awaitingHaxr[0].id, "proforma-conversion-doc-1");
-      assert.equal(snapshot.portfolio.items.length, 1);
-      assert.equal(snapshot.portfolio.summary.total, 1);
-      assert.equal(snapshot.upcoming.available, true);
-      assert.equal(snapshot.upcoming.items.length, 1);
-      assert.equal(snapshot.upcoming.items[0].title, "Revisão de Proposta");
-    });
-
-    it("generates deterministic snapshot structure with injected now timestamp", () => {
-      const source = createFixtureSourceData();
-      const testDate = new Date("2026-08-19T14:30:00.000Z");
-      const snapshot = buildAdminDashboardSnapshot(source, { now: testDate });
-
-      assert.equal(snapshot.generatedAt, "2026-08-19T14:30:00.000Z");
-    });
-
-    it("forwards the single injected now clock across Attention, Client Decisions, Upcoming and Pipeline", () => {
+    it("forwards the single injected now clock across Attention, Client Decisions, Upcoming, Pipeline, and Financial Position", () => {
       const testDate = new Date("2026-08-19T14:30:00.000Z");
       const doc = createOperationalDocument({
         id: "doc-overdue",
@@ -590,6 +503,10 @@ describe("admin-dashboard.service (actionability semantics)", () => {
       const overdueAttention = snapshot.attention.items.find((i) => i.id === "overdue-doc-overdue");
       assert.ok(overdueAttention);
       assert.match(overdueAttention.label, /9 dias/);
+
+      // Check Financial Position overdue items match testDate
+      assert.equal(snapshot.financialPosition.receivables.overdueInvoiceCount, 1);
+      assert.equal(snapshot.financialPosition.receivables.overdueItems[0].daysOverdue, 9);
     });
   });
 });

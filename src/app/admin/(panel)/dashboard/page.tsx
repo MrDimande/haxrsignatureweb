@@ -10,57 +10,18 @@ import PortfolioHealthPanel from "@/components/admin/dashboard/PortfolioHealthPa
 import UpcomingOperationalAgendaPanel from "@/components/admin/dashboard/UpcomingOperationalAgendaPanel";
 import ClientDecisionsPanel from "@/components/admin/dashboard/ClientDecisionsPanel";
 import CommercialPipelinePanel from "@/components/admin/dashboard/CommercialPipelinePanel";
-import CashSummaryPanel from "@/components/admin/dashboard/CashSummaryPanel";
-import DocumentAnalyticsPanel from "@/components/admin/dashboard/DocumentAnalyticsPanel";
 import EventPipelinePanel from "@/components/admin/dashboard/EventPipelinePanel";
-import DataTable from "@/components/admin/DataTable";
-import StatusBadge from "@/components/admin/StatusBadge";
+import FinancialPositionPanel from "@/components/admin/dashboard/FinancialPositionPanel";
 import { formatCurrency } from "@/lib/calculations";
-import { DOCUMENT_TYPE_LABELS } from "@/lib/admin/constants";
 import { getAdminDashboardSnapshot } from "@/lib/admin/services/admin-dashboard.service";
-import type { InvoiceDocument } from "@/lib/admin/types";
 
 export default async function DashboardPage() {
   const snapshot = await getAdminDashboardSnapshot();
 
   const businessMap = new Map(snapshot.businesses.map((b) => [b.id, b.name]));
-
-  const columns = [
-    {
-      key: "number",
-      header: "Documento",
-      render: (row: InvoiceDocument) => (
-        <div>
-          <p className="text-white font-mono text-xs">{row.documentNumber}</p>
-          <p className="text-grey/50 text-xs mt-1">
-            {DOCUMENT_TYPE_LABELS[row.documentType]}
-          </p>
-        </div>
-      ),
-    },
-    {
-      key: "client",
-      header: "Cliente",
-      render: (row: InvoiceDocument) => row.clientName || "—",
-    },
-    {
-      key: "business",
-      header: "Empresa",
-      render: (row: InvoiceDocument) => businessMap.get(row.businessId) ?? "—",
-    },
-    {
-      key: "total",
-      header: "Total",
-      className: "text-right",
-      render: (row: InvoiceDocument) =>
-        formatCurrency(row.totals.grandTotal, row.totals.currency),
-    },
-    {
-      key: "status",
-      header: "Estado",
-      render: (row: InvoiceDocument) => <StatusBadge status={row.status} />,
-    },
-  ];
+  const { financialPosition } = snapshot;
+  const totalReceivedBuckets = financialPosition.received.total;
+  const thisMonthBuckets = financialPosition.received.thisMonth;
 
   return (
     <AdminShell
@@ -113,10 +74,18 @@ export default async function DashboardPage() {
 
             <div className="pt-2">
               <p className="font-mono text-[8px] tracking-[0.2em] uppercase text-grey/60">
-                Total Recebido Acumulado
+                {financialPosition.coverage.receivedComplete
+                  ? "Total Recebido Acumulado"
+                  : "Recebimentos Documentados"}
               </p>
               <p className="font-serif text-3xl font-light text-admin-gold mt-1">
-                {formatCurrency(snapshot.finance.totalReceived)}
+                {financialPosition.coverage.receivedComplete
+                  ? totalReceivedBuckets.length > 0
+                    ? totalReceivedBuckets
+                        .map((b) => formatCurrency(b.amount, b.currency))
+                        .join(" · ")
+                    : "0 MT"
+                  : "Indisponível"}
               </p>
             </div>
           </div>
@@ -179,7 +148,13 @@ export default async function DashboardPage() {
                   Recebido este mês
                 </p>
                 <p className="font-serif text-[22px] md:text-2xl font-light text-white mt-1.5 truncate">
-                  {formatCurrency(snapshot.finance.thisMonthReceived)}
+                  {financialPosition.coverage.receivedComplete
+                    ? thisMonthBuckets.length > 0
+                      ? thisMonthBuckets
+                          .map((b) => formatCurrency(b.amount, b.currency))
+                          .join(" · ")
+                      : "0 MT"
+                    : "Indisponível"}
                 </p>
               </div>
             </div>
@@ -226,38 +201,7 @@ export default async function DashboardPage() {
 
         <CommercialPipelinePanel commercial={snapshot.commercial} />
 
-        <CashSummaryPanel finance={snapshot.finance} />
-
-        <DocumentAnalyticsPanel
-          fiscalYear={snapshot.fiscalYear}
-          revenueByBusiness={snapshot.analytics.revenueByBusiness}
-          revenueByMonth={snapshot.analytics.revenueByMonth}
-        />
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-mono text-[8.5px] tracking-[0.4em] uppercase text-grey/50">
-                Documentos recentes
-              </span>
-            </div>
-            <Link
-              href="/admin/documents"
-              className="font-mono text-[9px] tracking-[0.3em] uppercase text-admin-gold hover:opacity-80 inline-flex items-center gap-1"
-            >
-              <span>Ver todos</span>
-              <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          <DataTable
-            columns={columns}
-            data={snapshot.documents.recentDocuments}
-            keyExtractor={(row) => row.id}
-            rowHref={(row) => `/admin/documents/${row.id}`}
-            emptyMessage="Ainda não há documentos. Crie o primeiro."
-          />
-        </section>
+        <FinancialPositionPanel financialPosition={snapshot.financialPosition} />
       </div>
     </AdminShell>
   );

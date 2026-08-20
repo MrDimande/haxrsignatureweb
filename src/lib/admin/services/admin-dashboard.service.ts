@@ -1,13 +1,13 @@
-import type { AdminOperationalDocument, Business, DashboardStats } from "@/lib/admin/types";
+import type { AdminOperationalDocument, Business } from "@/lib/admin/types";
 import type { ManagedEvent } from "@/lib/events/types";
 import type { EventPipelineStatus } from "@/lib/events/pipeline";
-import type { FinanceOverview } from "@/lib/finance/types";
 import type { ContactInquiry } from "@/lib/contact/types";
 import type {
   PortalCreativeApproval,
   PortalPaymentProof,
   PortalTimelineItem,
 } from "@/lib/portal/portal-premium.types";
+import type { PaymentsBatchResult } from "@/lib/finance/repositories/payments.repository";
 import {
   buildAdminAttentionFeed,
   type AdminAlert,
@@ -42,12 +42,19 @@ import {
   type AdminActiveCommercialStage,
   type AdminCommercialStage,
 } from "@/lib/admin/services/admin-commercial-pipeline.service";
-import * as analyticsRepo from "@/lib/admin/repositories/analytics.repository";
+import {
+  buildAdminFinancialPosition,
+  type AdminFinancialPosition,
+  type AdminFinancialCoverage,
+  type AdminMoneyBucket,
+  type AdminFinancialExposureItem,
+  type AdminFinancialMovement,
+} from "@/lib/admin/services/admin-financial-position.service";
 import * as businessesRepo from "@/lib/admin/repositories/businesses.repository";
 import * as documentsRepo from "@/lib/admin/repositories/documents.repository";
 import * as inquiriesRepo from "@/lib/contact/inquiries.repository";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
-import * as financeRepo from "@/lib/finance/repositories/overview.repository";
+import * as paymentsRepo from "@/lib/finance/repositories/payments.repository";
 import * as portalPremiumRepo from "@/lib/portal/repositories/portal-premium.repository";
 import { countPendingConciergeReviews } from "@/lib/concierge/repositories/concierge.repository";
 import { groupEventsByPipeline, resolveEventPipelineStatus } from "@/lib/events/pipeline";
@@ -77,9 +84,13 @@ export type {
   AdminActiveCommercialStage,
   AdminCommercialStage,
 };
-
-export type RevenueByBusiness = Awaited<ReturnType<typeof analyticsRepo.getRevenueByBusiness>>;
-export type RevenueByMonth = Awaited<ReturnType<typeof analyticsRepo.getRevenueByMonth>>;
+export type {
+  AdminFinancialPosition,
+  AdminFinancialCoverage,
+  AdminMoneyBucket,
+  AdminFinancialExposureItem,
+  AdminFinancialMovement,
+};
 
 export type AdminAttentionItem = {
   id: string;
@@ -90,9 +101,16 @@ export type AdminAttentionItem = {
   source: AdminAttentionSource;
 };
 
+export type AdminDocumentSummary = {
+  totalProformas: number;
+  totalInvoices: number;
+  totalReceipts: number;
+  totalDraft: number;
+  totalPaid: number;
+};
+
 export type AdminDashboardSnapshot = {
   generatedAt: string;
-  fiscalYear: number;
   attention: {
     items: AdminAttentionItem[];
   };
@@ -102,20 +120,15 @@ export type AdminDashboardSnapshot = {
     summary: EventPortfolioHealthSummary;
   };
   upcoming: AdminUpcomingAgenda;
-  documents: DashboardStats;
+  documents: AdminDocumentSummary;
   businesses: Business[];
   events: ManagedEvent[];
   eventGroups: Record<EventPipelineStatus, ManagedEvent[]>;
-  finance: FinanceOverview;
+  financialPosition: AdminFinancialPosition;
   commercial: AdminCommercialPipeline;
-  analytics: {
-    revenueByBusiness: RevenueByBusiness;
-    revenueByMonth: RevenueByMonth;
-  };
 };
 
 export type AdminDashboardSourceData = {
-  fiscalYear: number;
   operationalDocuments: AdminOperationalDocument[];
   inquiries: ContactInquiry[];
   conciergePending: number;
@@ -132,12 +145,9 @@ export type AdminDashboardSourceData = {
     available: boolean;
     items: PortalTimelineItem[];
   };
-  documents: DashboardStats;
+  paymentsBatch: PaymentsBatchResult;
   businesses: Business[];
   events: ManagedEvent[];
-  finance: FinanceOverview;
-  revenueByBusiness: RevenueByBusiness;
-  revenueByMonth: RevenueByMonth;
 };
 
 /**
@@ -155,6 +165,36 @@ export function buildAdminAttentionItems(alerts: AdminAlert[]): AdminAttentionIt
       priority: alert.priority,
       source: alert.source,
     }));
+}
+
+/**
+ * Builds document counts summary directly from loaded operational documents in memory.
+ */
+export function buildAdminDocumentSummary(
+  documents: readonly AdminOperationalDocument[]
+): AdminDocumentSummary {
+  let totalProformas = 0;
+  let totalInvoices = 0;
+  let totalReceipts = 0;
+  let totalDraft = 0;
+  let totalPaid = 0;
+
+  for (const doc of documents) {
+    if (doc.documentType === "proforma") totalProformas++;
+    else if (doc.documentType === "invoice") totalInvoices++;
+    else if (doc.documentType === "receipt") totalReceipts++;
+
+    if (doc.status === "draft") totalDraft++;
+    else if (doc.status === "paid") totalPaid++;
+  }
+
+  return {
+    totalProformas,
+    totalInvoices,
+    totalReceipts,
+    totalDraft,
+    totalPaid,
+  };
 }
 
 /**
@@ -212,26 +252,29 @@ export function buildAdminDashboardSnapshot(
     { now }
   );
   const commercial = buildAdminCommercialPipeline(source.inquiries);
+  const documentsSummary = buildAdminDocumentSummary(source.operationalDocuments);
+  const financialPosition = buildAdminFinancialPosition(
+    {
+      documents: source.operationalDocuments,
+      paymentsBatch: source.paymentsBatch,
+    },
+    { now }
+  );
 
   return {
     generatedAt,
-    fiscalYear: source.fiscalYear,
     attention: {
       items: attentionItems,
     },
     clientDecisions,
     portfolio,
     upcoming,
-    documents: source.documents,
+    documents: documentsSummary,
     businesses: source.businesses,
     events: source.events,
     eventGroups,
-    finance: source.finance,
+    financialPosition,
     commercial,
-    analytics: {
-      revenueByBusiness: source.revenueByBusiness,
-      revenueByMonth: source.revenueByMonth,
-    },
   };
 }
 
@@ -242,30 +285,23 @@ export async function getAdminDashboardSnapshot(
   options?: { now?: Date }
 ): Promise<AdminDashboardSnapshot> {
   const now = options?.now ?? new Date();
-  const fiscalYear = getMaputoFiscalYear(now);
 
   const [
     inquiries,
     operationalDocuments,
     conciergePending,
     paymentProofsBatch,
-    documents,
     businesses,
     events,
-    finance,
-    revenueByBusiness,
-    revenueByMonth,
+    paymentsBatch,
   ] = await Promise.all([
     inquiriesRepo.listInquiries(),
     documentsRepo.listOperationalDocuments(),
     countPendingConciergeReviews(),
     portalPremiumRepo.listPendingPaymentProofsBatch(),
-    documentsRepo.getDashboardStats(),
     businessesRepo.listBusinesses(),
     eventsRepo.listAllEvents(),
-    financeRepo.getFinanceOverview(),
-    analyticsRepo.getRevenueByBusiness(fiscalYear),
-    analyticsRepo.getRevenueByMonth(fiscalYear),
+    paymentsRepo.listPaymentsBatch(),
   ]);
 
   const allEventIds = events.map((e) => e.id);
@@ -285,7 +321,6 @@ export async function getAdminDashboardSnapshot(
 
   return buildAdminDashboardSnapshot(
     {
-      fiscalYear,
       operationalDocuments,
       inquiries,
       conciergePending,
@@ -293,12 +328,9 @@ export async function getAdminDashboardSnapshot(
       creativeApprovalsBatch,
       portfolioSnapshots,
       timelineBatch,
-      documents,
+      paymentsBatch,
       businesses,
       events,
-      finance,
-      revenueByBusiness,
-      revenueByMonth,
     },
     { now }
   );

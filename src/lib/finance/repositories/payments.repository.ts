@@ -4,6 +4,31 @@ import { mapPayment } from "@/lib/finance/db/mappers";
 import type { TablesInsert } from "@/lib/supabase/database.types";
 import type { PaymentRecord, RegisterPaymentInput } from "@/lib/finance/types";
 
+export type PaymentsBatchResult = {
+  available: boolean;
+  items: PaymentRecord[];
+};
+
+export async function listPaymentsBatch(): Promise<PaymentsBatchResult> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("payments")
+      .select("*")
+      .order("paid_at", { ascending: false });
+
+    if (error) {
+      return { available: false, items: [] };
+    }
+    return {
+      available: true,
+      items: asTableRows<"payments">(data).map((row) => mapPayment(row)),
+    };
+  } catch {
+    return { available: false, items: [] };
+  }
+}
+
 export async function listPaymentsByClientId(
   clientId: string,
   limit = 100
