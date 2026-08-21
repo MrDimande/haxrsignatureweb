@@ -51,7 +51,7 @@ export function buildGuestReportCsv(report: GuestEventReport): string {
       "Telefone",
       "Tipo",
       "Estado RSVP",
-      "Acompanhante(s) Nomeado(s)",
+      "Acompanhantes",
       "Qtd Acompanhantes",
       "Total Couverts",
       "Restrições Alimentares / Alergias",
@@ -69,8 +69,8 @@ export function buildGuestReportCsv(report: GuestEventReport): string {
         guest.phone || "—",
         CLIENT_TYPE_LABELS[guest.clientType] || guest.clientType,
         GUEST_STATUS_LABELS[guest.status] || guest.status,
-        companion.names.length > 0 ? companion.names.join(", ") : (guest.plusOnes > 0 ? "Por nomear" : "—"),
-        guest.plusOnes > 0 ? `+${guest.plusOnes}` : 0,
+        companion.formattedLabel,
+        guest.plusOnes > 0 ? guest.plusOnes : 0,
         companion.totalPartySize,
         guest.dietaryNotes || "—",
         guest.guestNotes || "—",
@@ -86,7 +86,7 @@ export function buildGuestReportCsv(report: GuestEventReport): string {
   for (const group of tableGroups) {
     lines.push("");
     lines.push(row([`Mesa: ${group.tableName}`, `Lugares: ${group.assignedSeats}/${group.totalSeats}`]));
-    lines.push(row(["Lugar", "Etiqueta", "Convidado Alocado", "Acompanhante(s)", "Estado RSVP", "Check-in"]));
+    lines.push(row(["Lugar", "Etiqueta", "Convidado Alocado", "Acompanhantes", "Estado RSVP", "Check-in"]));
     for (const seat of group.seats) {
       const companion = seat.guest ? resolveGuestCompanionInfo(seat.guest) : null;
       lines.push(
@@ -94,7 +94,7 @@ export function buildGuestReportCsv(report: GuestEventReport): string {
           seat.seatNumber,
           seat.label || "—",
           seat.guest?.name ?? "Vazio",
-          companion && companion.names.length > 0 ? companion.names.join(", ") : (seat.guest && seat.guest.plusOnes > 0 ? `+${seat.guest.plusOnes}` : "—"),
+          companion ? companion.formattedLabel : "—",
           seat.guest ? (GUEST_STATUS_LABELS[seat.guest.status] || seat.guest.status) : "Disponível",
           seat.guest ? formatGuestCheckIn(seat.guest.checkedInAt) : "—",
         ])

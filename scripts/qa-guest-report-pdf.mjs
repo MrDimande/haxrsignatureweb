@@ -20,7 +20,6 @@ import { buildGuestReportExcelBuffer } from "../src/lib/events/export/excel-gues
 const GuestReportPDF = GuestReportPDFDocModule.default || GuestReportPDFDocModule;
 
 const outputDir = path.join(process.cwd(), ".qa-pdf-output", "guest-report");
-const artifactsDir = "C:\\Users\\Aldim\\.gemini\\antigravity-ide\\brain\\2e2e129d-ef54-4596-822b-200e772ffc24";
 await fs.mkdir(outputDir, { recursive: true });
 
 async function loadLocalLogoBase64(logoPath) {
@@ -58,12 +57,8 @@ async function renderPdfPagesToPng(pdfPath, baseName) {
     const pngBuffer = canvas.toBuffer("image/png");
     const outPngName = `${baseName}_page_${i}.png`;
     const localPngPath = path.join(outputDir, outPngName);
-    const artifactPngPath = path.join(artifactsDir, outPngName);
 
     await fs.writeFile(localPngPath, pngBuffer);
-    try {
-      await fs.writeFile(artifactPngPath, pngBuffer);
-    } catch {}
     console.log(`  -> Saved ${outPngName} (${pngBuffer.length} bytes)`);
   }
 }
@@ -300,7 +295,7 @@ const report01 = buildGuestEventReport({
   generatedAt: "2026-08-21T00:00:00.000Z",
 });
 
-const pdf01Path = path.join(outputDir, "01_wedding_editorial_ivory_canonical_22_guests.pdf");
+const pdf01Path = path.join(outputDir, "01_guest_report_standard.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report01,
@@ -311,7 +306,7 @@ await renderToFile(
 
 // Also generate Excel workbook for fixture 01
 const excel01Buffer = await buildGuestReportExcelBuffer(report01);
-const excel01Path = path.join(outputDir, "01_wedding_operations_master_workbook.xlsx");
+const excel01Path = path.join(outputDir, "01_guest_report_standard.xlsx");
 await fs.writeFile(excel01Path, excel01Buffer);
 console.log(`Saved Excel Master Workbook: ${excel01Path} (${excel01Buffer.length} bytes)`);
 
@@ -352,7 +347,7 @@ const report02 = buildGuestEventReport({
   seats: fixture02Seats,
 });
 
-const pdf02Path = path.join(outputDir, "02_multipage_120_guests_banquet_stress.pdf");
+const pdf02Path = path.join(outputDir, "02_guest_report_120_guests.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report02,
@@ -391,7 +386,7 @@ const report03 = buildGuestEventReport({
   seats: fixture03Seats,
 });
 
-const pdf03Path = path.join(outputDir, "03_table_seating_flow_24_seats_per_table.pdf");
+const pdf03Path = path.join(outputDir, "03_guest_report_seating.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report03,
@@ -435,7 +430,7 @@ const report04 = buildGuestEventReport({
   seats: [],
 });
 
-const pdf04Path = path.join(outputDir, "04_dietary_manifest_kitchen_ops.pdf");
+const pdf04Path = path.join(outputDir, "04_guest_report_notes_dietary.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report04,
@@ -445,14 +440,38 @@ await renderToFile(
 );
 
 // ─────────────────────────────────────────────────────────────
-// FIXTURE 05: BrainyWrite Corporate Event Guest Report
+// FIXTURE 05: Empty State (Zero Guests and Seats)
 // ─────────────────────────────────────────────────────────────
-console.log("Generating Fixture 05: BrainyWrite Corporate Event Guest Report...");
-const logo05 = await loadLocalLogoBase64(
+console.log("Generating Fixture 05: Empty State...");
+const report05 = buildGuestEventReport({
+  event: {
+    ...baseEvent,
+    name: "Novo Evento Por Configurar",
+    date: "",
+    location: "",
+  },
+  guests: [],
+  seats: [],
+});
+
+const pdf05Path = path.join(outputDir, "05_guest_report_empty.pdf");
+await renderToFile(
+  React.createElement(GuestReportPDF, {
+    report: report05,
+    logoUrl: logo01,
+  }),
+  pdf05Path
+);
+
+// ─────────────────────────────────────────────────────────────
+// FIXTURE 06: Non-HAXR Corporate Event Guest Report (BrainyWrite)
+// ─────────────────────────────────────────────────────────────
+console.log("Generating Fixture 06: Non-HAXR Corporate Event Guest Report (BrainyWrite)...");
+const logo06 = await loadLocalLogoBase64(
   resolveDocumentLogoPath(brainyBusiness, "editorial_ivory")
 );
 
-const report05 = buildGuestEventReport({
+const report06 = buildGuestEventReport({
   event: {
     ...baseEvent,
     businessId: "brainywrite",
@@ -468,35 +487,11 @@ const report05 = buildGuestEventReport({
   seats: [],
 });
 
-const pdf05Path = path.join(outputDir, "05_brainywrite_corporate_event_guest_report.pdf");
-await renderToFile(
-  React.createElement(GuestReportPDF, {
-    report: report05,
-    logoUrl: logo05,
-  }),
-  pdf05Path
-);
-
-// ─────────────────────────────────────────────────────────────
-// FIXTURE 06: Empty State (Zero Guests and Seats)
-// ─────────────────────────────────────────────────────────────
-console.log("Generating Fixture 06: Empty State...");
-const report06 = buildGuestEventReport({
-  event: {
-    ...baseEvent,
-    name: "Novo Evento Por Configurar",
-    date: "",
-    location: "",
-  },
-  guests: [],
-  seats: [],
-});
-
-const pdf06Path = path.join(outputDir, "06_empty_state_zero_guests_and_seats.pdf");
+const pdf06Path = path.join(outputDir, "06_guest_report_non_haxr.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report06,
-    logoUrl: logo01,
+    logoUrl: logo06,
   }),
   pdf06Path
 );
@@ -505,11 +500,11 @@ await renderToFile(
 // RENDER ALL FIXTURES TO PNG FOR VISUAL INSPECTION
 // ─────────────────────────────────────────────────────────────
 console.log("\nRendering PDF fixtures to PNGs...");
-await renderPdfPagesToPng(pdf01Path, "01_wedding_editorial_ivory_canonical_22_guests");
-await renderPdfPagesToPng(pdf02Path, "02_multipage_120_guests_banquet_stress");
-await renderPdfPagesToPng(pdf03Path, "03_table_seating_flow_24_seats_per_table");
-await renderPdfPagesToPng(pdf04Path, "04_dietary_manifest_kitchen_ops");
-await renderPdfPagesToPng(pdf05Path, "05_brainywrite_corporate_event_guest_report");
-await renderPdfPagesToPng(pdf06Path, "06_empty_state_zero_guests_and_seats");
+await renderPdfPagesToPng(pdf01Path, "01_guest_report_standard");
+await renderPdfPagesToPng(pdf02Path, "02_guest_report_120_guests");
+await renderPdfPagesToPng(pdf03Path, "03_guest_report_seating");
+await renderPdfPagesToPng(pdf04Path, "04_guest_report_notes_dietary");
+await renderPdfPagesToPng(pdf05Path, "05_guest_report_empty");
+await renderPdfPagesToPng(pdf06Path, "06_guest_report_non_haxr");
 
 console.log("\nAll 6 PDF fixtures and PNGs rendered successfully!");

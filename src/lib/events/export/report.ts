@@ -1,5 +1,4 @@
 import { EVENT_TYPE_LABELS } from "@/lib/admin/constants";
-import { parsePartyName } from "@/lib/events/party-parser";
 import type {
   EventGuest,
   EventSeat,
@@ -16,71 +15,36 @@ export function isGuestReportEligible(guest: EventGuest): boolean {
 }
 
 /**
- * Informação estruturada de acompanhante(s) de um convidado.
- * Suporta nome explícito (de notas, RSVP ou nome composto) e contagem precisa.
+ * Formatação canónica e factual de acompanhantes:
+ * - 0 -> "—"
+ * - 1 -> "+1 acompanhante"
+ * - N -> "+N acompanhantes"
+ */
+export function formatGuestPlusOnes(plusOnes: number | null | undefined): string {
+  const count = Math.max(0, plusOnes || 0);
+  if (count === 0) return "—";
+  if (count === 1) return "+1 acompanhante";
+  return `+${count} acompanhantes`;
+}
+
+/**
+ * Informação estruturada e factual de acompanhantes de um convidado.
  */
 export interface ResolvedCompanionInfo {
   count: number;
-  names: string[];
   formattedLabel: string;
-  hasNamedCompanions: boolean;
   totalPartySize: number; // 1 (convidado principal) + count
 }
 
 /**
- * Resolve acompanhantes de um convidado de forma determinística e estruturada.
+ * Resolve acompanhantes de um convidado de forma estritamente factual baseada em plusOnes.
  */
 export function resolveGuestCompanionInfo(guest: EventGuest): ResolvedCompanionInfo {
-  const plusOnesCount = Math.max(0, guest.plusOnes || 0);
-  const names: string[] = [];
-
-  // 1. Tentar extrair de guestNotes se houver marcação de acompanhante/cônjuge
-  if (guest.guestNotes) {
-    const companionMatch = guest.guestNotes.match(
-      /(?:acompanhante|cônjuge|conjuge|parceir[oa]|espos[ao]|marido|mulher):\s*([^;\n\r·|]+)/i
-    );
-    if (companionMatch?.[1]) {
-      let extracted = companionMatch[1].trim();
-      extracted = extracted.replace(/\s*(?:·|\||-|\/|tel(?:efone)?|contac?to|email|whatsapp).*$/i, "").trim();
-      if (extracted && !/^\+\d+$/.test(extracted)) {
-        names.push(extracted);
-      }
-    }
-  }
-
-  // 2. Tentar extrair do nome composto via parsePartyName se houver membros nomeados
-  if (names.length === 0 && guest.name) {
-    const party = parsePartyName(guest.name);
-    const namedMembers = party.members.filter(
-      (m) => m.role !== "primary" && m.isNamed && m.label
-    );
-    for (const member of namedMembers) {
-      if (!names.includes(member.label)) {
-        names.push(member.label);
-      }
-    }
-  }
-
-  const hasNamed = names.length > 0;
-  let formattedLabel = "—";
-
-  if (plusOnesCount > 0 || hasNamed) {
-    const effectiveCount = Math.max(plusOnesCount, names.length);
-    if (hasNamed) {
-      formattedLabel = `+${effectiveCount} (${names.join(", ")})`;
-    } else if (effectiveCount === 1) {
-      formattedLabel = "+1 acompanhante";
-    } else {
-      formattedLabel = `+${effectiveCount} acompanhantes`;
-    }
-  }
-
+  const count = Math.max(0, guest.plusOnes || 0);
   return {
-    count: plusOnesCount,
-    names,
-    formattedLabel,
-    hasNamedCompanions: hasNamed,
-    totalPartySize: 1 + plusOnesCount,
+    count,
+    formattedLabel: formatGuestPlusOnes(count),
+    totalPartySize: 1 + count,
   };
 }
 

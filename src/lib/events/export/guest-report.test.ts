@@ -225,38 +225,37 @@ describe("HAXR Guest Operations Report & Data Integrity", () => {
     assert.equal(report.generatedAt, fixedIso);
   });
 
-  // ── AA: Named Companion Resolution ──
-  it("AA: Resolves named companions from guestNotes and compound names", () => {
-    // 1. Named in guestNotes
-    const gWithNotes = createMockGuest("g-01", "Dr. Fernando Nhaca", {
-      plusOnes: 1,
+  // ── AA: Factual Companion Presentation & No Free-Text Guesses ──
+  it("AA: Strictly factual plusOnes formatting and proof that free-text guestNotes cannot create a named companion", () => {
+    // 1. Guest with plusOnes === 0 -> "—" even if guestNotes contains free text mentions
+    const gZero = createMockGuest("g-01", "Dr. Fernando Nhaca", {
+      plusOnes: 0,
       guestNotes: "Acompanhante: Dr.ª Sofia Albuquerque · Telefone: +258 84 123 4567",
     });
-    const info1 = resolveGuestCompanionInfo(gWithNotes);
+    const info0 = resolveGuestCompanionInfo(gZero);
+    assert.equal(info0.count, 0);
+    assert.equal(info0.formattedLabel, "—");
+    assert.equal(info0.totalPartySize, 1);
+
+    // 2. Guest with plusOnes === 1 -> "+1 acompanhante" (no free-text guessing)
+    const gOne = createMockGuest("g-02", "Carlos Tembe & Maria Tembe", {
+      plusOnes: 1,
+      guestNotes: "Cônjuge: Maria Tembe",
+    });
+    const info1 = resolveGuestCompanionInfo(gOne);
     assert.equal(info1.count, 1);
-    assert.equal(info1.hasNamedCompanions, true);
-    assert.equal(info1.names[0], "Dr.ª Sofia Albuquerque");
-    assert.equal(info1.formattedLabel, "+1 (Dr.ª Sofia Albuquerque)");
+    assert.equal(info1.formattedLabel, "+1 acompanhante");
     assert.equal(info1.totalPartySize, 2);
 
-    // 2. Named via compound name
-    const gCompound = createMockGuest("g-02", "Carlos Tembe & Maria Tembe", {
-      plusOnes: 1,
+    // 3. Guest with plusOnes > 1 -> "+N acompanhantes"
+    const gMultiple = createMockGuest("g-03", "Paulo Zandamela", {
+      plusOnes: 3,
+      guestNotes: "Traz 3 acompanhantes convidados pela direcção.",
     });
-    const info2 = resolveGuestCompanionInfo(gCompound);
-    assert.equal(info2.count, 1);
-    assert.equal(info2.hasNamedCompanions, true);
-    assert.ok(info2.formattedLabel.includes("Maria Tembe"));
-
-    // 3. Unnamed plus ones
-    const gUnnamed = createMockGuest("g-03", "Paulo Zandamela", {
-      plusOnes: 2,
-    });
-    const info3 = resolveGuestCompanionInfo(gUnnamed);
-    assert.equal(info3.count, 2);
-    assert.equal(info3.hasNamedCompanions, false);
-    assert.equal(info3.formattedLabel, "+2 acompanhantes");
-    assert.equal(info3.totalPartySize, 3);
+    const info3 = resolveGuestCompanionInfo(gMultiple);
+    assert.equal(info3.count, 3);
+    assert.equal(info3.formattedLabel, "+3 acompanhantes");
+    assert.equal(info3.totalPartySize, 4);
   });
 
   // ── N to Q: PDF Generation & Buffer Safety ──
@@ -309,7 +308,7 @@ describe("HAXR Guest Operations Report & Data Integrity", () => {
     assert.ok(csv.includes("Ana Nhaca"));
     assert.ok(csv.includes("Bernardo Silva"));
     assert.ok(csv.includes("Carlos Tembe"));
-    assert.ok(csv.includes("Acompanhante(s) Nomeado(s)"));
+    assert.ok(csv.includes("Acompanhantes"));
     assert.ok(csv.includes("Total Couverts"));
   });
 

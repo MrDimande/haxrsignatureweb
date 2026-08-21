@@ -65,13 +65,10 @@ export default function GuestReportPanel({
       .filter((guest) => statusFilter === "all" || guest.status === statusFilter)
       .filter((guest) => {
         if (!query) return true;
-        const companion = resolveGuestCompanionInfo(guest);
-        const companionMatch = companion.names.some((n) => n.toLowerCase().includes(query));
         return (
           guest.name.toLowerCase().includes(query) ||
           guest.email.toLowerCase().includes(query) ||
           guest.phone.toLowerCase().includes(query) ||
-          companionMatch ||
           (guest.seat?.tableName.toLowerCase().includes(query) ?? false)
         );
       })

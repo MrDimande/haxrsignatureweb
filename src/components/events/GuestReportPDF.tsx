@@ -190,8 +190,72 @@ const styles = StyleSheet.create({
   },
 
   // ── Executive Metrics Strip (2x4 Grid) ──
-  metricsSection: {
-    marginBottom: 8,
+  // ── Executive Editorial Strip ──
+  executiveStrip: {
+    backgroundColor: colors.cardBg,
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: colors.cardBorder,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    marginBottom: 10,
+  },
+  primaryMetricsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 6,
+    marginBottom: 5,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.borderHairline,
+  },
+  primaryMetricItem: {
+    flex: 1,
+  },
+  primaryMetricItemDivider: {
+    borderRightWidth: 0.5,
+    borderRightColor: colors.cardBorder,
+    paddingRight: 8,
+    marginRight: 8,
+  },
+  primaryMetricLabel: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 5.5,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  primaryMetricValue: {
+    fontFamily: "Times-Bold",
+    fontSize: 13.5,
+    color: colors.textPrimary,
+  },
+  primaryMetricSub: {
+    fontFamily: "Helvetica",
+    fontSize: 5,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  secondaryMetricsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  secondaryMetricItem: {
+    flex: 1,
+  },
+  secondaryMetricLabel: {
+    fontFamily: "Helvetica",
+    fontSize: 5,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+    color: colors.textMuted,
+  },
+  secondaryMetricValue: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 8,
+    color: colors.textPrimary,
+    marginTop: 1,
   },
   sectionTitle: {
     fontFamily: "Times-Bold",
@@ -200,103 +264,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: colors.goldDark,
     marginBottom: 5,
-  },
-  metricsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 5,
-  },
-  metricCard: {
-    width: "23.6%",
-    backgroundColor: colors.cardBg,
-    borderWidth: 0.5,
-    borderColor: colors.cardBorder,
-    borderRadius: 1,
-    padding: 4.5,
-  },
-  metricLabel: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 5.5,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    color: colors.textMuted,
-    marginBottom: 1.5,
-  },
-  metricValue: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 10.5,
-    color: colors.textPrimary,
-  },
-  metricSub: {
-    fontSize: 5,
-    color: colors.textMuted,
-    marginTop: 0.5,
-  },
-
-  // ── RSVP Proportional Bar ──
-  rsvpBarContainer: {
-    backgroundColor: colors.cardBg,
-    borderWidth: 0.5,
-    borderColor: colors.cardBorder,
-    borderRadius: 1,
-    padding: 6,
-    marginBottom: 8,
-  },
-  rsvpBarTitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 3,
-  },
-  rsvpBarTitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 6,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    color: colors.textSecondary,
-  },
-  rsvpBarRate: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 6.5,
-    color: colors.goldDark,
-  },
-  progressBarTrack: {
-    height: 5,
-    flexDirection: "row",
-    backgroundColor: colors.cardSecondaryBg,
-    borderRadius: 1,
-    overflow: "hidden",
-    marginBottom: 4,
-  },
-  barConfirmed: {
-    backgroundColor: colors.statusConfirmedText,
-    height: "100%",
-  },
-  barCheckedIn: {
-    backgroundColor: colors.goldAccent,
-    height: "100%",
-  },
-  barInvited: {
-    backgroundColor: colors.cardBorder,
-    height: "100%",
-  },
-  barDeclined: {
-    backgroundColor: colors.statusDeclinedText,
-    height: "100%",
-  },
-  rsvpLegendRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 1,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  legendDot: {
-    width: 3.5,
-    height: 3.5,
-    borderRadius: 2,
   },
   legendText: {
     fontSize: 5.5,
@@ -498,13 +465,6 @@ export default function GuestReportPDF({
     (g) => (g.dietaryNotes && g.dietaryNotes.trim()) || (g.guestNotes && g.guestNotes.trim())
   );
 
-  // Proporções para a barra de RSVP
-  const total = Math.max(1, stats.primaryGuests);
-  const pConfirmed = (stats.confirmed / total) * 100;
-  const pCheckedIn = (stats.checkedIn / total) * 100;
-  const pInvited = (stats.invited / total) * 100;
-  const pDeclined = (stats.declined / total) * 100;
-
   function renderStatusBadge(status: string) {
     let bg = colors.statusInvitedBg;
     let text = colors.statusInvitedText;
@@ -566,94 +526,61 @@ export default function GuestReportPDF({
           </View>
         </View>
 
-        {/* Executive Metrics (8 Cards) */}
-        <View style={styles.metricsSection}>
-          <Text style={styles.sectionTitle}>Indicadores Operacionais de Banquete & Recepção</Text>
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Convidados Principais</Text>
-              <Text style={styles.metricValue}>{stats.primaryGuests}</Text>
-              <Text style={styles.metricSub}>Convites emitidos</Text>
+        {/* Executive Editorial Strip */}
+        <View style={styles.executiveStrip}>
+          {/* Primary Tier */}
+          <View style={styles.primaryMetricsRow}>
+            <View style={[styles.primaryMetricItem, styles.primaryMetricItemDivider]}>
+              <Text style={styles.primaryMetricLabel}>Convidados Principais</Text>
+              <Text style={styles.primaryMetricValue}>{stats.primaryGuests}</Text>
+              <Text style={styles.primaryMetricSub}>Convites emitidos</Text>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Confirmados (RSVP)</Text>
-              <Text style={[styles.metricValue, { color: colors.statusConfirmedText }]}>
-                {stats.confirmed}
-              </Text>
-              <Text style={styles.metricSub}>Presença assegurada</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Check-in Realizado</Text>
-              <Text style={[styles.metricValue, { color: colors.goldDark }]}>
-                {stats.checkedIn}
-              </Text>
-              <Text style={styles.metricSub}>Na recepção do evento</Text>
-            </View>
-            <View style={[styles.metricCard, { backgroundColor: colors.goldLightBg, borderColor: colors.goldBorder }]}>
-              <Text style={[styles.metricLabel, { color: colors.goldDark }]}>Headcount Banquete</Text>
-              <Text style={[styles.metricValue, { color: colors.goldDark }]}>
+            <View style={[styles.primaryMetricItem, styles.primaryMetricItemDivider]}>
+              <Text style={[styles.primaryMetricLabel, { color: colors.goldDark }]}>Presença Prevista</Text>
+              <Text style={[styles.primaryMetricValue, { color: colors.goldDark }]}>
                 {stats.expectedAttendance}
               </Text>
-              <Text style={styles.metricSub}>Catering covers previstos</Text>
+              <Text style={styles.primaryMetricSub}>Catering covers / Banquete</Text>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Acompanhantes (+1)</Text>
-              <Text style={styles.metricValue}>{stats.plusOnesTotal}</Text>
-              <Text style={styles.metricSub}>Total de extras</Text>
+            <View style={styles.primaryMetricItem}>
+              <Text style={styles.primaryMetricLabel}>Confirmados / Presença</Text>
+              <Text style={[styles.primaryMetricValue, { color: colors.statusConfirmedText }]}>
+                {stats.confirmed} <Text style={{ fontSize: 9, color: colors.textSecondary, fontFamily: "Helvetica" }}>({stats.checkedIn} no evento)</Text>
+              </Text>
+              <Text style={styles.primaryMetricSub}>
+                {stats.responseRate}% taxa de resposta
+              </Text>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Pendentes</Text>
-              <Text style={styles.metricValue}>{stats.invited}</Text>
-              <Text style={styles.metricSub}>A aguardar resposta</Text>
+          </View>
+
+          {/* Secondary Tier */}
+          <View style={styles.secondaryMetricsRow}>
+            <View style={styles.secondaryMetricItem}>
+              <Text style={styles.secondaryMetricLabel}>Acompanhantes</Text>
+              <Text style={styles.secondaryMetricValue}>+{stats.plusOnesTotal}</Text>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Recusados</Text>
-              <Text style={[styles.metricValue, { color: colors.statusDeclinedText }]}>
+            <View style={styles.secondaryMetricItem}>
+              <Text style={styles.secondaryMetricLabel}>Pendentes</Text>
+              <Text style={styles.secondaryMetricValue}>{stats.invited}</Text>
+            </View>
+            <View style={styles.secondaryMetricItem}>
+              <Text style={styles.secondaryMetricLabel}>Recusados</Text>
+              <Text style={[styles.secondaryMetricValue, { color: colors.statusDeclinedText }]}>
                 {stats.declined}
               </Text>
-              <Text style={styles.metricSub}>Declinou presença</Text>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Sem Lugar</Text>
-              <Text style={styles.metricValue}>{stats.unassignedGuests}</Text>
-              <Text style={styles.metricSub}>A aguardar mesa</Text>
+            <View style={styles.secondaryMetricItem}>
+              <Text style={styles.secondaryMetricLabel}>Check-in</Text>
+              <Text style={[styles.secondaryMetricValue, { color: colors.goldDark }]}>
+                {stats.checkedIn}
+              </Text>
+            </View>
+            <View style={styles.secondaryMetricItem}>
+              <Text style={styles.secondaryMetricLabel}>Sem Lugar</Text>
+              <Text style={styles.secondaryMetricValue}>{stats.unassignedGuests}</Text>
             </View>
           </View>
         </View>
-
-        {/* Factual RSVP Proportional Bar */}
-        {stats.primaryGuests > 0 ? (
-          <View style={styles.rsvpBarContainer}>
-            <View style={styles.rsvpBarTitleRow}>
-              <Text style={styles.rsvpBarTitle}>Distribuição Factual de Resposta</Text>
-              <Text style={styles.rsvpBarRate}>{stats.responseRate}% Respondido</Text>
-            </View>
-            <View style={styles.progressBarTrack}>
-              {pConfirmed > 0 ? <View style={[styles.barConfirmed, { width: `${pConfirmed}%` }]} /> : null}
-              {pCheckedIn > 0 ? <View style={[styles.barCheckedIn, { width: `${pCheckedIn}%` }]} /> : null}
-              {pInvited > 0 ? <View style={[styles.barInvited, { width: `${pInvited}%` }]} /> : null}
-              {pDeclined > 0 ? <View style={[styles.barDeclined, { width: `${pDeclined}%` }]} /> : null}
-            </View>
-            <View style={styles.rsvpLegendRow}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.statusConfirmedText }]} />
-                <Text style={styles.legendText}>Confirmados: {stats.confirmed} ({Math.round(pConfirmed)}%)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.goldAccent }]} />
-                <Text style={styles.legendText}>Check-in: {stats.checkedIn} ({Math.round(pCheckedIn)}%)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.cardBorder }]} />
-                <Text style={styles.legendText}>Pendentes: {stats.invited} ({Math.round(pInvited)}%)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.statusDeclinedText }]} />
-                <Text style={styles.legendText}>Recusados: {stats.declined} ({Math.round(pDeclined)}%)</Text>
-              </View>
-            </View>
-          </View>
-        ) : null}
 
         {/* Guest Registry Table Header */}
         <Text style={styles.sectionTitle}>Registo de Convidados ({guests.length})</Text>
@@ -687,7 +614,7 @@ export default function GuestReportPDF({
                   {renderStatusBadge(guest.status)}
                 </View>
                 <View style={styles.colCompanion}>
-                  <Text style={companion.hasNamedCompanions ? styles.cellText : (guest.plusOnes > 0 ? styles.cellText : styles.cellTextMuted)}>
+                  <Text style={companion.count > 0 ? styles.cellText : styles.cellTextMuted}>
                     {companion.formattedLabel}
                   </Text>
                 </View>
