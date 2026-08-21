@@ -17,6 +17,7 @@ import {
 } from "@/lib/events/export/csv";
 import { buildEditionCombinedExportCsv } from "@/lib/events/export/edition-csv";
 import { downloadGuestReportExcel } from "@/lib/events/export/excel-guest-operations";
+import { downloadRsvpGiftingExcel } from "@/lib/events/export/excel-rsvp-gifting";
 import type { EditionGiftReservation } from "@/lib/events/repositories/edition-gifts.repository";
 import { downloadGuestReportPdf } from "@/lib/events/export/pdf";
 import TableMapPrintView from "@/components/events/TableMapPrintView";
@@ -43,7 +44,6 @@ export default function GuestReportPanel({
   event,
   guests,
   seats,
-  stats: _externalStats,
   giftReservations = [],
 }: GuestReportPanelProps) {
   const [view, setView] = useState<ViewMode>("list");
@@ -82,6 +82,17 @@ export default function GuestReportPanel({
         setMessage("Livro de operações em Excel (.xlsx) exportado com sucesso.");
       } catch {
         setMessage("Não foi possível gerar o ficheiro Excel.");
+      }
+    });
+  }
+
+  async function handleRsvpGiftingExcel() {
+    startTransition(async () => {
+      try {
+        await downloadRsvpGiftingExcel(report, giftReservations);
+        setMessage("Livro de RSVP & Presentes (.xlsx) exportado com sucesso.");
+      } catch {
+        setMessage("Não foi possível gerar o livro de presentes.");
       }
     });
   }
@@ -136,10 +147,15 @@ export default function GuestReportPanel({
             { label: "Acompanhantes (+1)", value: reportStats.plusOnesTotal },
             { label: "Pendentes", value: reportStats.invited },
             { label: "Recusados", value: reportStats.declined },
-            {
-              label: "Sem lugar",
-              value: reportStats.unassignedGuests,
-            },
+            report.readiness.hasSeating
+              ? {
+                  label: "Por distribuir",
+                  value: reportStats.unassignedGuests,
+                }
+              : {
+                  label: "Taxa de Resposta",
+                  value: `${reportStats.responseRate}%`,
+                },
           ].map((item) => (
             <div key={item.label} className="admin-stat-card">
               <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
@@ -158,11 +174,23 @@ export default function GuestReportPanel({
             onClick={handleExcel}
             disabled={isPending}
             className="admin-btn-secondary"
-            title="Exportar Livro de Operações em Excel (.xlsx) com abas de Resumo, Lista Mestre, Mesas e Cozinha"
+            title="Exportar Livro de Operações em Excel (.xlsx) com abas adaptativas"
           >
             <FileSpreadsheet className="w-4 h-4 text-admin-gold" />
             Exportar Excel (.xlsx)
           </button>
+          {event.editionRegistryKey || giftReservations.length > 0 ? (
+            <button
+              type="button"
+              onClick={handleRsvpGiftingExcel}
+              disabled={isPending}
+              className="admin-btn-secondary"
+              title="Exportar Livro de RSVP & Presentes (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              Livro RSVP & Presentes (.xlsx)
+            </button>
+          ) : null}
           <button type="button" onClick={handleCsv} className="admin-btn-secondary">
             <FileText className="w-4 h-4" />
             {event.editionRegistryKey

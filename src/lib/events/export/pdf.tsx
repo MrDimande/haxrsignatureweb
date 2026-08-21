@@ -13,15 +13,18 @@ export async function downloadGuestReportPdf(
 ): Promise<void> {
   const business = getBusiness(report.event.businessId || "haxr-signature");
   const logoUrl = resolveDocumentLogoPath(business, "editorial_ivory");
+  const coverLogoUrl = resolveDocumentLogoPath(business, "maison_signature");
+
+  const prefix = report.event.businessId === "brainywrite" ? "brainywrite" : "haxr";
 
   const blob = await pdf(
     <GuestReportPDF
       report={report}
       logoUrl={logoUrl}
-      generatedAt={report.generatedAt}
+      coverLogoUrl={coverLogoUrl}
+      businessName={business.name}
     />
   ).toBlob();
 
-  downloadPdf(blob, `haxr-convidados-${eventReportSlug(report.event)}.pdf`);
+  downloadPdf(blob, `${prefix}-convidados-${eventReportSlug(report.event)}.pdf`);
 }
-

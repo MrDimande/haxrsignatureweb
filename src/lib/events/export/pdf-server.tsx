@@ -44,6 +44,8 @@ async function loadLogoDataUrl(logoPath: string): Promise<string | undefined> {
 
 export interface GenerateGuestReportPDFOptions {
   logoUrl?: string;
+  coverLogoUrl?: string;
+  signatureMarkUrl?: string;
   generatedAt?: string;
 }
 
@@ -52,14 +54,22 @@ export async function generateGuestReportPDFBuffer(
   options?: GenerateGuestReportPDFOptions
 ): Promise<Buffer> {
   const business = getBusiness(report.event.businessId || "haxr-signature");
-  const defaultLogoPath = resolveDocumentLogoPath(business, "editorial_ivory");
-  const logoUrl = options?.logoUrl ?? (await loadLogoDataUrl(defaultLogoPath));
+  const navLogoPath = resolveDocumentLogoPath(business, "editorial_ivory");
+  const coverLogoPath = resolveDocumentLogoPath(business, "maison_signature");
+  const isHaxr = !business.id.includes("brainy") && business.name.toLowerCase().includes("haxr");
+  const sigMarkPath = isHaxr ? "/images/brand/aldimande-signature-gold.png" : undefined;
+
+  const logoUrl = options?.logoUrl ?? (await loadLogoDataUrl(navLogoPath));
+  const coverLogoUrl = options?.coverLogoUrl ?? (await loadLogoDataUrl(coverLogoPath));
+  const signatureMarkUrl = options?.signatureMarkUrl ?? (sigMarkPath ? await loadLogoDataUrl(sigMarkPath) : undefined);
 
   const element = (
     <GuestReportPDF
       report={report}
       logoUrl={logoUrl}
-      generatedAt={options?.generatedAt || report.generatedAt}
+      coverLogoUrl={coverLogoUrl}
+      signatureMarkUrl={signatureMarkUrl}
+      businessName={business.name}
     />
   ) as ReactElement<DocumentProps>;
 
@@ -67,6 +77,6 @@ export async function generateGuestReportPDFBuffer(
 }
 
 export function guestReportPdfFilename(report: GuestEventReport): string {
-  return `haxr-relatorio-${eventReportSlug(report.event)}.pdf`;
+  const prefix = report.event.businessId === "brainywrite" ? "brainywrite" : "haxr";
+  return `${prefix}-relatorio-${eventReportSlug(report.event)}.pdf`;
 }
-

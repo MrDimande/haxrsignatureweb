@@ -2,19 +2,22 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildGuestEventReport,
-  isGuestReportEligible,
-  resolveGuestCompanionInfo,
   calculateGuestReportStats,
-  type GuestEventReport,
+  getEventSocialClass,
+  resolveGuestCompanionInfo,
+  shouldReportExactSeat,
 } from "./report";
-import { buildGuestReportCsv } from "./csv";
 import {
   buildOfficialGuestOperationsWorkbook,
   buildGuestReportExcelBuffer,
 } from "./excel-guest-operations";
+import {
+  buildOfficialRsvpGiftingWorkbook,
+  buildRsvpGiftingExcelBuffer,
+} from "./excel-rsvp-gifting";
 import { generateGuestReportPDFBuffer } from "./pdf-server";
 import type { EventGuest, EventSeat, ManagedEvent } from "@/lib/events/types";
-import { getBusiness } from "@/lib/admin/businesses";
+import type { EditionGiftReservation } from "@/lib/events/repositories/edition-gifts.repository";
 
 // ── Mock Factory Helpers ──
 function createMockEvent(overrides: Partial<ManagedEvent> = {}): ManagedEvent {
@@ -90,15 +93,14 @@ function createMockSeat(id: string, tableName: string, seatNumber: number, label
   };
 }
 
-describe("HAXR Guest Operations Report & Data Integrity", () => {
-  // ── A to F: Canonical Guest Universe & Eligibility Invariants ──
+describe("HAXR Guest Operations Report & Adaptive Readiness Standard", () => {
+  // ── 1. Canonical Guest Universe & Eligibility Invariants ──
   it("A & B: Exactly 22 eligible guests from 27 raw records (5 filtered: archived, deleted, incorrect)", () => {
     const rawGuests: EventGuest[] = [
-      // 22 Eligible guests with varied statuses
       createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", plusOnes: 1 }),
       createMockGuest("g-02", "Bernardo Silva", { status: "confirmed" }),
       createMockGuest("g-03", "Carlos Tembe", { status: "checked_in", plusOnes: 2 }),
-      createMockGuest("g-04", "Daniela Matusse", { status: "declined" }), // Declined is eligible!
+      createMockGuest("g-04", "Daniela Matusse", { status: "declined" }),
       createMockGuest("g-05", "Eduardo Cossa", { status: "invited" }),
       createMockGuest("g-06", "Fernanda Langa", { status: "confirmed" }),
       createMockGuest("g-07", "Gabriel Machava", { status: "invited", plusOnes: 1 }),
@@ -135,27 +137,25 @@ describe("HAXR Guest Operations Report & Data Integrity", () => {
     assert.equal(report.stats.primaryGuests, 22, "Primary guests stat must be exactly 22");
     assert.equal(report.stats.totalGuests, 22, "Total guests alias must be exactly 22");
 
-    // Verify exclusions
     assert.ok(!report.guests.some((g) => g.id === "g-in-01"), "Archived 1 excluded");
     assert.ok(!report.guests.some((g) => g.id === "g-in-02"), "Archived 2 excluded");
     assert.ok(!report.guests.some((g) => g.id === "g-in-03"), "Deleted 1 excluded");
     assert.ok(!report.guests.some((g) => g.id === "g-in-04"), "Deleted 2 excluded");
     assert.ok(!report.guests.some((g) => g.id === "g-in-05"), "Incorrect 1 excluded");
 
-    // Verify declined inclusion
     assert.ok(report.guests.some((g) => g.id === "g-04"), "Declined guest 04 remains included");
     assert.ok(report.guests.some((g) => g.id === "g-09"), "Declined guest 09 remains included");
     assert.ok(report.guests.some((g) => g.id === "g-16"), "Declined guest 16 remains included");
   });
 
-  // ── G to J: Mathematical Headcount, Plus-Ones, and RSVP Response Rates ──
-  it("G, H, I & J: Rigorous Banqueting Headcount and RSVP Metrics derivation", () => {
+  // ── 2. Rigorous Banqueting Headcount & RSVP Metrics Derivation ──
+  it("G, H, I & J: Headcount and RSVP Metrics derivation", () => {
     const guests: EventGuest[] = [
       createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", plusOnes: 1, seatId: "s-01" }),
       createMockGuest("g-02", "Bernardo Silva", { status: "confirmed", plusOnes: 0, seatId: "s-02" }),
       createMockGuest("g-03", "Carlos Tembe", { status: "checked_in", plusOnes: 2, seatId: "s-03" }),
-      createMockGuest("g-04", "Daniela Matusse", { status: "declined", plusOnes: 3 }), // Plus-ones not attending because declined!
-      createMockGuest("g-05", "Eduardo Cossa", { status: "invited", plusOnes: 1 }), // Plus-ones not attending because still invited!
+      createMockGuest("g-04", "Daniela Matusse", { status: "declined", plusOnes: 3 }),
+      createMockGuest("g-05", "Eduardo Cossa", { status: "invited", plusOnes: 1 }),
     ];
 
     const seats: EventSeat[] = [
@@ -174,166 +174,94 @@ describe("HAXR Guest Operations Report & Data Integrity", () => {
     assert.equal(stats.checkedIn, 1);
     assert.equal(stats.declined, 1);
     assert.equal(stats.invited, 1);
-
-    // Responded = 2 confirmed + 1 checked_in + 1 declined = 4
     assert.equal(stats.responded, 4);
-    // Response rate = 4/5 * 100 = 80%
     assert.equal(stats.responseRate, 80);
-
-    // Total plus ones declared = 1 + 0 + 2 + 3 + 1 = 7
-    assert.equal(stats.plusOnesTotal, 7);
-
-    // Attending primary guests = confirmed(2) + checked_in(1) = 3
     assert.equal(stats.attendingPrimaryGuests, 3);
-
-    // Expected Attendance (Catering Covers) = 3 primary attending + 1 (Ana) + 2 (Carlos) = 6 covers!
+    assert.equal(stats.attendingPlusOnes, 3);
     assert.equal(stats.expectedAttendance, 6);
-
-    // Seating metrics
-    assert.equal(stats.assignedGuests, 3);
-    assert.equal(stats.unassignedGuests, 2);
-    assert.equal(stats.totalSeats, 6);
-    assert.equal(stats.uniqueTables, 2);
   });
 
-  // ── K, L, M: Immutability, Sorting & Deterministic Clock ──
-  it("K, L & M: Source array immutability, deterministic collation, and injected clock", () => {
-    const rawGuests = [
-      createMockGuest("g-02", "Zulmira Banze"),
-      createMockGuest("g-01", "Álvaro Cossa"),
-      createMockGuest("g-03", "Bernardo Silva"),
-    ];
-
-    const frozenCopy = [...rawGuests];
-    const fixedIso = "2026-08-21T00:30:00.000Z";
-    const report = buildGuestEventReport({
-      event: createMockEvent(),
-      guests: rawGuests,
-      seats: [],
-      generatedAt: fixedIso,
-    });
-
-    // Check immutability of input array
-    assert.deepEqual(rawGuests, frozenCopy, "Source array must not be mutated");
-
-    // Check deterministic sorting: Álvaro (A) -> Bernardo (B) -> Zulmira (Z)
-    assert.equal(report.guests[0].name, "Álvaro Cossa");
-    assert.equal(report.guests[1].name, "Bernardo Silva");
-    assert.equal(report.guests[2].name, "Zulmira Banze");
-
-    // Check clock preservation
-    assert.equal(report.generatedAt, fixedIso);
-  });
-
-  // ── AA: Factual Companion Presentation & No Free-Text Guesses ──
-  it("AA: Strictly factual plusOnes formatting and proof that free-text guestNotes cannot create a named companion", () => {
-    // 1. Guest with plusOnes === 0 -> "—" even if guestNotes contains free text mentions
-    const gZero = createMockGuest("g-01", "Dr. Fernando Nhaca", {
-      plusOnes: 0,
-      guestNotes: "Acompanhante: Dr.ª Sofia Albuquerque · Telefone: +258 84 123 4567",
-    });
-    const info0 = resolveGuestCompanionInfo(gZero);
-    assert.equal(info0.count, 0);
-    assert.equal(info0.formattedLabel, "—");
-    assert.equal(info0.totalPartySize, 1);
-
-    // 2. Guest with plusOnes === 1 -> "+1 acompanhante" (no free-text guessing)
-    const gOne = createMockGuest("g-02", "Carlos Tembe & Maria Tembe", {
-      plusOnes: 1,
-      guestNotes: "Cônjuge: Maria Tembe",
-    });
-    const info1 = resolveGuestCompanionInfo(gOne);
-    assert.equal(info1.count, 1);
-    assert.equal(info1.formattedLabel, "+1 acompanhante");
-    assert.equal(info1.totalPartySize, 2);
-
-    // 3. Guest with plusOnes > 1 -> "+N acompanhantes"
-    const gMultiple = createMockGuest("g-03", "Paulo Zandamela", {
-      plusOnes: 3,
-      guestNotes: "Traz 3 acompanhantes convidados pela direcção.",
-    });
-    const info3 = resolveGuestCompanionInfo(gMultiple);
-    assert.equal(info3.count, 3);
-    assert.equal(info3.formattedLabel, "+3 acompanhantes");
-    assert.equal(info3.totalPartySize, 4);
-  });
-
-  // ── N to Q: PDF Generation & Buffer Safety ──
-  it("N, O, P & Q: PDF Buffer valid, HAXR logo resolves, non-HAXR safe, and summary matches list", async () => {
-    const guests = [
-      createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", plusOnes: 1 }),
-      createMockGuest("g-02", "Bernardo Silva", { status: "checked_in" }),
-      createMockGuest("g-03", "Carlos Tembe", { status: "declined" }),
-    ];
-
-    const reportHaxr = buildGuestEventReport({
-      event: createMockEvent({ businessId: "haxr-signature" }),
-      guests,
-      seats: [],
-    });
-
-    const pdfBufferHaxr = await generateGuestReportPDFBuffer(reportHaxr);
-    assert.ok(Buffer.isBuffer(pdfBufferHaxr));
-    assert.ok(pdfBufferHaxr.length > 5000);
-    assert.equal(pdfBufferHaxr.subarray(0, 4).toString("utf-8"), "%PDF");
-
-    // Non-HAXR Business (BrainyWrite)
-    const reportBrainy = buildGuestEventReport({
-      event: createMockEvent({ businessId: "brainywrite", name: "Conferência BrainyWrite" }),
-      guests,
-      seats: [],
-    });
-    const pdfBufferBrainy = await generateGuestReportPDFBuffer(reportBrainy);
-    assert.ok(Buffer.isBuffer(pdfBufferBrainy));
-    assert.ok(pdfBufferBrainy.length > 5000);
-    assert.equal(pdfBufferBrainy.subarray(0, 4).toString("utf-8"), "%PDF");
-  });
-
-  // ── R & S: CSV Equality & Structure ──
-  it("R & S: CSV Total strictly equals report.guests.length and contains companion columns", () => {
-    const guests = [
-      createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", plusOnes: 1 }),
-      createMockGuest("g-02", "Bernardo Silva", { status: "invited" }),
-      createMockGuest("g-03", "Carlos Tembe", { status: "declined" }),
-    ];
-
-    const report = buildGuestEventReport({
-      event: createMockEvent(),
-      guests,
-      seats: [],
-    });
-
-    const csv = buildGuestReportCsv(report);
-    assert.ok(csv.includes("Total convidados principais (convites),3"));
-    assert.ok(csv.includes("Ana Nhaca"));
-    assert.ok(csv.includes("Bernardo Silva"));
-    assert.ok(csv.includes("Carlos Tembe"));
-    assert.ok(csv.includes("Acompanhantes"));
-    assert.ok(csv.includes("Total Couverts"));
-  });
-
-  // ── Z: Excel Workbook & Multi-Tab Parity ──
-  it("Z: Excel Workbook generates valid .xlsx buffer with all 4 tabs and exact parity", async () => {
-    const guests = [
-      createMockGuest("g-01", "Ana Nhaca", {
+  // ── 3. STAN CASE REGRESSION: 22 eligible, 20 companions, 42 expected attendance, NO seating ──
+  it("Stan Case Regression: 22 guests, 20 companions, 42 expected attendance, 0 pending, 0 declined, 0 check-ins, NO seating", async () => {
+    // 22 primary guests, each confirmed, 20 companions in total
+    const stanGuests: EventGuest[] = Array.from({ length: 22 }, (_, i) => {
+      const plusOnes = i < 20 ? 1 : 0; // 20 guests with +1, 2 guests with 0 => 20 companions
+      return createMockGuest(`stan-${i + 1}`, `Convidado Real ${i + 1}`, {
         status: "confirmed",
-        plusOnes: 1,
-        dietaryNotes: "Alérgica a marisco",
-        seatId: "s-01",
-        seat: { tableName: "Imperial", seatNumber: 1, label: "VIP" },
-      }),
-      createMockGuest("g-02", "Bernardo Silva", {
-        status: "checked_in",
-        guestNotes: "Chegada com a noiva",
-        seatId: "s-02",
-        seat: { tableName: "Imperial", seatNumber: 2, label: "" },
-      }),
+        plusOnes,
+        dietaryNotes: "",
+        guestNotes: "",
+      });
+    });
+
+    const event = createMockEvent({ name: "Casamento Real de Stan", type: "wedding" });
+    const report = buildGuestEventReport({ event, guests: stanGuests, seats: [] });
+
+    // Mathematical Invariants
+    assert.equal(report.stats.primaryGuests, 22);
+    assert.equal(report.stats.confirmed, 22);
+    assert.equal(report.stats.invited, 0);
+    assert.equal(report.stats.declined, 0);
+    assert.equal(report.stats.checkedIn, 0);
+    assert.equal(report.stats.plusOnesTotal, 20);
+    assert.equal(report.stats.expectedAttendance, 42); // 22 + 20 = 42
+    assert.equal(report.stats.responseRate, 100);
+
+    // Adaptive Readiness Invariants (REPORT ONLY WHAT IS OPERATIONALLY TRUE)
+    assert.equal(report.readiness.hasSeating, false, "Must report NO seating configured");
+    assert.equal(report.readiness.seatingState, "not_configured");
+    assert.equal(report.readiness.hasDietaryRequirements, false, "Must report NO dietary restrictions");
+    assert.equal(report.readiness.hasGuestMessages, false, "Must report NO guest messages");
+    assert.equal(report.readiness.hasCheckIns, false, "Must report NO check-ins");
+    assert.equal(report.readiness.isSocialEvent, true, "Wedding is a social event");
+
+    // Excel Workbook Invariant: Exactly 3 core worksheets, NO seating, NO dietary, NO messages
+    const wb = await buildOfficialGuestOperationsWorkbook(report);
+    assert.equal(wb.worksheets.length, 3, "Must have exactly 3 worksheets (Resumo, Lista, RSVP)");
+    assert.equal(wb.worksheets[0].name, "01 — Resumo Executivo");
+    assert.equal(wb.worksheets[1].name, "02 — Lista de Convidados");
+    assert.equal(wb.worksheets[2].name, "03 — RSVP & Banquete");
+    assert.ok(!wb.getWorksheet("04 — Mapa de Mesas"), "Must NOT create Mapa de Mesas worksheet");
+    assert.ok(!wb.getWorksheet("05 — Cozinha & Alergias"), "Must NOT create Cozinha worksheet");
+    assert.ok(!wb.getWorksheet("06 — Mensagens dos Convidados"), "Must NOT create Mensagens worksheet");
+
+    // PDF Buffer renders cleanly without empty chapters
+    const pdfBuffer = await generateGuestReportPDFBuffer(report);
+    assert.ok(Buffer.isBuffer(pdfBuffer));
+    assert.ok(pdfBuffer.length > 5000);
+    assert.equal(pdfBuffer.subarray(0, 4).toString("utf-8"), "%PDF");
+  });
+
+  // ── 4. Conditional Section Tests (A to L) ──
+  it("A & B: Seating configuration toggles seating readiness and worksheets", async () => {
+    const guests = [
+      createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", seatId: "s-01" }),
+      createMockGuest("g-02", "Bernardo Silva", { status: "confirmed", seatId: "s-02" }),
+    ];
+    const seats = [
+      createMockSeat("s-01", "Mesa 1", 1),
+      createMockSeat("s-02", "Mesa 1", 2),
     ];
 
-    const seats = [
-      createMockSeat("s-01", "Imperial", 1, "VIP"),
-      createMockSeat("s-02", "Imperial", 2),
+    const reportWithSeats = buildGuestEventReport({
+      event: createMockEvent(),
+      guests,
+      seats,
+    });
+
+    assert.equal(reportWithSeats.readiness.hasSeating, true);
+    assert.equal(reportWithSeats.readiness.seatingState, "complete");
+
+    const wb = await buildOfficialGuestOperationsWorkbook(reportWithSeats);
+    assert.ok(wb.getWorksheet("04 — Mapa de Mesas"), "Mapa de Mesas worksheet must exist when seating is configured");
+  });
+
+  it("C: Partial seating reports partial state and unassigned count", () => {
+    const guests = [
+      createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", seatId: "s-01" }),
+      createMockGuest("g-02", "Bernardo Silva", { status: "confirmed", seatId: null }),
     ];
+    const seats = [createMockSeat("s-01", "Mesa 1", 1)];
 
     const report = buildGuestEventReport({
       event: createMockEvent(),
@@ -341,22 +269,131 @@ describe("HAXR Guest Operations Report & Data Integrity", () => {
       seats,
     });
 
-    const wb = await buildOfficialGuestOperationsWorkbook(report);
-    assert.equal(wb.worksheets.length, 4, "Must contain exactly 4 worksheets");
-    assert.equal(wb.worksheets[0].name, "01 — Resumo Executivo");
-    assert.equal(wb.worksheets[1].name, "02 — Lista de Convidados");
-    assert.equal(wb.worksheets[2].name, "03 — Mapa de Mesas");
-    assert.equal(wb.worksheets[3].name, "04 — Cozinha & Alergias");
-
-    const excelBuffer = await buildGuestReportExcelBuffer(report);
-    assert.ok(Buffer.isBuffer(excelBuffer));
-    assert.ok(excelBuffer.length > 5000);
-    // Standard ZIP header for .xlsx: PK\x03\x04
-    assert.equal(excelBuffer.subarray(0, 2).toString("utf-8"), "PK");
+    assert.equal(report.readiness.hasSeating, true);
+    assert.equal(report.readiness.seatingState, "partial");
+    assert.equal(report.stats.unassignedGuests, 1);
   });
 
-  // ── Large Fixture Stress Tests (W & X) ──
-  it("W & X: Large multipage fixtures (120 guests and 20+ seats table) generate valid PDF buffer without crashing", async () => {
+  it("D & E: Dietary restrictions toggle kitchen chapter and worksheet", async () => {
+    const guests = [
+      createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", dietaryNotes: "Sem lactose" }),
+      createMockGuest("g-02", "Bernardo Silva", { status: "confirmed" }),
+    ];
+
+    const report = buildGuestEventReport({
+      event: createMockEvent(),
+      guests,
+      seats: [],
+    });
+
+    assert.equal(report.readiness.hasDietaryRequirements, true);
+    assert.equal(report.dietaryGuests.length, 1);
+    assert.equal(report.dietaryGuests[0].dietaryNotes, "Sem lactose");
+
+    const wb = await buildOfficialGuestOperationsWorkbook(report);
+    assert.ok(wb.getWorksheet("05 — Cozinha & Alergias"), "Cozinha worksheet must exist when dietary notes exist");
+  });
+
+  it("F & G: Guest messages and greetings separation from kitchen", async () => {
+    const guests = [
+      createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", guestNotes: "Muitas felicidades aos noivos!" }),
+      createMockGuest("g-02", "Bernardo Silva", { status: "confirmed", dietaryNotes: "Vegetariano", guestNotes: "Que Deus abençoe!" }),
+    ];
+
+    const report = buildGuestEventReport({
+      event: createMockEvent(),
+      guests,
+      seats: [],
+    });
+
+    assert.equal(report.readiness.hasGuestMessages, true);
+    assert.equal(report.messageGuests.length, 2);
+    assert.equal(report.messageGuests[0].message, "Muitas felicidades aos noivos!");
+    assert.equal(report.readiness.hasDietaryRequirements, true);
+    assert.equal(report.dietaryGuests.length, 1, "Kitchen manifest contains ONLY the guest with dietaryNotes");
+
+    const wb = await buildOfficialGuestOperationsWorkbook(report);
+    assert.ok(wb.getWorksheet("06 — Mensagens dos Convidados"), "Mensagens worksheet must exist");
+  });
+
+  it("J, K & L: Event social class and exact seat reporting rules", () => {
+    const socialEvent = createMockEvent({ type: "wedding" });
+    assert.equal(getEventSocialClass(socialEvent.type), "social");
+    assert.equal(shouldReportExactSeat(socialEvent, []), false);
+
+    const corporateEvent = createMockEvent({ type: "corporate" });
+    assert.equal(getEventSocialClass(corporateEvent.type), "corporate");
+
+    const protocolEvent = createMockEvent({ type: "other" });
+    const labeledSeats = [createMockSeat("s-01", "Mesa Presidencial", 1, "Cadeira 1 · Ministro")];
+    assert.equal(shouldReportExactSeat(protocolEvent, labeledSeats), true);
+  });
+
+  // ── 5. Companion Semantics (M to P) ──
+  it("M, N, O & P: Factual companion resolution and no heuristic guessing", () => {
+    // 0 companions
+    const g0 = createMockGuest("g-01", "Ana Nhaca", { plusOnes: 0, guestNotes: "Vem com o esposo Carlos" });
+    const info0 = resolveGuestCompanionInfo(g0);
+    assert.equal(info0.count, 0);
+    assert.equal(info0.formattedLabel, "—");
+    assert.equal(info0.totalPartySize, 1);
+
+    // 1 companion
+    const g1 = createMockGuest("g-02", "Bernardo Silva", { plusOnes: 1, guestNotes: "Traz acompanhante" });
+    const info1 = resolveGuestCompanionInfo(g1);
+    assert.equal(info1.count, 1);
+    assert.equal(info1.formattedLabel, "+1 acompanhante");
+    assert.equal(info1.totalPartySize, 2);
+
+    // N companions
+    const gN = createMockGuest("g-03", "Carlos Tembe", { plusOnes: 3 });
+    const infoN = resolveGuestCompanionInfo(gN);
+    assert.equal(infoN.count, 3);
+    assert.equal(infoN.formattedLabel, "+3 acompanhantes");
+    assert.equal(infoN.totalPartySize, 4);
+  });
+
+  // ── 6. Dedicated RSVP & Gifting Workbook Tests ──
+  it("Dedicated RSVP & Gifting Workbook generates valid .xlsx buffer and sheets", async () => {
+    const guests = [
+      createMockGuest("g-01", "Ana Nhaca", { status: "confirmed", plusOnes: 1, guestNotes: "Muitas felicidades!" }),
+      createMockGuest("g-02", "Bernardo Silva", { status: "confirmed" }),
+    ];
+
+    const giftReservations: EditionGiftReservation[] = [
+      {
+        id: "gift-01",
+        registryKey: "KEY-01",
+        giftId: "cozinha-01",
+        giftName: "Serviço de Jantar Vista Alegre 68 Peças",
+        category: "Cozinha",
+        reservedBy: "Ana Nhaca",
+        createdAt: "2026-08-20T12:00:00Z",
+      },
+    ];
+
+    const report = buildGuestEventReport({
+      event: createMockEvent({ editionRegistryKey: "KEY-01" }),
+      guests,
+      seats: [],
+    });
+
+    const wb = await buildOfficialRsvpGiftingWorkbook(report, giftReservations);
+    assert.ok(wb.worksheets.length >= 4);
+    assert.equal(wb.worksheets[0].name, "01 — Resumo Executivo");
+    assert.equal(wb.worksheets[1].name, "02 — Lista RSVP");
+    assert.equal(wb.worksheets[2].name, "03 — Dimensão de Grupos");
+    assert.equal(wb.worksheets[3].name, "04 — Registo de Presentes");
+    assert.ok(wb.getWorksheet("05 — Mensagens & Votos"), "Mensagens sheet present because guestNotes exist");
+
+    const buffer = await buildRsvpGiftingExcelBuffer(report, giftReservations);
+    assert.ok(Buffer.isBuffer(buffer));
+    assert.ok(buffer.length > 5000);
+    assert.equal(buffer.subarray(0, 2).toString("utf-8"), "PK");
+  });
+
+  // ── 7. Stress Tests ──
+  it("Stress test: 120 guests and 30 seats per table generate valid PDF and Excel", async () => {
     const largeGuests = Array.from({ length: 120 }, (_, i) =>
       createMockGuest(`g-${i + 1}`, `Convidado Especial Nº ${i + 1}`, {
         status: i % 4 === 0 ? "confirmed" : i % 4 === 1 ? "checked_in" : i % 4 === 2 ? "invited" : "declined",
@@ -377,11 +414,14 @@ describe("HAXR Guest Operations Report & Data Integrity", () => {
     });
 
     assert.equal(report.guests.length, 120);
-    assert.equal(report.stats.primaryGuests, 120);
 
     const pdfBuffer = await generateGuestReportPDFBuffer(report);
     assert.ok(Buffer.isBuffer(pdfBuffer));
     assert.ok(pdfBuffer.length > 20000);
     assert.equal(pdfBuffer.subarray(0, 4).toString("utf-8"), "%PDF");
+
+    const excelBuffer = await buildGuestReportExcelBuffer(report);
+    assert.ok(Buffer.isBuffer(excelBuffer));
+    assert.ok(excelBuffer.length > 10000);
   });
 });

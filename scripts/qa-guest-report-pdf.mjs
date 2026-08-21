@@ -15,7 +15,6 @@ import {
   buildGuestEventReport,
   calculateGuestReportStats,
 } from "../src/lib/events/export/report.ts";
-import { buildGuestReportExcelBuffer } from "../src/lib/events/export/excel-guest-operations.ts";
 
 const GuestReportPDF = GuestReportPDFDocModule.default || GuestReportPDFDocModule;
 
@@ -138,247 +137,135 @@ function makeSeat(id, tableName, seatNumber, label = "") {
 }
 
 // ─────────────────────────────────────────────────────────────
-// FIXTURE 01: Canonical 22 Eligible Guests (Wedding Editorial Ivory)
+// FIXTURE 01: Stan Case (22 Eligible Confirmed Guests, 20 Companions, 42 Headcount, NO Seating)
 // ─────────────────────────────────────────────────────────────
-console.log("Generating Fixture 01: Canonical 22 Eligible Guests...");
+console.log("Generating Fixture 01: Stan Case (No Seating)...");
 const logo01 = await loadLocalLogoBase64(
   resolveDocumentLogoPath(haxrBusiness, "editorial_ivory")
 );
+const coverLogo01 = await loadLocalLogoBase64(
+  resolveDocumentLogoPath(haxrBusiness, "maison_signature")
+);
 
-const fixture01RawGuests = [
-  makeGuest("g-01", "Ana Nhaca", {
-    status: "confirmed",
-    plusOnes: 1,
-    guestNotes: "Acompanhante: Eng. Roberto Nhaca · Telefone: +258 84 111 2222",
-    dietaryNotes: "Alérgica severa a frutos do mar e marisco",
-    seatId: "s-01",
-    seat: { tableName: "Imperial", seatNumber: 1, label: "VIP" },
-  }),
-  makeGuest("g-02", "Bernardo Silva & Sofia Albuquerque", {
-    status: "confirmed",
-    plusOnes: 1,
-    seatId: "s-02",
-    seat: { tableName: "Imperial", seatNumber: 2, label: "VIP" },
-  }),
-  makeGuest("g-03", "Carlos Tembe", {
-    status: "checked_in",
-    plusOnes: 2,
-    checkedInAt: "2026-11-28T14:30:00Z",
-    seatId: "s-03",
-    seat: { tableName: "Imperial", seatNumber: 3, label: "" },
-  }),
-  makeGuest("g-04", "Daniela Matusse", {
-    status: "declined",
-    guestNotes: "Ausente no estrangeiro durante a data da cerimónia.",
-  }),
-  makeGuest("g-05", "Eduardo Cossa", {
-    status: "invited",
-    seatId: "s-04",
-    seat: { tableName: "Imperial", seatNumber: 4, label: "" },
-  }),
-  makeGuest("g-06", "Fernanda Langa", {
-    status: "confirmed",
-    plusOnes: 1,
-    seatId: "s-05",
-    seat: { tableName: "Presidencial", seatNumber: 1, label: "Padrinhos" },
-  }),
-  makeGuest("g-07", "Gabriel Machava", {
-    status: "invited",
-    plusOnes: 1,
-    seatId: "s-06",
-    seat: { tableName: "Presidencial", seatNumber: 2, label: "Padrinhos" },
-  }),
-  makeGuest("g-08", "Helena Mabunda", {
-    status: "confirmed",
-    dietaryNotes: "Dieta Vegetariana estrita",
-    seatId: "s-07",
-    seat: { tableName: "Presidencial", seatNumber: 3, label: "" },
-  }),
-  makeGuest("g-09", "Inácio Macamo", {
-    status: "declined",
-  }),
-  makeGuest("g-10", "Joana Mondlane", {
-    status: "checked_in",
-    checkedInAt: "2026-11-28T14:45:00Z",
-    seatId: "s-08",
-    seat: { tableName: "Presidencial", seatNumber: 4, label: "" },
-  }),
-  makeGuest("g-11", "Kátia Chissano", {
-    status: "invited",
-    seatId: "s-09",
-    seat: { tableName: "Família", seatNumber: 1, label: "" },
-  }),
-  makeGuest("g-12", "Lucas Guebuza", {
-    status: "confirmed",
-    plusOnes: 1,
-    guestNotes: "Cônjuge: Maria Guebuza",
-    seatId: "s-10",
-    seat: { tableName: "Família", seatNumber: 2, label: "" },
-  }),
-  makeGuest("g-13", "Marta Nyusi", {
-    status: "confirmed",
-    dietaryNotes: "Sem glúten (Celíaca)",
-    seatId: "s-11",
-    seat: { tableName: "Família", seatNumber: 3, label: "" },
-  }),
-  makeGuest("g-14", "Nelson Diogo", {
-    status: "invited",
-    seatId: "s-12",
-    seat: { tableName: "Família", seatNumber: 4, label: "" },
-  }),
-  makeGuest("g-15", "Olívia Sitoe", {
-    status: "confirmed",
-    seatId: "s-13",
-    seat: { tableName: "Amigos de Honra", seatNumber: 1, label: "" },
-  }),
-  makeGuest("g-16", "Paulo Zandamela", {
-    status: "declined",
-  }),
-  makeGuest("g-17", "Quitéria Manjate", {
-    status: "invited",
-    seatId: "s-14",
-    seat: { tableName: "Amigos de Honra", seatNumber: 2, label: "" },
-  }),
-  makeGuest("g-18", "Rui Simango", {
-    status: "confirmed",
-    seatId: "s-15",
-    seat: { tableName: "Amigos de Honra", seatNumber: 3, label: "" },
-  }),
-  makeGuest("g-19", "Sara Dhlakama", {
-    status: "checked_in",
-    checkedInAt: "2026-11-28T15:00:00Z",
-    seatId: "s-16",
-    seat: { tableName: "Amigos de Honra", seatNumber: 4, label: "" },
-  }),
-  makeGuest("g-20", "Tiago Matsinhe", {
-    status: "invited",
-  }), // Sem lugar
-  makeGuest("g-21", "Úrsula Magaia", {
-    status: "confirmed",
-    plusOnes: 1,
-  }), // Sem lugar
-  makeGuest("g-22", "Valdemar Banze", {
-    status: "invited",
-  }), // Sem lugar
-
-  // 5 Ineligible records that MUST be excluded
-  makeGuest("g-in-01", "Ineligible Archived 1", { archivedAt: "2026-08-19T00:00:00Z" }),
-  makeGuest("g-in-02", "Ineligible Archived 2", { archivedAt: "2026-08-18T00:00:00Z" }),
-  makeGuest("g-in-03", "Ineligible Deleted 1", { deletedAt: "2026-08-19T00:00:00Z" }),
-  makeGuest("g-in-04", "Ineligible Deleted 2", { deletedAt: "2026-08-18T00:00:00Z" }),
-  makeGuest("g-in-05", "Ineligible Incorrect 1", { isIncorrect: true }),
+const stanNames = [
+  "Ana Nhaca", "Bernardo Silva", "Carlos Tembe", "Daniela Matusse",
+  "Eduardo Cossa", "Fernanda Langa", "Gabriel Machava", "Helena Mabunda",
+  "Inácio Macamo", "Joana Mondlane", "Kátia Chissano", "Lucas Guebuza",
+  "Marta Nyusi", "Nelson Diogo", "Olívia Sitoe", "Paulo Zandamela",
+  "Quitéria Manjate", "Rui Simango", "Sara Dhlakama", "Tiago Matsinhe",
+  "Úrsula Magaia", "Valdemar Banze"
 ];
 
-const fixture01Seats = [
-  makeSeat("s-01", "Imperial", 1, "VIP"),
-  makeSeat("s-02", "Imperial", 2, "VIP"),
-  makeSeat("s-03", "Imperial", 3),
-  makeSeat("s-04", "Imperial", 4),
-  makeSeat("s-05", "Presidencial", 1, "Padrinhos"),
-  makeSeat("s-06", "Presidencial", 2, "Padrinhos"),
-  makeSeat("s-07", "Presidencial", 3),
-  makeSeat("s-08", "Presidencial", 4),
-  makeSeat("s-09", "Família", 1),
-  makeSeat("s-10", "Família", 2),
-  makeSeat("s-11", "Família", 3),
-  makeSeat("s-12", "Família", 4),
-  makeSeat("s-13", "Amigos de Honra", 1),
-  makeSeat("s-14", "Amigos de Honra", 2),
-  makeSeat("s-15", "Amigos de Honra", 3),
-  makeSeat("s-16", "Amigos de Honra", 4),
-];
+const fixture01Guests = stanNames.map((name, i) =>
+  makeGuest(`stan-${i + 1}`, name, {
+    status: "confirmed",
+    plusOnes: i < 20 ? 1 : 0, // 20 with +1, 2 with 0 = 20 companions
+    dietaryNotes: "",
+    guestNotes: "",
+  })
+);
 
 const report01 = buildGuestEventReport({
   event: baseEvent,
-  guests: fixture01RawGuests,
-  seats: fixture01Seats,
-  generatedAt: "2026-08-21T00:00:00.000Z",
+  guests: fixture01Guests,
+  seats: [],
 });
 
-const pdf01Path = path.join(outputDir, "01_guest_report_standard.pdf");
+const pdf01Path = path.join(outputDir, "01_social_event_no_seating.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report01,
     logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
   }),
   pdf01Path
 );
 
-// Also generate Excel workbook for fixture 01
-const excel01Buffer = await buildGuestReportExcelBuffer(report01);
-const excel01Path = path.join(outputDir, "01_guest_report_standard.xlsx");
-await fs.writeFile(excel01Path, excel01Buffer);
-console.log(`Saved Excel Master Workbook: ${excel01Path} (${excel01Buffer.length} bytes)`);
-
 // ─────────────────────────────────────────────────────────────
-// FIXTURE 02: Multipage 120 Guests Banquet Stress
+// FIXTURE 02: Multipage 120 Guests Banquet Stress (with repeated continuation headers)
 // ─────────────────────────────────────────────────────────────
 console.log("Generating Fixture 02: Multipage 120 Guests Banquet Stress...");
-const fixture02Guests = Array.from({ length: 120 }, (_, i) => {
-  const num = i + 1;
-  const hasPlus = num % 3 === 0;
-  const isDiet = num % 8 === 0;
-  const tableIndex = Math.floor(i / 10) + 1;
-  const seatIndex = (i % 10) + 1;
-  return makeGuest(`g-stress-${num}`, `Convidado Distinto Dr. António Sebastião de Albuquerque Nº ${num}`, {
-    status: num % 4 === 0 ? "confirmed" : num % 4 === 1 ? "checked_in" : num % 4 === 2 ? "invited" : "declined",
-    plusOnes: hasPlus ? 1 : 0,
-    guestNotes: hasPlus ? `Acompanhante: Dr.ª Maria Teresa de Albuquerque Nº ${num}` : "",
-    dietaryNotes: isDiet ? "Intolerância severa a lactose e frutos secos" : "",
-    seatId: `s-stress-${tableIndex}-${seatIndex}`,
-    seat: { tableName: `Mesa ${tableIndex}`, seatNumber: seatIndex, label: "" },
-  });
-});
+const firstNames = [
+  "Abel", "Beatriz", "Carlos", "Duarte", "Ema", "Filipe", "Graça", "Hélder",
+  "Ilda", "Jorge", "Leonor", "Manuel", "Nádia", "Orlando", "Patrícia", "Rui",
+  "Sónia", "Tomás", "Valdemar", "Zulmira", "Amilcar", "Bruna", "Cláudio", "Dulce"
+];
+const lastNames = [
+  "Mabunda", "Nhaca", "Sitoe", "Tembe", "Cossa", "Langa", "Matusse", "Macamo",
+  "Mondlane", "Chissano", "Guebuza", "Nyusi", "Diogo", "Zandamela", "Simango", "Banze"
+];
+
+const fixture02Guests = [];
+for (let i = 1; i <= 120; i++) {
+  const fn = firstNames[(i - 1) % firstNames.length];
+  const ln = lastNames[(i - 1) % lastNames.length];
+  const fullName = `${fn} ${ln} (${i})`;
+  const statusCycle = ["confirmed", "confirmed", "checked_in", "invited", "declined"];
+  const status = statusCycle[(i - 1) % statusCycle.length];
+  const plusOnes = i % 4 === 0 ? 2 : i % 2 === 0 ? 1 : 0;
+  const tableNum = Math.ceil(i / 10);
+  const seatNum = ((i - 1) % 10) + 1;
+
+  fixture02Guests.push(
+    makeGuest(`g-120-${i}`, fullName, {
+      status,
+      plusOnes,
+      email: `${fn.toLowerCase()}.${ln.toLowerCase()}.${i}@empresa-parceira.co.mz`,
+      phone: `+258 84 ${100 + (i % 900)} ${1000 + i}`,
+      seatId: `s-120-${tableNum}-${seatNum}`,
+      seat: { tableName: `Mesa ${tableNum}`, seatNumber: seatNum, label: "" },
+    })
+  );
+}
 
 const fixture02Seats = [];
 for (let t = 1; t <= 12; t++) {
   for (let s = 1; s <= 10; s++) {
-    fixture02Seats.push(makeSeat(`s-stress-${t}-${s}`, `Mesa ${t}`, s));
+    fixture02Seats.push(makeSeat(`s-120-${t}-${s}`, `Mesa ${t}`, s));
   }
 }
 
 const report02 = buildGuestEventReport({
-  event: {
-    ...baseEvent,
-    name: "Grande Banquete de Gala 2026",
-    type: "banquet",
-  },
+  event: baseEvent,
   guests: fixture02Guests,
   seats: fixture02Seats,
 });
 
-const pdf02Path = path.join(outputDir, "02_guest_report_120_guests.pdf");
+const pdf02Path = path.join(outputDir, "02_large_guest_book_120.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report02,
     logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
   }),
   pdf02Path
 );
 
 // ─────────────────────────────────────────────────────────────
-// FIXTURE 03: Table Seating Flow (24 Seats per Table)
+// FIXTURE 03: Social Event with Seating (Table Flow)
 // ─────────────────────────────────────────────────────────────
-console.log("Generating Fixture 03: Table Seating Flow (24 Seats per Table)...");
-const fixture03Seats = [];
-const fixture03Guests = [];
+console.log("Generating Fixture 03: Social Event with Seating...");
+const fixture03Guests = [
+  makeGuest("g-01", "Ana Nhaca", { status: "confirmed", plusOnes: 1, seatId: "s-01", seat: { tableName: "Imperial", seatNumber: 1, label: "VIP" } }),
+  makeGuest("g-02", "Bernardo Silva", { status: "confirmed", seatId: "s-02", seat: { tableName: "Imperial", seatNumber: 2, label: "VIP" } }),
+  makeGuest("g-03", "Carlos Tembe", { status: "checked_in", plusOnes: 2, seatId: "s-03", seat: { tableName: "Imperial", seatNumber: 3, label: "" } }),
+  makeGuest("g-04", "Daniela Matusse", { status: "confirmed", seatId: "s-04", seat: { tableName: "Imperial", seatNumber: 4, label: "" } }),
+  makeGuest("g-05", "Eduardo Cossa", { status: "invited", seatId: "s-05", seat: { tableName: "Família", seatNumber: 1, label: "" } }),
+  makeGuest("g-06", "Fernanda Langa", { status: "confirmed", seatId: "s-06", seat: { tableName: "Família", seatNumber: 2, label: "" } }),
+  makeGuest("g-07", "Gabriel Machava", { status: "invited" }), // Unassigned
+  makeGuest("g-08", "Helena Mabunda", { status: "confirmed" }), // Unassigned
+];
 
-for (let t = 1; t <= 2; t++) {
-  for (let s = 1; s <= 24; s++) {
-    const sId = `s-mega-${t}-${s}`;
-    fixture03Seats.push(makeSeat(sId, `Mesa Imperial Magna ${t}`, s, s <= 4 ? "Honra" : ""));
-    if (s <= 20) {
-      fixture03Guests.push(
-        makeGuest(`g-mega-${t}-${s}`, `Convidado Mesa ${t} Lugar ${s}`, {
-          status: s % 2 === 0 ? "confirmed" : "checked_in",
-          plusOnes: s % 5 === 0 ? 1 : 0,
-          seatId: sId,
-          seat: { tableName: `Mesa Imperial Magna ${t}`, seatNumber: s, label: s <= 4 ? "Honra" : "" },
-        })
-      );
-    }
-  }
-}
+const fixture03Seats = [
+  makeSeat("s-01", "Imperial", 1, "VIP"),
+  makeSeat("s-02", "Imperial", 2, "VIP"),
+  makeSeat("s-03", "Imperial", 3),
+  makeSeat("s-04", "Imperial", 4),
+  makeSeat("s-05", "Família", 1),
+  makeSeat("s-06", "Família", 2),
+];
 
 const report03 = buildGuestEventReport({
   event: baseEvent,
@@ -386,55 +273,57 @@ const report03 = buildGuestEventReport({
   seats: fixture03Seats,
 });
 
-const pdf03Path = path.join(outputDir, "03_guest_report_seating.pdf");
+const pdf03Path = path.join(outputDir, "03_social_event_with_seating.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report03,
     logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
   }),
   pdf03Path
 );
 
 // ─────────────────────────────────────────────────────────────
-// FIXTURE 04: Dietary & Kitchen Manifest Ops
+// FIXTURE 04: Dietary Manifest & Kitchen Ops
 // ─────────────────────────────────────────────────────────────
 console.log("Generating Fixture 04: Dietary Manifest & Kitchen Ops...");
 const fixture04Guests = [
   makeGuest("g-diet-01", "Beatriz Fontes", {
     status: "confirmed",
     dietaryNotes: "Alergia anafilática a amendoim e frutos secos (EpiPen)",
-    guestNotes: "Mesa próxima à saída de emergência recomendada.",
-    seat: { tableName: "Mesa 1", seatNumber: 1, label: "" },
+    seat: { tableName: "Imperial", seatNumber: 1, label: "" },
   }),
   makeGuest("g-diet-02", "Carlos Eduardo", {
     status: "confirmed",
     dietaryNotes: "Dieta Kosher estrita",
-    guestNotes: "Refeição selada fornecida por fornecedor certificado.",
-    seat: { tableName: "Mesa 1", seatNumber: 2, label: "" },
+    seat: { tableName: "Imperial", seatNumber: 2, label: "" },
   }),
   makeGuest("g-diet-03", "Dra. Diana Vasconcelos", {
     status: "checked_in",
     dietaryNotes: "Dieta Halal",
-    seat: { tableName: "Mesa 2", seatNumber: 1, label: "" },
+    seat: { tableName: "Família", seatNumber: 1, label: "" },
   }),
   makeGuest("g-diet-04", "Eng. Ernesto Matos", {
     status: "confirmed",
     dietaryNotes: "Vegano estrito — sem derivados animais",
-    seat: { tableName: "Mesa 2", seatNumber: 2, label: "" },
+    seat: { tableName: "Família", seatNumber: 2, label: "" },
   }),
 ];
 
 const report04 = buildGuestEventReport({
   event: baseEvent,
   guests: fixture04Guests,
-  seats: [],
+  seats: fixture03Seats,
 });
 
-const pdf04Path = path.join(outputDir, "04_guest_report_notes_dietary.pdf");
+const pdf04Path = path.join(outputDir, "04_dietary_manifest.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report04,
     logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
   }),
   pdf04Path
 );
@@ -454,11 +343,13 @@ const report05 = buildGuestEventReport({
   seats: [],
 });
 
-const pdf05Path = path.join(outputDir, "05_guest_report_empty.pdf");
+const pdf05Path = path.join(outputDir, "05_empty_or_early_stage.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report05,
     logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
   }),
   pdf05Path
 );
@@ -480,31 +371,253 @@ const report06 = buildGuestEventReport({
     location: "Radisson Blu Hotel, Maputo",
   },
   guests: [
-    makeGuest("g-corp-01", "Dra. Alice Nogueira", { status: "confirmed", clientType: "corporate" }),
-    makeGuest("g-corp-02", "Dr. Bruno Esteves", { status: "checked_in", clientType: "corporate" }),
-    makeGuest("g-corp-03", "Dra. Cecília Mendes", { status: "invited", clientType: "corporate" }),
+    makeGuest("g-corp-01", "Dra. Alice Nogueira", { status: "confirmed", groupName: "Banco Comercial" }),
+    makeGuest("g-corp-02", "Dr. Bruno Esteves", { status: "checked_in", groupName: "Seguradora Global" }),
+    makeGuest("g-corp-03", "Dra. Cecília Mendes", { status: "invited", groupName: "Consultoria Estratégica" }),
   ],
   seats: [],
 });
 
-const pdf06Path = path.join(outputDir, "06_guest_report_non_haxr.pdf");
+const pdf06Path = path.join(outputDir, "06_non_haxr_guest_book.pdf");
 await renderToFile(
   React.createElement(GuestReportPDF, {
     report: report06,
     logoUrl: logo06,
+    coverLogoUrl: logo06,
+    businessName: "BrainyWrite",
   }),
   pdf06Path
+);
+
+// ─────────────────────────────────────────────────────────────
+// FIXTURE 07 (QA STRESS): Large Single Table (75 Guests in 1 Table → Forces Table Cross-Page Pagination)
+// ─────────────────────────────────────────────────────────────
+console.log("Generating Fixture 07: Forced Cross-Page Table Pagination Stress (75 guests in 1 table)...");
+
+const fixture07Guests = [];
+for (let i = 1; i <= 75; i++) {
+  const statusCycle = ["confirmed", "confirmed", "checked_in", "invited", "declined"];
+  const status = statusCycle[(i - 1) % statusCycle.length];
+  const plusOnes = i % 5 === 0 ? 2 : i % 3 === 0 ? 1 : 0;
+  fixture07Guests.push(
+    makeGuest(`g-bigT-${i}`, `Convidado Banquete Imperial ${i}`, {
+      status,
+      plusOnes,
+      phone: `+258 84 ${500 + i} ${2000 + i}`,
+      seatId: `s-bigT-${i}`,
+      seat: { tableName: "Mesa Imperial Magna", seatNumber: i, label: "" },
+    })
+  );
+}
+
+const fixture07Seats = [];
+for (let s = 1; s <= 80; s++) {
+  fixture07Seats.push(makeSeat(`s-bigT-${s}`, "Mesa Imperial Magna", s));
+}
+
+const report07 = buildGuestEventReport({
+  event: { ...baseEvent, name: "Stress Test — Mesa Imperial Magna (75 Convidados)" },
+  guests: fixture07Guests,
+  seats: fixture07Seats,
+});
+
+const pdf07Path = path.join(outputDir, "07_large_table_pagination_stress.pdf");
+await renderToFile(
+  React.createElement(GuestReportPDF, {
+    report: report07,
+    logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
+  }),
+  pdf07Path
+);
+
+// ─────────────────────────────────────────────────────────────
+// FIXTURE 08 (QA STRESS): Long Names & Contacts Registry Height Stress
+// ─────────────────────────────────────────────────────────────
+console.log("Generating Fixture 08: Registry Height Stress (long names, long contacts)...");
+
+const longNames = [
+  "Prof.ª Dra. Maria Fernanda de Albuquerque Figueiredo Montenegro e Silva",
+  "Eng.º João Carlos Alberto Sebastião Mondlane Chissano de Matos",
+  "Dra. Ana Beatriz Fernandes Vasconcelos Castelo-Branco Pereira",
+  "Dr. Pedro Henrique Alexandre Monteiro de Almeida e Sousa-Martins",
+  "Arq. Catarina Isabel Domingos Correia Magalhães Fonseca-Tavares",
+  "Sra. D. Margarida Filomena do Rosário Ribeiro Gonçalves da Costa",
+  "Prof. Doutor António Eduardo Machado Ferreira Vieira Brandão",
+  "Eng.ª Sofia Alexandra Mendes Teixeira de Carvalho Montenegro",
+  "Comendador Francisco Manuel de Assis Reis Ferraz Nascimento",
+  "Drª. Beatriz Maria Helena Rodrigues Taveira de Almeida Nogueira",
+  "S.Exª Sr. Embaixador Luís Bernardo de Andrade e Castro Montez",
+  "Profª. Doutora Clara Raquel Abreu Figueiredo Martins Lourenço",
+  "Eng.º Mestre Ricardo Jorge Alberto dos Santos Magalhães Pinto",
+  "Sra. Condessa Leonor Filipa de Bragança Sousa Montenegro-Vaz",
+  "Dr. Augusto Manuel Filipe Henriques Rebelo de Sousa Figueiredo",
+  "Arq.ª Marina Inês Fernanda do Espírito Santo Pereira da Silva",
+  "Prof. Catedrático Emeritus José Eduardo Martins Costa Brandão",
+  "Drª. Helena Francisca do Carmo Ribeiro Moura Pinto Figueiredo",
+  "Eng.º Doutor Tiago Miguel Fernandes de Albuquerque Castanheira",
+  "Sra. D. Rosário Augusta de Fátima Correia Monteiro da Fonseca",
+  "Rev. Padre Joaquim Francisco Martins Lopes de Oliveira Baptista",
+  "Drª. Isabel Cristina Maria Santos Ferreira Guimarães de Matos",
+  "Prof. Doutor Mestre Nuno Filipe Andrade e Castro Montenegro",
+  "Eng.ª Ana Margarida Luísa Figueiredo de Carvalho Montenegro",
+  "Gen. José Alberto Francisco do Nascimento Pereira de Almeida",
+  "Drª. Cláudia Beatriz Henriques Taveira de Montenegro e Silva",
+  "Dr. Vasco Manuel Fernando da Costa Reis Monteiro Figueiredo",
+  "Arq. Teresa Filomena do Carmo Albuquerque Brandão e Fonseca",
+  "Eng.º Doutor Henrique Augusto Pereira Montenegro da Silveira",
+  "Sra. Marquesa D. Carlota Fernanda de Assis Monteiro Brandão",
+];
+
+const fixture08Guests = longNames.map((name, i) => {
+  const statusCycle = ["confirmed", "confirmed", "checked_in", "invited"];
+  const status = statusCycle[i % statusCycle.length];
+  const plusOnes = i % 4 === 0 ? 2 : i % 2 === 0 ? 1 : 0;
+  return makeGuest(`g-long-${i + 1}`, name, {
+    status,
+    plusOnes,
+    phone: `+258 84 ${700 + i} ${3000 + i}`,
+    email: `${name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20)}@universidade-maputo.edu.mz`,
+  });
+});
+
+const report08 = buildGuestEventReport({
+  event: { ...baseEvent, name: "Stress Test — Nomes Longos & Contactos" },
+  guests: fixture08Guests,
+  seats: [],
+});
+
+const pdf08Path = path.join(outputDir, "08_long_name_registry_stress.pdf");
+await renderToFile(
+  React.createElement(GuestReportPDF, {
+    report: report08,
+    logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
+  }),
+  pdf08Path
+);
+
+// ─────────────────────────────────────────────────────────────
+// FIXTURE 09 (QA PROTOCOL): Protocol / State Dinner Seating (Exact Seats & Labels)
+// ─────────────────────────────────────────────────────────────
+console.log("Generating Fixture 09: Protocol State Dinner (Exact Seat & Distinctive Labels)...");
+
+const protocolGuests = [
+  makeGuest("g-proto-1", "S.Exª Sr. Presidente da República", {
+    status: "confirmed",
+    groupName: "Presidência da República",
+    phone: "+258 84 100 0001",
+    seatId: "s-honra-1",
+    seat: { tableName: "Mesa de Honra Presidencial", seatNumber: 1, label: "Chefe de Estado" },
+  }),
+  makeGuest("g-proto-2", "Sra. Dra. Primeira-Dama da República", {
+    status: "confirmed",
+    groupName: "Presidência da República",
+    phone: "+258 84 100 0002",
+    seatId: "s-honra-2",
+    seat: { tableName: "Mesa de Honra Presidencial", seatNumber: 2, label: "Primeira-Dama" },
+  }),
+  makeGuest("g-proto-3", "S.Exª Sr. Embaixador da União Europeia", {
+    status: "confirmed",
+    groupName: "Corpo Diplomático",
+    phone: "+258 84 100 0003",
+    seatId: "s-honra-3",
+    seat: { tableName: "Mesa de Honra Presidencial", seatNumber: 3, label: "Embaixador Decano" },
+  }),
+  makeGuest("g-proto-4", "Exmo. Sr. Ministro dos Negócios Estrangeiros", {
+    status: "confirmed",
+    groupName: "Governo de Moçambique",
+    phone: "+258 84 100 0004",
+    seatId: "s-honra-4",
+    seat: { tableName: "Mesa de Honra Presidencial", seatNumber: 4, label: "Ministro de Estado" },
+  }),
+  makeGuest("g-proto-5", "S.Exª Sr. Alto Comissário Britânico", {
+    status: "confirmed",
+    groupName: "Corpo Diplomático",
+    phone: "+258 84 100 0005",
+    seatId: "s-honra-5",
+    seat: { tableName: "Mesa de Honra Presidencial", seatNumber: 5, label: "Alto Comissário" },
+  }),
+  makeGuest("g-proto-6", "Exmo. Sr. Chefe do Protocolo de Estado", {
+    status: "checked_in",
+    groupName: "Protocolo de Estado",
+    phone: "+258 84 100 0006",
+    seatId: "s-honra-6",
+    seat: { tableName: "Mesa de Honra Presidencial", seatNumber: 6, label: "Chefe do Protocolo" },
+  }),
+  makeGuest("g-proto-7", "S.Exª Sr. Embaixador de Portugal", {
+    status: "confirmed",
+    groupName: "Corpo Diplomático",
+    phone: "+258 84 100 0007",
+    seatId: "s-diplo-1",
+    seat: { tableName: "Mesa do Corpo Diplomático", seatNumber: 1, label: "Embaixador" },
+  }),
+  makeGuest("g-proto-8", "S.Exª Sr. Embaixador dos Estados Unidos", {
+    status: "confirmed",
+    groupName: "Corpo Diplomático",
+    phone: "+258 84 100 0008",
+    seatId: "s-diplo-2",
+    seat: { tableName: "Mesa do Corpo Diplomático", seatNumber: 2, label: "Embaixador" },
+  }),
+  makeGuest("g-proto-9", "S.Exª Sr. Embaixador da África do Sul", {
+    status: "confirmed",
+    groupName: "Corpo Diplomático",
+    phone: "+258 84 100 0009",
+    seatId: "s-diplo-3",
+    seat: { tableName: "Mesa do Corpo Diplomático", seatNumber: 3, label: "Embaixador" },
+  }),
+  makeGuest("g-proto-10", "S.Exª Sr. Embaixador do Brasil", {
+    status: "confirmed",
+    groupName: "Corpo Diplomático",
+    phone: "+258 84 100 0010",
+    seatId: "s-diplo-4",
+    seat: { tableName: "Mesa do Corpo Diplomático", seatNumber: 4, label: "Embaixador" },
+  }),
+];
+
+const protocolSeats = [
+  makeSeat("s-honra-1", "Mesa de Honra Presidencial", 1, "Chefe de Estado"),
+  makeSeat("s-honra-2", "Mesa de Honra Presidencial", 2, "Primeira-Dama"),
+  makeSeat("s-honra-3", "Mesa de Honra Presidencial", 3, "Embaixador Decano"),
+  makeSeat("s-honra-4", "Mesa de Honra Presidencial", 4, "Ministro de Estado"),
+  makeSeat("s-honra-5", "Mesa de Honra Presidencial", 5, "Alto Comissário"),
+  makeSeat("s-honra-6", "Mesa de Honra Presidencial", 6, "Chefe do Protocolo"),
+  makeSeat("s-diplo-1", "Mesa do Corpo Diplomático", 1, "Embaixador"),
+  makeSeat("s-diplo-2", "Mesa do Corpo Diplomático", 2, "Embaixador"),
+  makeSeat("s-diplo-3", "Mesa do Corpo Diplomático", 3, "Embaixador"),
+  makeSeat("s-diplo-4", "Mesa do Corpo Diplomático", 4, "Embaixador"),
+];
+
+const report09 = buildGuestEventReport({
+  event: { ...baseEvent, name: "Banquete Oficial de Estado & Gala Diplomática", type: "state_dinner" },
+  guests: protocolGuests,
+  seats: protocolSeats,
+});
+
+const pdf09Path = path.join(outputDir, "09_protocol_diplomatic_seating.pdf");
+await renderToFile(
+  React.createElement(GuestReportPDF, {
+    report: report09,
+    logoUrl: logo01,
+    coverLogoUrl: coverLogo01,
+    businessName: "HAXR Signature",
+  }),
+  pdf09Path
 );
 
 // ─────────────────────────────────────────────────────────────
 // RENDER ALL FIXTURES TO PNG FOR VISUAL INSPECTION
 // ─────────────────────────────────────────────────────────────
 console.log("\nRendering PDF fixtures to PNGs...");
-await renderPdfPagesToPng(pdf01Path, "01_guest_report_standard");
-await renderPdfPagesToPng(pdf02Path, "02_guest_report_120_guests");
-await renderPdfPagesToPng(pdf03Path, "03_guest_report_seating");
-await renderPdfPagesToPng(pdf04Path, "04_guest_report_notes_dietary");
-await renderPdfPagesToPng(pdf05Path, "05_guest_report_empty");
-await renderPdfPagesToPng(pdf06Path, "06_guest_report_non_haxr");
-
-console.log("\nAll 6 PDF fixtures and PNGs rendered successfully!");
+await renderPdfPagesToPng(pdf01Path, "01_social_event_no_seating");
+await renderPdfPagesToPng(pdf02Path, "02_large_guest_book_120");
+await renderPdfPagesToPng(pdf03Path, "03_social_event_with_seating");
+await renderPdfPagesToPng(pdf04Path, "04_dietary_manifest");
+await renderPdfPagesToPng(pdf05Path, "05_empty_or_early_stage");
+await renderPdfPagesToPng(pdf06Path, "06_non_haxr_guest_book");
+await renderPdfPagesToPng(pdf07Path, "07_large_table_pagination_stress");
+await renderPdfPagesToPng(pdf08Path, "08_long_name_registry_stress");
+await renderPdfPagesToPng(pdf09Path, "09_protocol_diplomatic_seating");
+console.log("\nAll 9 PDF fixtures and PNGs rendered successfully!");
