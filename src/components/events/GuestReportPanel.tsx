@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Download, FileSpreadsheet, Search } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Search } from "lucide-react";
 import { CLIENT_TYPE_LABELS } from "@/lib/admin/constants";
 import { GUEST_STATUS_LABELS, GUEST_STATUS_STYLES, GUEST_STATUSES } from "@/lib/events/constants";
 import {
@@ -9,12 +9,14 @@ import {
   formatGuestCheckIn,
   formatGuestSeat,
   eventReportSlug,
+  resolveGuestCompanionInfo,
 } from "@/lib/events/export/report";
 import {
   buildGuestReportCsv,
   downloadCsvFile,
 } from "@/lib/events/export/csv";
 import { buildEditionCombinedExportCsv } from "@/lib/events/export/edition-csv";
+import { downloadGuestReportExcel } from "@/lib/events/export/excel-guest-operations";
 import type { EditionGiftReservation } from "@/lib/events/repositories/edition-gifts.repository";
 import { downloadGuestReportPdf } from "@/lib/events/export/pdf";
 import TableMapPrintView from "@/components/events/TableMapPrintView";
@@ -41,7 +43,7 @@ export default function GuestReportPanel({
   event,
   guests,
   seats,
-  stats,
+  stats: _externalStats,
   giftReservations = [],
 }: GuestReportPanelProps) {
   const [view, setView] = useState<ViewMode>("list");
@@ -51,25 +53,41 @@ export default function GuestReportPanel({
   const [isPending, startTransition] = useTransition();
 
   const report = useMemo(
-    () => buildGuestEventReport(event, guests, seats, stats),
-    [event, guests, seats, stats]
+    () => buildGuestEventReport({ event, guests, seats }),
+    [event, guests, seats]
   );
+
+  const reportStats = report.stats;
 
   const filteredGuests = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return guests
+    return report.guests
       .filter((guest) => statusFilter === "all" || guest.status === statusFilter)
       .filter((guest) => {
         if (!query) return true;
+        const companion = resolveGuestCompanionInfo(guest);
+        const companionMatch = companion.names.some((n) => n.toLowerCase().includes(query));
         return (
           guest.name.toLowerCase().includes(query) ||
           guest.email.toLowerCase().includes(query) ||
           guest.phone.toLowerCase().includes(query) ||
+          companionMatch ||
           (guest.seat?.tableName.toLowerCase().includes(query) ?? false)
         );
       })
       .sort((a, b) => a.name.localeCompare(b.name, "pt"));
-  }, [guests, search, statusFilter]);
+  }, [report.guests, search, statusFilter]);
+
+  async function handleExcel() {
+    startTransition(async () => {
+      try {
+        await downloadGuestReportExcel(report);
+        setMessage("Livro de operações em Excel (.xlsx) exportado com sucesso.");
+      } catch {
+        setMessage("Não foi possível gerar o ficheiro Excel.");
+      }
+    });
+  }
 
   function handleCsv() {
     const csv = event.editionRegistryKey
@@ -102,30 +120,29 @@ export default function GuestReportPanel({
             Relatório por evento
           </p>
           <h3 className="font-serif text-xl font-light text-white/90">
-            Gestão de convidados
+            Gestão de convidados & Operações de Banquete
           </h3>
           <p className="text-sm text-grey/55 mt-2 leading-relaxed">
-            Lista completa, distribuição por mesa e exportação para recepção ou
-            coordenação do evento.
+            Lista canónica de convidados, headcount de banquete, distribuição por mesa e exportação oficial.
           </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total", value: stats.totalGuests },
-            { label: "Pendentes", value: stats.invited },
-            { label: "Confirmados", value: stats.confirmed },
-            { label: "Recusados", value: stats.declined },
-            { label: "Check-in", value: stats.checkedIn },
+            { label: "Convidados Principais", value: reportStats.primaryGuests },
+            { label: "Confirmados", value: reportStats.confirmed },
+            { label: "Check-in", value: reportStats.checkedIn },
             {
-              label: "Presença prevista",
-              value: stats.expectedAttendance,
+              label: "Headcount Banquete (Previsto)",
+              value: reportStats.expectedAttendance,
             },
+            { label: "Acompanhantes (+1)", value: reportStats.plusOnesTotal },
+            { label: "Pendentes", value: reportStats.invited },
+            { label: "Recusados", value: reportStats.declined },
             {
               label: "Sem lugar",
-              value: stats.totalGuests - stats.assignedSeats,
+              value: reportStats.unassignedGuests,
             },
-            { label: "Duplicados", value: stats.duplicateGuests },
           ].map((item) => (
             <div key={item.label} className="admin-stat-card">
               <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
@@ -139,8 +156,18 @@ export default function GuestReportPanel({
         </div>
 
         <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handleExcel}
+            disabled={isPending}
+            className="admin-btn-secondary"
+            title="Exportar Livro de Operações em Excel (.xlsx) com abas de Resumo, Lista Mestre, Mesas e Cozinha"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-admin-gold" />
+            Exportar Excel (.xlsx)
+          </button>
           <button type="button" onClick={handleCsv} className="admin-btn-secondary">
-            <FileSpreadsheet className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             {event.editionRegistryKey
               ? "Exportar CSV (RSVP + presentes)"
               : "Exportar CSV"}
@@ -220,7 +247,7 @@ export default function GuestReportPanel({
               Lista de convidados
             </h2>
             <span className="text-xs text-grey/50 font-mono">
-              {filteredGuests.length} de {guests.length}
+              {filteredGuests.length} de {report.guests.length}
             </span>
           </div>
           {filteredGuests.length ? (
@@ -233,7 +260,7 @@ export default function GuestReportPanel({
                       "Contacto",
                       "Tipo",
                       "Estado",
-                      "Extras",
+                      "Acompanhantes",
                       "Lugar",
                       "Check-in",
                     ].map((heading) => (
@@ -247,41 +274,44 @@ export default function GuestReportPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredGuests.map((guest) => (
-                    <tr
-                      key={guest.id}
-                      className="border-b border-grey-dark/50 hover:bg-white/[0.02]"
-                    >
-                      <td className="px-4 py-3 text-white/90">{guest.name}</td>
-                      <td className="px-4 py-3 text-sm text-grey/60">
-                        {guest.email || guest.phone || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-grey/60">
-                        {CLIENT_TYPE_LABELS[guest.clientType]}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block text-[9px] font-mono tracking-[0.15em] uppercase px-2 py-1 border rounded-sm ${GUEST_STATUS_STYLES[guest.status]}`}
-                        >
-                          {GUEST_STATUS_LABELS[guest.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-grey/60">
-                        {guest.plusOnes > 0 ? `+${guest.plusOnes}` : "—"}
-                        {guest.dietaryNotes ? (
-                          <span className="block text-xs text-grey/45 mt-1">
-                            {guest.dietaryNotes}
+                  {filteredGuests.map((guest) => {
+                    const companion = resolveGuestCompanionInfo(guest);
+                    return (
+                      <tr
+                        key={guest.id}
+                        className="border-b border-grey-dark/50 hover:bg-white/[0.02]"
+                      >
+                        <td className="px-4 py-3 text-white/90">{guest.name}</td>
+                        <td className="px-4 py-3 text-sm text-grey/60">
+                          {guest.email || guest.phone || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-grey/60">
+                          {CLIENT_TYPE_LABELS[guest.clientType]}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-block text-[9px] font-mono tracking-[0.15em] uppercase px-2 py-1 border rounded-sm ${GUEST_STATUS_STYLES[guest.status]}`}
+                          >
+                            {GUEST_STATUS_LABELS[guest.status]}
                           </span>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-grey/60">
-                        {formatGuestSeat(guest)}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-grey/50 font-mono">
-                        {formatGuestCheckIn(guest.checkedInAt)}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-grey/60">
+                          {companion.formattedLabel}
+                          {guest.dietaryNotes ? (
+                            <span className="block text-xs text-red-300/80 mt-1">
+                              Restrição: {guest.dietaryNotes}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-grey/60">
+                          {formatGuestSeat(guest)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-grey/50 font-mono">
+                          {formatGuestCheckIn(guest.checkedInAt)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

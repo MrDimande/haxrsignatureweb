@@ -113,7 +113,7 @@ export async function sendPostEventReportForEvent(
     paymentsRepo.listPaymentsByClientId(client.id),
   ]);
 
-  const report = buildGuestEventReport(event, guests, seats, stats);
+  const report = buildGuestEventReport({ event, guests, seats });
   const pdfBuffer = await generateGuestReportPDFBuffer(report);
   const financials = eventFinancialTotals(
     client.id,
