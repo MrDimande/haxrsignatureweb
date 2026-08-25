@@ -1,275 +1,118 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import type {
   GuestImportBatch,
   GuestImportBatchStatus,
 } from "@/lib/events/types";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import {
+  createImportBatch as createImportBatchNeon,
+  getBulkAuditById as getBulkAuditByIdNeon,
+  getImportBatchById as getImportBatchByIdNeon,
+  insertBulkAudit as insertBulkAuditNeon,
+  listImportBatchesByEvent as listImportBatchesByEventNeon,
+  markBulkAuditUndone as markBulkAuditUndoneNeon,
+  removeImportBatchAtomic as removeImportBatchAtomicNeon,
+  undoImportBatchRemovalAtomic as undoImportBatchRemovalAtomicNeon,
+  updateImportBatchTotals as updateImportBatchTotalsNeon,
+} from "@/lib/events/repositories/guest-import-batches.neon.repository";
+import {
+  createImportBatch as createImportBatchSupabase,
+  getBulkAuditById as getBulkAuditByIdSupabase,
+  getImportBatchById as getImportBatchByIdSupabase,
+  insertBulkAudit as insertBulkAuditSupabase,
+  listImportBatchesByEvent as listImportBatchesByEventSupabase,
+  markBulkAuditUndone as markBulkAuditUndoneSupabase,
+  removeImportBatchAtomic as removeImportBatchAtomicSupabase,
+  undoImportBatchRemovalAtomic as undoImportBatchRemovalAtomicSupabase,
+  updateImportBatchTotals as updateImportBatchTotalsSupabase,
+} from "@/lib/events/repositories/guest-import-batches.supabase.repository";
+import type {
+  CreateImportBatchInput,
+  RemoveImportBatchResult,
+  UndoImportBatchRemovalResult,
+} from "@/lib/events/repositories/guest-import-batches.supabase.repository";
 
-function mapBatch(row: {
-  id: string;
-  event_id: string;
-  filename: string;
-  created_at: string;
-  updated_at: string;
-  operator_user_id: string;
-  operator_email: string;
-  total_rows: number;
-  valid_rows: number;
-  duplicate_rows: number;
-  invalid_rows: number;
-  removed_rows: number;
-  status: GuestImportBatchStatus;
-}): GuestImportBatch {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    filename: row.filename,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    operatorUserId: row.operator_user_id,
-    operatorEmail: row.operator_email,
-    totalRows: row.total_rows,
-    validRows: row.valid_rows,
-    duplicateRows: row.duplicate_rows,
-    invalidRows: row.invalid_rows,
-    removedRows: row.removed_rows,
-    status: row.status,
-  };
-}
+export type {
+  CreateImportBatchInput,
+  RemoveImportBatchResult,
+  UndoImportBatchRemovalResult,
+} from "@/lib/events/repositories/guest-import-batches.supabase.repository";
 
-export type CreateImportBatchInput = {
-  eventId: string;
-  filename: string;
-  operatorUserId: string;
-  operatorEmail: string;
-  totalRows: number;
-  validRows: number;
-  duplicateRows: number;
-  invalidRows: number;
-  removedRows?: number;
-  status?: GuestImportBatchStatus;
-};
-
-export type RemoveImportBatchResult = {
-  success: boolean;
-  batchId: string;
-  removedGuestCount: number;
-  alreadyRemovedCount: number;
-  protectedCount: number;
-  auditId: string;
-  status: "removed";
-};
-
-export type UndoImportBatchRemovalResult = {
-  success: boolean;
-  batchId: string;
-  restoredGuestCount: number;
-  auditId: string;
-  status: "completed";
-};
-
-export async function createImportBatch(
-  input: CreateImportBatchInput
+export function createImportBatch(
+  input: CreateImportBatchInput,
 ): Promise<GuestImportBatch> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("guest_import_batches")
-    .insert({
-      event_id: input.eventId,
-      filename: input.filename,
-      operator_user_id: input.operatorUserId,
-      operator_email: input.operatorEmail,
-      total_rows: input.totalRows,
-      valid_rows: input.validRows,
-      duplicate_rows: input.duplicateRows,
-      invalid_rows: input.invalidRows,
-      removed_rows: input.removedRows ?? 0,
-      status: input.status ?? "completed",
-    } as never)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"guest_import_batches">(data);
-  if (!row) throw new Error("Falha ao criar lote de importação.");
-  return mapBatch(row);
+  return shouldUseNeonServerDatabase()
+    ? createImportBatchNeon(input)
+    : createImportBatchSupabase(input);
 }
 
-export async function listImportBatchesByEvent(
-  eventId: string
+export function listImportBatchesByEvent(
+  eventId: string,
 ): Promise<GuestImportBatch[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("guest_import_batches")
-    .select("*")
-    .eq("event_id", eventId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-
-  const batches = asTableRows<"guest_import_batches">(data).map(mapBatch);
-
-  // Fetch active removal audits to power the Undo functionality
-  const { data: auditData, error: auditError } = await supabase
-    .from("guest_bulk_audit")
-    .select("id, batch_id, created_at")
-    .eq("event_id", eventId)
-    .eq("action", "remove_import_batch")
-    .is("undone_at", null)
-    .order("created_at", { ascending: false });
-
-  if (auditError) {
-    console.error("Failed to fetch bulk audits for import batches:", auditError);
-  } else if (auditData) {
-    for (const batch of batches) {
-      if (batch.status === "removed") {
-        const audit = (auditData as { id: string; batch_id: string; created_at: string }[]).find(a => a.batch_id === batch.id);
-        if (audit) {
-          batch.latestReversibleRemoval = {
-            auditId: audit.id,
-            createdAt: audit.created_at,
-          };
-        }
-      }
-    }
-  }
-
-  return batches;
+  return shouldUseNeonServerDatabase()
+    ? listImportBatchesByEventNeon(eventId)
+    : listImportBatchesByEventSupabase(eventId);
 }
 
-export async function getImportBatchById(
-  batchId: string
+export function getImportBatchById(
+  batchId: string,
 ): Promise<GuestImportBatch | null> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("guest_import_batches")
-    .select("*")
-    .eq("id", batchId)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"guest_import_batches">(data);
-  return row ? mapBatch(row) : null;
+  return shouldUseNeonServerDatabase()
+    ? getImportBatchByIdNeon(batchId)
+    : getImportBatchByIdSupabase(batchId);
 }
 
-export async function updateImportBatchTotals(
+export function updateImportBatchTotals(
   batchId: string,
   eventId: string,
   patch: Partial<{
     removedRows: number;
     status: GuestImportBatchStatus;
-  }>
+  }>,
 ): Promise<GuestImportBatch> {
-  const supabase = createAdminClient();
-  const payload: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
-  };
-  if (patch.removedRows !== undefined) payload.removed_rows = patch.removedRows;
-  if (patch.status !== undefined) payload.status = patch.status;
-
-  const { data, error } = await supabase
-    .from("guest_import_batches")
-    .update(payload as never)
-    .eq("id", batchId)
-    .eq("event_id", eventId)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"guest_import_batches">(data);
-  if (!row) throw new Error("Lote não encontrado.");
-  return mapBatch(row);
+  return shouldUseNeonServerDatabase()
+    ? updateImportBatchTotalsNeon(batchId, eventId, patch)
+    : updateImportBatchTotalsSupabase(batchId, eventId, patch);
 }
 
-export async function insertBulkAudit(input: {
-  eventId: string;
-  batchId?: string | null;
-  action: string;
-  guestIds: string[];
-  operatorEmail: string;
-  impact: Record<string, unknown>;
-  undoPayload?: Record<string, unknown> | null;
-}): Promise<string> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("guest_bulk_audit")
-    .insert({
-      event_id: input.eventId,
-      batch_id: input.batchId ?? null,
-      action: input.action,
-      guest_ids: input.guestIds,
-      operator_email: input.operatorEmail,
-      impact: input.impact,
-      undo_payload: input.undoPayload ?? null,
-    } as never)
-    .select("id")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const id = (data as { id?: string } | null)?.id;
-  if (!id) throw new Error("Falha ao registar auditoria em massa.");
-  return id;
+export function insertBulkAudit(
+  input: Parameters<typeof insertBulkAuditSupabase>[0],
+): Promise<string> {
+  return shouldUseNeonServerDatabase()
+    ? insertBulkAuditNeon(input)
+    : insertBulkAuditSupabase(input);
 }
 
-export async function getBulkAuditById(auditId: string, eventId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("guest_bulk_audit")
-    .select("*")
-    .eq("id", auditId)
-    .eq("event_id", eventId)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  return asTableRow<"guest_bulk_audit">(data);
+export function getBulkAuditById(auditId: string, eventId: string) {
+  return shouldUseNeonServerDatabase()
+    ? getBulkAuditByIdNeon(auditId, eventId)
+    : getBulkAuditByIdSupabase(auditId, eventId);
 }
 
-export async function markBulkAuditUndone(
+export function markBulkAuditUndone(
   auditId: string,
-  eventId: string
+  eventId: string,
 ): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("guest_bulk_audit")
-    .update({ undone_at: new Date().toISOString() } as never)
-    .eq("id", auditId)
-    .eq("event_id", eventId);
-
-  if (error) throw new Error(error.message);
+  return shouldUseNeonServerDatabase()
+    ? markBulkAuditUndoneNeon(auditId, eventId)
+    : markBulkAuditUndoneSupabase(auditId, eventId);
 }
 
-/** Atomic batch removal via PostgreSQL RPC. */
-export async function removeImportBatchAtomic(
+export function removeImportBatchAtomic(
   eventId: string,
   batchId: string,
-  operatorEmail: string
+  operatorEmail: string,
 ): Promise<RemoveImportBatchResult> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.rpc("remove_guest_import_batch_atomic", {
-    p_event_id: eventId,
-    p_batch_id: batchId,
-    p_operator_user_id: operatorEmail,
-    p_operator_email: operatorEmail,
-  } as never);
-
-  if (error) throw new Error(error.message);
-  return data as RemoveImportBatchResult;
+  return shouldUseNeonServerDatabase()
+    ? removeImportBatchAtomicNeon(eventId, batchId, operatorEmail)
+    : removeImportBatchAtomicSupabase(eventId, batchId, operatorEmail);
 }
 
-/** Atomic batch removal undo via PostgreSQL RPC. */
-export async function undoImportBatchRemovalAtomic(
+export function undoImportBatchRemovalAtomic(
   eventId: string,
   auditId: string,
-  operatorEmail: string
+  operatorEmail: string,
 ): Promise<UndoImportBatchRemovalResult> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.rpc("undo_guest_import_batch_removal_atomic", {
-    p_event_id: eventId,
-    p_audit_id: auditId,
-    p_operator_user_id: operatorEmail,
-    p_operator_email: operatorEmail,
-  } as never);
-
-  if (error) throw new Error(error.message);
-  return data as UndoImportBatchRemovalResult;
+  return shouldUseNeonServerDatabase()
+    ? undoImportBatchRemovalAtomicNeon(eventId, auditId, operatorEmail)
+    : undoImportBatchRemovalAtomicSupabase(eventId, auditId, operatorEmail);
 }
