@@ -11,6 +11,8 @@ import type { CatalogFormData } from "@/lib/admin/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type CatalogStateRow = { is_active: boolean };
+
 function isMigrationPreview(): boolean {
   return (
     process.env.VERCEL_ENV === "preview" &&
@@ -51,7 +53,10 @@ export async function GET() {
 
     const activeItems = await listCatalog(undefined, false);
     const allItems = await listCatalog(undefined, true);
-    const softDeleted = allItems.find((item) => item.id === id);
+    const databaseState = await neonQuery<CatalogStateRow>(
+      "SELECT is_active FROM public.service_catalog WHERE id = $1",
+      [id],
+    );
 
     const operations = {
       create: created.id === id,
@@ -59,9 +64,10 @@ export async function GET() {
       update:
         updated.id === id &&
         updated.name.endsWith(" Updated") &&
-        updated.price === 2345,
+        updated.basePrice === 2345,
       softDeleteHidden: !activeItems.some((item) => item.id === id),
-      inactiveVisible: softDeleted?.id === id && softDeleted.isActive === false,
+      inactiveVisible: allItems.some((item) => item.id === id),
+      databaseInactive: databaseState.rows[0]?.is_active === false,
     };
 
     const ok = Object.values(operations).every(Boolean);
