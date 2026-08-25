@@ -1,101 +1,52 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
 import type { GuestGroup, GuestGroupFormData } from "@/lib/events/types";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import {
+  countGuestsInGroup as countGuestsInGroupNeon,
+  createGroup as createGroupNeon,
+  deleteGroup as deleteGroupNeon,
+  listGroupsByEvent as listGroupsByEventNeon,
+  updateGroup as updateGroupNeon,
+} from "@/lib/events/repositories/guest-groups.neon.repository";
+import {
+  countGuestsInGroup as countGuestsInGroupSupabase,
+  createGroup as createGroupSupabase,
+  deleteGroup as deleteGroupSupabase,
+  listGroupsByEvent as listGroupsByEventSupabase,
+  updateGroup as updateGroupSupabase,
+} from "@/lib/events/repositories/guest-groups.supabase.repository";
 
-function mapGroup(row: {
-  id: string;
-  event_id: string;
-  name: string;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-}): GuestGroup {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    name: row.name,
-    notes: row.notes,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+export function listGroupsByEvent(eventId: string): Promise<GuestGroup[]> {
+  return shouldUseNeonServerDatabase()
+    ? listGroupsByEventNeon(eventId)
+    : listGroupsByEventSupabase(eventId);
 }
 
-export async function listGroupsByEvent(eventId: string): Promise<GuestGroup[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("guest_groups")
-    .select("*")
-    .eq("event_id", eventId)
-    .order("name");
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"guest_groups">(data).map(mapGroup);
-}
-
-export async function createGroup(
+export function createGroup(
   eventId: string,
-  data: GuestGroupFormData
+  data: GuestGroupFormData,
 ): Promise<GuestGroup> {
-  const supabase = createAdminClient();
-  const { data: saved, error } = await supabase
-    .from("guest_groups")
-    .insert({
-      event_id: eventId,
-      name: data.name.trim(),
-      notes: data.notes.trim(),
-    } as never)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"guest_groups">(saved);
-  if (!row) throw new Error("Falha ao criar grupo.");
-  return mapGroup(row);
+  return shouldUseNeonServerDatabase()
+    ? createGroupNeon(eventId, data)
+    : createGroupSupabase(eventId, data);
 }
 
-export async function updateGroup(
+export function updateGroup(
   id: string,
-  data: GuestGroupFormData
+  data: GuestGroupFormData,
 ): Promise<GuestGroup> {
-  const supabase = createAdminClient();
-  const { data: saved, error } = await supabase
-    .from("guest_groups")
-    .update({
-      name: data.name.trim(),
-      notes: data.notes.trim(),
-      updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id", id)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"guest_groups">(saved);
-  if (!row) throw new Error("Grupo não encontrado.");
-  return mapGroup(row);
+  return shouldUseNeonServerDatabase()
+    ? updateGroupNeon(id, data)
+    : updateGroupSupabase(id, data);
 }
 
-export async function deleteGroup(id: string): Promise<void> {
-  const supabase = createAdminClient();
-
-  const { error: clearError } = await supabase
-    .from("guests")
-    .update({ group_id: null } as never)
-    .eq("group_id", id);
-
-  if (clearError) throw new Error(clearError.message);
-
-  const { error } = await supabase.from("guest_groups").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+export function deleteGroup(id: string): Promise<void> {
+  return shouldUseNeonServerDatabase()
+    ? deleteGroupNeon(id)
+    : deleteGroupSupabase(id);
 }
 
-export async function countGuestsInGroup(groupId: string): Promise<number> {
-  const supabase = createAdminClient();
-  const { count, error } = await supabase
-    .from("guests")
-    .select("*", { count: "exact", head: true })
-    .eq("group_id", groupId);
-
-  if (error) throw new Error(error.message);
-  return count ?? 0;
+export function countGuestsInGroup(groupId: string): Promise<number> {
+  return shouldUseNeonServerDatabase()
+    ? countGuestsInGroupNeon(groupId)
+    : countGuestsInGroupSupabase(groupId);
 }
