@@ -3,6 +3,8 @@ const NEON_AUTH_URL_KEYS = [
   "NEON_AUTH_BASE_URL",
 ] as const;
 
+const DATABASE_MIGRATION_BRANCH = "migration/supabase-to-neon";
+
 export type NeonClientEnvironmentCheck =
   | { ok: true; authUrl: string; dataApiUrl: string }
   | { ok: false; message: string };
@@ -86,6 +88,27 @@ export function validateNeonServerEnvironment(): NeonServerEnvironmentCheck {
   }
 
   return { ok: true, databaseUrl };
+}
+
+/**
+ * Progressive cutover switch for privileged/server-side database access.
+ *
+ * Production must never move merely because DATABASE_URL exists. The migration
+ * branch uses Neon automatically in Vercel Preview; every other environment
+ * remains on Supabase unless HAXR_DATABASE_PROVIDER=neon is explicitly set.
+ */
+export function shouldUseNeonServerDatabase(): boolean {
+  const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
+  if (!hasDatabaseUrl) return false;
+
+  if (process.env.HAXR_DATABASE_PROVIDER?.trim().toLowerCase() === "neon") {
+    return true;
+  }
+
+  return (
+    process.env.VERCEL_ENV === "preview" &&
+    process.env.VERCEL_GIT_COMMIT_REF === DATABASE_MIGRATION_BRANCH
+  );
 }
 
 export function isNeonAuthServerConfigured(): boolean {
