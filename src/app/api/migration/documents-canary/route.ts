@@ -136,6 +136,7 @@ export async function GET() {
     return new NextResponse(null, { status: 404 });
   }
 
+  let stage = "initial_state";
   const initialDocuments = await listDocuments();
   const initialOperational = await listOperationalDocuments();
   const initialDashboard = await getDashboardStats();
@@ -152,14 +153,17 @@ export async function GET() {
   let createdClientId: string | null = null;
 
   try {
+    stage = "peek_proforma_number";
     const peekBefore = await peekDocumentNumber("haxr-signature", "proforma");
 
+    stage = "create_proforma";
     const proforma = await saveDocument(makeForm(suffix), undefined, {
       createClientIfMissing: true,
     });
     createdDocumentIds.push(proforma.id);
     createdClientId = proforma.clientId;
 
+    stage = "read_proforma";
     const fetched = await getDocumentById(proforma.id);
     const filtered = await listDocuments({
       documentType: "proforma",
@@ -173,6 +177,7 @@ export async function GET() {
         })
       : [];
 
+    stage = "update_proforma";
     const updated = await saveDocument(
       makeForm(suffix, {
         documentNumber: proforma.documentNumber,
@@ -195,8 +200,10 @@ export async function GET() {
       proforma.id,
     );
 
+    stage = "document_markers";
     const emailed = await markEmailSent(proforma.id);
     const whatsapped = await markWhatsAppShared(proforma.id);
+    const sent = await updateDocumentStatus(proforma.id, "sent");
     const pending = await markClientApprovalPending(proforma.id);
     const approvalsPendingDuring = await countPortalApprovalsPending();
     const approved = await recordClientApproval(
@@ -204,10 +211,10 @@ export async function GET() {
       "approved",
       "migration-canary-approved",
     );
-    const sent = await updateDocumentStatus(proforma.id, "sent");
     const responsesDuring = await countPortalClientResponses();
     const pdf = await markPdfGenerated(proforma.id);
 
+    stage = "portal_visibility";
     const portalDocuments = proforma.clientId
       ? await listPortalDocumentsForClient({
           id: proforma.clientId,
@@ -215,6 +222,7 @@ export async function GET() {
         })
       : [];
 
+    stage = "create_invoice_conversion";
     const invoice = await saveDocument(
       makeForm(suffix, {
         documentType: "invoice",
@@ -233,6 +241,7 @@ export async function GET() {
 
     const convertedInvoice = await findInvoiceBySourceProforma(proforma.id);
 
+    stage = "concurrent_numbering";
     const receiptPeekBefore = await peekDocumentNumber(
       "haxr-signature",
       "receipt",
@@ -246,6 +255,7 @@ export async function GET() {
       "receipt",
     );
 
+    stage = "dashboard";
     const dashboardDuring = await getDashboardStats();
     const operationalDuring = await listOperationalDocuments();
 
@@ -273,7 +283,7 @@ export async function GET() {
       whatsapp: Boolean(whatsapped.whatsappSharedAt),
       approvalPending:
         pending.clientApprovalStatus === "pending" &&
-        approvalsPendingDuring >= initialDashboard.totalProformas,
+        approvalsPendingDuring >= 1,
       approvalResponse:
         approved.clientApprovalStatus === "approved" &&
         approved.clientApprovalNote === "migration-canary-approved" &&
@@ -286,8 +296,7 @@ export async function GET() {
         convertedInvoice?.id === invoice.id,
       concurrentNumbering:
         receiptA !== receiptB &&
-        receiptA !== receiptPeekBefore &&
-        receiptB !== receiptPeekBefore &&
+        receiptA === receiptPeekBefore &&
         receiptPeekAfter !== receiptA &&
         receiptPeekAfter !== receiptB,
       dashboard:
@@ -299,6 +308,7 @@ export async function GET() {
         operationalDuring.some((doc) => doc.id === invoice.id),
     };
 
+    stage = "cleanup";
     await deleteDocument(invoice.id);
     createdDocumentIds.splice(createdDocumentIds.indexOf(invoice.id), 1);
     await deleteDocument(proforma.id);
@@ -335,9 +345,16 @@ export async function GET() {
       },
       { status: ok ? 200 : 503 },
     );
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_error";
+    console.error("[documents-neon-canary]", stage, message);
     return NextResponse.json(
-      { ok: false, error: "documents_neon_canary_failed" },
+      {
+        ok: false,
+        error: "documents_neon_canary_failed",
+        stage,
+        message,
+      },
       { status: 503 },
     );
   } finally {
