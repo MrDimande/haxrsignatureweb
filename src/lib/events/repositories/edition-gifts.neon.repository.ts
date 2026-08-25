@@ -43,7 +43,7 @@ export async function listEditionGiftReservations(
              gift_id,
              gift_name,
              reserved_by,
-             created_at::text AS created_at
+             to_jsonb(created_at) #>> '{}' AS created_at
       FROM public.edition_gift_reservations
       WHERE registry_key = $1
       ORDER BY created_at DESC
