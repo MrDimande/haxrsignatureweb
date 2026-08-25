@@ -1,7 +1,6 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
-import { mapPayment } from "@/lib/finance/db/mappers";
-import type { TablesInsert } from "@/lib/supabase/database.types";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import * as neonPayments from "@/lib/finance/repositories/payments.neon.repository";
+import * as supabasePayments from "@/lib/finance/repositories/payments.supabase.repository";
 import type { PaymentRecord, RegisterPaymentInput } from "@/lib/finance/types";
 
 export type PaymentsBatchResult = {
@@ -9,123 +8,54 @@ export type PaymentsBatchResult = {
   items: PaymentRecord[];
 };
 
-export async function listPaymentsBatch(): Promise<PaymentsBatchResult> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("payments")
-      .select("*")
-      .order("paid_at", { ascending: false });
+type CreatePaymentInput = Omit<RegisterPaymentInput, "generateReceipt"> & {
+  documentId?: string | null;
+  clientName?: string;
+  eventName?: string;
+  documentNumber?: string | null;
+  sourceDocumentNumber?: string | null;
+};
 
-    if (error) {
-      return { available: false, items: [] };
-    }
-    return {
-      available: true,
-      items: asTableRows<"payments">(data).map((row) => mapPayment(row)),
-    };
-  } catch {
-    return { available: false, items: [] };
-  }
+export function listPaymentsBatch(): Promise<PaymentsBatchResult> {
+  return shouldUseNeonServerDatabase()
+    ? neonPayments.listPaymentsBatch()
+    : supabasePayments.listPaymentsBatch();
 }
 
-export async function listPaymentsByClientId(
+export function listPaymentsByClientId(
   clientId: string,
-  limit = 100
+  limit = 100,
 ): Promise<PaymentRecord[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("client_id", clientId)
-    .order("paid_at", { ascending: false })
-    .limit(limit);
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"payments">(data).map((row) => mapPayment(row));
+  return shouldUseNeonServerDatabase()
+    ? neonPayments.listPaymentsByClientId(clientId, limit)
+    : supabasePayments.listPaymentsByClientId(clientId, limit);
 }
 
-export async function listPaymentsByEventId(
+export function listPaymentsByEventId(
   eventId: string,
-  limit = 50
+  limit = 50,
 ): Promise<PaymentRecord[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("event_id", eventId)
-    .order("paid_at", { ascending: false })
-    .limit(limit);
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"payments">(data).map((row) => mapPayment(row));
+  return shouldUseNeonServerDatabase()
+    ? neonPayments.listPaymentsByEventId(eventId, limit)
+    : supabasePayments.listPaymentsByEventId(eventId, limit);
 }
 
-export async function listPayments(limit = 100): Promise<PaymentRecord[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .select("*")
-    .order("paid_at", { ascending: false })
-    .limit(limit);
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"payments">(data).map((row) => mapPayment(row));
+export function listPayments(limit = 100): Promise<PaymentRecord[]> {
+  return shouldUseNeonServerDatabase()
+    ? neonPayments.listPayments(limit)
+    : supabasePayments.listPayments(limit);
 }
 
-export async function createPayment(
-  input: Omit<RegisterPaymentInput, "generateReceipt"> & {
-    documentId?: string | null;
-    clientName?: string;
-    eventName?: string;
-    documentNumber?: string | null;
-    sourceDocumentNumber?: string | null;
-  }
-): Promise<PaymentRecord> {
-  const supabase = createAdminClient();
-
-  const payload: TablesInsert<"payments"> = {
-    business_id: input.businessId,
-    client_id: input.clientId ?? null,
-    event_id: input.eventId ?? null,
-    document_id: input.documentId ?? null,
-    source_document_id: input.sourceDocumentId ?? null,
-    amount: input.amount,
-    currency: input.currency,
-    payment_method: input.paymentMethod,
-    reference: input.reference?.trim() ?? "",
-    notes: input.notes?.trim() ?? "",
-    paid_at: input.paidAt ?? new Date().toISOString(),
-  };
-
-  const { data, error } = await supabase
-    .from("payments")
-    .insert(payload as never)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"payments">(data);
-  if (!row) throw new Error("Falha ao registar pagamento.");
-
-  return mapPayment(row, {
-    clientName: input.clientName,
-    eventName: input.eventName,
-    documentNumber: input.documentNumber ?? null,
-    sourceDocumentNumber: input.sourceDocumentNumber ?? null,
-  });
+export function createPayment(input: CreatePaymentInput): Promise<PaymentRecord> {
+  return shouldUseNeonServerDatabase()
+    ? neonPayments.createPayment(input)
+    : supabasePayments.createPayment(input);
 }
 
-export async function sumPaymentsForSourceDocument(
-  sourceDocumentId: string
+export function sumPaymentsForSourceDocument(
+  sourceDocumentId: string,
 ): Promise<number> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .select("amount")
-    .eq("source_document_id", sourceDocumentId);
-
-  if (error) throw new Error(error.message);
-  const rows = asTableRows<"payments">(data);
-  return rows.reduce((sum, row) => sum + Number(row.amount), 0);
+  return shouldUseNeonServerDatabase()
+    ? neonPayments.sumPaymentsForSourceDocument(sourceDocumentId)
+    : supabasePayments.sumPaymentsForSourceDocument(sourceDocumentId);
 }
