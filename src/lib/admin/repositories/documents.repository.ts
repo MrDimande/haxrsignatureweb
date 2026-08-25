@@ -27,9 +27,9 @@ import {
   peekDocumentNumberNeon,
   recordClientApprovalNeon,
   reserveDocumentNumberNeon,
-  saveDocumentNeon,
   updateDocumentStatusNeon,
 } from "@/lib/admin/repositories/documents.neon.repository";
+import { saveDocumentNeon } from "@/lib/admin/repositories/documents.neon.save.repository";
 import {
   countPortalApprovalsPendingSupabase,
   countPortalClientResponsesSupabase,
