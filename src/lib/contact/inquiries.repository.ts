@@ -1,222 +1,120 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { asTableRow, asTableRows } from "@/lib/supabase/helpers";
-import type { Tables } from "@/lib/supabase/database.types";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import type { ContactInquiry, InquiryStatus } from "@/lib/contact/types";
+import {
+  countNewInquiries as countNewInquiriesNeon,
+  countRecentInquiriesByEmail as countRecentInquiriesByEmailNeon,
+  createInquiry as createInquiryNeon,
+  getInquiriesDueForExperiences as getInquiriesDueForExperiencesNeon,
+  getInquiriesDueForLastCall as getInquiriesDueForLastCallNeon,
+  getInquiriesDueForMeeting as getInquiriesDueForMeetingNeon,
+  getInquiriesDueForPortfolio as getInquiriesDueForPortfolioNeon,
+  getInquiryById as getInquiryByIdNeon,
+  listInquiries as listInquiriesNeon,
+  markBrevoFunnelSent as markBrevoFunnelSentNeon,
+  updateInquiryStatus as updateInquiryStatusNeon,
+} from "@/lib/contact/inquiries.neon.repository";
+import {
+  countNewInquiries as countNewInquiriesSupabase,
+  countRecentInquiriesByEmail as countRecentInquiriesByEmailSupabase,
+  createInquiry as createInquirySupabase,
+  getInquiriesDueForExperiences as getInquiriesDueForExperiencesSupabase,
+  getInquiriesDueForLastCall as getInquiriesDueForLastCallSupabase,
+  getInquiriesDueForMeeting as getInquiriesDueForMeetingSupabase,
+  getInquiriesDueForPortfolio as getInquiriesDueForPortfolioSupabase,
+  getInquiryById as getInquiryByIdSupabase,
+  listInquiries as listInquiriesSupabase,
+  markBrevoFunnelSent as markBrevoFunnelSentSupabase,
+  updateInquiryStatus as updateInquiryStatusSupabase,
+} from "@/lib/contact/inquiries.supabase.repository";
+import type {
+  BrevoFunnelTimestampField,
+  CreateInquiryInput,
+} from "@/lib/contact/inquiries.supabase.repository";
 
-function mapInquiry(row: Tables<"contact_inquiries">): ContactInquiry {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    projectType: row.project_type,
-    packageLabel: row.package_label,
-    intent: row.intent ?? row.message,
-    message: row.message,
-    status: row.status,
-    marketingOptIn: row.marketing_opt_in,
-    source: row.source,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    brevoLeadWelcomeAt: row.brevo_lead_welcome_at,
-    brevoPortfolioSentAt: row.brevo_portfolio_sent_at,
-    brevoExperiencesSentAt: row.brevo_experiences_sent_at,
-    brevoMeetingSentAt: row.brevo_meeting_sent_at,
-    brevoLastCallSentAt: row.brevo_last_call_sent_at,
-    brevoNewsletterWelcomeAt: row.brevo_newsletter_welcome_at,
-  };
+export type {
+  BrevoFunnelTimestampField,
+  CreateInquiryInput,
+} from "@/lib/contact/inquiries.supabase.repository";
+
+export function createInquiry(input: CreateInquiryInput): Promise<ContactInquiry> {
+  return shouldUseNeonServerDatabase()
+    ? createInquiryNeon(input)
+    : createInquirySupabase(input);
 }
 
-export type BrevoFunnelTimestampField =
-  | "brevo_lead_welcome_at"
-  | "brevo_portfolio_sent_at"
-  | "brevo_experiences_sent_at"
-  | "brevo_meeting_sent_at"
-  | "brevo_last_call_sent_at"
-  | "brevo_newsletter_welcome_at";
-
-export interface CreateInquiryInput {
-  name: string;
-  email: string;
-  projectType: string;
-  intent: string;
-  message?: string;
-  packageLabel?: string | null;
-  marketingOptIn?: boolean;
-}
-
-export async function createInquiry(
-  input: CreateInquiryInput
-): Promise<ContactInquiry> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .insert({
-      name: input.name,
-      email: input.email.toLowerCase(),
-      project_type: input.projectType,
-      package_label: input.packageLabel?.trim() || null,
-      intent: input.intent.trim(),
-      message: input.message?.trim() || "",
-      marketing_opt_in: input.marketingOptIn ?? false,
-      source: "website",
-    } as never)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"contact_inquiries">(data);
-  if (!row) throw new Error("Falha ao guardar pedido de contacto.");
-  return mapInquiry(row);
-}
-
-export async function countRecentInquiriesByEmail(
+export function countRecentInquiriesByEmail(
   email: string,
-  windowMs = 60 * 60 * 1000
+  windowMs = 60 * 60 * 1000,
 ): Promise<number> {
-  const supabase = createAdminClient();
-  const since = new Date(Date.now() - windowMs).toISOString();
-  const { count, error } = await supabase
-    .from("contact_inquiries")
-    .select("*", { count: "exact", head: true })
-    .eq("email", email.toLowerCase())
-    .gte("created_at", since);
-
-  if (error) throw new Error(error.message);
-  return count ?? 0;
+  return shouldUseNeonServerDatabase()
+    ? countRecentInquiriesByEmailNeon(email, windowMs)
+    : countRecentInquiriesByEmailSupabase(email, windowMs);
 }
 
-export async function getInquiryById(id: string): Promise<ContactInquiry | null> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"contact_inquiries">(data);
-  return row ? mapInquiry(row) : null;
+export function getInquiryById(id: string): Promise<ContactInquiry | null> {
+  return shouldUseNeonServerDatabase()
+    ? getInquiryByIdNeon(id)
+    : getInquiryByIdSupabase(id);
 }
 
-export async function listInquiries(): Promise<ContactInquiry[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"contact_inquiries">(data).map(mapInquiry);
+export function listInquiries(): Promise<ContactInquiry[]> {
+  return shouldUseNeonServerDatabase()
+    ? listInquiriesNeon()
+    : listInquiriesSupabase();
 }
 
-export async function updateInquiryStatus(
+export function updateInquiryStatus(
   id: string,
-  status: InquiryStatus
+  status: InquiryStatus,
 ): Promise<ContactInquiry> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .update({ status } as never)
-    .eq("id", id)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  const row = asTableRow<"contact_inquiries">(data);
-  if (!row) throw new Error("Pedido não encontrado.");
-  return mapInquiry(row);
+  return shouldUseNeonServerDatabase()
+    ? updateInquiryStatusNeon(id, status)
+    : updateInquiryStatusSupabase(id, status);
 }
 
-export async function countNewInquiries(): Promise<number> {
-  const supabase = createAdminClient();
-  const { count, error } = await supabase
-    .from("contact_inquiries")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "new");
-
-  if (error) throw new Error(error.message);
-  return count ?? 0;
+export function countNewInquiries(): Promise<number> {
+  return shouldUseNeonServerDatabase()
+    ? countNewInquiriesNeon()
+    : countNewInquiriesSupabase();
 }
 
-export async function markBrevoFunnelSent(
+export function markBrevoFunnelSent(
   id: string,
-  field: BrevoFunnelTimestampField
+  field: BrevoFunnelTimestampField,
 ): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("contact_inquiries")
-    .update({ [field]: new Date().toISOString() } as never)
-    .eq("id", id);
-
-  if (error) throw new Error(error.message);
+  return shouldUseNeonServerDatabase()
+    ? markBrevoFunnelSentNeon(id, field)
+    : markBrevoFunnelSentSupabase(id, field);
 }
 
-function daysAgoIso(days: number): string {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString();
-}
-
-export async function getInquiriesDueForPortfolio(
-  afterDays: number
+export function getInquiriesDueForPortfolio(
+  afterDays: number,
 ): Promise<ContactInquiry[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .select("*")
-    .eq("status", "new")
-    .not("brevo_lead_welcome_at", "is", null)
-    .is("brevo_portfolio_sent_at", null)
-    .lte("created_at", daysAgoIso(afterDays));
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"contact_inquiries">(data).map(mapInquiry);
+  return shouldUseNeonServerDatabase()
+    ? getInquiriesDueForPortfolioNeon(afterDays)
+    : getInquiriesDueForPortfolioSupabase(afterDays);
 }
 
-export async function getInquiriesDueForLastCall(
-  afterDays: number
+export function getInquiriesDueForLastCall(
+  afterDays: number,
 ): Promise<ContactInquiry[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .select("*")
-    .eq("status", "new")
-    .not("brevo_lead_welcome_at", "is", null)
-    .is("brevo_last_call_sent_at", null)
-    .lte("created_at", daysAgoIso(afterDays));
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"contact_inquiries">(data).map(mapInquiry);
+  return shouldUseNeonServerDatabase()
+    ? getInquiriesDueForLastCallNeon(afterDays)
+    : getInquiriesDueForLastCallSupabase(afterDays);
 }
 
-export async function getInquiriesDueForExperiences(
-  afterDays: number
+export function getInquiriesDueForExperiences(
+  afterDays: number,
 ): Promise<ContactInquiry[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .select("*")
-    .eq("status", "new")
-    .not("brevo_lead_welcome_at", "is", null)
-    .is("brevo_experiences_sent_at", null)
-    .lte("created_at", daysAgoIso(afterDays));
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"contact_inquiries">(data).map(mapInquiry);
+  return shouldUseNeonServerDatabase()
+    ? getInquiriesDueForExperiencesNeon(afterDays)
+    : getInquiriesDueForExperiencesSupabase(afterDays);
 }
 
-export async function getInquiriesDueForMeeting(
-  afterDays: number
+export function getInquiriesDueForMeeting(
+  afterDays: number,
 ): Promise<ContactInquiry[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contact_inquiries")
-    .select("*")
-    .eq("status", "new")
-    .not("brevo_lead_welcome_at", "is", null)
-    .is("brevo_meeting_sent_at", null)
-    .lte("created_at", daysAgoIso(afterDays));
-
-  if (error) throw new Error(error.message);
-  return asTableRows<"contact_inquiries">(data).map(mapInquiry);
+  return shouldUseNeonServerDatabase()
+    ? getInquiriesDueForMeetingNeon(afterDays)
+    : getInquiriesDueForMeetingSupabase(afterDays);
 }
