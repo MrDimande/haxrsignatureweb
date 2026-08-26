@@ -40,6 +40,10 @@ type AccessibleEventRow = {
   operational_event_id: string | null;
 };
 
+type EventMembershipRow = {
+  client_event_id: string;
+};
+
 const TEAM_ACTIONS: PortalConciergeAction[] = [
   "intake_create",
   "item_view",
@@ -116,8 +120,9 @@ async function listAccessibleEventKeysSupabase(userId: string): Promise<string[]
     .eq("user_id", userId);
   if (membershipsError) throw new Error(membershipsError.message);
 
+  const membershipRows = (memberships ?? []) as EventMembershipRow[];
   const memberIds = Array.from(
-    new Set((memberships ?? []).map((row) => row.client_event_id).filter(Boolean)),
+    new Set(membershipRows.map((row) => row.client_event_id).filter(Boolean)),
   );
 
   let memberEvents: AccessibleEventRow[] = [];
