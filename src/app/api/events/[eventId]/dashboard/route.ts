@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { getCurrentAppSession } from "@/lib/auth/app-session";
+import {
+  resolveClientEventReadRequestAuth,
+  validateClientEventAuthEnvironment,
+} from "@/lib/auth/client-event-server-clients";
 import { handleClientEventDashboardRequest } from "@/lib/dashboard/client-event-dashboard-api";
 import type { ClientEventDashboardAuthClient } from "@/lib/dashboard/client-event-dashboard-service";
 import { getDashboardData } from "@/lib/dashboard/get-dashboard-data";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import type { DashboardDataResult } from "@/lib/dashboard/types";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
-import { validateClientAppAuthEnvironment } from "@/lib/supabase/config";
 
 type RouteContext = {
   params: Promise<{ eventId: string }>;
@@ -26,18 +27,15 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json(mockResult satisfies DashboardDataResult);
     }
 
-    const envCheck = validateClientAppAuthEnvironment();
-    const session = await getCurrentAppSession();
-    const { user, supabase } = await resolveAuthenticatedSupabaseClient(request);
+    const envCheck = validateClientEventAuthEnvironment();
+    const auth = await resolveClientEventReadRequestAuth<ClientEventDashboardAuthClient>(request);
 
     const result = await handleClientEventDashboardRequest({
       envCheck,
-      user: user ?? session.user,
+      user: auth.user,
       eventId: trimmedEventId,
-      authClient: envCheck.ok
-        ? (supabase as unknown as ClientEventDashboardAuthClient)
-        : null,
-      profile: session.profile,
+      authClient: auth.authClient,
+      profile: auth.profile,
     });
 
     return NextResponse.json(result.body satisfies DashboardDataResult, {

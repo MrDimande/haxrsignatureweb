@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { getCurrentAppSession } from "@/lib/auth/app-session";
+import {
+  createClientEventOperationalRpcClient,
+  resolveClientEventReadRequestAuth,
+  validateClientEventAuthEnvironment,
+  validateClientEventOperationalEnvironment,
+} from "@/lib/auth/client-event-server-clients";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { getBudgetModuleData } from "@/lib/event-modules/get-event-module-data";
 import type { BudgetModuleData, ModuleDataResult } from "@/lib/event-modules/types";
 import { handleClientEventPaymentsRequest } from "@/lib/payments/client-event-payments-api";
+import type { ClientEventPaymentsRpcClient } from "@/lib/payments/client-event-payments-rpc";
 import type { ClientEventPaymentsAuthClient } from "@/lib/payments/client-event-payments-service";
-import {
-  validateClientAppAuthEnvironment,
-  validateClientAppServiceRoleEnvironment,
-} from "@/lib/supabase/config";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -30,19 +31,20 @@ export async function GET(request: Request, context: RouteContext) {
       });
     }
 
-    const envCheck = validateClientAppAuthEnvironment();
-    const serviceRoleCheck = validateClientAppServiceRoleEnvironment();
-    const session = await getCurrentAppSession();
-    const { user, supabase } = await resolveAuthenticatedSupabaseClient(request);
+    const envCheck = validateClientEventAuthEnvironment();
+    const serviceRoleCheck = validateClientEventOperationalEnvironment();
+    const auth = await resolveClientEventReadRequestAuth<ClientEventPaymentsAuthClient>(request);
+    const rpcClient = serviceRoleCheck.ok
+      ? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>()
+      : null;
 
     const result = await handleClientEventPaymentsRequest({
       envCheck,
       serviceRoleCheck,
-      user: user ?? session.user,
+      user: auth.user,
       eventId: trimmedEventId,
-      authClient: envCheck.ok
-        ? (supabase as unknown as ClientEventPaymentsAuthClient)
-        : null,
+      authClient: auth.authClient,
+      rpcClient,
     });
 
     return NextResponse.json(result.body satisfies ModuleDataResult<BudgetModuleData>, {
