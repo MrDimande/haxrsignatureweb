@@ -29,6 +29,18 @@ if (isMigrationPreview) {
         process.env.NEXT_PUBLIC_HAXR_AUTH_PROVIDER?.trim().toLowerCase() === "neon",
     }),
   );
+
+  const authCanary = spawnSync(
+    process.execPath,
+    [resolve(process.cwd(), "scripts/neon-auth-preview-canary.mjs")],
+    {
+      stdio: "inherit",
+      env: process.env,
+    },
+  );
+  if ((authCanary.status ?? 1) !== 0) {
+    process.exit(authCanary.status ?? 1);
+  }
 }
 
 const incoming = process.env.NODE_ENV?.trim();
