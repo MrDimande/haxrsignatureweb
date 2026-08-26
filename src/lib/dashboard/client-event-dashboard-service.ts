@@ -226,15 +226,31 @@ export function mapClientEventToDashboardData(
           ? progressOverall
           : event.status === "planning"
             ? 8
-            : 0,
+            : event.status === "active"
+              ? 20
+              : 0,
     },
-    kpis: [
+    meta: {
+      lastSyncedAt: event.updated_at,
+      lastSyncedLabel: "Agora",
+      role: "client",
+      operationalLinked: hasOperationalLink,
+      operationalEventId: event.operational_event_id,
+    },
+    stats: [
+      {
+        id: "guests-estimated",
+        label: hasOperationalLink ? "Convidados registados" : "Convidados estimados",
+        value: guests.total,
+        valueType: "number",
+        detail: hasOperationalLink ? "na lista operacional" : "definidos no evento",
+      },
       {
         id: "guests-confirmed",
         label: "Convidados confirmados",
         value: guests.confirmed,
         valueType: "number",
-        detail: guests.total > 0 ? `de ${guests.total} registados` : "sem convidados ainda",
+        detail: `de ${guests.total} convidados`,
       },
       {
         id: "budget-planned",
