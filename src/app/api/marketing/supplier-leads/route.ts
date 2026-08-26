@@ -11,12 +11,12 @@ import {
 } from "@/lib/email/marketing/marketing-contact";
 import { captureMarketingContact } from "@/lib/email/marketing/contact-capture";
 import { getCurrentAppSession } from "@/lib/auth/app-session";
-import { validateClientAppServiceRoleEnvironment } from "@/lib/supabase/config";
-import { createAdminClient } from "@/lib/supabase/server";
 import {
-  createSupplierApplication,
-  type SupplierApplicationClient,
-} from "@/lib/vendors/supplier-application";
+  shouldUseNeonServerDatabase,
+  validateNeonServerEnvironment,
+} from "@/lib/neon/config";
+import { validateClientAppServiceRoleEnvironment } from "@/lib/supabase/config";
+import { createSupplierApplicationForActiveDatabase } from "@/lib/vendors/supplier-application";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,9 +50,11 @@ export async function POST(request: Request) {
 
     const { firstName, lastName } = splitFullName(parsed.data.responsibleName);
     const now = new Date().toISOString();
-    const serviceRoleCheck = validateClientAppServiceRoleEnvironment();
+    const databaseCheck = shouldUseNeonServerDatabase()
+      ? validateNeonServerEnvironment()
+      : validateClientAppServiceRoleEnvironment();
 
-    if (!serviceRoleCheck.ok) {
+    if (!databaseCheck.ok) {
       return NextResponse.json(
         { error: "A candidatura está temporariamente indisponível." },
         { status: 503 },
@@ -67,20 +69,17 @@ export async function POST(request: Request) {
       // Public applications remain valid without an authenticated account.
     }
 
-    const application = await createSupplierApplication(
-      createAdminClient() as unknown as SupplierApplicationClient,
-      {
-        applicantUserId,
-        supplierName: parsed.data.supplierName,
-        responsibleName: parsed.data.responsibleName,
-        email,
-        phone: parsed.data.phone,
-        category: parsed.data.category,
-        city: parsed.data.city,
-        portfolioUrl: parsed.data.portfolioUrl || null,
-        message: parsed.data.message || null,
-      },
-    );
+    const application = await createSupplierApplicationForActiveDatabase({
+      applicantUserId,
+      supplierName: parsed.data.supplierName,
+      responsibleName: parsed.data.responsibleName,
+      email,
+      phone: parsed.data.phone,
+      category: parsed.data.category,
+      city: parsed.data.city,
+      portfolioUrl: parsed.data.portfolioUrl || null,
+      message: parsed.data.message || null,
+    });
 
     if (!application.ok) {
       return NextResponse.json({ error: application.message }, { status: 503 });
