@@ -12,7 +12,11 @@ export type SupabaseAuthSessionResult = {
 };
 
 type RawNeonSessionPayload = {
-  user?: { id?: unknown; email?: unknown } | null;
+  user?: {
+    id?: unknown;
+    email?: unknown;
+    emailVerified?: unknown;
+  } | null;
 };
 
 async function updateNeonAuthSession(
@@ -41,7 +45,11 @@ async function updateNeonAuthSession(
     }
 
     const payload = (await upstream.json().catch(() => null)) as RawNeonSessionPayload | null;
-    if (!payload?.user || typeof payload.user.id !== "string") {
+    if (
+      !payload?.user ||
+      typeof payload.user.id !== "string" ||
+      payload.user.emailVerified !== true
+    ) {
       return { response: sessionResponse, user: null };
     }
 
