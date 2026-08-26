@@ -195,7 +195,7 @@ export interface ConciergeEventOverview {
 }
 
 export interface ConciergeWorkspaceMeta {
-  persistenceMode: "memory" | "supabase";
+  persistenceMode: "memory" | "supabase" | "neon";
   storageMode: "metadata_only" | "supabase";
   persistenceLabel: string;
   storageLabel: string;

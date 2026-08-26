@@ -218,7 +218,7 @@ export const conciergeModuleDataSchema = z.object({
   inboundEmailAddress: z.string(),
   dashboardHref: z.string(),
   workspaceMeta: z.object({
-    persistenceMode: z.enum(["memory", "supabase"]),
+    persistenceMode: z.enum(["memory", "supabase", "neon"]),
     storageMode: z.enum(["metadata_only", "supabase"]),
     persistenceLabel: z.string(),
     storageLabel: z.string(),
