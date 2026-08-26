@@ -65,10 +65,7 @@ export async function uploadAndProcessConciergeFile(input: {
     throw new Error(`Storage: ${storageError.message}`);
   }
 
-  await supabase
-    .from("concierge_uploads")
-    .update({ storage_path: storagePath } as never)
-    .eq("id", upload.id);
+  await repo.updateUploadStoragePath(upload.id, storagePath);
 
   await repo.updateUpload(upload.id, {
     status: "processing",
@@ -129,51 +126,36 @@ export async function reprocessConciergeUpload(
     throw new Error("IA não configurada. Configure GEMINI_API_KEY.");
   }
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("concierge_uploads")
-    .select("*")
-    .eq("id", uploadId)
-    .single();
-
-  if (error || !data) throw new Error("Upload não encontrado.");
-
-  const row = data as {
-    id: string;
-    event_id: string;
-    file_name: string;
-    storage_path: string;
-    mime_type: string;
-  };
-
-  if (!row.storage_path) {
+  const upload = await repo.getUploadById(uploadId);
+  if (!upload) throw new Error("Upload não encontrado.");
+  if (!upload.storagePath) {
     throw new Error("Caminho de storage em falta.");
   }
 
-  await repo.updateUpload(row.id, {
+  await repo.updateUpload(upload.id, {
     status: "processing",
     error_message: "",
   });
 
   try {
-    const buffer = await downloadUploadBuffer(row.storage_path);
-    const parsed = await parseFileContent(buffer, row.mime_type, row.file_name);
+    const buffer = await downloadUploadBuffer(upload.storagePath);
+    const parsed = await parseFileContent(buffer, upload.mimeType, upload.fileName);
     const { extraction, raw, model } = await extractWithGemini({
       textContent: parsed.text,
-      mimeType: row.mime_type,
-      fileName: row.file_name,
+      mimeType: upload.mimeType,
+      fileName: upload.fileName,
       imageBase64: parsed.imageBase64,
     });
 
-    await repo.updateUpload(row.id, {
+    await repo.updateUpload(upload.id, {
       status: "pending_review",
       extracted_text: parsed.text.slice(0, 100_000),
       error_message: "",
     });
 
     const review = await repo.createReviewItem({
-      uploadId: row.id,
-      eventId: row.event_id,
+      uploadId: upload.id,
+      eventId: upload.eventId,
       documentType: extraction.documentType,
       extractedData: extractionToRecord(extraction),
       aiModel: model,
@@ -181,8 +163,8 @@ export async function reprocessConciergeUpload(
     });
 
     await repo.logAiAudit({
-      eventId: row.event_id,
-      uploadId: row.id,
+      eventId: upload.eventId,
+      uploadId: upload.id,
       reviewId: review.id,
       action: "reprocess_extract",
       model,
@@ -192,10 +174,10 @@ export async function reprocessConciergeUpload(
       },
     });
 
-    return { reviewId: review.id, eventId: row.event_id };
+    return { reviewId: review.id, eventId: upload.eventId };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro ao reprocessar.";
-    await repo.updateUpload(row.id, {
+    await repo.updateUpload(upload.id, {
       status: "failed",
       error_message: message,
     });

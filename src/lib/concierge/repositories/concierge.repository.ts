@@ -1,6 +1,41 @@
 import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import { neonQuery } from "@/lib/neon/server-db";
+import { createAdminClient } from "@/lib/supabase/server";
+import type { ConciergeUpload } from "@/lib/concierge/types";
 import * as neon from "./concierge.neon.repository";
 import * as supabase from "./concierge.supabase.repository";
+
+type UploadRow = {
+  id: string;
+  event_id: string;
+  file_name: string;
+  storage_path: string;
+  mime_type: string;
+  file_size: number;
+  status: ConciergeUpload["status"];
+  extracted_text: string;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type NeonJsonRow = { row: UploadRow };
+
+function mapUpload(row: UploadRow): ConciergeUpload {
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    fileName: row.file_name,
+    storagePath: row.storage_path,
+    mimeType: row.mime_type,
+    fileSize: row.file_size,
+    status: row.status,
+    extractedText: row.extracted_text,
+    errorMessage: row.error_message,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export const createUploadRecord: typeof supabase.createUploadRecord = (...args) =>
   shouldUseNeonServerDatabase()
@@ -11,6 +46,51 @@ export const updateUpload: typeof supabase.updateUpload = (...args) =>
   shouldUseNeonServerDatabase()
     ? neon.updateUpload(...args)
     : supabase.updateUpload(...args);
+
+export async function getUploadById(id: string): Promise<ConciergeUpload | null> {
+  if (shouldUseNeonServerDatabase()) {
+    const result = await neonQuery<NeonJsonRow>(
+      `SELECT to_jsonb(u) AS row
+       FROM public.concierge_uploads u
+       WHERE u.id = $1::uuid
+       LIMIT 1`,
+      [id],
+    );
+    const row = result.rows[0]?.row;
+    return row ? mapUpload(row) : null;
+  }
+
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("concierge_uploads")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? mapUpload(data as UploadRow) : null;
+}
+
+export async function updateUploadStoragePath(
+  id: string,
+  storagePath: string,
+): Promise<void> {
+  if (shouldUseNeonServerDatabase()) {
+    await neonQuery(
+      `UPDATE public.concierge_uploads
+       SET storage_path = $2
+       WHERE id = $1::uuid`,
+      [id, storagePath],
+    );
+    return;
+  }
+
+  const client = createAdminClient();
+  const { error } = await client
+    .from("concierge_uploads")
+    .update({ storage_path: storagePath } as never)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
 
 export const createReviewItem: typeof supabase.createReviewItem = (...args) =>
   shouldUseNeonServerDatabase()
