@@ -10,6 +10,7 @@ import {
   MapPin,
   Phone,
 } from "lucide-react";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 import {
   getPublishedSupplierProfileBySlug,
@@ -20,8 +21,9 @@ import { buildSupplierInitials } from "@/lib/vendors/marketplace";
 export const dynamic = "force-dynamic";
 
 async function loadSupplier(slug: string) {
-  const client =
-    (await createSupabaseServerAuthClient()) as unknown as SupplierMarketplaceQueryClient;
+  const client = shouldUseNeonServerDatabase()
+    ? null
+    : ((await createSupabaseServerAuthClient()) as unknown as SupplierMarketplaceQueryClient);
   return getPublishedSupplierProfileBySlug(client, slug);
 }
 
