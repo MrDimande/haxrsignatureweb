@@ -1,4 +1,4 @@
-import { neonQuery } from "@/lib/neon/server-db";
+import { neonQuery, withNeonTransaction } from "@/lib/neon/server-db";
 import type {
   CampaignRecipient,
   CampaignStatus,
@@ -146,39 +146,42 @@ export async function insertSenderProfile(
     updatedAt?: string;
   },
 ): Promise<SenderProfile> {
-  const result = await neonQuery<JsonRow<SenderRow>>(
-    `
-      WITH cleared AS (
-        UPDATE public.sender_profiles
-        SET is_default=false
-        WHERE $9::boolean
-          AND event_id=$2::uuid
-          AND is_default=true
-        RETURNING id
-      ), saved AS (
-        INSERT INTO public.sender_profiles (
-          id,event_id,sender_kind,public_name,masked_number,provider,
-          provider_phone_id,status,is_default
-        ) VALUES ($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9)
-        RETURNING *
-      )
-      SELECT to_jsonb(saved) AS row FROM saved
-    `,
-    [
-      profile.id,
-      profile.eventId,
-      profile.senderKind,
-      profile.publicName,
-      profile.maskedNumber,
-      profile.provider,
-      profile.providerPhoneId,
-      profile.status,
-      profile.isDefault,
-    ],
-  );
-  const row = result.rows[0]?.row;
-  if (!row) throw new Error("Falha ao criar sender profile.");
-  return mapSender(row);
+  return withNeonTransaction(async (client) => {
+    if (profile.isDefault) {
+      await client.query(
+        `UPDATE public.sender_profiles SET is_default=false WHERE event_id=$1::uuid AND is_default=true`,
+        [profile.eventId],
+      );
+    }
+
+    const result = await client.query<JsonRow<SenderRow>>(
+      `
+        WITH saved AS (
+          INSERT INTO public.sender_profiles (
+            id,event_id,sender_kind,public_name,masked_number,provider,
+            provider_phone_id,status,is_default
+          ) VALUES ($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9)
+          RETURNING *
+        )
+        SELECT to_jsonb(saved) AS row FROM saved
+      `,
+      [
+        profile.id,
+        profile.eventId,
+        profile.senderKind,
+        profile.publicName,
+        profile.maskedNumber,
+        profile.provider,
+        profile.providerPhoneId,
+        profile.status,
+        profile.isDefault,
+      ],
+    );
+
+    const row = result.rows[0]?.row;
+    if (!row) throw new Error("Falha ao criar sender profile.");
+    return mapSender(row);
+  });
 }
 
 export async function listCampaignsByEvent(eventId: string): Promise<InvitationCampaign[]> {
