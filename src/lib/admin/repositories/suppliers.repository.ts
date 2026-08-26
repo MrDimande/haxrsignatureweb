@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import { neonQuery } from "@/lib/neon/server-db";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   supplierApplicationStatuses,
@@ -67,6 +69,8 @@ const eventRowSchema = z.object({
   next_status: z.string().nullable(),
   created_at: z.string(),
 });
+
+type NeonJsonRow = { row: unknown };
 
 function getClient(): SupabaseClient {
   // Supplier tables were introduced after the generated Database snapshot.
@@ -143,7 +147,41 @@ function mapEvent(row: unknown): SupplierModerationEvent {
   };
 }
 
-export async function listSupplierBackoffice(): Promise<SupplierBackofficeSnapshot> {
+async function listSupplierBackofficeFromNeon(): Promise<SupplierBackofficeSnapshot> {
+  try {
+    const [applicationsResult, profilesResult, eventsResult] = await Promise.all([
+      neonQuery<NeonJsonRow>(`
+        SELECT to_jsonb(a) AS row
+        FROM public.supplier_applications a
+        ORDER BY a.created_at DESC
+      `),
+      neonQuery<NeonJsonRow>(`
+        SELECT to_jsonb(p) AS row
+        FROM public.supplier_profiles p
+        ORDER BY p.updated_at DESC
+      `),
+      neonQuery<NeonJsonRow>(`
+        SELECT to_jsonb(e) AS row
+        FROM public.supplier_moderation_events e
+        ORDER BY e.created_at DESC
+        LIMIT 100
+      `),
+    ]);
+
+    return {
+      applications: applicationsResult.rows.map(({ row }) => mapApplication(row)),
+      profiles: profilesResult.rows.map(({ row }) => mapProfile(row)),
+      recentEvents: eventsResult.rows.map(({ row }) => mapEvent(row)),
+    };
+  } catch (cause) {
+    throw databaseError(
+      "list Neon backoffice",
+      cause instanceof Error ? cause.message : "Falha desconhecida no Neon.",
+    );
+  }
+}
+
+async function listSupplierBackofficeFromSupabase(): Promise<SupplierBackofficeSnapshot> {
   const client = getClient();
   const [applicationsResult, profilesResult, eventsResult] = await Promise.all([
     client
@@ -184,7 +222,44 @@ export async function listSupplierBackoffice(): Promise<SupplierBackofficeSnapsh
   };
 }
 
-export async function reviewSupplierApplication(
+export async function listSupplierBackoffice(): Promise<SupplierBackofficeSnapshot> {
+  return shouldUseNeonServerDatabase()
+    ? listSupplierBackofficeFromNeon()
+    : listSupplierBackofficeFromSupabase();
+}
+
+async function reviewSupplierApplicationInNeon(
+  input: SupplierReviewInput,
+  actorEmail: string,
+): Promise<void> {
+  try {
+    await neonQuery(
+      `SELECT public.admin_review_supplier_application_atomic(
+        $1::uuid,
+        $2::text,
+        $3::public.supplier_application_status,
+        $4::text,
+        $5::text,
+        $6::boolean
+      )`,
+      [
+        input.applicationId,
+        actorEmail,
+        input.status,
+        input.reviewNotes,
+        input.slug,
+        input.isTestRecord,
+      ],
+    );
+  } catch (cause) {
+    throw databaseError(
+      "review Neon application",
+      cause instanceof Error ? cause.message : "Falha desconhecida no Neon.",
+    );
+  }
+}
+
+async function reviewSupplierApplicationInSupabase(
   input: SupplierReviewInput,
   actorEmail: string,
 ): Promise<void> {
@@ -200,7 +275,69 @@ export async function reviewSupplierApplication(
   if (error) throw databaseError("review application", error.message);
 }
 
-export async function saveSupplierProfile(
+export async function reviewSupplierApplication(
+  input: SupplierReviewInput,
+  actorEmail: string,
+): Promise<void> {
+  if (shouldUseNeonServerDatabase()) {
+    await reviewSupplierApplicationInNeon(input, actorEmail);
+    return;
+  }
+  await reviewSupplierApplicationInSupabase(input, actorEmail);
+}
+
+async function saveSupplierProfileInNeon(
+  input: SupplierProfileInput,
+  actorEmail: string,
+): Promise<void> {
+  try {
+    await neonQuery(
+      `SELECT public.admin_save_supplier_profile_atomic(
+        $1::uuid,
+        $2::text,
+        $3::text,
+        $4::text,
+        $5::text,
+        $6::text,
+        $7::text,
+        $8::text,
+        $9::text,
+        $10::text,
+        $11::text,
+        $12::text,
+        $13::text,
+        $14::text[],
+        $15::public.supplier_publication_status,
+        $16::boolean
+      )`,
+      [
+        input.profileId,
+        actorEmail,
+        input.slug,
+        input.businessName,
+        input.category,
+        input.city,
+        input.shortDescription,
+        input.about,
+        input.publicEmail,
+        input.publicPhone,
+        input.websiteUrl,
+        input.instagramUrl,
+        input.serviceLevel,
+        input.services,
+        input.publicationStatus,
+        input.isVerified,
+      ],
+    );
+  } catch (cause) {
+    throw databaseError(
+      "save Neon profile",
+      cause instanceof Error ? cause.message : "Falha desconhecida no Neon.",
+    );
+  }
+}
+
+async function saveSupplierProfileInSupabase(
   input: SupplierProfileInput,
   actorEmail: string,
 ): Promise<void> {
@@ -226,7 +363,39 @@ export async function saveSupplierProfile(
   if (error) throw databaseError("save profile", error.message);
 }
 
-export async function removeSupplierUat(
+export async function saveSupplierProfile(
+  input: SupplierProfileInput,
+  actorEmail: string,
+): Promise<void> {
+  if (shouldUseNeonServerDatabase()) {
+    await saveSupplierProfileInNeon(input, actorEmail);
+    return;
+  }
+  await saveSupplierProfileInSupabase(input, actorEmail);
+}
+
+async function removeSupplierUatInNeon(
+  input: SupplierUatRemovalInput,
+  actorEmail: string,
+): Promise<void> {
+  try {
+    await neonQuery(
+      `SELECT public.admin_remove_supplier_uat_atomic(
+        $1::uuid,
+        $2::text,
+        $3::text
+      )`,
+      [input.applicationId, actorEmail, input.expectedSupplierName],
+    );
+  } catch (cause) {
+    throw databaseError(
+      "remove Neon UAT supplier",
+      cause instanceof Error ? cause.message : "Falha desconhecida no Neon.",
+    );
+  }
+}
+
+async function removeSupplierUatInSupabase(
   input: SupplierUatRemovalInput,
   actorEmail: string,
 ): Promise<void> {
@@ -237,4 +406,15 @@ export async function removeSupplierUat(
     p_expected_supplier_name: input.expectedSupplierName,
   });
   if (error) throw databaseError("remove UAT supplier", error.message);
+}
+
+export async function removeSupplierUat(
+  input: SupplierUatRemovalInput,
+  actorEmail: string,
+): Promise<void> {
+  if (shouldUseNeonServerDatabase()) {
+    await removeSupplierUatInNeon(input, actorEmail);
+    return;
+  }
+  await removeSupplierUatInSupabase(input, actorEmail);
 }
