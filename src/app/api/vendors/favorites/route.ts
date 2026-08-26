@@ -1,36 +1,20 @@
 import { NextResponse } from "next/server";
+import { resolveClientEventReadRequestAuth } from "@/lib/auth/client-event-server-clients";
 import {
   isSameOriginMutation,
   mapSupplierFavoriteError,
   supplierFavoriteSchema,
 } from "@/lib/vendors/favorites";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
+import {
+  findPublishedSupplierProfile,
+  listSavedSupplierProfileIds,
+  removeSupplierProfileFavorite,
+  saveSupplierProfileFavorite,
+  type SupplierFavoritesClient,
+} from "@/lib/vendors/favorites.repository";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type QueryError = { code?: string; message: string } | null;
-type QueryResult<T> = { data: T | null; error: QueryError };
-
-type SelectQuery<T> = PromiseLike<QueryResult<T>> & {
-  eq(column: string, value: string): SelectQuery<T>;
-  maybeSingle(): Promise<QueryResult<T extends Array<infer Item> ? Item : T>>;
-};
-
-type DeleteQuery = PromiseLike<QueryResult<null>> & {
-  eq(column: string, value: string): DeleteQuery;
-};
-
-type SupplierFavoritesClient = {
-  from(table: "saved_supplier_profiles" | "supplier_profiles"): {
-    select(columns: string): SelectQuery<Array<{ supplier_profile_id: string }>>;
-    insert(values: {
-      owner_user_id: string;
-      supplier_profile_id: string;
-    }): PromiseLike<QueryResult<null>>;
-    delete(): DeleteQuery;
-  };
-};
 
 function json(
   body: Record<string, unknown>,
@@ -42,11 +26,7 @@ function json(
 }
 
 async function authenticate(request: Request) {
-  const { user, supabase } = await resolveAuthenticatedSupabaseClient(request);
-  return {
-    user,
-    client: supabase as unknown as SupplierFavoritesClient,
-  };
+  return resolveClientEventReadRequestAuth<SupplierFavoritesClient>(request);
 }
 
 async function parseSupplierId(request: Request): Promise<
@@ -69,22 +49,17 @@ async function parseSupplierId(request: Request): Promise<
 
 export async function GET(request: Request) {
   try {
-    const { user, client } = await authenticate(request);
-    if (!user) return json({ ok: false, message: "Inicie sessão para ver os guardados." }, 401);
+    const { user, authClient } = await authenticate(request);
+    if (!user) {
+      return json({ ok: false, message: "Inicie sessão para ver os guardados." }, 401);
+    }
 
-    const { data, error } = await client
-      .from("saved_supplier_profiles")
-      .select("supplier_profile_id")
-      .eq("owner_user_id", user.id);
-
+    const { data, error } = await listSavedSupplierProfileIds(user.id, authClient);
     if (error) {
       return json({ ok: false, message: "Não foi possível carregar os guardados." }, 503);
     }
 
-    return json({
-      ok: true,
-      supplierIds: (data ?? []).map((row) => row.supplier_profile_id),
-    });
+    return json({ ok: true, supplierIds: data ?? [] });
   } catch {
     return json({ ok: false, message: "Não foi possível carregar os guardados." }, 503);
   }
@@ -99,24 +74,24 @@ export async function POST(request: Request) {
     const parsed = await parseSupplierId(request);
     if (!parsed.ok) return parsed.response;
 
-    const { user, client } = await authenticate(request);
-    if (!user) return json({ ok: false, message: "Inicie sessão para guardar." }, 401);
+    const { user, authClient } = await authenticate(request);
+    if (!user) {
+      return json({ ok: false, message: "Inicie sessão para guardar." }, 401);
+    }
 
-    const { data: profile, error: profileError } = await client
-      .from("supplier_profiles")
-      .select("id")
-      .eq("id", parsed.supplierId)
-      .eq("publication_status", "published")
-      .maybeSingle();
-
+    const { data: profile, error: profileError } = await findPublishedSupplierProfile(
+      parsed.supplierId,
+      authClient,
+    );
     if (profileError || !profile) {
       return json({ ok: false, message: "Fornecedor publicado não encontrado." }, 404);
     }
 
-    const { error } = await client.from("saved_supplier_profiles").insert({
-      owner_user_id: user.id,
-      supplier_profile_id: parsed.supplierId,
-    });
+    const { error } = await saveSupplierProfileFavorite(
+      user.id,
+      parsed.supplierId,
+      authClient,
+    );
     const mapped = mapSupplierFavoriteError(error);
     if (mapped && mapped.status !== 200) {
       return json({ ok: false, message: mapped.message }, mapped.status);
@@ -137,14 +112,16 @@ export async function DELETE(request: Request) {
     const parsed = await parseSupplierId(request);
     if (!parsed.ok) return parsed.response;
 
-    const { user, client } = await authenticate(request);
-    if (!user) return json({ ok: false, message: "Inicie sessão para continuar." }, 401);
+    const { user, authClient } = await authenticate(request);
+    if (!user) {
+      return json({ ok: false, message: "Inicie sessão para continuar." }, 401);
+    }
 
-    const { error } = await client
-      .from("saved_supplier_profiles")
-      .delete()
-      .eq("owner_user_id", user.id)
-      .eq("supplier_profile_id", parsed.supplierId);
+    const { error } = await removeSupplierProfileFavorite(
+      user.id,
+      parsed.supplierId,
+      authClient,
+    );
     const mapped = mapSupplierFavoriteError(error);
     if (mapped) {
       return json({ ok: false, message: mapped.message }, mapped.status);

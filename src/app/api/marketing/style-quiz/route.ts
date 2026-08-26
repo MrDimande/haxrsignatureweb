@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  resolveClientEventReadRequestAuth,
+  validateClientEventAuthEnvironment,
+} from "@/lib/auth/client-event-server-clients";
 import { createInquiry } from "@/lib/contact/inquiries.repository";
 import { captureMarketingContact } from "@/lib/email/marketing/contact-capture";
 import { resolveSegmentFromEventType } from "@/lib/email/marketing/marketing-contact";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
 
 const styleQuizLeadSchema = z.object({
   name: z.string().min(2).max(120),
@@ -19,18 +21,19 @@ const styleQuizLeadSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
+  const envCheck = validateClientEventAuthEnvironment();
+  if (!envCheck.ok) {
     return NextResponse.json(
       { error: "Serviço temporariamente indisponível." },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
-  const { user } = await resolveAuthenticatedSupabaseClient(request);
+  const { user } = await resolveClientEventReadRequestAuth<unknown>(request);
   if (!user) {
     return NextResponse.json(
       { error: "Inicie sessão para aceder ao Style Quiz." },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Dados inválidos." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
