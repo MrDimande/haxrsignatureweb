@@ -7,6 +7,30 @@ import { spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
 
+const MIGRATION_BRANCH = "migration/supabase-to-neon";
+const isMigrationPreview =
+  process.env.VERCEL_ENV === "preview" &&
+  process.env.VERCEL_GIT_COMMIT_REF === MIGRATION_BRANCH;
+
+if (isMigrationPreview) {
+  const authUrlConfigured = Boolean(
+    process.env.NEON_AUTH_BASE_URL?.trim() ||
+      process.env.NEXT_PUBLIC_NEON_AUTH_URL?.trim(),
+  );
+
+  console.info(
+    "[migration-readiness]",
+    JSON.stringify({
+      databaseUrlConfigured: Boolean(process.env.DATABASE_URL?.trim()),
+      authUrlConfigured,
+      serverAuthProviderRequested:
+        process.env.HAXR_AUTH_PROVIDER?.trim().toLowerCase() === "neon",
+      browserAuthProviderRequested:
+        process.env.NEXT_PUBLIC_HAXR_AUTH_PROVIDER?.trim().toLowerCase() === "neon",
+    }),
+  );
+}
+
 const incoming = process.env.NODE_ENV?.trim();
 const allowed = new Set(["production", "test", ""]);
 
