@@ -1,6 +1,6 @@
 const NEON_AUTH_URL_KEYS = [
-  "NEXT_PUBLIC_NEON_AUTH_URL",
   "NEON_AUTH_BASE_URL",
+  "NEXT_PUBLIC_NEON_AUTH_URL",
 ] as const;
 
 const DATABASE_MIGRATION_BRANCH = "migration/supabase-to-neon";
@@ -109,6 +109,22 @@ export function shouldUseNeonServerDatabase(): boolean {
     process.env.VERCEL_ENV === "preview" &&
     process.env.VERCEL_GIT_COMMIT_REF === DATABASE_MIGRATION_BRANCH
   );
+}
+
+/**
+ * Auth cutover is intentionally stricter than the database cutover.
+ *
+ * Neon Auth never activates just because this is a Preview deployment. It
+ * requires an explicit HAXR_AUTH_PROVIDER=neon switch plus both Neon Auth and
+ * private database connectivity, because first-login identity reconciliation
+ * is an atomic database operation.
+ */
+export function shouldUseNeonAuthForAppSession(): boolean {
+  if (process.env.HAXR_AUTH_PROVIDER?.trim().toLowerCase() !== "neon") {
+    return false;
+  }
+
+  return Boolean(getNeonAuthUrl() && process.env.DATABASE_URL?.trim());
 }
 
 export function isNeonAuthServerConfigured(): boolean {

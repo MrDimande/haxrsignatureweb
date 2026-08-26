@@ -4,6 +4,8 @@ import {
   type AppUserDisplay,
   type ClientAppProfile,
 } from "@/lib/auth/app-user-display";
+import { shouldUseNeonAuthForAppSession } from "@/lib/neon/config";
+import { getCurrentNeonAppIdentity } from "@/lib/neon/auth-session";
 
 type ProfileQueryClient = {
   from(table: "profiles"): {
@@ -27,7 +29,7 @@ export type CurrentAppSession = {
   display: AppUserDisplay;
 };
 
-export async function getCurrentAppSession(): Promise<CurrentAppSession> {
+async function getCurrentSupabaseAppSession(): Promise<CurrentAppSession> {
   const supabase = await createSupabaseServerAuthClient();
   const {
     data: { user },
@@ -60,4 +62,31 @@ export async function getCurrentAppSession(): Promise<CurrentAppSession> {
     profile: profile ?? null,
     display: buildAppUserDisplay({ user, profile: profile ?? null }),
   };
+}
+
+async function getCurrentNeonAppSession(): Promise<CurrentAppSession> {
+  const { user, profile } = await getCurrentNeonAppIdentity();
+
+  if (!user) {
+    return {
+      user: null,
+      profile: null,
+      display: buildAppUserDisplay({ user: null, profile: null }),
+    };
+  }
+
+  return {
+    user: { id: user.id, email: user.email },
+    profile,
+    display: buildAppUserDisplay({
+      user: { email: user.email, name: user.name },
+      profile,
+    }),
+  };
+}
+
+export async function getCurrentAppSession(): Promise<CurrentAppSession> {
+  return shouldUseNeonAuthForAppSession()
+    ? getCurrentNeonAppSession()
+    : getCurrentSupabaseAppSession();
 }
