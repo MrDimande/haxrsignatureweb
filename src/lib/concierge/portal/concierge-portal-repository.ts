@@ -9,7 +9,7 @@ import type {
 } from "./types";
 import type { PortalConciergeActor } from "./portal-concierge-auth";
 
-export type ConciergePortalPersistenceMode = "memory" | "supabase";
+export type ConciergePortalPersistenceMode = "memory" | "supabase" | "neon";
 
 export interface CreatePortalItemInput extends ConciergeIntakeInput {
   type: ConciergeInboxItem["type"];
