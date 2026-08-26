@@ -29,6 +29,13 @@ function isHttpsUrl(value: string): boolean {
   }
 }
 
+function isMigrationVercelPreview(): boolean {
+  return (
+    process.env.VERCEL_ENV === "preview" &&
+    process.env.VERCEL_GIT_COMMIT_REF === DATABASE_MIGRATION_BRANCH
+  );
+}
+
 export function getNeonAuthUrl(): string | null {
   return firstConfiguredEnv(NEON_AUTH_URL_KEYS);
 }
@@ -105,31 +112,39 @@ export function shouldUseNeonServerDatabase(): boolean {
     return true;
   }
 
-  return (
-    process.env.VERCEL_ENV === "preview" &&
-    process.env.VERCEL_GIT_COMMIT_REF === DATABASE_MIGRATION_BRANCH
-  );
+  return isMigrationVercelPreview();
 }
 
 /**
  * Auth cutover is intentionally stricter than the database cutover.
  *
- * Neon Auth never activates just because this is a Preview deployment. It
- * requires an explicit HAXR_AUTH_PROVIDER=neon switch plus both Neon Auth and
- * private database connectivity, because first-login identity reconciliation
- * is an atomic database operation.
+ * On Vercel, an explicit HAXR_AUTH_PROVIDER=neon request is accepted only for
+ * the isolated migration Preview branch. This remains safe even if vercel.json
+ * is later merged into main: Production cannot satisfy the Preview + branch lock.
+ * Outside Vercel (for deliberate local testing), the explicit provider switch is
+ * sufficient when both Auth and private database connectivity are configured.
  */
 export function shouldUseNeonAuthForAppSession(): boolean {
   if (process.env.HAXR_AUTH_PROVIDER?.trim().toLowerCase() !== "neon") {
     return false;
   }
 
-  return Boolean(getNeonAuthUrl() && process.env.DATABASE_URL?.trim());
+  if (!getNeonAuthUrl() || !process.env.DATABASE_URL?.trim()) {
+    return false;
+  }
+
+  if (process.env.VERCEL_ENV || process.env.VERCEL_GIT_COMMIT_REF) {
+    return isMigrationVercelPreview();
+  }
+
+  return true;
 }
 
+/**
+ * The current HAXR Neon Auth integration uses a same-origin HTTP proxy and
+ * native fetch. It does not use the @neondatabase/auth SDK cookie cache, so a
+ * separate NEON_AUTH_COOKIE_SECRET is not required for this architecture.
+ */
 export function isNeonAuthServerConfigured(): boolean {
-  return Boolean(
-    process.env.NEON_AUTH_BASE_URL?.trim() &&
-      process.env.NEON_AUTH_COOKIE_SECRET?.trim(),
-  );
+  return Boolean(getNeonAuthUrl() && process.env.DATABASE_URL?.trim());
 }
