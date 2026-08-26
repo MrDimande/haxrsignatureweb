@@ -1,16 +1,28 @@
 import { NextResponse } from "next/server";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
+import {
+  resolveClientEventReadRequestAuth,
+  validateClientEventAuthEnvironment,
+  validateClientEventOperationalEnvironment,
+} from "@/lib/auth/client-event-server-clients";
+import { createClientEventFromPayloadNeon } from "@/lib/events/client-event.neon.service";
+import { handleCreateEventRequest } from "@/lib/events/create-event-api";
+import type { CreateClientEventDeps } from "@/lib/events/client-event-service";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   validateClientAppAuthEnvironment,
   validateClientAppServiceRoleEnvironment,
 } from "@/lib/supabase/config";
-import { handleCreateEventRequest } from "@/lib/events/create-event-api";
-import type { CreateClientEventDeps } from "@/lib/events/client-event-service";
+import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
 
 export async function POST(request: Request) {
-  const envCheck = validateClientAppAuthEnvironment();
-  const serviceRoleCheck = validateClientAppServiceRoleEnvironment();
+  const useNeon = shouldUseNeonServerDatabase();
+  const envCheck = useNeon
+    ? validateClientEventAuthEnvironment()
+    : validateClientAppAuthEnvironment();
+  const serviceRoleCheck = useNeon
+    ? validateClientEventOperationalEnvironment()
+    : validateClientAppServiceRoleEnvironment();
 
   let user: { id: string } | null = null;
   let authSupabase: Awaited<
@@ -18,9 +30,14 @@ export async function POST(request: Request) {
   >["supabase"] | null = null;
 
   if (envCheck.ok) {
-    const resolved = await resolveAuthenticatedSupabaseClient(request);
-    user = resolved.user;
-    authSupabase = resolved.supabase;
+    if (useNeon) {
+      const resolved = await resolveClientEventReadRequestAuth<unknown>(request);
+      user = resolved.user;
+    } else {
+      const resolved = await resolveAuthenticatedSupabaseClient(request);
+      user = resolved.user;
+      authSupabase = resolved.supabase;
+    }
   }
 
   let raw: unknown;
@@ -31,7 +48,7 @@ export async function POST(request: Request) {
   }
 
   let createDeps: Omit<CreateClientEventDeps, "ownerUserId"> | null = null;
-  if (envCheck.ok && serviceRoleCheck.ok && authSupabase) {
+  if (!useNeon && envCheck.ok && serviceRoleCheck.ok && authSupabase) {
     try {
       createDeps = {
         authClient: authSupabase as unknown as CreateClientEventDeps["authClient"],
@@ -51,6 +68,8 @@ export async function POST(request: Request) {
     rawBody: raw,
     idempotencyKey,
     createDeps,
+    createEvent:
+      useNeon && serviceRoleCheck.ok ? createClientEventFromPayloadNeon : null,
   });
 
   return NextResponse.json(result.body, { status: result.status });
