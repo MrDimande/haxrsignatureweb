@@ -1,3 +1,4 @@
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { timingSafeEqual } from "@/lib/security/timing-safe";
 import {
   getSupabaseJwtProjectRef,
@@ -8,9 +9,12 @@ import {
 export const EDITION_RSVP_WRITES_DISABLED_CODE =
   "edition_rsvp_writes_disabled" as const;
 
+const DATABASE_MIGRATION_BRANCH = "migration/supabase-to-neon";
+
 export type EditionRsvpWriteMode =
   | "disabled"
   | "preview_clone"
+  | "preview_neon"
   | "production";
 
 export type EditionRsvpWriteGateReason =
@@ -18,6 +22,8 @@ export type EditionRsvpWriteGateReason =
   | "mode_unknown"
   | "production_runtime"
   | "not_preview"
+  | "migration_branch_required"
+  | "neon_database_unavailable"
   | "not_production"
   | "url_unresolved"
   | "production_ref"
@@ -32,7 +38,7 @@ export type EditionRsvpWriteGateReason =
   | "production_slug_denied";
 
 export type EditionRsvpWriteGateDecision =
-  | { allowed: true; mode: "preview_clone" | "production" }
+  | { allowed: true; mode: "preview_clone" | "preview_neon" | "production" }
   | {
       allowed: false;
       mode: EditionRsvpWriteMode | "unknown";
@@ -50,6 +56,7 @@ export function resolveEditionRsvpWriteMode(
   const value = raw?.trim().toLowerCase();
   if (!value || value === "disabled") return "disabled";
   if (value === "preview_clone") return "preview_clone";
+  if (value === "preview_neon") return "preview_neon";
   if (value === "production") return "production";
   return "unknown";
 }
@@ -194,9 +201,85 @@ function evaluateProductionWriteGate(options?: {
   return { allowed: true, mode: "production" };
 }
 
+function resolveVercelGitCommitRef(raw?: string): string {
+  return (raw ?? process.env.VERCEL_GIT_COMMIT_REF)?.trim() ?? "";
+}
+
+function isMigrationPreview(options?: {
+  vercelEnv?: string | undefined;
+  vercelGitCommitRef?: string | undefined;
+}): boolean {
+  const vercelEnv = (
+    options?.vercelEnv ?? process.env.VERCEL_ENV
+  )?.trim().toLowerCase();
+  return (
+    vercelEnv === "preview" &&
+    resolveVercelGitCommitRef(options?.vercelGitCommitRef) ===
+      DATABASE_MIGRATION_BRANCH
+  );
+}
+
+function evaluatePreviewNeonWriteGate(options?: {
+  vercelEnv?: string | undefined;
+  nodeEnv?: string | undefined;
+  vercelGitCommitRef?: string | undefined;
+  neonDatabaseEnabled?: boolean | undefined;
+}): EditionRsvpWriteGateDecision {
+  if (
+    isEditionRsvpProductionRuntime({
+      vercelEnv: options?.vercelEnv,
+      nodeEnv: options?.nodeEnv,
+    })
+  ) {
+    return {
+      allowed: false,
+      mode: "preview_neon",
+      reason: "production_runtime",
+    };
+  }
+
+  const vercelEnv = (
+    options?.vercelEnv ?? process.env.VERCEL_ENV
+  )?.trim().toLowerCase();
+  if (vercelEnv !== "preview") {
+    return { allowed: false, mode: "preview_neon", reason: "not_preview" };
+  }
+
+  if (
+    resolveVercelGitCommitRef(options?.vercelGitCommitRef) !==
+    DATABASE_MIGRATION_BRANCH
+  ) {
+    return {
+      allowed: false,
+      mode: "preview_neon",
+      reason: "migration_branch_required",
+    };
+  }
+
+  const neonDatabaseEnabled =
+    options?.neonDatabaseEnabled ?? shouldUseNeonServerDatabase();
+  if (!neonDatabaseEnabled) {
+    return {
+      allowed: false,
+      mode: "preview_neon",
+      reason: "neon_database_unavailable",
+    };
+  }
+
+  return { allowed: true, mode: "preview_neon" };
+}
+
 /**
  * Fail-closed gate for Edition RSVP persistence.
  * Must run after Bearer auth and before any guests SELECT/INSERT/UPDATE/RPC.
+ *
+ * Migration behavior:
+ * - Existing Preview clone rehearsals remain unchanged on all other branches.
+ * - On the exact Supabase→Neon migration Preview branch, an existing
+ *   preview_clone operator intent is promoted to preview_neon and must prove
+ *   that the Neon server database is actually active. If DATABASE_URL/Neon is
+ *   unavailable, writes fail closed instead of silently falling back to the
+ *   legacy Supabase clone.
  */
 export function evaluateEditionRsvpWriteGate(options?: {
   writeMode?: string | undefined;
@@ -205,13 +288,23 @@ export function evaluateEditionRsvpWriteGate(options?: {
   serviceRoleKey?: string | undefined;
   vercelEnv?: string | undefined;
   nodeEnv?: string | undefined;
+  vercelGitCommitRef?: string | undefined;
+  neonDatabaseEnabled?: boolean | undefined;
   configuredProxySecret?: string | undefined;
   presentedProxySecret?: string | undefined;
   productionAllowedSlugs?: string | undefined;
   /** Canonical Edition slug (already resolved). Never the raw payload alias alone. */
   resolvedSlug?: string | null | undefined;
 }): EditionRsvpWriteGateDecision {
-  const mode = resolveEditionRsvpWriteMode(options?.writeMode);
+  const configuredMode = resolveEditionRsvpWriteMode(options?.writeMode);
+  const mode =
+    configuredMode === "preview_clone" &&
+    isMigrationPreview({
+      vercelEnv: options?.vercelEnv,
+      vercelGitCommitRef: options?.vercelGitCommitRef,
+    })
+      ? "preview_neon"
+      : configuredMode;
 
   if (mode === "disabled") {
     return { allowed: false, mode: "disabled", reason: "mode_disabled" };
@@ -223,6 +316,10 @@ export function evaluateEditionRsvpWriteGate(options?: {
 
   if (mode === "production") {
     return evaluateProductionWriteGate(options);
+  }
+
+  if (mode === "preview_neon") {
+    return evaluatePreviewNeonWriteGate(options);
   }
 
   // mode === preview_clone
