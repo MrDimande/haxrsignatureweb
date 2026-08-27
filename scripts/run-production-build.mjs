@@ -24,17 +24,17 @@ if (incoming && !allowed.has(incoming)) {
 process.env.NODE_ENV = "production";
 
 if (isMigrationPreview) {
-  const diagnosticScript = resolve(
+  const canaryScript = resolve(
     process.cwd(),
-    "scripts/edition-rsvp-gate-diagnostic.ts",
+    "scripts/edition-rsvp-neon-canary.ts",
   );
-  const diagnostic = spawnSync(
+  const canary = spawnSync(
     process.execPath,
-    ["--import", "tsx", diagnosticScript],
+    ["--import", "tsx", canaryScript],
     { stdio: "inherit", env: process.env },
   );
-  if ((diagnostic.status ?? 1) !== 0) {
-    process.exit(diagnostic.status ?? 1);
+  if ((canary.status ?? 1) !== 0) {
+    process.exit(canary.status ?? 1);
   }
 }
 
