@@ -7,6 +7,11 @@ import { spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
 
+const MIGRATION_BRANCH = "migration/supabase-to-neon";
+const isMigrationPreview =
+  process.env.VERCEL_ENV === "preview" &&
+  process.env.VERCEL_GIT_COMMIT_REF === MIGRATION_BRANCH;
+
 const incoming = process.env.NODE_ENV?.trim();
 const allowed = new Set(["production", "test", ""]);
 
@@ -17,6 +22,21 @@ if (incoming && !allowed.has(incoming)) {
 }
 
 process.env.NODE_ENV = "production";
+
+if (isMigrationPreview) {
+  const diagnosticScript = resolve(
+    process.cwd(),
+    "scripts/edition-rsvp-gate-diagnostic.ts",
+  );
+  const diagnostic = spawnSync(
+    process.execPath,
+    ["--import", "tsx", diagnosticScript],
+    { stdio: "inherit", env: process.env },
+  );
+  if ((diagnostic.status ?? 1) !== 0) {
+    process.exit(diagnostic.status ?? 1);
+  }
+}
 
 try {
   rmSync(resolve(process.cwd(), ".next/cache"), { recursive: true, force: true });
