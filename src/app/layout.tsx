@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { buildSiteMetadata } from "@/lib/seo";
 import "./globals.css";
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
