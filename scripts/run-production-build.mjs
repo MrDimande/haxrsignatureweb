@@ -7,6 +7,11 @@ import { spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
 
+const MIGRATION_BRANCH = "migration/supabase-to-neon";
+const isMigrationPreview =
+  process.env.VERCEL_ENV === "preview" &&
+  process.env.VERCEL_GIT_COMMIT_REF === MIGRATION_BRANCH;
+
 const incoming = process.env.NODE_ENV?.trim();
 const allowed = new Set(["production", "test", ""]);
 
@@ -17,6 +22,41 @@ if (incoming && !allowed.has(incoming)) {
 }
 
 process.env.NODE_ENV = "production";
+
+if (isMigrationPreview) {
+  const checks = [
+    {
+      name: "neon-schema-readiness",
+      script: "scripts/neon-health-check.mjs",
+      args: [],
+    },
+    {
+      name: "gate-2c-preflight",
+      script: "scripts/gate-2c-gifts-photos-migration.mjs",
+      args: [
+        "preflight",
+        "--expected-source-ref=oxsrdmydlqyvnueedgtl",
+        "--expected-gifts=42",
+        "--expected-photos=147",
+        "--expected-gifts-checksum=7ff1cf6590b6d4e3989e0070fa61b619d23f5dfcae3a71f4e604f4ecdaf4a5d2",
+        "--expected-photos-checksum=36b8f471d851f7244a47f2b3070b03465d5415a1f7d42109f3fb7764054ecfd0",
+        "--photo-table=wedding_photos",
+      ],
+    },
+  ];
+
+  for (const check of checks) {
+    const result = spawnSync(
+      process.execPath,
+      [resolve(process.cwd(), check.script), ...check.args],
+      { stdio: "inherit", env: process.env },
+    );
+    if ((result.status ?? 1) !== 0) {
+      console.error(`[build] ${check.name} blocked the migration Preview build.`);
+      process.exit(result.status ?? 1);
+    }
+  }
+}
 
 try {
   rmSync(resolve(process.cwd(), ".next/cache"), { recursive: true, force: true });

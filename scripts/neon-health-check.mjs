@@ -1,66 +1,18 @@
 #!/usr/bin/env node
 /**
- * HAXR Signature — Neon Database Health & Schema Readiness Checker
+ * Read-only Neon schema readiness audit for the migration Preview.
  *
- * Usage:
- *   node scripts/neon-health-check.mjs
+ * This is not a Production-readiness certificate. It verifies connectivity,
+ * critical tables and row counts without changing the database.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import pg from "pg";
+import {
+  assertPreviewNeonTarget,
+  loadExplicitEnvFile,
+} from "./gate-2c-gifts-photos-migration.mjs";
 
-function loadEnvFile(filename) {
-  const path = resolve(process.cwd(), filename);
-  if (!existsSync(path)) return;
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
-    const idx = trimmed.indexOf("=");
-    const key = trimmed.slice(0, idx).trim();
-    let value = trimmed.slice(idx + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (!process.env[key]) process.env[key] = value;
-  }
-}
-
-loadEnvFile(".env.local");
-loadEnvFile(".env.development.local");
-loadEnvFile(".env.production");
-loadEnvFile(".env.preview");
-loadEnvFile(".env.branch");
-loadEnvFile(".env");
-
-const { Pool } = pg;
-
-const databaseUrl = process.env.HAXR_NEON_PRODUCTION_OWNER_URL || process.env.DATABASE_URL;
-
-console.log("═══════════════════════════════════════════════════════════════════");
-console.log("  HAXR SIGNATURE — NEON DATABASE HEALTH & INTEGRITY AUDIT");
-console.log("═══════════════════════════════════════════════════════════════════\n");
-
-if (!databaseUrl) {
-  console.error("❌ ERRO: DATABASE_URL ou HAXR_NEON_PRODUCTION_OWNER_URL não encontrada no ambiente.");
-  console.error("   Certifique-se de definir no .env.local ou passar por variável de ambiente.\n");
-  process.exit(1);
-}
-
-const maskedUrl = databaseUrl.replace(/:([^@]+)@/, ":****@");
-console.log(`🔌 Conectando ao Neon PostgreSQL: ${maskedUrl}`);
-
-const pool = new Pool({
-  connectionString: databaseUrl,
-  max: 3,
-  connectionTimeoutMillis: 10_000,
-  ssl: { rejectUnauthorized: false },
-});
-
-const REQUIRED_TABLES = [
+const REQUIRED_TABLES = Object.freeze([
   "profiles",
   "client_events",
   "client_event_members",
@@ -79,62 +31,78 @@ const REQUIRED_TABLES = [
   "monthly_targets",
   "marketing_contacts",
   "contact_inquiries",
-];
+  "edition_gift_reservations",
+  "wedding_photos",
+]);
 
-async function runAudit() {
-  const client = await pool.connect();
+function parseEnvFileArg(argv) {
+  const argument = argv.find((value) => value.startsWith("--env-file="));
+  return argument ? argument.slice("--env-file=".length) : null;
+}
+
+async function main() {
+  loadExplicitEnvFile(parseEnvFileArg(process.argv.slice(2)));
+  const target = assertPreviewNeonTarget(process.env, null, "preflight");
+  const pool = new pg.Pool({
+    connectionString: target.connectionString,
+    max: 1,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 10_000,
+    ssl: { rejectUnauthorized: true },
+  });
+
+  let client;
   try {
-    console.log("✅ Conexão estabelecida com sucesso!");
+    client = await pool.connect();
+    const metadata = await client.query(
+      `SELECT current_database() AS database,
+              current_setting('server_version_num')::int AS server_version_num,
+              pg_is_in_recovery() AS is_replica`,
+    );
+    if (metadata.rows[0]?.is_replica) throw new Error("target_is_read_replica");
 
-    const versionRes = await client.query("SELECT version(), NOW() AS server_time, current_database() AS db_name;");
-    const { version, server_time, db_name } = versionRes.rows[0];
-    console.log(`\n📦 Base de Dados: ${db_name}`);
-    console.log(`⏱️  Hora do Servidor: ${server_time}`);
-    console.log(`🏛️  Versão: ${version.split(" on ")[0]}\n`);
+    const tableResult = await client.query(
+      `SELECT table_name
+         FROM information_schema.tables
+        WHERE table_schema='public' AND table_type='BASE TABLE'`,
+    );
+    const existing = new Set(tableResult.rows.map((row) => row.table_name));
+    const missing = REQUIRED_TABLES.filter((table) => !existing.has(table));
+    const counts = {};
 
-    console.log("🔍 Verificando Tabelas Críticas do HAXR Signature...");
-    const tableQuery = `
-      SELECT table_name 
-        FROM information_schema.tables 
-       WHERE table_schema = 'public' 
-         AND table_type = 'BASE TABLE';
-    `;
-    const tableRes = await client.query(tableQuery);
-    const existingTables = new Set(tableRes.rows.map((r) => r.table_name));
-
-    let allTablesPresent = true;
     for (const table of REQUIRED_TABLES) {
-      if (existingTables.has(table)) {
-        const countRes = await client.query(`SELECT COUNT(*)::int AS count FROM public."${table}"`);
-        console.log(`  ✔ [OK] public.${table.padEnd(26)} (Registos: ${countRes.rows[0].count})`);
-      } else {
-        console.log(`  ❌ [FALTA] public.${table.padEnd(26)} (Tabela não encontrada!)`);
-        allTablesPresent = false;
-      }
+      if (!existing.has(table)) continue;
+      const result = await client.query(`SELECT count(*)::int AS count FROM public."${table}"`);
+      counts[table] = result.rows[0]?.count ?? 0;
     }
 
-    console.log("\n🔒 Testando Atomicidade e Transações (BEGIN / ROLLBACK)...");
-    await client.query("BEGIN;");
-    const txRes = await client.query("SELECT 1 AS tx_ok;");
-    await client.query("ROLLBACK;");
-    if (txRes.rows[0]?.tx_ok === 1) {
-      console.log("  ✔ Atomicidade Transacional: PASS");
-    }
+    console.info(
+      "[neon-schema-readiness]",
+      JSON.stringify({
+        provider: "neon",
+        runtime: "vercel-preview",
+        connectionMode: target.connectionMode,
+        database: metadata.rows[0]?.database,
+        serverVersion: metadata.rows[0]?.server_version_num,
+        requiredTableCount: REQUIRED_TABLES.length,
+        missingTables: missing,
+        rowCounts: counts,
+        schemaReady: missing.length === 0,
+        productionReadyClaimed: false,
+      }),
+    );
 
-    console.log("\n═══════════════════════════════════════════════════════════════════");
-    if (allTablesPresent) {
-      console.log("🎉 RESULTADO: O Neon Database está 100% PRONTO PARA PRODUÇÃO!");
-    } else {
-      console.log("⚠️  RESULTADO: Algumas tabelas ainda precisam de ser migradas para o Neon.");
-    }
-    console.log("═══════════════════════════════════════════════════════════════════\n");
+    if (missing.length) throw new Error("required_tables_missing");
   } finally {
-    client.release();
+    client?.release();
     await pool.end();
   }
 }
 
-runAudit().catch((err) => {
-  console.error("❌ Erro durante a auditoria do Neon:", err.message);
+main().catch((cause) => {
+  console.error(
+    "[neon-schema-readiness] blocked",
+    cause instanceof Error ? cause.message : "unknown_error",
+  );
   process.exit(1);
 });
