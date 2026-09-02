@@ -126,11 +126,28 @@ function projectRefFromSupabaseUrl(value) {
   return projectRef;
 }
 
-export function resolveSourceConfig(env, expectedSourceRef) {
-  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim() || env.SUPABASE_URL?.trim();
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url) throw new GateError("supabase_url_missing");
-  if (!serviceRoleKey) throw new GateError("supabase_service_role_missing");
+export function resolveSourceConfig(env, expectedSourceRef, { requireDedicated = false } = {}) {
+  const url = requireDedicated
+    ? env.GATE_2C_SOURCE_SUPABASE_URL?.trim()
+    : env.GATE_2C_SOURCE_SUPABASE_URL?.trim() ||
+      env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+      env.SUPABASE_URL?.trim();
+  const serviceRoleKey = requireDedicated
+    ? env.GATE_2C_SOURCE_SUPABASE_SERVICE_ROLE_KEY?.trim()
+    : env.GATE_2C_SOURCE_SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+      env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url) {
+    throw new GateError(
+      requireDedicated ? "migration_source_supabase_url_missing" : "supabase_url_missing",
+    );
+  }
+  if (!serviceRoleKey) {
+    throw new GateError(
+      requireDedicated
+        ? "migration_source_supabase_service_role_missing"
+        : "supabase_service_role_missing",
+    );
+  }
   if (!expectedSourceRef) throw new GateError("expected_source_ref_missing");
 
   const actualRef = projectRefFromSupabaseUrl(url);
@@ -413,7 +430,9 @@ function safeTableAudit(audit) {
 }
 
 async function loadSourceData(options, env) {
-  const source = resolveSourceConfig(env, options.expectedSourceRef);
+  const source = resolveSourceConfig(env, options.expectedSourceRef, {
+    requireDedicated: options.mode !== "source-audit",
+  });
   const supabase = createSupabase(source);
   const giftAudit = await inspectSourceTable(supabase, GIFT_TABLE);
   const photoAudit = await Promise.all(

@@ -44,6 +44,26 @@ describe("Gate 2C safety gates", () => {
     );
   });
 
+  it("requires dedicated migration source bindings in Preview", async () => {
+    await assert.rejects(
+      () =>
+        main(
+          ["preflight", "--expected-source-ref=aaaaaaaaaaaaaaaaaaaa"],
+          {
+            VERCEL_ENV: "preview",
+            VERCEL_GIT_COMMIT_REF: "migration/supabase-to-neon",
+            DATABASE_URL:
+              "postgresql://role:secret@ep-example.us-east-2.aws.neon.tech/neondb",
+            NEXT_PUBLIC_SUPABASE_URL: "https://aaaaaaaaaaaaaaaaaaaa.supabase.co",
+            SUPABASE_SERVICE_ROLE_KEY: "application-preview-key",
+          },
+        ),
+      (cause) =>
+        cause instanceof GateError &&
+        cause.message === "migration_source_supabase_url_missing",
+    );
+  });
+
   it("requires the service role and exact source ref", () => {
     throwsCode(
       () =>
