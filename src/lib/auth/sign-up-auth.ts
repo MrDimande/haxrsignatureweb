@@ -34,20 +34,22 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
 export function validateSignUpCredentials(input: {
-  fullName: string;
+  fullName?: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword?: string;
   termsAccepted: boolean;
 }): SignUpFieldErrors {
   const errors: SignUpFieldErrors = {};
   const trimmedEmail = input.email.trim();
-  const trimmedName = input.fullName.trim();
 
-  if (!trimmedName) {
-    errors.fullName = "O nome é obrigatório.";
-  } else if (trimmedName.length < 2) {
-    errors.fullName = "Introduza o seu nome completo.";
+  if (input.fullName !== undefined) {
+    const trimmedName = input.fullName.trim();
+    if (!trimmedName) {
+      errors.fullName = "O nome é obrigatório.";
+    } else if (trimmedName.length < 2) {
+      errors.fullName = "Introduza o seu nome completo.";
+    }
   }
 
   if (!trimmedEmail) {
@@ -62,10 +64,12 @@ export function validateSignUpCredentials(input: {
     errors.password = `Use pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
   }
 
-  if (!input.confirmPassword) {
-    errors.confirmPassword = "Confirme a palavra-passe.";
-  } else if (input.password !== input.confirmPassword) {
-    errors.confirmPassword = "As palavras-passe não coincidem.";
+  if (input.confirmPassword !== undefined) {
+    if (!input.confirmPassword) {
+      errors.confirmPassword = "Confirme a palavra-passe.";
+    } else if (input.password !== input.confirmPassword) {
+      errors.confirmPassword = "As palavras-passe não coincidem.";
+    }
   }
 
   if (!input.termsAccepted) {
@@ -120,10 +124,10 @@ export type SignUpWithEmailPasswordResult =
 export async function signUpWithEmailPassword(
   client: EmailPasswordSignUpClient,
   input: {
-    fullName: string;
+    fullName?: string;
     email: string;
     password: string;
-    confirmPassword: string;
+    confirmPassword?: string;
     termsAccepted: boolean;
   },
 ): Promise<SignUpWithEmailPasswordResult> {
@@ -142,14 +146,13 @@ export async function signUpWithEmailPassword(
   }
 
   try {
+    const trimmedName = input.fullName?.trim();
     const { data, error } = await client.auth.signUp({
       email: input.email.trim(),
       password: input.password,
-      options: {
-        data: {
-          full_name: input.fullName.trim(),
-        },
-      },
+      options: trimmedName
+        ? { data: { full_name: trimmedName } }
+        : undefined,
     });
 
     if (error) {

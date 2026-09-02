@@ -3,7 +3,7 @@ import {
   ClipboardList,
   Activity,
   AlertTriangle,
-  Sparkles,
+  Gem,
   Users,
   Wallet,
 } from "lucide-react";
@@ -119,7 +119,7 @@ export default function EventCommandCenterPanel({
           </p>
         </div>
         <div className="admin-stat-card">
-          <Sparkles className="w-4 h-4 text-admin-gold/70 mb-2" />
+          <Gem className="w-4 h-4 text-admin-gold/70 mb-2" strokeWidth={1.5} />
           <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
             Concierge
           </p>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Globe, Sparkles, MessageCircle, ArrowLeft,
+  Globe, Gem, MessageCircle, ArrowLeft,
   Smartphone, Monitor, Check
 } from "lucide-react";
 import Link from "next/link";
@@ -225,7 +225,7 @@ export default function WeddingWebsiteSetupPage() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
+                    <Gem className="w-4 h-4" strokeWidth={1.5} />
                     <span>Publicar Rascunho</span>
                   </>
                 )}

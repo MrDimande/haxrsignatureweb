@@ -4,8 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Heart, MessageCircle, Trash2, X } from "lucide-react";
+import {
+  CalendarCheck2,
+  ChevronDown,
+  Coins,
+  Heart,
+  LayoutDashboard,
+  LogOut,
+  MessageCircle,
+  Search,
+  Settings,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import { navAccountLink, type NavGroup, type NavLink } from "@/lib/marketing/navigation";
+import type { AppUserDisplay } from "@/lib/auth/app-user-display";
 
 interface FavoriteItem {
   id: string;
@@ -17,27 +31,34 @@ interface FavoriteItem {
 type NavMobileDrawerProps = {
   open: boolean;
   onClose: () => void;
+  onOpenSearch?: () => void;
   groups: readonly NavGroup[];
   directLinks: readonly NavLink[];
-  cta: NavLink;
   favorites: FavoriteItem[];
   onRemoveFavorite: (id: string) => void;
   whatsAppShareHref: string;
+  auth?: {
+    isAuthenticated: boolean;
+    userDisplay: AppUserDisplay | null;
+    signOut: () => Promise<void>;
+  };
 };
 
 export default function NavMobileDrawer({
   open,
   onClose,
+  onOpenSearch,
   groups,
   directLinks,
-  cta,
   favorites,
   onRemoveFavorite,
   whatsAppShareHref,
+  auth,
 }: NavMobileDrawerProps) {
   const pathname = usePathname();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -45,6 +66,13 @@ export default function NavMobileDrawer({
       setShowFavorites(false);
     }
   }, [open]);
+
+  const handleMobileSignOut = async () => {
+    if (isSigningOut || !auth) return;
+    setIsSigningOut(true);
+    await auth.signOut();
+    onClose();
+  };
 
   return (
     <AnimatePresence>
@@ -70,10 +98,27 @@ export default function NavMobileDrawer({
             aria-modal="true"
             aria-label="Menu de navegação"
           >
+            {/* ── Top Header ── */}
             <div className="flex items-center justify-between px-5 h-[4.25rem] border-b border-gold-dim shrink-0">
-              <p className="font-mono text-[9px] tracking-[0.35em] uppercase text-white/50">
-                Menu
-              </p>
+              {auth?.isAuthenticated && auth.userDisplay ? (
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-gold/70 bg-brand-black font-serif text-xs font-bold text-brand-gold">
+                    {auth.userDisplay.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-serif text-xs text-white truncate font-medium">
+                      {auth.userDisplay.name}
+                    </p>
+                    <p className="font-mono text-[8px] text-brand-gold uppercase tracking-wider">
+                      {auth.userDisplay.roleLabel}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="font-mono text-[9px] tracking-[0.35em] uppercase text-white/50">
+                  Menu
+                </p>
+              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -84,73 +129,124 @@ export default function NavMobileDrawer({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-6 space-y-2">
-              {groups.map((group) => (
-                <div key={group.id} className="border-b border-white/8 pb-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedId((current) =>
-                        current === group.id ? null : group.id
-                      )
-                    }
-                    className="w-full flex items-center justify-between py-3 font-sans text-xs tracking-[0.28em] uppercase text-white/75 cursor-pointer"
-                    aria-expanded={expandedId === group.id}
+            {/* ── Scrollable Body ── */}
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+              {/* ── Search Bar ── */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenSearch?.();
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/60 hover:text-white hover:border-brand-gold/40 transition-colors text-xs font-light"
+              >
+                <Search className="h-4 w-4 text-brand-gold shrink-0" strokeWidth={1.5} />
+                <span>Pesquisar serviços, guias, fornecedores...</span>
+              </button>
+
+              {/* ── Authenticated User Quick Links (If logged in) ── */}
+              {auth?.isAuthenticated && auth.userDisplay && (
+                <div className="p-3 rounded-xl border border-brand-gold/25 bg-brand-gold/5 space-y-2">
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-widest text-brand-gold/80 px-1">
+                    Área Privada
+                  </p>
+                  <Link
+                    href="/app/dashboard"
+                    onClick={onClose}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-white/10 transition-colors"
                   >
-                    {group.label}
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-300 ${
-                        expandedId === group.id ? "rotate-180" : ""
-                      }`}
-                      strokeWidth={1.25}
-                    />
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {expandedId === group.id ? (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pb-3 space-y-1 pl-1">
-                          {group.links.map((link) => (
-                            <Link
-                              key={`${group.id}-${link.label}`}
-                              href={link.href}
-                              onClick={onClose}
-                              className={`block py-2 font-serif text-sm font-light transition-colors ${
-                                pathname === link.href
-                                  ? "text-brand-gold-light"
-                                  : "text-white/60 hover:text-white"
-                              }`}
-                            >
-                              {link.label}
-                            </Link>
-                          ))}
-                        </div>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
+                    <LayoutDashboard className="h-4 w-4 text-brand-gold" />
+                    <span>Painel do Casamento</span>
+                  </Link>
+                  <Link
+                    href="/tools/wedding-checklist"
+                    onClick={onClose}
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-light text-white/80 hover:bg-white/10 transition-colors"
+                  >
+                    <CalendarCheck2 className="h-3.5 w-3.5 text-brand-gold/70" />
+                    <span>Checklist & Tarefas</span>
+                  </Link>
+                  <Link
+                    href="/tools/budget-tracker"
+                    onClick={onClose}
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-light text-white/80 hover:bg-white/10 transition-colors"
+                  >
+                    <Coins className="h-3.5 w-3.5 text-brand-gold/70" />
+                    <span>Orçamento & Sinais</span>
+                  </Link>
                 </div>
-              ))}
+              )}
 
-              {directLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={onClose}
-                  className={`block py-3 font-sans text-xs tracking-[0.28em] uppercase border-b border-white/8 transition-colors ${
-                    pathname === link.href
-                      ? "text-brand-gold-light"
-                      : "text-white/75 hover:text-white"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {/* ── Main Nav Groups ── */}
+              <div className="space-y-1">
+                {groups.map((group) => (
+                  <div key={group.id} className="border-b border-white/8 pb-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedId((current) =>
+                          current === group.id ? null : group.id
+                        )
+                      }
+                      className="w-full flex items-center justify-between py-3 font-sans text-xs tracking-[0.28em] uppercase text-white/75 cursor-pointer"
+                      aria-expanded={expandedId === group.id}
+                    >
+                      {group.label}
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-300 ${
+                          expandedId === group.id ? "rotate-180 text-brand-gold" : ""
+                        }`}
+                        strokeWidth={1.25}
+                      />
+                    </button>
 
+                    <AnimatePresence initial={false}>
+                      {expandedId === group.id ? (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pl-3 pb-3 space-y-1 border-l border-brand-gold/30 ml-1">
+                            {group.links.map((link) => (
+                              <Link
+                                key={`${group.id}-${link.href}-${link.label}`}
+                                href={link.href}
+                                onClick={onClose}
+                                className={`block py-1.5 font-serif text-sm font-light transition-colors ${
+                                  pathname === link.href
+                                    ? "text-brand-gold-light"
+                                    : "text-white/60 hover:text-white"
+                                }`}
+                              >
+                                {link.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+                ))}
+
+                {directLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={onClose}
+                    className={`block py-3 font-sans text-xs tracking-[0.28em] uppercase border-b border-white/8 transition-colors ${
+                      pathname === link.href
+                        ? "text-brand-gold-light"
+                        : "text-white/75 hover:text-white"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+
+              {/* ── Favorites Section ── */}
               <button
                 type="button"
                 onClick={() => setShowFavorites((value) => !value)}
@@ -233,21 +329,27 @@ export default function NavMobileDrawer({
               </AnimatePresence>
             </div>
 
-            <div className="p-5 border-t border-gold-dim shrink-0 flex flex-col gap-3">
-              <Link
-                href={navAccountLink.href}
-                onClick={onClose}
-                className="w-full text-center font-sans text-[10px] font-semibold tracking-[0.2em] uppercase text-white hover:text-brand-gold border border-white/20 py-3.5 hover:border-brand-gold hover:bg-white/5 transition-all duration-300 rounded-sm"
-              >
-                {navAccountLink.label}
-              </Link>
-              <Link
-                href={cta.href}
-                onClick={onClose}
-                className="btn-editorial btn-editorial--solid w-full text-center py-3.5"
-              >
-                {cta.label}
-              </Link>
+            {/* ── Footer / CTA / Sign Out ── */}
+            <div className="p-5 border-t border-gold-dim shrink-0">
+              {auth?.isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={handleMobileSignOut}
+                  disabled={isSigningOut}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-rose-500/40 bg-rose-950/20 text-rose-300 font-sans text-xs font-medium hover:bg-rose-900/30 transition-colors cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>{isSigningOut ? "A terminar sessão..." : "Terminar Sessão"}</span>
+                </button>
+              ) : (
+                <Link
+                  href={navAccountLink.href}
+                  onClick={onClose}
+                  className="btn-editorial btn-editorial--solid w-full text-center py-3.5 block"
+                >
+                  {navAccountLink.label}
+                </Link>
+              )}
             </div>
           </motion.div>
         </>

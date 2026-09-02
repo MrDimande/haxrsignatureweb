@@ -10,7 +10,7 @@ import {
   MessageCircle,
   PencilLine,
   Receipt,
-  Sparkles,
+  Crown,
   UserPlus,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/calculations";
@@ -28,7 +28,7 @@ const ICONS: Record<ClientTimelineEntry["kind"], typeof FileText> = {
   email_sent: Mail,
   whatsapp_shared: MessageCircle,
   payment_received: CreditCard,
-  proforma_converted: Sparkles,
+  proforma_converted: Crown,
   portal_proposal_approved: CheckCircle2,
   portal_proposal_changes: PencilLine,
 };

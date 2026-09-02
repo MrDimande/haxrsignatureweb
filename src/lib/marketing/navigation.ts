@@ -104,6 +104,21 @@ export const navGroups: readonly NavGroup[] = [
         description: "Despesas, sinais e controlo financeiro do evento.",
       },
       {
+        href: "/tools/calculadora-bebidas-catering",
+        label: "Calculadora de Bebidas",
+        description: "Estime garrafas de vinho, cerveja, whisky, salgados e bolo.",
+      },
+      {
+        href: "/tools/cronograma-casamento",
+        label: "Cronograma do Grande Dia",
+        description: "Timeline minuto a minuto dos preparativos à última música.",
+      },
+      {
+        href: "/tools/simulador-layout-salao",
+        label: "Simulador de Layout de Salão",
+        description: "Calcule a área em m², mesas, pista de dança e buffet.",
+      },
+      {
         href: "/tools/wedding-checklist",
         label: "Checklist",
         description: "Cronograma e tarefas personalizadas por data.",
@@ -126,7 +141,7 @@ export const navDirectLinks: readonly NavLink[] = [
 ];
 
 export const navAccountLink: NavLink = {
-  href: "/dashboard",
+  href: "/sign-in",
   label: "Entrar",
 };
 
@@ -197,6 +212,7 @@ export const footerLinkGroups: FooterLinkGroup[] = [
       { href: "/ferramentas", label: "Hub de Ferramentas" },
       { href: "/tools/haxr-concierge", label: "HAXR Concierge" },
       { href: "/tools/guest-list", label: "Lista e RSVP" },
+      { href: "/tools/calculadora-bebidas-catering", label: "Calculadora de Bebidas" },
       { href: "/tools/vendor-manager", label: "Gestor de Fornecedores" },
       { href: "/tools/budget-tracker", label: "Orçamento" },
       { href: "/tools/wedding-checklist", label: "Checklist" },

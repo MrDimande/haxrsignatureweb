@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Copy, Mail, Sparkles } from "lucide-react";
+import { ArrowRight, Copy, Mail, Gem } from "lucide-react";
 import {
   homeConciergeSection,
   type ConciergeScenarioId,
@@ -40,7 +40,7 @@ export default function HomeConciergeInbox({
     <div className="rounded-sm border border-white/12 bg-[#0f0d0b] shadow-[0_32px_80px_rgba(0,0,0,0.55)] overflow-hidden">
       <div className="flex items-center justify-between px-4 md:px-5 py-3 border-b border-white/10 bg-brand-black">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-brand-gold-light" strokeWidth={1.5} />
+          <Gem className="w-4 h-4 text-brand-gold-light" strokeWidth={1.5} />
           <span className="font-sans text-xs font-semibold uppercase tracking-wider text-brand-ivory/80">
             {inbox.panelTitle}
           </span>

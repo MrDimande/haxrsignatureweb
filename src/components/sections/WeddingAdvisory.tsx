@@ -1,11 +1,11 @@
 "use client";
 
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
-import { ShieldCheck, Calendar, Users, HelpCircle, Sparkles, Clock } from "lucide-react";
+import { ShieldCheck, Calendar, Users, HelpCircle, Crown, Clock } from "lucide-react";
 
 const advisoryPillars = [
   {
-    icon: Sparkles,
+    icon: Crown,
     title: "Assessoria Completa",
     desc: "Acompanhamento integral desde o primeiro dia: da definição do conceito criativo à contratação de fornecedores e coordenação final.",
   },

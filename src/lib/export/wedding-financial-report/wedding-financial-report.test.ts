@@ -64,7 +64,6 @@ function createLeilaArmandoLedger(): NormalizedEventFinancialLedger {
       eventId: "ce-leila-armando-2026",
       currency: "MZN",
       eventOverview: {
-        id: "ce-leila-armando-2026",
         name: "Casamento Leila & Armando",
         type: "Casamento",
         date: "14 de Novembro de 2026",
@@ -74,18 +73,25 @@ function createLeilaArmandoLedger(): NormalizedEventFinancialLedger {
       },
     },
     summary: {
-      budgetCeiling: 1200000,
+      estimatedBudget: 1200000,
       approvedBudget: 1200000,
+      budgetCeiling: 1200000,
+      hasApprovedBudget: true,
       contractedAmount: 800000,
       paidAmount: 350000,
       outstandingAmount: 450000,
       uncommittedBudget: 400000,
       forecastFinalCost: 980000,
       projectedVariance: 220000,
-      totalCommitted: 800000,
-      executionRate: 43.75,
-      commitmentRate: 66.67,
+      isOverBudget: false,
+      contingencyReserved: 0,
+      contingencySpent: 0,
       costPerGuest: 4900,
+      guestCount: 200,
+      paymentProgress: 43.75,
+      commitmentProgress: 66.67,
+      overdueCount: 0,
+      overdueTotalAmount: 0,
       nextPayment: {
         vendorName: "Chef Silva Catering",
         dueDate: "01/10/2026",
@@ -99,7 +105,6 @@ function createLeilaArmandoLedger(): NormalizedEventFinancialLedger {
         contracted: 470000,
         paid: 200000,
         balance: 270000,
-        itemCount: 1,
         shareOfTotal: 58.75,
       },
       {
@@ -108,7 +113,6 @@ function createLeilaArmandoLedger(): NormalizedEventFinancialLedger {
         contracted: 330000,
         paid: 150000,
         balance: 180000,
-        itemCount: 1,
         shareOfTotal: 41.25,
       },
     ],
@@ -117,7 +121,7 @@ function createLeilaArmandoLedger(): NormalizedEventFinancialLedger {
       {
         id: "inst-1",
         vendorOrItem: "Chef Silva Catering",
-        category: "Catering & Bar",
+        installmentLabel: "1ª Parcela",
         amount: 200000,
         dueDate: "01/08/2026",
         dueDateIso: "2026-08-01",
@@ -126,7 +130,7 @@ function createLeilaArmandoLedger(): NormalizedEventFinancialLedger {
       {
         id: "inst-2",
         vendorOrItem: "Chef Silva Catering",
-        category: "Catering & Bar",
+        installmentLabel: "2ª Parcela",
         amount: 270000,
         dueDate: "01/10/2026",
         dueDateIso: "2026-10-01",
@@ -135,7 +139,7 @@ function createLeilaArmandoLedger(): NormalizedEventFinancialLedger {
       {
         id: "inst-3",
         vendorOrItem: "Catembe Gallery Hotel",
-        category: "Espaço",
+        installmentLabel: "Sinal",
         amount: 180000,
         dueDate: "15/10/2026",
         dueDateIso: "2026-10-15",
@@ -179,7 +183,6 @@ function createEmptyLedger(): NormalizedEventFinancialLedger {
       eventId: "ce-empty-2026",
       currency: "MZN",
       eventOverview: {
-        id: "ce-empty-2026",
         name: "Casamento Sem Dados",
         type: "Casamento",
         date: "Data por definir",
@@ -189,18 +192,25 @@ function createEmptyLedger(): NormalizedEventFinancialLedger {
       },
     },
     summary: {
-      budgetCeiling: 0,
+      estimatedBudget: 0,
       approvedBudget: null,
+      budgetCeiling: 0,
+      hasApprovedBudget: false,
       contractedAmount: 0,
       paidAmount: 0,
       outstandingAmount: 0,
       uncommittedBudget: 0,
       forecastFinalCost: 0,
       projectedVariance: 0,
-      totalCommitted: 0,
-      executionRate: 0,
-      commitmentRate: 0,
+      isOverBudget: false,
+      contingencyReserved: 0,
+      contingencySpent: 0,
       costPerGuest: 0,
+      guestCount: 0,
+      paymentProgress: 0,
+      commitmentProgress: 0,
+      overdueCount: 0,
+      overdueTotalAmount: 0,
       nextPayment: null,
     },
     categories: [],
@@ -404,8 +414,8 @@ describe("HAXR Wedding Financial Report (PDF System)", () => {
   it("H. Segurança e Autorização do API Handler", async () => {
     // 1. Rejeição de eventos demo/mock
     const mockRes = await handleClientEventFinancialReportRequest({
-      envCheck: { ok: true },
-      serviceRoleCheck: { ok: true },
+      envCheck: { ok: true, projectRef: "preview-ref" },
+      serviceRoleCheck: { ok: true, projectRef: "preview-ref" },
       user: { id: "u-123" },
       eventId: "demo-event",
       authClient: {} as ClientEventPaymentsAuthClient,
@@ -414,8 +424,8 @@ describe("HAXR Wedding Financial Report (PDF System)", () => {
 
     // 2. Rejeição sem utilizador autenticado
     const unauthRes = await handleClientEventFinancialReportRequest({
-      envCheck: { ok: true },
-      serviceRoleCheck: { ok: true },
+      envCheck: { ok: true, projectRef: "preview-ref" },
+      serviceRoleCheck: { ok: true, projectRef: "preview-ref" },
       user: null,
       eventId: "ce-real-123",
       authClient: {} as ClientEventPaymentsAuthClient,
@@ -425,7 +435,7 @@ describe("HAXR Wedding Financial Report (PDF System)", () => {
     // 3. Rejeição por ambiente indisponível
     const envErrRes = await handleClientEventFinancialReportRequest({
       envCheck: { ok: false, message: "Missing SUPABASE_URL" },
-      serviceRoleCheck: { ok: true },
+      serviceRoleCheck: { ok: true, projectRef: "preview-ref" },
       user: { id: "u-123" },
       eventId: "ce-real-123",
       authClient: {} as ClientEventPaymentsAuthClient,
@@ -435,31 +445,51 @@ describe("HAXR Wedding Financial Report (PDF System)", () => {
 
   it("I. Contrato assinado sem contracted_amount: zero proposal-to-balance inference", async () => {
     // Cenário: proposal = 500000, contractSigned = true, contractedAmount = 0, paid = 0
+    const testEvent: ClientEventRow = {
+      ...baseEvent,
+      id: "ev-test-no-val",
+      slug: "test-slug",
+      event_name: "Casamento Teste Sem Valor",
+      event_date: "2026-12-01",
+      budget_min: 1000000,
+      budget_max: 1000000,
+      currency: "MZN",
+    };
+
     const ledger = buildNormalizedFinancialLedger({
-      event: {
-        id: "ev-test-no-val",
-        name: "Casamento Teste Sem Valor",
-        event_date: "2026-12-01",
-        budget: 1000000,
-        currency: "MZN",
-      },
+      event: testEvent,
       paymentsPayload: {
-        currency: "MZN",
-        totals: { totalAmount: 0, count: 0 },
+        summary: {
+          totalPaid: 0,
+          totalPending: 0,
+          totalOverdue: 0,
+          paymentCount: 0,
+          paidCount: 0,
+          pendingCount: 0,
+          overdueCount: 0,
+          nextPayment: null,
+        },
+        installments: [],
         payments: [],
       },
       vendors: [
         {
           id: "v-signed-no-val",
           name: "Flores do Campo Atelier",
-          category: "Decoração & Flores",
+          category: "decoração",
+          contact: "+258 84 000 0000",
+          location: "Maputo",
+          status: "contratado",
+          nextAction: "",
           proposal: {
+            id: "prop-1",
             amount: 500000,
-            submittedAt: "2026-07-01",
+            receivedAt: "2026-07-01",
+            status: "aprovada",
           },
           contract: {
+            id: "ct-1",
             signed: true,
-            status: "contratado",
           },
           contractedAmount: 0,
         },

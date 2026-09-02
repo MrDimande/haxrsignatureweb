@@ -16,7 +16,6 @@ import {
   Smartphone,
   CheckCircle,
   ArrowUpRight,
-  Sparkles,
   ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

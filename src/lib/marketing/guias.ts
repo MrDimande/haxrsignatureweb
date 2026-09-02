@@ -9,9 +9,9 @@ export type GuiaItem = {
 export const guiasCatalog: readonly GuiaItem[] = [
   {
     id: "checklist-12-meses",
-    title: "Checklist 12 Meses — Casamento em Maputo",
+    title: "Checklist 12 Meses — Casamento",
     description:
-      "Cronograma mês a mês desde o noivado até ao grande dia — fornecedores, prazos e decisões críticas.",
+      "Cronograma mês a mês desde o noivado até ao grande dia, fornecedores, prazos e decisões críticas.",
     bullets: [
       "Marcos por trimestre",
       "Fornecedores prioritários em MZ",

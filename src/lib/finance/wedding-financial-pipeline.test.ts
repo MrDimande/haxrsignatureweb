@@ -45,6 +45,7 @@ describe("HAXR Canonical Wedding Financial Pipeline & Parity", () => {
       status: "contratado",
       contractedAmount: 350000,
       contract: { id: "ct-001", signed: true },
+      nextAction: "Pagar sinal",
     },
     {
       id: "v-catering",
@@ -55,16 +56,18 @@ describe("HAXR Canonical Wedding Financial Pipeline & Parity", () => {
       status: "contratado",
       contractedAmount: 450000,
       contract: { id: "ct-002", signed: true },
+      nextAction: "Degustação agendada",
     },
     {
       id: "v-decor",
       name: "Atelier Botânico de Maputo",
-      category: "decoracao",
+      category: "decoração",
       contact: "+258 87 500 6000",
       location: "Maputo",
       status: "sugerido",
       contractedAmount: 0,
       proposal: { id: "prop-003", amount: 180000, receivedAt: "2026-08-10", status: "pendente" },
+      nextAction: "Aguardar proposta final",
     },
   ];
 
@@ -244,9 +247,12 @@ describe("HAXR Canonical Wedding Financial Pipeline & Parity", () => {
     const negotiatedVendor: Vendor = {
       id: "v-neg-01",
       name: "Alta Costura Floral",
-      category: "decoracao",
+      category: "decoração",
       status: "contratado",
       contractedAmount: 470000,
+      contact: "+258 84 111 2222",
+      location: "Maputo",
+      nextAction: "Pagamento 2ª tranche",
       proposal: {
         id: "prop-01",
         amount: 500000,

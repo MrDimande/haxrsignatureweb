@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { Download, Sparkles } from "lucide-react";
+import { Download, Gem } from "lucide-react";
 import { AdminInput, AdminSelect } from "@/components/admin/AdminField";
 import { buildFindSeatUrl } from "@/lib/events/tokens";
 import { generateStyledQrDataUrl } from "@/lib/events/qr-client";
@@ -374,7 +374,7 @@ export default function EventQrPanel({
                 />
               ) : (
                 <div className="aspect-[3/4] flex flex-col items-center justify-center gap-3">
-                  <Sparkles className="w-6 h-6 text-admin-gold/40 animate-pulse" />
+                  <Gem className="w-6 h-6 text-admin-gold/40 animate-pulse" strokeWidth={1.5} />
                   <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-grey/40">
                     A compor...
                   </p>

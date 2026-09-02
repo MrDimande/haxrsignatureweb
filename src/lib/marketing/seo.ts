@@ -5,7 +5,7 @@ export const marketingPagesSeo = {
   home: {
     path: "/",
     title:
-      "HAXR Signature | Assessoria de Eventos, Convites Digitais e Gestão de Convidados em Maputo",
+      "HAXR Signature | Assessoria de Eventos, Convites Digitais e Gestão de Convidados",
     description:
       "Assessoria de eventos, convites digitais para casamentos, RSVP, Find Your Seat e gestão de convidados, Moçambique. Organização premium com assinatura HAXR.",
     keywords: [
@@ -69,7 +69,7 @@ export const marketingPagesSeo = {
       "wedding planner Moçambique",
       "planeamento de eventos",
       "coordenação de casamentos",
-      "cerimonial casamento Maputo",
+      "cerimonial casamento",
       "curadoria de eventos exclusivos",
     ],
   },
@@ -183,7 +183,7 @@ export const marketingPagesSeo = {
     path: "/insights",
     title: "Insights — Organização de Casamentos e Eventos em Moçambique",
     description:
-      "Guias e reflexões sobre casamentos, RSVP, gestão de convidados, Find Your Seat e assessoria de eventos em Maputo — conhecimento editorial HAXR Signature.",
+      "Guias e reflexões sobre casamentos, RSVP, gestão de convidados, Find Your Seat e assessoria de eventos, conhecimento editorial HAXR Signature.",
     keywords: [
       "organização de casamentos",
       "dicas RSVP casamento",
@@ -196,7 +196,7 @@ export const marketingPagesSeo = {
     path: "/area-cliente",
     title: "Área do Cliente HAXR Signature",
     description:
-      "Acompanhamento próximo do seu evento com a HAXR Signature — cronograma, documentos e decisões com clareza e discrição.",
+      "Acompanhamento próximo do seu evento com a HAXR Signature cronograma, documentos e decisões com clareza e discrição.",
     keywords: ["área do cliente eventos", "HAXR Signature cliente"],
   },
   signUp: {

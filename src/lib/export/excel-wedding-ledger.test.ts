@@ -128,10 +128,10 @@ describe("Official Excel Wedding Financial Book Exporter (ExcelJS)", () => {
       budget_min: null,
       budget_max: null,
       estimated_guests: 0,
-      event_location: null,
+      event_location: "",
       event_date: null,
-      bride_name: null,
-      groom_name: null,
+      bride_name: "",
+      groom_name: "",
       event_name: "Novo Evento",
     };
 

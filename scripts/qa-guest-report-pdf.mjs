@@ -146,6 +146,7 @@ const logo01 = await loadLocalLogoBase64(
 const coverLogo01 = await loadLocalLogoBase64(
   resolveDocumentLogoPath(haxrBusiness, "maison_signature")
 );
+const sigMark01 = await loadLocalLogoBase64("/images/brand/aldimande-signature-gold.png");
 
 const stanNames = [
   "Ana Nhaca", "Bernardo Silva", "Carlos Tembe", "Daniela Matusse",
@@ -169,6 +170,7 @@ const report01 = buildGuestEventReport({
   event: baseEvent,
   guests: fixture01Guests,
   seats: [],
+  plannerNotes: "Recepção com protocolo de boas-vindas na entrada poente. Coordenação de banquete alinhada com o maître para serviço às 15:30.",
 });
 
 const pdf01Path = path.join(outputDir, "01_social_event_no_seating.pdf");
@@ -177,6 +179,7 @@ await renderToFile(
     report: report01,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf01Path
@@ -238,6 +241,7 @@ await renderToFile(
     report: report02,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf02Path
@@ -279,6 +283,7 @@ await renderToFile(
     report: report03,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf03Path
@@ -296,17 +301,17 @@ const fixture04Guests = [
   }),
   makeGuest("g-diet-02", "Carlos Eduardo", {
     status: "confirmed",
-    dietaryNotes: "Dieta Kosher estrita",
+    dietaryNotes: "Intolerância severa à lactose e derivados lácteos",
     seat: { tableName: "Imperial", seatNumber: 2, label: "" },
   }),
-  makeGuest("g-diet-03", "Dra. Diana Vasconcelos", {
+  makeGuest("g-diet-03", "Dra. Diana Matos", {
     status: "checked_in",
-    dietaryNotes: "Dieta Halal",
+    dietaryNotes: "Regime vegetariano estrito (sem ovos nem gelatina)",
     seat: { tableName: "Família", seatNumber: 1, label: "" },
   }),
-  makeGuest("g-diet-04", "Eng. Ernesto Matos", {
+  makeGuest("g-diet-04", "Eng. Fernando Dias", {
     status: "confirmed",
-    dietaryNotes: "Vegano estrito — sem derivados animais",
+    dietaryNotes: "Diabético Tipo 1 (sem adição de açúcares refinados)",
     seat: { tableName: "Família", seatNumber: 2, label: "" },
   }),
 ];
@@ -323,6 +328,7 @@ await renderToFile(
     report: report04,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf04Path
@@ -349,6 +355,7 @@ await renderToFile(
     report: report05,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf05Path
@@ -427,6 +434,7 @@ await renderToFile(
     report: report07,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf07Path
@@ -445,28 +453,8 @@ const longNames = [
   "Arq. Catarina Isabel Domingos Correia Magalhães Fonseca-Tavares",
   "Sra. D. Margarida Filomena do Rosário Ribeiro Gonçalves da Costa",
   "Prof. Doutor António Eduardo Machado Ferreira Vieira Brandão",
-  "Eng.ª Sofia Alexandra Mendes Teixeira de Carvalho Montenegro",
-  "Comendador Francisco Manuel de Assis Reis Ferraz Nascimento",
-  "Drª. Beatriz Maria Helena Rodrigues Taveira de Almeida Nogueira",
-  "S.Exª Sr. Embaixador Luís Bernardo de Andrade e Castro Montez",
-  "Profª. Doutora Clara Raquel Abreu Figueiredo Martins Lourenço",
-  "Eng.º Mestre Ricardo Jorge Alberto dos Santos Magalhães Pinto",
-  "Sra. Condessa Leonor Filipa de Bragança Sousa Montenegro-Vaz",
-  "Dr. Augusto Manuel Filipe Henriques Rebelo de Sousa Figueiredo",
-  "Arq.ª Marina Inês Fernanda do Espírito Santo Pereira da Silva",
-  "Prof. Catedrático Emeritus José Eduardo Martins Costa Brandão",
-  "Drª. Helena Francisca do Carmo Ribeiro Moura Pinto Figueiredo",
-  "Eng.º Doutor Tiago Miguel Fernandes de Albuquerque Castanheira",
-  "Sra. D. Rosário Augusta de Fátima Correia Monteiro da Fonseca",
-  "Rev. Padre Joaquim Francisco Martins Lopes de Oliveira Baptista",
-  "Drª. Isabel Cristina Maria Santos Ferreira Guimarães de Matos",
-  "Prof. Doutor Mestre Nuno Filipe Andrade e Castro Montenegro",
-  "Eng.ª Ana Margarida Luísa Figueiredo de Carvalho Montenegro",
-  "Gen. José Alberto Francisco do Nascimento Pereira de Almeida",
-  "Drª. Cláudia Beatriz Henriques Taveira de Montenegro e Silva",
-  "Dr. Vasco Manuel Fernando da Costa Reis Monteiro Figueiredo",
-  "Arq. Teresa Filomena do Carmo Albuquerque Brandão e Fonseca",
-  "Eng.º Doutor Henrique Augusto Pereira Montenegro da Silveira",
+  "Dra. Luísa Madalena Henriques de Vasconcelos Alvim e Castro",
+  "Sr. Comendador Francisco Xavier de Bragança Barreto Mascarenhas",
   "Sra. Marquesa D. Carlota Fernanda de Assis Monteiro Brandão",
 ];
 
@@ -494,6 +482,7 @@ await renderToFile(
     report: report08,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf08Path
@@ -602,6 +591,7 @@ await renderToFile(
     report: report09,
     logoUrl: logo01,
     coverLogoUrl: coverLogo01,
+    signatureMarkUrl: sigMark01,
     businessName: "HAXR Signature",
   }),
   pdf09Path

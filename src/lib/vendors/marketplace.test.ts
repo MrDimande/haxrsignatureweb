@@ -25,6 +25,24 @@ const supplier: PublicSupplierProfile = {
   services: ["Casamentos"],
   verified: true,
   publishedAt: "2026-08-03T10:00:00.000Z",
+  avatarUrl: null,
+  coverImageUrl: "/images/suppliers/default-cover.webp",
+  portfolioImages: [],
+  priceRange: "Sob Consulta",
+  experienceYears: 5,
+  featuredBadge: "Curadoria HAXR",
+  responseTime: "Responde em menos de 2h",
+  satisfactionRate: 98,
+  memberSince: "2025",
+  styles: ["editorial"],
+  seasonality: {
+    status: "open",
+    statusBadge: "Agenda Aberta",
+    seasonAlert: "Época Alta",
+    recommendedAdvance: "6 meses",
+    peakSeasonMonths: "Set-Dez",
+    availableYears: ["2025", "2026"],
+  },
 };
 
 describe("supplier marketplace", () => {

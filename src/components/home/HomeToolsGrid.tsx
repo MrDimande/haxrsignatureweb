@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft, ArrowRight, FileText, Check,
-  ChevronRight, Sparkles, CheckCheck
+  ChevronRight, CheckCheck
 } from "lucide-react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 

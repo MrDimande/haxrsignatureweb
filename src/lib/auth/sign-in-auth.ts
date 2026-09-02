@@ -16,6 +16,14 @@ export type EmailPasswordSignInClient = {
     signInWithPassword: (credentials: SignInCredentials) => Promise<{
       error: { message: string } | null;
     }>;
+    signInWithOtp?: (options: {
+      email: string;
+      options?: {
+        emailRedirectTo?: string;
+      };
+    }) => Promise<{
+      error: { message: string } | null;
+    }>;
   };
 };
 
@@ -23,7 +31,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateSignInCredentials(
   email: string,
-  password: string,
+  password?: string,
 ): SignInFieldErrors {
   const errors: SignInFieldErrors = {};
   const trimmedEmail = email.trim();
@@ -34,8 +42,10 @@ export function validateSignInCredentials(
     errors.email = "Introduza um endereço de email válido.";
   }
 
-  if (!password) {
-    errors.password = "A palavra-passe é obrigatória.";
+  if (password !== undefined) {
+    if (!password) {
+      errors.password = "A palavra-passe é obrigatória.";
+    }
   }
 
   return errors;
@@ -57,6 +67,10 @@ export function mapSupabaseSignInError(message: string): string {
 
   if (normalized.includes("email not confirmed")) {
     return "Confirme o seu email antes de entrar.";
+  }
+
+  if (normalized.includes("for security purposes") || normalized.includes("rate limit")) {
+    return "Muitas tentativas. Aguarde alguns instantes antes de tentar novamente.";
   }
 
   if (
@@ -97,6 +111,56 @@ export async function signInWithEmailPassword(
     const { error } = await client.auth.signInWithPassword({
       email: email.trim(),
       password,
+    });
+
+    if (error) {
+      return { ok: false, formError: mapSupabaseSignInError(error.message) };
+    }
+
+    return { ok: true };
+  } catch (cause) {
+    const message =
+      cause instanceof Error ? cause.message : "Erro de rede desconhecido.";
+    return { ok: false, formError: mapSupabaseSignInError(message) };
+  }
+}
+
+export type SignInWithMagicLinkResult =
+  | { ok: true }
+  | { ok: false; fieldErrors?: SignInFieldErrors; formError: string };
+
+export async function signInWithMagicLink(
+  client: EmailPasswordSignInClient,
+  email: string,
+  redirectTo: string,
+): Promise<SignInWithMagicLinkResult> {
+  const fieldErrors = validateSignInCredentials(email);
+  if (hasSignInFieldErrors(fieldErrors)) {
+    return {
+      ok: false,
+      fieldErrors,
+      formError: "Introduza um email válido.",
+    };
+  }
+
+  const envCheck = validateClientAppAuthEnvironment();
+  if (!envCheck.ok) {
+    return { ok: false, formError: envCheck.message };
+  }
+
+  if (!client.auth.signInWithOtp) {
+    return {
+      ok: false,
+      formError: "O método de link de acesso por email não está disponível.",
+    };
+  }
+
+  try {
+    const { error } = await client.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: redirectTo,
+      },
     });
 
     if (error) {

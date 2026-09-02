@@ -5,6 +5,7 @@ import {
   mapSupabaseSignInError,
   signOutFromSupabase,
   signInWithEmailPassword,
+  signInWithMagicLink,
   validateSignInCredentials,
   type EmailPasswordSignInClient,
 } from "./sign-in-auth";
@@ -186,6 +187,52 @@ describe("sign-in-auth", () => {
     if (!result.ok) {
       assert.match(result.formError, /ligar ao servidor/i);
     }
+  });
+
+  it("signInWithMagicLink sends OTP with correct redirect URL", async () => {
+    setProcessEnv("NODE_ENV", "development");
+    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+
+    let sentEmail = "";
+    let sentRedirect = "";
+    const client = {
+      auth: {
+        signInWithPassword: async () => ({ error: null }),
+        signInWithOtp: async (options: { email: string; options?: { emailRedirectTo?: string } }) => {
+          sentEmail = options.email;
+          sentRedirect = options.options?.emailRedirectTo ?? "";
+          return { error: null };
+        },
+      },
+    };
+
+    const result = await signInWithMagicLink(
+      client,
+      "couple@example.com",
+      "https://example.com/auth/callback",
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(sentEmail, "couple@example.com");
+    assert.equal(sentRedirect, "https://example.com/auth/callback");
+  });
+
+  it("signInWithMagicLink validates email before calling Supabase", async () => {
+    let called = false;
+    const client = {
+      auth: {
+        signInWithPassword: async () => ({ error: null }),
+        signInWithOtp: async () => {
+          called = true;
+          return { error: null };
+        },
+      },
+    };
+
+    const result = await signInWithMagicLink(client, "invalid-email", "https://example.com");
+    assert.equal(result.ok, false);
+    assert.equal(called, false);
   });
 
   it("signOutFromSupabase calls Supabase signOut", async () => {
