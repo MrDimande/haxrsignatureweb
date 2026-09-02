@@ -14,6 +14,7 @@ import {
   resolveSourceConfig,
   selectConflictKey,
   selectPhotoTable,
+  summarizeTargetReconciliation,
 } from "./gate-2c-gifts-photos-migration.mjs";
 import { REQUIRED_TABLES } from "./neon-health-check.mjs";
 
@@ -281,6 +282,32 @@ describe("Gate 2C integrity helpers", () => {
         ),
       "source_conflict_key_null:edition_gift_reservations",
     );
+  });
+
+  it("summarizes a reconciliation without exposing row values", () => {
+    const summary = summarizeTargetReconciliation(
+      [
+        { id: "source-a", storage_path: "source/a.jpg", caption: "same" },
+        { id: "source-b", storage_path: "source/b.jpg", caption: "source" },
+      ],
+      [
+        { id: "source-a", storage_path: "source/a.jpg", caption: "same" },
+        { id: "source-b", storage_path: "other/b.jpg", caption: "target" },
+      ],
+      3,
+      ["id"],
+    );
+
+    assert.deepEqual(summary, {
+      sourceRowCount: 2,
+      targetRowCount: 3,
+      matchedConflictKeyCount: 2,
+      matchingRecordCount: 1,
+      divergentRecordCount: 1,
+      storagePathMatchCount: 1,
+      sourceOnlyCount: 0,
+      targetOnlyCount: 1,
+    });
   });
 
   it("produces stable checksums independent of key and row order", () => {

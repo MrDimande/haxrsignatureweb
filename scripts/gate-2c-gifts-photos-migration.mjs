@@ -324,6 +324,41 @@ export function assertSourceConflictKeys(table, rows, columns) {
   }
 }
 
+export function summarizeTargetReconciliation(
+  sourceRows,
+  matchingTargetRows,
+  targetRowCount,
+  conflictColumns,
+) {
+  const sourceByConflictKey = new Map(
+    sourceRows.map((row) => [conflictKey(row, conflictColumns), row]),
+  );
+  const divergentRecordCount = matchingTargetRows.filter(
+    (row) =>
+      checksumRows([row]) !==
+      checksumRows([sourceByConflictKey.get(conflictKey(row, conflictColumns))]),
+  ).length;
+  const storagePathMatchCount =
+    sourceRows[0] && Object.hasOwn(sourceRows[0], "storage_path")
+      ? matchingTargetRows.filter(
+          (row) =>
+            row.storage_path ===
+            sourceByConflictKey.get(conflictKey(row, conflictColumns))?.storage_path,
+        ).length
+      : null;
+
+  return {
+    sourceRowCount: sourceRows.length,
+    targetRowCount,
+    matchedConflictKeyCount: matchingTargetRows.length,
+    matchingRecordCount: matchingTargetRows.length - divergentRecordCount,
+    divergentRecordCount,
+    storagePathMatchCount,
+    sourceOnlyCount: sourceRows.length - matchingTargetRows.length,
+    targetOnlyCount: targetRowCount - matchingTargetRows.length,
+  };
+}
+
 function rowColumns(rows) {
   if (rows.length === 0) return [];
   const columns = Object.keys(rows[0]).sort();
@@ -477,15 +512,25 @@ async function inspectTargetState(client, table, rows) {
     rows,
   );
   const totalCount = await countTargetRows(client, table);
-
-  const sourceByConflictKey = new Map(rows.map((row) => [conflictKey(row, conflictColumns), row]));
-  const conflicts = existingRows.filter(
-    (row) =>
-      checksumRows([row]) !==
-      checksumRows([sourceByConflictKey.get(conflictKey(row, conflictColumns))]),
+  const reconciliation = summarizeTargetReconciliation(
+    rows,
+    existingRows,
+    totalCount,
+    conflictColumns,
   );
-  if (conflicts.length) throw new GateError(`target_conflict:${table}`);
-  if (totalCount !== existingRows.length) throw new GateError(`target_extra_rows:${table}`);
+  console.info(
+    "[gate-2c-reconciliation-audit]",
+    JSON.stringify({
+      table,
+      conflictKey: conflictColumns,
+      ...reconciliation,
+      sourceMutated: false,
+      targetMutated: false,
+      storageBlobsCopied: false,
+    }),
+  );
+  if (reconciliation.divergentRecordCount) throw new GateError(`target_conflict:${table}`);
+  if (reconciliation.targetOnlyCount) throw new GateError(`target_extra_rows:${table}`);
 
   return {
     columns: sourceColumns,
@@ -494,6 +539,7 @@ async function inspectTargetState(client, table, rows) {
     conflictColumns,
     existingCount: existingRows.length,
     totalCount,
+    reconciliation,
     sourceChecksum: checksumRows(rows),
     targetChecksum: checksumRows(existingRows),
   };
