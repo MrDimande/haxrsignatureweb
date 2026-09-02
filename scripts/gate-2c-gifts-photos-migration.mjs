@@ -2,19 +2,20 @@
 /**
  * Gate 2C — Supabase -> Neon gift reservations and photo metadata.
  *
- * The command is read-only unless `apply` is selected and every Preview gate
- * passes. It never copies Storage blobs and never falls back to the anon key.
+ * The command is read-only unless `apply-gifts` is selected and every Preview
+ * gate passes. Photo metadata is intentionally deferred: this gate never
+ * copies Storage blobs and never falls back to the anon key.
  *
  * Examples:
  *   node scripts/gate-2c-gifts-photos-migration.mjs source-audit \
  *     --env-file=.env.local --expected-source-ref=<ref>
- *   node scripts/gate-2c-gifts-photos-migration.mjs preflight \
- *     --expected-source-ref=<ref> --expected-gifts=38 --expected-photos=147 \
- *     --expected-gifts-checksum=<sha256> --expected-photos-checksum=<sha256>
- *   node scripts/gate-2c-gifts-photos-migration.mjs apply \
- *     --expected-source-ref=<ref> --expected-gifts=38 --expected-photos=147 \
+ *   node scripts/gate-2c-gifts-photos-migration.mjs preflight-gifts \
+ *     --expected-source-ref=<ref> --expected-gifts=38 \
+ *     --expected-gifts-checksum=<sha256>
+ *   node scripts/gate-2c-gifts-photos-migration.mjs apply-gifts \
+ *     --expected-source-ref=<ref> --expected-gifts=38 \
  *     --expected-neon-host=<exact-preview-host> \
- *     --confirm=GATE_2C_PREVIEW_WRITE
+ *     --confirm=GATE_2C_PREVIEW_GIFTS_WRITE
  */
 
 import { createHash } from "node:crypto";
@@ -25,7 +26,7 @@ import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
 
 const MIGRATION_BRANCH = "migration/supabase-to-neon";
-const APPLY_CONFIRMATION = "GATE_2C_PREVIEW_WRITE";
+const APPLY_GIFTS_CONFIRMATION = "GATE_2C_PREVIEW_GIFTS_WRITE";
 const CLEANUP_CONFIRMATION = "GATE_2C_PREVIEW_CLEANUP";
 const GIFT_TABLE = "edition_gift_reservations";
 const PHOTO_TABLE_CANDIDATES = Object.freeze([
@@ -46,9 +47,17 @@ export class GateError extends Error {
   }
 }
 
+export function modeRequiresPhotoData(mode) {
+  return mode === "source-audit" || mode === "cleanup-preview-photos";
+}
+
 export function parseArgs(argv) {
   const [mode = "source-audit", ...rawFlags] = argv;
-  if (!new Set(["source-audit", "preflight", "apply", "cleanup-preview-photos"]).has(mode)) {
+  if (
+    !new Set(["source-audit", "preflight-gifts", "apply-gifts", "cleanup-preview-photos"]).has(
+      mode,
+    )
+  ) {
     throw new GateError("invalid_mode");
   }
 
@@ -182,11 +191,14 @@ export function assertPreviewNeonTarget(env, confirmation, mode, expectedNeonHos
   if (env.VERCEL_GIT_COMMIT_REF !== MIGRATION_BRANCH) {
     throw new GateError("migration_branch_required");
   }
-  const requiresWriteConfirmation = mode === "apply" || mode === "cleanup-preview-photos";
-  const expectedConfirmation = mode === "apply" ? APPLY_CONFIRMATION : CLEANUP_CONFIRMATION;
+  const requiresWriteConfirmation = mode === "apply-gifts" || mode === "cleanup-preview-photos";
+  const expectedConfirmation =
+    mode === "apply-gifts" ? APPLY_GIFTS_CONFIRMATION : CLEANUP_CONFIRMATION;
   if (requiresWriteConfirmation && confirmation !== expectedConfirmation) {
     throw new GateError(
-      mode === "apply" ? "apply_confirmation_missing" : "cleanup_confirmation_missing",
+      mode === "apply-gifts"
+        ? "apply_gifts_confirmation_missing"
+        : "cleanup_confirmation_missing",
     );
   }
 
@@ -889,9 +901,10 @@ async function loadSourceData(options, env) {
   });
   const supabase = createSupabase(source);
   const giftAudit = await inspectSourceTable(supabase, GIFT_TABLE);
-  const photoAudit = await Promise.all(
-    PHOTO_TABLE_CANDIDATES.map((table) => inspectSourceTable(supabase, table)),
-  );
+  const requiresPhotoData = modeRequiresPhotoData(options.mode);
+  const photoAudit = requiresPhotoData
+    ? await Promise.all(PHOTO_TABLE_CANDIDATES.map((table) => inspectSourceTable(supabase, table)))
+    : null;
 
   if (options.mode === "source-audit") {
     console.info(
@@ -909,11 +922,11 @@ async function loadSourceData(options, env) {
     throw new GateError(`gift_table_inaccessible:${giftAudit.errorCode}`);
   }
 
+  const gifts = await fetchAllSourceRows(supabase, GIFT_TABLE);
+  if (!requiresPhotoData) return { source, gifts, photoTable: null, photos: null };
+
   const photoTable = selectPhotoTable(photoAudit, options.photoTable);
-  const [gifts, photos] = await Promise.all([
-    fetchAllSourceRows(supabase, GIFT_TABLE),
-    fetchAllSourceRows(supabase, photoTable),
-  ]);
+  const photos = await fetchAllSourceRows(supabase, photoTable);
 
   return { source, photoTable, gifts, photos };
 }
@@ -930,6 +943,7 @@ async function runGate(options, env = process.env) {
           options.expectedNeonHost,
         );
   const sourceData = await loadSourceData(options, env);
+  const requiresPhotoData = modeRequiresPhotoData(options.mode);
 
   if (options.mode === "source-audit") {
     console.info(
@@ -951,11 +965,12 @@ async function runGate(options, env = process.env) {
   }
 
   assertExpectedCount("gifts", sourceData.gifts.length, options.expectedGifts);
-  assertExpectedCount("photos", sourceData.photos.length, options.expectedPhotos);
   const giftChecksum = checksumRows(sourceData.gifts);
-  const photoChecksum = checksumRows(sourceData.photos);
   assertExpectedChecksum("gifts", giftChecksum, options.expectedGiftsChecksum);
-  assertExpectedChecksum("photos", photoChecksum, options.expectedPhotosChecksum);
+  if (requiresPhotoData) {
+    assertExpectedCount("photos", sourceData.photos.length, options.expectedPhotos);
+    assertExpectedChecksum("photos", checksumRows(sourceData.photos), options.expectedPhotosChecksum);
+  }
   const pool = new pg.Pool({
     connectionString: target.connectionString,
     max: 1,
@@ -976,10 +991,12 @@ async function runGate(options, env = process.env) {
 
     const giftState = await inspectTargetState(client, GIFT_TABLE, sourceData.gifts);
     const isPhotoCleanup = options.mode === "cleanup-preview-photos";
-    const photoState = await inspectTargetState(client, sourceData.photoTable, sourceData.photos, {
-      allowTargetOnly: isPhotoCleanup,
-      auditTargetOnlyDependencies: !isPhotoCleanup,
-    });
+    const photoState = requiresPhotoData
+      ? await inspectTargetState(client, sourceData.photoTable, sourceData.photos, {
+          allowTargetOnly: isPhotoCleanup,
+          auditTargetOnlyDependencies: !isPhotoCleanup,
+        })
+      : null;
 
     if (isPhotoCleanup) {
       assertExpectedTargetOnlyPhotos(photoState.reconciliation, options);
@@ -1065,22 +1082,24 @@ async function runGate(options, env = process.env) {
           sourceChecksum: giftState.sourceChecksum,
           existingTargetChecksum: giftState.targetChecksum,
         },
-        photos: {
-          table: sourceData.photoTable,
-          sourceCount: sourceData.photos.length,
-          existingTargetCount: photoState.existingCount,
-          targetPrimaryKey: photoState.primaryKey,
-          targetIdUnique: photoState.idUnique,
-          targetConflictKey: photoState.conflictColumns,
-          sourceChecksum: photoState.sourceChecksum,
-          existingTargetChecksum: photoState.targetChecksum,
-        },
+        photos: photoState
+          ? {
+              table: sourceData.photoTable,
+              sourceCount: sourceData.photos.length,
+              existingTargetCount: photoState.existingCount,
+              targetPrimaryKey: photoState.primaryKey,
+              targetIdUnique: photoState.idUnique,
+              targetConflictKey: photoState.conflictColumns,
+              sourceChecksum: photoState.sourceChecksum,
+              existingTargetChecksum: photoState.targetChecksum,
+            }
+          : { migrationDeferred: true },
         storageBlobsCopied: false,
-        writeAuthorized: options.mode === "apply",
+        writeAuthorized: options.mode === "apply-gifts",
       }),
     );
 
-    if (options.mode === "preflight") return;
+    if (options.mode === "preflight-gifts") return;
 
     await client.query("BEGIN");
     try {
@@ -1096,14 +1115,6 @@ async function runGate(options, env = process.env) {
         sourceData.gifts,
         giftState.conflictColumns,
       );
-      await insertRows(
-        client,
-        sourceData.photoTable,
-        photoState.columns,
-        sourceData.photos,
-        photoState.conflictColumns,
-      );
-
       const verifiedGifts = await fetchTargetRows(
         client,
         GIFT_TABLE,
@@ -1111,15 +1122,7 @@ async function runGate(options, env = process.env) {
         giftState.conflictColumns,
         sourceData.gifts,
       );
-      const verifiedPhotos = await fetchTargetRows(
-        client,
-        sourceData.photoTable,
-        photoState.columns,
-        photoState.conflictColumns,
-        sourceData.photos,
-      );
       const finalGiftCount = await countTargetRows(client, GIFT_TABLE);
-      const finalPhotoCount = await countTargetRows(client, sourceData.photoTable);
 
       if (
         finalGiftCount !== sourceData.gifts.length ||
@@ -1128,27 +1131,15 @@ async function runGate(options, env = process.env) {
       ) {
         throw new GateError("gift_verification_failed");
       }
-      if (
-        finalPhotoCount !== sourceData.photos.length ||
-        verifiedPhotos.length !== sourceData.photos.length ||
-        checksumRows(verifiedPhotos) !== photoState.sourceChecksum
-      ) {
-        throw new GateError("photo_verification_failed");
-      }
-
       await client.query("COMMIT");
       console.info(
-        "[gate-2c-apply]",
+        "[gate-2c-apply-gifts]",
         JSON.stringify({
           status: "committed_and_verified",
           sourceRef: sourceData.source.projectRef,
           target: "neon-vercel-preview",
           gifts: { count: finalGiftCount, checksum: giftState.sourceChecksum },
-          photos: {
-            table: sourceData.photoTable,
-            count: finalPhotoCount,
-            checksum: photoState.sourceChecksum,
-          },
+          photos: { migrationDeferred: true },
           storageBlobsCopied: false,
         }),
       );

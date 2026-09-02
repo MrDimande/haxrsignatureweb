@@ -31,16 +31,13 @@ if (isMigrationPreview) {
       args: [],
     },
     {
-      name: "gate-2c-preflight",
+      name: "gate-2c-gifts-preflight",
       script: "scripts/gate-2c-gifts-photos-migration.mjs",
       args: [
-        "preflight",
+        "preflight-gifts",
         "--expected-source-ref=oxsrdmydlqyvnueedgtl",
         "--expected-gifts=42",
-        "--expected-photos=147",
         "--expected-gifts-checksum=7ff1cf6590b6d4e3989e0070fa61b619d23f5dfcae3a71f4e604f4ecdaf4a5d2",
-        "--expected-photos-checksum=36b8f471d851f7244a47f2b3070b03465d5415a1f7d42109f3fb7764054ecfd0",
-        "--photo-table=wedding_photos",
       ],
     },
   ];

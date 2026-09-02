@@ -12,6 +12,7 @@ import {
   checksumRows,
   foreignKeyDeleteAction,
   main,
+  modeRequiresPhotoData,
   normalizeTargetColumnList,
   parseArgs,
   quoteIdentifier,
@@ -35,14 +36,12 @@ describe("Gate 2C safety gates", () => {
   it("validates pinned source checksums", () => {
     const checksum = "a".repeat(64);
     const parsed = parseArgs([
-      "preflight",
+      "preflight-gifts",
       `--expected-gifts-checksum=${checksum}`,
-      `--expected-photos-checksum=${checksum}`,
     ]);
     assert.equal(parsed.expectedGiftsChecksum, checksum);
-    assert.equal(parsed.expectedPhotosChecksum, checksum);
     throwsCode(
-      () => parseArgs(["preflight", "--expected-gifts-checksum=not-a-sha256"]),
+      () => parseArgs(["preflight-gifts", "--expected-gifts-checksum=not-a-sha256"]),
       "expected_gifts_checksum_invalid",
     );
     const cleanup = parseArgs([
@@ -54,9 +53,17 @@ describe("Gate 2C safety gates", () => {
     assert.equal(cleanup.expectedTargetOnlyPhotosChecksum, checksum);
   });
 
+  it("isolates gift writes from deferred photo metadata", () => {
+    throwsCode(() => parseArgs(["apply"]), "invalid_mode");
+    assert.equal(parseArgs(["apply-gifts"]).mode, "apply-gifts");
+    assert.equal(modeRequiresPhotoData("apply-gifts"), false);
+    assert.equal(modeRequiresPhotoData("preflight-gifts"), false);
+    assert.equal(modeRequiresPhotoData("cleanup-preview-photos"), true);
+  });
+
   it("blocks non-Preview preflight before attempting a source read", async () => {
     await assert.rejects(
-      () => main(["preflight"], {}),
+      () => main(["preflight-gifts"], {}),
       (cause) => cause instanceof GateError && cause.message === "vercel_preview_required",
     );
   });
@@ -65,7 +72,7 @@ describe("Gate 2C safety gates", () => {
     await assert.rejects(
       () =>
         main(
-          ["preflight", "--expected-source-ref=aaaaaaaaaaaaaaaaaaaa"],
+          ["preflight-gifts", "--expected-source-ref=aaaaaaaaaaaaaaaaaaaa"],
           {
             VERCEL_ENV: "preview",
             VERCEL_GIT_COMMIT_REF: "migration/supabase-to-neon",
@@ -144,11 +151,11 @@ describe("Gate 2C safety gates", () => {
       "vercel_preview_required",
     );
     throwsCode(
-      () => assertPreviewNeonTarget(base, null, "apply"),
-      "apply_confirmation_missing",
+      () => assertPreviewNeonTarget(base, null, "apply-gifts"),
+      "apply_gifts_confirmation_missing",
     );
     throwsCode(
-      () => assertPreviewNeonTarget(base, "GATE_2C_PREVIEW_WRITE", "apply"),
+      () => assertPreviewNeonTarget(base, "GATE_2C_PREVIEW_GIFTS_WRITE", "apply-gifts"),
       "expected_neon_host_missing",
     );
     throwsCode(
@@ -159,8 +166,8 @@ describe("Gate 2C safety gates", () => {
       () =>
         assertPreviewNeonTarget(
           base,
-          "GATE_2C_PREVIEW_WRITE",
-          "apply",
+          "GATE_2C_PREVIEW_GIFTS_WRITE",
+          "apply-gifts",
           "ep-wrong.us-east-2.aws.neon.tech",
         ),
       "neon_host_mismatch",
@@ -168,8 +175,8 @@ describe("Gate 2C safety gates", () => {
     assert.equal(
       assertPreviewNeonTarget(
         base,
-        "GATE_2C_PREVIEW_WRITE",
-        "apply",
+        "GATE_2C_PREVIEW_GIFTS_WRITE",
+        "apply-gifts",
         "ep-example.us-east-2.aws.neon.tech",
       ).database,
       "neondb",
@@ -187,7 +194,7 @@ describe("Gate 2C safety gates", () => {
               "postgresql://role:secret@ep-production.us-east-2.aws.neon.tech/neondb",
           },
           null,
-          "preflight",
+          "preflight-gifts",
         ),
       "neon_database_url_missing",
     );
@@ -203,7 +210,7 @@ describe("Gate 2C safety gates", () => {
             DATABASE_URL: "postgresql://role:secret@database.example.com/app",
           },
           null,
-          "preflight",
+          "preflight-gifts",
         ),
       "neon_host_required",
     );
