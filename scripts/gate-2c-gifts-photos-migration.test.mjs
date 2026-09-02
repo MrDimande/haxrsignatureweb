@@ -64,6 +64,33 @@ describe("Gate 2C safety gates", () => {
     );
   });
 
+  it("accepts a dedicated revocable Supabase secret key", () => {
+    const source = resolveSourceConfig(
+      {
+        GATE_2C_SOURCE_SUPABASE_URL: "https://aaaaaaaaaaaaaaaaaaaa.supabase.co",
+        GATE_2C_SOURCE_SUPABASE_SECRET_KEY: "sb_secret_migration_only",
+      },
+      "aaaaaaaaaaaaaaaaaaaa",
+      { requireDedicated: true },
+    );
+    assert.equal(source.adminKey, "sb_secret_migration_only");
+  });
+
+  it("does not accept the legacy service-role binding for Preview migration", () => {
+    throwsCode(
+      () =>
+        resolveSourceConfig(
+          {
+            GATE_2C_SOURCE_SUPABASE_URL: "https://aaaaaaaaaaaaaaaaaaaa.supabase.co",
+            GATE_2C_SOURCE_SUPABASE_SERVICE_ROLE_KEY: "legacy-key",
+          },
+          "aaaaaaaaaaaaaaaaaaaa",
+          { requireDedicated: true },
+        ),
+      "migration_source_supabase_secret_key_missing",
+    );
+  });
+
   it("requires the service role and exact source ref", () => {
     throwsCode(
       () =>

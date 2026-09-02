@@ -132,19 +132,19 @@ export function resolveSourceConfig(env, expectedSourceRef, { requireDedicated =
     : env.GATE_2C_SOURCE_SUPABASE_URL?.trim() ||
       env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
       env.SUPABASE_URL?.trim();
-  const serviceRoleKey = requireDedicated
-    ? env.GATE_2C_SOURCE_SUPABASE_SERVICE_ROLE_KEY?.trim()
-    : env.GATE_2C_SOURCE_SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+  const adminKey = requireDedicated
+    ? env.GATE_2C_SOURCE_SUPABASE_SECRET_KEY?.trim()
+    : env.GATE_2C_SOURCE_SUPABASE_SECRET_KEY?.trim() ||
       env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url) {
     throw new GateError(
       requireDedicated ? "migration_source_supabase_url_missing" : "supabase_url_missing",
     );
   }
-  if (!serviceRoleKey) {
+  if (!adminKey) {
     throw new GateError(
       requireDedicated
-        ? "migration_source_supabase_service_role_missing"
+        ? "migration_source_supabase_secret_key_missing"
         : "supabase_service_role_missing",
     );
   }
@@ -152,7 +152,7 @@ export function resolveSourceConfig(env, expectedSourceRef, { requireDedicated =
 
   const actualRef = projectRefFromSupabaseUrl(url);
   if (actualRef !== expectedSourceRef) throw new GateError("source_ref_mismatch");
-  return { url, serviceRoleKey, projectRef: actualRef };
+  return { url, adminKey, projectRef: actualRef };
 }
 
 function resolveNeonUrl(env) {
@@ -193,7 +193,7 @@ export function assertPreviewNeonTarget(env, confirmation, mode, expectedNeonHos
 }
 
 function createSupabase(source) {
-  return createClient(source.url, source.serviceRoleKey, {
+  return createClient(source.url, source.adminKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
