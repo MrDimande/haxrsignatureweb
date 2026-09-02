@@ -10,6 +10,7 @@ import {
   buildTargetRowFetch,
   checksumConflictKeys,
   checksumRows,
+  foreignKeyDeleteAction,
   main,
   normalizeTargetColumnList,
   parseArgs,
@@ -395,6 +396,12 @@ describe("Gate 2C integrity helpers", () => {
       'SELECT count(*)::int AS count FROM public."photo_reactions" WHERE "photo_id" = ANY($1::uuid[])',
     );
     assert.deepEqual(query.values, [["00000000-0000-0000-0000-000000000001"]]);
+  });
+
+  it("reports referential actions without exposing dependent row data", () => {
+    assert.equal(foreignKeyDeleteAction("r"), "restrict");
+    assert.equal(foreignKeyDeleteAction("c"), "cascade");
+    assert.equal(foreignKeyDeleteAction("n"), "set_null");
   });
 
   it("uses a parameterized composite conflict key when needed", () => {

@@ -542,7 +542,12 @@ async function assertForeignKeysPresent(client, table, rows) {
   }
 }
 
-async function inspectTargetState(client, table, rows, { allowTargetOnly = false } = {}) {
+async function inspectTargetState(
+  client,
+  table,
+  rows,
+  { allowTargetOnly = false, auditTargetOnlyDependencies = false } = {},
+) {
   const { sourceColumns, primaryKey, idUnique, conflictColumns } = await inspectTargetTable(
     client,
     table,
@@ -575,6 +580,15 @@ async function inspectTargetState(client, table, rows, { allowTargetOnly = false
   const targetOnlyRows = allTargetRows.filter(
     (row) => !sourceConflictKeys.has(conflictKey(row, conflictColumns)),
   );
+  const dependencyAudit =
+    auditTargetOnlyDependencies && targetOnlyRows.length
+      ? await auditTargetOnlyDependenciesForTable(
+          client,
+          table,
+          conflictColumns,
+          targetOnlyRows,
+        )
+      : null;
   console.info(
     "[gate-2c-reconciliation-audit]",
     JSON.stringify({
@@ -600,6 +614,7 @@ async function inspectTargetState(client, table, rows, { allowTargetOnly = false
     totalCount,
     reconciliation,
     targetOnlyRows,
+    dependencyAudit,
     sourceChecksum: checksumRows(rows),
     targetChecksum: checksumRows(existingRows),
   };
@@ -700,22 +715,26 @@ function assertExpectedTargetOnlyPhotos(reconciliation, options) {
   );
 }
 
-async function assertCleanupDeleteSafety(client, table, conflictColumns, targetOnlyRows) {
+export function foreignKeyDeleteAction(action) {
+  const labels = {
+    a: "no_action",
+    r: "restrict",
+    c: "cascade",
+    n: "set_null",
+    d: "set_default",
+  };
+  return labels[action] || "unknown";
+}
+
+async function auditTargetOnlyDependenciesForTable(client, table, conflictColumns, targetOnlyRows) {
   if (conflictColumns.length !== 1 || conflictColumns[0] !== "id") {
     throw new GateError(`target_cleanup_conflict_key_unsupported:${table}`);
-  }
-
-  const privilegesResult = await client.query(
-    "SELECT has_table_privilege(current_user, $1, 'DELETE') AS can_delete",
-    [`public.${table}`],
-  );
-  if (!privilegesResult.rows[0]?.can_delete) {
-    throw new GateError(`target_delete_privilege_missing:${table}`);
   }
 
   const inboundForeignKeysResult = await client.query(
     `SELECT namespace.nspname AS schema_name,
             relation.relname AS table_name,
+            fk.confdeltype AS delete_action,
             array_agg(referencing_column.attname ORDER BY key_position.ordinality) AS referencing_columns,
             array_agg(referenced_column.attname ORDER BY key_position.ordinality) AS referenced_columns
        FROM pg_constraint fk
@@ -730,12 +749,13 @@ async function assertCleanupDeleteSafety(client, table, conflictColumns, targetO
          ON referenced_column.attrelid=fk.confrelid
         AND referenced_column.attnum=key_position.referenced_attnum
       WHERE fk.contype='f' AND fk.confrelid=$1::regclass
-      GROUP BY fk.oid, namespace.nspname, relation.relname
+      GROUP BY fk.oid, fk.confdeltype, namespace.nspname, relation.relname
       ORDER BY namespace.nspname, relation.relname, fk.oid`,
     [`public.${table}`],
   );
   const targetIds = targetOnlyRows.map((row) => row.id);
   let dependentRowCount = 0;
+  const relations = [];
   for (const row of inboundForeignKeysResult.rows) {
     const referencingColumns = normalizeTargetColumnList(row.referencing_columns);
     const referencedColumns = normalizeTargetColumnList(row.referenced_columns);
@@ -753,7 +773,14 @@ async function assertCleanupDeleteSafety(client, table, conflictColumns, targetO
       targetIds,
     );
     const result = await client.query(query.sql, query.values);
-    dependentRowCount += result.rows[0]?.count ?? 0;
+    const relationDependentRowCount = result.rows[0]?.count ?? 0;
+    dependentRowCount += relationDependentRowCount;
+    relations.push({
+      table: `${row.schema_name}.${row.table_name}`,
+      columns: referencingColumns,
+      onDelete: foreignKeyDeleteAction(row.delete_action),
+      dependentRowCount: relationDependentRowCount,
+    });
   }
 
   const triggersResult = await client.query(
@@ -764,21 +791,41 @@ async function assertCleanupDeleteSafety(client, table, conflictColumns, targetO
         AND tgenabled <> 'D'`,
     [`public.${table}`],
   );
-  if ((triggersResult.rows[0]?.count ?? 0) !== 0) {
+  const audit = {
+    table,
+    targetOnlyCount: targetOnlyRows.length,
+    inboundForeignKeyCount: inboundForeignKeysResult.rows.length,
+    dependentRowCount,
+    activeTriggerCount: triggersResult.rows[0]?.count ?? 0,
+    relations,
+    sourceMutated: false,
+    targetMutated: false,
+  };
+  console.info("[gate-2c-cleanup-dependency-audit]", JSON.stringify(audit));
+  return audit;
+}
+
+async function assertCleanupDeleteSafety(client, table, conflictColumns, targetOnlyRows) {
+  const privilegesResult = await client.query(
+    "SELECT has_table_privilege(current_user, $1, 'DELETE') AS can_delete",
+    [`public.${table}`],
+  );
+  if (!privilegesResult.rows[0]?.can_delete) {
+    throw new GateError(`target_delete_privilege_missing:${table}`);
+  }
+
+  const dependencyAudit = await auditTargetOnlyDependenciesForTable(
+    client,
+    table,
+    conflictColumns,
+    targetOnlyRows,
+  );
+  if (dependencyAudit.activeTriggerCount !== 0) {
     throw new GateError(`target_cleanup_triggers_present:${table}`);
   }
-  console.info(
-    "[gate-2c-cleanup-dependency-audit]",
-    JSON.stringify({
-      table,
-      targetOnlyCount: targetOnlyRows.length,
-      inboundForeignKeyCount: inboundForeignKeysResult.rows.length,
-      dependentRowCount,
-      sourceMutated: false,
-      targetMutated: false,
-    }),
-  );
-  if (dependentRowCount !== 0) throw new GateError(`target_cleanup_references_present:${table}`);
+  if (dependencyAudit.dependentRowCount !== 0) {
+    throw new GateError(`target_cleanup_references_present:${table}`);
+  }
 }
 
 function safeTableAudit(audit) {
@@ -885,6 +932,7 @@ async function runGate(options, env = process.env) {
     const isPhotoCleanup = options.mode === "cleanup-preview-photos";
     const photoState = await inspectTargetState(client, sourceData.photoTable, sourceData.photos, {
       allowTargetOnly: isPhotoCleanup,
+      auditTargetOnlyDependencies: !isPhotoCleanup,
     });
 
     if (isPhotoCleanup) {
