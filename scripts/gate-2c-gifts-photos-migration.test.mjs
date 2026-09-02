@@ -5,6 +5,7 @@ import {
   assertSourceConflictKeys,
   assertPreviewNeonTarget,
   buildBatchInsert,
+  buildBatchDelete,
   buildTargetRowFetch,
   checksumConflictKeys,
   checksumRows,
@@ -41,6 +42,13 @@ describe("Gate 2C safety gates", () => {
       () => parseArgs(["preflight", "--expected-gifts-checksum=not-a-sha256"]),
       "expected_gifts_checksum_invalid",
     );
+    const cleanup = parseArgs([
+      "cleanup-preview-photos",
+      "--expected-target-only-photos=6",
+      `--expected-target-only-photos-checksum=${checksum}`,
+    ]);
+    assert.equal(cleanup.expectedTargetOnlyPhotos, 6);
+    assert.equal(cleanup.expectedTargetOnlyPhotosChecksum, checksum);
   });
 
   it("blocks non-Preview preflight before attempting a source read", async () => {
@@ -139,6 +147,10 @@ describe("Gate 2C safety gates", () => {
     throwsCode(
       () => assertPreviewNeonTarget(base, "GATE_2C_PREVIEW_WRITE", "apply"),
       "expected_neon_host_missing",
+    );
+    throwsCode(
+      () => assertPreviewNeonTarget(base, null, "cleanup-preview-photos"),
+      "cleanup_confirmation_missing",
     );
     throwsCode(
       () =>
@@ -355,6 +367,19 @@ describe("Gate 2C integrity helpers", () => {
     assert.match(batch.sql, /VALUES \(\$1, \$2\), \(\$3, \$4\)/);
     assert.match(batch.sql, /ON CONFLICT \("id"\) DO NOTHING$/);
     assert.deepEqual(batch.values, ["1", "A", "2", "B"]);
+  });
+
+  it("builds a parameterized cleanup for only the approved conflict keys", () => {
+    const batch = buildBatchDelete(
+      "wedding_photos",
+      ["id"],
+      [{ id: "photo-a" }, { id: "photo-b" }],
+    );
+    assert.match(
+      batch.sql,
+      /^DELETE FROM public\."wedding_photos" WHERE \("id"\) IN \(\(\$1\), \(\$2\)\) RETURNING "id"$/,
+    );
+    assert.deepEqual(batch.values, ["photo-a", "photo-b"]);
   });
 
   it("uses a parameterized composite conflict key when needed", () => {

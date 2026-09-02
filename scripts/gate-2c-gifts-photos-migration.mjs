@@ -26,6 +26,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const MIGRATION_BRANCH = "migration/supabase-to-neon";
 const APPLY_CONFIRMATION = "GATE_2C_PREVIEW_WRITE";
+const CLEANUP_CONFIRMATION = "GATE_2C_PREVIEW_CLEANUP";
 const GIFT_TABLE = "edition_gift_reservations";
 const PHOTO_TABLE_CANDIDATES = Object.freeze([
   "wedding_photos",
@@ -47,7 +48,7 @@ export class GateError extends Error {
 
 export function parseArgs(argv) {
   const [mode = "source-audit", ...rawFlags] = argv;
-  if (!new Set(["source-audit", "preflight", "apply"]).has(mode)) {
+  if (!new Set(["source-audit", "preflight", "apply", "cleanup-preview-photos"]).has(mode)) {
     throw new GateError("invalid_mode");
   }
 
@@ -73,6 +74,14 @@ export function parseArgs(argv) {
     expectedPhotosChecksum: parseExpectedChecksum(
       flags.get("expected-photos-checksum"),
       "expected_photos_checksum",
+    ),
+    expectedTargetOnlyPhotos: parseExpectedCount(
+      flags.get("expected-target-only-photos"),
+      "expected_target_only_photos",
+    ),
+    expectedTargetOnlyPhotosChecksum: parseExpectedChecksum(
+      flags.get("expected-target-only-photos-checksum"),
+      "expected_target_only_photos_checksum",
     ),
     photoTable: flags.get("photo-table") || null,
     expectedNeonHost: flags.get("expected-neon-host") || null,
@@ -165,8 +174,12 @@ export function assertPreviewNeonTarget(env, confirmation, mode, expectedNeonHos
   if (env.VERCEL_GIT_COMMIT_REF !== MIGRATION_BRANCH) {
     throw new GateError("migration_branch_required");
   }
-  if (mode === "apply" && confirmation !== APPLY_CONFIRMATION) {
-    throw new GateError("apply_confirmation_missing");
+  const requiresWriteConfirmation = mode === "apply" || mode === "cleanup-preview-photos";
+  const expectedConfirmation = mode === "apply" ? APPLY_CONFIRMATION : CLEANUP_CONFIRMATION;
+  if (requiresWriteConfirmation && confirmation !== expectedConfirmation) {
+    throw new GateError(
+      mode === "apply" ? "apply_confirmation_missing" : "cleanup_confirmation_missing",
+    );
   }
 
   const connectionString = resolveNeonUrl(env);
@@ -180,7 +193,7 @@ export function assertPreviewNeonTarget(env, confirmation, mode, expectedNeonHos
   }
   if (!url.hostname.endsWith(".neon.tech")) throw new GateError("neon_host_required");
   if (!url.pathname || url.pathname === "/") throw new GateError("neon_database_missing");
-  if (mode === "apply") {
+  if (requiresWriteConfirmation) {
     if (!expectedNeonHost) throw new GateError("expected_neon_host_missing");
     if (url.hostname !== expectedNeonHost) throw new GateError("neon_host_mismatch");
   }
@@ -529,7 +542,7 @@ async function assertForeignKeysPresent(client, table, rows) {
   }
 }
 
-async function inspectTargetState(client, table, rows) {
+async function inspectTargetState(client, table, rows, { allowTargetOnly = false } = {}) {
   const { sourceColumns, primaryKey, idUnique, conflictColumns } = await inspectTargetTable(
     client,
     table,
@@ -558,6 +571,10 @@ async function inspectTargetState(client, table, rows) {
     allTargetRows,
     conflictColumns,
   );
+  const sourceConflictKeys = new Set(rows.map((row) => conflictKey(row, conflictColumns)));
+  const targetOnlyRows = allTargetRows.filter(
+    (row) => !sourceConflictKeys.has(conflictKey(row, conflictColumns)),
+  );
   console.info(
     "[gate-2c-reconciliation-audit]",
     JSON.stringify({
@@ -570,7 +587,9 @@ async function inspectTargetState(client, table, rows) {
     }),
   );
   if (reconciliation.divergentRecordCount) throw new GateError(`target_conflict:${table}`);
-  if (reconciliation.targetOnlyCount) throw new GateError(`target_extra_rows:${table}`);
+  if (!allowTargetOnly && reconciliation.targetOnlyCount) {
+    throw new GateError(`target_extra_rows:${table}`);
+  }
 
   return {
     columns: sourceColumns,
@@ -580,6 +599,7 @@ async function inspectTargetState(client, table, rows) {
     existingCount: existingRows.length,
     totalCount,
     reconciliation,
+    targetOnlyRows,
     sourceChecksum: checksumRows(rows),
     targetChecksum: checksumRows(existingRows),
   };
@@ -604,6 +624,26 @@ export function buildBatchInsert(table, columns, rows, conflictColumns) {
   return { sql, values };
 }
 
+export function buildBatchDelete(table, conflictColumns, rows) {
+  if (!rows.length) return null;
+  if (!conflictColumns.length) throw new GateError(`target_conflict_key_missing:${table}`);
+  const values = [];
+  const tuples = rows.map((row) => {
+    const placeholders = conflictColumns.map((column) => {
+      values.push(row[column]);
+      return `$${values.length}`;
+    });
+    return `(${placeholders.join(", ")})`;
+  });
+  const key = conflictColumns.map(quoteIdentifier).join(", ");
+  return {
+    sql: `DELETE FROM public.${quoteIdentifier(table)} WHERE (${key}) IN (${tuples.join(
+      ", ",
+    )}) RETURNING ${key}`,
+    values,
+  };
+}
+
 async function insertRows(client, table, columns, rows, conflictColumns) {
   for (let start = 0; start < rows.length; start += INSERT_BATCH_SIZE) {
     const batch = buildBatchInsert(
@@ -616,6 +656,14 @@ async function insertRows(client, table, columns, rows, conflictColumns) {
   }
 }
 
+async function deleteRows(client, table, conflictColumns, rows) {
+  const batch = buildBatchDelete(table, conflictColumns, rows);
+  if (!batch) return 0;
+  const result = await client.query(batch.sql, batch.values);
+  if (result.rowCount !== rows.length) throw new GateError(`target_cleanup_delete_mismatch:${table}`);
+  return result.rowCount;
+}
+
 function assertExpectedCount(label, actual, expected) {
   if (expected === null) throw new GateError(`${label}_expected_count_missing`);
   if (actual !== expected) throw new GateError(`${label}_count_mismatch`);
@@ -624,6 +672,50 @@ function assertExpectedCount(label, actual, expected) {
 function assertExpectedChecksum(label, actual, expected) {
   if (expected === null) throw new GateError(`${label}_expected_checksum_missing`);
   if (actual !== expected) throw new GateError(`${label}_checksum_mismatch`);
+}
+
+function assertExpectedTargetOnlyPhotos(reconciliation, options) {
+  assertExpectedCount(
+    "target_only_photos",
+    reconciliation.targetOnlyCount,
+    options.expectedTargetOnlyPhotos,
+  );
+  assertExpectedChecksum(
+    "target_only_photos",
+    reconciliation.targetOnlyKeyChecksum,
+    options.expectedTargetOnlyPhotosChecksum,
+  );
+}
+
+async function assertCleanupDeleteSafety(client, table) {
+  const [privilegesResult, inboundForeignKeysResult, triggersResult] = await Promise.all([
+    client.query("SELECT has_table_privilege(current_user, $1, 'DELETE') AS can_delete", [
+      `public.${table}`,
+    ]),
+    client.query(
+      `SELECT count(*)::int AS count
+         FROM pg_constraint
+        WHERE contype='f' AND confrelid=$1::regclass`,
+      [`public.${table}`],
+    ),
+    client.query(
+      `SELECT count(*)::int AS count
+         FROM pg_trigger
+        WHERE tgrelid=$1::regclass
+          AND NOT tgisinternal
+          AND tgenabled <> 'D'`,
+      [`public.${table}`],
+    ),
+  ]);
+  if (!privilegesResult.rows[0]?.can_delete) {
+    throw new GateError(`target_delete_privilege_missing:${table}`);
+  }
+  if ((inboundForeignKeysResult.rows[0]?.count ?? 0) !== 0) {
+    throw new GateError(`target_cleanup_inbound_foreign_keys:${table}`);
+  }
+  if ((triggersResult.rows[0]?.count ?? 0) !== 0) {
+    throw new GateError(`target_cleanup_triggers_present:${table}`);
+  }
 }
 
 function safeTableAudit(audit) {
@@ -727,7 +819,64 @@ async function runGate(options, env = process.env) {
     if (connectionResult.rows[0]?.is_replica) throw new GateError("target_is_read_replica");
 
     const giftState = await inspectTargetState(client, GIFT_TABLE, sourceData.gifts);
-    const photoState = await inspectTargetState(client, sourceData.photoTable, sourceData.photos);
+    const isPhotoCleanup = options.mode === "cleanup-preview-photos";
+    const photoState = await inspectTargetState(client, sourceData.photoTable, sourceData.photos, {
+      allowTargetOnly: isPhotoCleanup,
+    });
+
+    if (isPhotoCleanup) {
+      assertExpectedTargetOnlyPhotos(photoState.reconciliation, options);
+      await client.query("BEGIN");
+      try {
+        await client.query("SET LOCAL lock_timeout = '5s'");
+        await client.query("SET LOCAL statement_timeout = '30s'");
+        await client.query("SET LOCAL idle_in_transaction_session_timeout = '30s'");
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('haxr:gate-2c:gifts-photos'))");
+
+        await inspectTargetState(client, GIFT_TABLE, sourceData.gifts);
+        const lockedPhotoState = await inspectTargetState(
+          client,
+          sourceData.photoTable,
+          sourceData.photos,
+          { allowTargetOnly: true },
+        );
+        assertExpectedTargetOnlyPhotos(lockedPhotoState.reconciliation, options);
+        await assertCleanupDeleteSafety(client, sourceData.photoTable);
+        const deletedMetadataRows = await deleteRows(
+          client,
+          sourceData.photoTable,
+          lockedPhotoState.conflictColumns,
+          lockedPhotoState.targetOnlyRows,
+        );
+        const verifiedPhotoState = await inspectTargetState(
+          client,
+          sourceData.photoTable,
+          sourceData.photos,
+        );
+        if (verifiedPhotoState.reconciliation.targetOnlyCount !== 0) {
+          throw new GateError("target_cleanup_verification_failed");
+        }
+
+        await client.query("COMMIT");
+        console.info(
+          "[gate-2c-cleanup]",
+          JSON.stringify({
+            status: "committed_and_verified",
+            sourceRef: sourceData.source.projectRef,
+            target: "neon-vercel-preview",
+            table: sourceData.photoTable,
+            deletedMetadataRows,
+            targetOnlyKeyChecksum: options.expectedTargetOnlyPhotosChecksum,
+            storageBlobsDeleted: false,
+            sourceMutated: false,
+          }),
+        );
+        return;
+      } catch (cause) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw cause;
+      }
+    }
 
     console.info(
       "[gate-2c-preflight]",
