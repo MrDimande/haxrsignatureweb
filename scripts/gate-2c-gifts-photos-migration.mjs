@@ -11,16 +11,37 @@
  *   node scripts/gate-2c-gifts-photos-migration.mjs
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { config } from "dotenv";
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
 
-// Carregar variáveis de ambiente
-config({ path: resolve(process.cwd(), ".env.local") });
-config({ path: resolve(process.cwd(), ".env.development.local") });
-config({ path: resolve(process.cwd(), ".env.production") });
-config({ path: resolve(process.cwd(), ".env") });
+// Carregador nativo de variáveis de ambiente (.env)
+function loadEnvFile(filename) {
+  const path = resolve(process.cwd(), filename);
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const idx = trimmed.indexOf("=");
+    const key = trimmed.slice(0, idx).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
+loadEnvFile(".env.local");
+loadEnvFile(".env.development.local");
+loadEnvFile(".env.production");
+loadEnvFile(".env.preview");
+loadEnvFile(".env.branch");
+loadEnvFile(".env");
 
 const { Pool } = pg;
 
@@ -39,6 +60,7 @@ if (!supabaseUrl || !supabaseKey) {
 
 if (!neonUrl) {
   console.error("❌ ERRO: DATABASE_URL ou HAXR_NEON_PRODUCTION_OWNER_URL do Neon não encontrada.");
+  console.error("   Certifique-se de que a variável de conexão ao Neon está definida no ambiente.");
   process.exit(1);
 }
 
@@ -54,9 +76,9 @@ const neonPool = new Pool({
 });
 
 async function migrateGate2C() {
-  const neonClient = await neonPool.connect();
-
+  let neonClient;
   try {
+    neonClient = await neonPool.connect();
     console.log("🔌 Conexões estabelecidas:");
     console.log(`   • Supabase: ${supabaseUrl}`);
     console.log(`   • Neon:     ${neonUrl.replace(/:([^@]+)@/, ":****@")}\n`);
@@ -185,11 +207,11 @@ async function migrateGate2C() {
     console.log("\n  ✨ STATUS: GATE 2C EXECUTADO COM SUCESSO!");
     console.log("═══════════════════════════════════════════════════════════════════\n");
   } catch (error) {
-    await neonClient.query("ROLLBACK;").catch(() => {});
+    if (neonClient) await neonClient.query("ROLLBACK;").catch(() => {});
     console.error("❌ ERRO NO GATE 2C:", error.message);
     process.exit(1);
   } finally {
-    neonClient.release();
+    if (neonClient) neonClient.release();
     await neonPool.end();
   }
 }

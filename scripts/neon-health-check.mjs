@@ -4,37 +4,52 @@
  *
  * Usage:
  *   node scripts/neon-health-check.mjs
- *
- * Verifies connectivity, pool configuration, tables, and transactional integrity
- * against the configured Neon PostgreSQL cloud instance.
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { config } from "dotenv";
 import pg from "pg";
 
-// Load local environment files
-config({ path: resolve(process.cwd(), ".env.local") });
-config({ path: resolve(process.cwd(), ".env.development.local") });
-config({ path: resolve(process.cwd(), ".env.production") });
-config({ path: resolve(process.cwd(), ".env") });
+function loadEnvFile(filename) {
+  const path = resolve(process.cwd(), filename);
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const idx = trimmed.indexOf("=");
+    const key = trimmed.slice(0, idx).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
+loadEnvFile(".env.local");
+loadEnvFile(".env.development.local");
+loadEnvFile(".env.production");
+loadEnvFile(".env.preview");
+loadEnvFile(".env.branch");
+loadEnvFile(".env");
 
 const { Pool } = pg;
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
+const databaseUrl = process.env.HAXR_NEON_PRODUCTION_OWNER_URL || process.env.DATABASE_URL;
 
 console.log("═══════════════════════════════════════════════════════════════════");
 console.log("  HAXR SIGNATURE — NEON DATABASE HEALTH & INTEGRITY AUDIT");
 console.log("═══════════════════════════════════════════════════════════════════\n");
 
 if (!databaseUrl) {
-  console.error("❌ ERRO: DATABASE_URL não encontrada no ambiente.");
-  console.error("   Certifique-se de definir DATABASE_URL no ficheiro .env.local ou nas variáveis da Vercel.\n");
-  console.log("Formato esperado: postgresql://[user]:[password]@[neon-host]/[dbname]?sslmode=require");
+  console.error("❌ ERRO: DATABASE_URL ou HAXR_NEON_PRODUCTION_OWNER_URL não encontrada no ambiente.");
+  console.error("   Certifique-se de definir no .env.local ou passar por variável de ambiente.\n");
   process.exit(1);
 }
 
-// Masked URL for safe logging
 const maskedUrl = databaseUrl.replace(/:([^@]+)@/, ":****@");
 console.log(`🔌 Conectando ao Neon PostgreSQL: ${maskedUrl}`);
 
@@ -71,14 +86,12 @@ async function runAudit() {
   try {
     console.log("✅ Conexão estabelecida com sucesso!");
 
-    // 1. PostgreSQL Version
     const versionRes = await client.query("SELECT version(), NOW() AS server_time, current_database() AS db_name;");
     const { version, server_time, db_name } = versionRes.rows[0];
     console.log(`\n📦 Base de Dados: ${db_name}`);
     console.log(`⏱️  Hora do Servidor: ${server_time}`);
     console.log(`🏛️  Versão: ${version.split(" on ")[0]}\n`);
 
-    // 2. Audit Core Schema Tables
     console.log("🔍 Verificando Tabelas Críticas do HAXR Signature...");
     const tableQuery = `
       SELECT table_name 
@@ -100,7 +113,6 @@ async function runAudit() {
       }
     }
 
-    // 3. Test Transactional Atomicity (BEGIN / ROLLBACK test)
     console.log("\n🔒 Testando Atomicidade e Transações (BEGIN / ROLLBACK)...");
     await client.query("BEGIN;");
     const txRes = await client.query("SELECT 1 AS tx_ok;");
@@ -109,7 +121,6 @@ async function runAudit() {
       console.log("  ✔ Atomicidade Transacional: PASS");
     }
 
-    // Summary
     console.log("\n═══════════════════════════════════════════════════════════════════");
     if (allTablesPresent) {
       console.log("🎉 RESULTADO: O Neon Database está 100% PRONTO PARA PRODUÇÃO!");
