@@ -33,6 +33,28 @@ const MIGRATION_BRANCH = "migration/supabase-to-neon";
 const APPLY_GIFTS_CONFIRMATION = "GATE_2C_PREVIEW_GIFTS_WRITE";
 const CLEANUP_CONFIRMATION = "GATE_2C_PREVIEW_CLEANUP";
 const GIFT_TABLE = "edition_gift_reservations";
+const EVENT_TABLE = "events";
+const BUSINESS_TABLE = "businesses";
+const CLIENT_TABLE = "clients";
+const EVENT_AUDIT_COLUMNS = Object.freeze([
+  "id",
+  "business_id",
+  "client_id",
+  "edition_registry_key",
+  "name",
+  "type",
+  "date",
+  "is_active",
+]);
+const MINIMAL_EVENT_TRANSFER_COLUMNS = Object.freeze([
+  "id",
+  "business_id",
+  "name",
+  "type",
+  "date",
+  "is_active",
+  "edition_registry_key",
+]);
 const PHOTO_TABLE_CANDIDATES = Object.freeze([
   "wedding_photos",
   "experience_photos",
@@ -56,7 +78,11 @@ export function modeRequiresPhotoData(mode) {
 }
 
 function modeRequiresGiftBindingData(mode) {
-  return mode === "preflight-gift-bindings";
+  return mode === "preflight-gift-bindings" || mode === "audit-event-dependencies";
+}
+
+function modeRequiresEventDependencyData(mode) {
+  return mode === "audit-event-dependencies";
 }
 
 export function parseArgs(argv) {
@@ -66,6 +92,7 @@ export function parseArgs(argv) {
       "source-audit",
       "preflight-gifts",
       "preflight-gift-bindings",
+      "audit-event-dependencies",
       "apply-gifts",
       "cleanup-preview-photos",
     ]).has(mode)
@@ -278,6 +305,24 @@ async function fetchAllSourceRows(supabase, table, columns = "*") {
   return rows;
 }
 
+async function fetchSourceRowsByValues(supabase, table, column, values, columns) {
+  if (!values.length) return [];
+  const rows = [];
+  for (let start = 0; ; start += SOURCE_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .in(column, values)
+      .order("id", { ascending: true })
+      .range(start, start + SOURCE_PAGE_SIZE - 1);
+    if (error) throw new GateError(`source_read_failed:${table}:${error.code || "unknown"}`);
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < SOURCE_PAGE_SIZE) break;
+  }
+  return rows;
+}
+
 export function selectPhotoTable(audit, requestedTable = null) {
   if (requestedTable && !PHOTO_TABLE_CANDIDATES.includes(requestedTable)) {
     throw new GateError("photo_table_not_allowed");
@@ -338,6 +383,17 @@ function checksumRegistryKeys(keys) {
   return createHash("sha256").update(JSON.stringify(keys)).digest("hex");
 }
 
+function collectNonEmptyStrings(rows, column) {
+  return [
+    ...new Set(
+      rows
+        .map((row) => row[column])
+        .filter((value) => typeof value === "string" && value.trim())
+        .map((value) => value.trim()),
+    ),
+  ].sort();
+}
+
 export function summarizeGiftEventBindings(gifts, sourceEvents, targetEvents) {
   const giftRegistryKeys = collectRegistryKeys(gifts, "registry_key", { required: true });
   const sourceEventRegistryKeys = collectRegistryKeys(sourceEvents, "edition_registry_key");
@@ -361,6 +417,174 @@ export function summarizeGiftEventBindings(gifts, sourceEvents, targetEvents) {
     missingTargetEventBindingCount: missingTargetKeys.length,
     missingTargetEventBindingChecksum: checksumRegistryKeys(missingTargetKeys),
     ready: missingSourceKeys.length === 0 && missingTargetKeys.length === 0,
+  };
+}
+
+function eventRecordMatchesSource(source, target) {
+  return (
+    source.id === target.id &&
+    source.business_id === target.business_id &&
+    source.edition_registry_key === target.edition_registry_key
+  );
+}
+
+function countDuplicateValues(rows, column) {
+  const values = rows
+    .map((row) => row[column])
+    .filter((value) => typeof value === "string" && value.trim());
+  return values.length - new Set(values).size;
+}
+
+/**
+ * Summarizes the minimum dependencies for importing Edition event bindings.
+ * It intentionally returns only aggregate counts, checksums and booleans: no
+ * event, business, client or registry identifiers are included in its output.
+ */
+export function summarizeEventDependencies({
+  gifts,
+  sourceEvents,
+  sourceBusinesses,
+  sourceClients,
+  targetEventsByRegistry,
+  targetEventsById,
+  targetBusinesses,
+  targetSchema,
+}) {
+  const giftRegistryKeys = collectRegistryKeys(gifts, "registry_key", { required: true });
+  const sourceRegistryKeys = collectRegistryKeys(sourceEvents, "edition_registry_key");
+  const sourceEventIds = collectNonEmptyStrings(sourceEvents, "id");
+  const sourceBusinessIds = collectNonEmptyStrings(sourceEvents, "business_id");
+  const sourceClientIds = collectNonEmptyStrings(sourceEvents, "client_id");
+  const sourceBusinessIdSet = new Set(sourceBusinesses.map((row) => row.id));
+  const sourceClientIdSet = new Set(sourceClients.map((row) => row.id));
+  const targetBusinessIdSet = new Set(targetBusinesses.map((row) => row.id));
+  const sourceByRegistryKey = new Map(
+    sourceEvents.map((row) => [row.edition_registry_key, row]),
+  );
+  const sourceById = new Map(sourceEvents.map((row) => [row.id, row]));
+  const targetRegistryKeys = collectRegistryKeys(
+    targetEventsByRegistry,
+    "edition_registry_key",
+  );
+  const targetRegistryKeySet = new Set(targetRegistryKeys);
+  const targetRegistryMatches = targetEventsByRegistry.filter((target) => {
+    const source = sourceByRegistryKey.get(target.edition_registry_key);
+    return source ? eventRecordMatchesSource(source, target) : false;
+  });
+  const targetIdMatches = targetEventsById.filter((target) => {
+    const source = sourceById.get(target.id);
+    return source ? eventRecordMatchesSource(source, target) : false;
+  });
+  const missingSourceRegistryKeys = giftRegistryKeys.filter(
+    (key) => !sourceByRegistryKey.has(key),
+  );
+  const missingTargetRegistryKeys = giftRegistryKeys.filter(
+    (key) => !targetRegistryKeySet.has(key),
+  );
+  const sourceBusinessReferenceFailures = sourceBusinessIds.filter(
+    (id) => !sourceBusinessIdSet.has(id),
+  );
+  const sourceClientReferenceFailures = sourceClientIds.filter(
+    (id) => !sourceClientIdSet.has(id),
+  );
+  const targetBusinessReferenceFailures = sourceBusinessIds.filter(
+    (id) => !targetBusinessIdSet.has(id),
+  );
+  const sourceRequiredFieldFailureCount = sourceEvents.filter((row) => {
+    const hasRequiredText = [
+      row.id,
+      row.business_id,
+      row.edition_registry_key,
+      row.name,
+      row.type,
+    ].every((value) => typeof value === "string" && value.trim());
+    return !hasRequiredText || typeof row.is_active !== "boolean";
+  }).length;
+  const unsupportedEventTypeCount = sourceEvents.filter(
+    (row) => !targetSchema.eventTypeLabels.has(row.type),
+  ).length;
+  const targetEmptyForRequestedEvents =
+    targetEventsByRegistry.length === 0 && targetEventsById.length === 0;
+  const targetBindingComplete =
+    targetRegistryMatches.length === giftRegistryKeys.length &&
+    targetEventsByRegistry.length === giftRegistryKeys.length &&
+    missingTargetRegistryKeys.length === 0;
+  const sourceReady =
+    missingSourceRegistryKeys.length === 0 &&
+    sourceEvents.length === giftRegistryKeys.length &&
+    countDuplicateValues(sourceEvents, "edition_registry_key") === 0 &&
+    countDuplicateValues(sourceEvents, "id") === 0 &&
+    sourceRequiredFieldFailureCount === 0 &&
+    sourceBusinessReferenceFailures.length === 0 &&
+    sourceClientReferenceFailures.length === 0 &&
+    unsupportedEventTypeCount === 0;
+  const targetSchemaReady =
+    targetSchema.missingMinimalEventColumns.length === 0 &&
+    targetSchema.clientIdNullable &&
+    targetSchema.eventIdUnique;
+  const targetReadyForEventDataImport =
+    sourceReady &&
+    targetSchemaReady &&
+    targetBusinessReferenceFailures.length === 0 &&
+    targetEmptyForRequestedEvents &&
+    targetSchema.nonEmptyRegistryKeyDuplicateCount === 0;
+
+  return {
+    registryKeyCount: giftRegistryKeys.length,
+    registryKeyChecksum: checksumRegistryKeys(giftRegistryKeys),
+    source: {
+      eventCount: sourceEvents.length,
+      eventIdChecksum: checksumRegistryKeys(sourceEventIds),
+      registryBindingCount: sourceRegistryKeys.length,
+      duplicateRegistryBindingCount: countDuplicateValues(sourceEvents, "edition_registry_key"),
+      duplicateEventIdCount: countDuplicateValues(sourceEvents, "id"),
+      missingRegistryBindingCount: missingSourceRegistryKeys.length,
+      missingRegistryBindingChecksum: checksumRegistryKeys(missingSourceRegistryKeys),
+      requiredFieldFailureCount: sourceRequiredFieldFailureCount,
+      unsupportedEventTypeCount,
+      businessReferenceCount: sourceBusinessIds.length,
+      businessReferenceChecksum: checksumRegistryKeys(sourceBusinessIds),
+      missingBusinessReferenceCount: sourceBusinessReferenceFailures.length,
+      missingBusinessReferenceChecksum: checksumRegistryKeys(sourceBusinessReferenceFailures),
+      clientReferenceCount: sourceClientIds.length,
+      clientReferenceChecksum: checksumRegistryKeys(sourceClientIds),
+      missingClientReferenceCount: sourceClientReferenceFailures.length,
+      missingClientReferenceChecksum: checksumRegistryKeys(sourceClientReferenceFailures),
+    },
+    target: {
+      missingMinimalEventColumnCount: targetSchema.missingMinimalEventColumns.length,
+      missingMinimalEventColumnChecksum: checksumRegistryKeys(
+        targetSchema.missingMinimalEventColumns,
+      ),
+      clientIdNullable: targetSchema.clientIdNullable,
+      clientIdForeignKeySetNull: targetSchema.clientIdForeignKeySetNull,
+      eventIdUnique: targetSchema.eventIdUnique,
+      editionRegistryKeyUnique: targetSchema.editionRegistryKeyUnique,
+      nonEmptyRegistryKeyCount: targetSchema.nonEmptyRegistryKeyCount,
+      nonEmptyRegistryKeyDuplicateCount: targetSchema.nonEmptyRegistryKeyDuplicateCount,
+      registryBindingCount: targetEventsByRegistry.length,
+      matchingRegistryBindingCount: targetRegistryMatches.length,
+      missingRegistryBindingCount: missingTargetRegistryKeys.length,
+      missingRegistryBindingChecksum: checksumRegistryKeys(missingTargetRegistryKeys),
+      duplicateRegistryBindingCount: countDuplicateValues(
+        targetEventsByRegistry,
+        "edition_registry_key",
+      ),
+      matchingSourceIdCount: targetIdMatches.length,
+      conflictingSourceIdCount: targetEventsById.length - targetIdMatches.length,
+      businessReferenceCount: sourceBusinessIds.length,
+      missingBusinessReferenceCount: targetBusinessReferenceFailures.length,
+      missingBusinessReferenceChecksum: checksumRegistryKeys(targetBusinessReferenceFailures),
+      state: targetEmptyForRequestedEvents
+        ? "empty_for_requested_events"
+        : targetBindingComplete
+          ? "already_consistent"
+          : "mixed_or_conflicting",
+    },
+    readyForEventDataImport: targetReadyForEventDataImport,
+    readyForSafeEventMigration:
+      targetReadyForEventDataImport && targetSchema.editionRegistryKeyUnique,
+    readyForGiftBindings: sourceReady && targetBindingComplete,
   };
 }
 
@@ -643,6 +867,178 @@ async function inspectGiftEventBindings(client, gifts, sourceEvents) {
   const summary = summarizeGiftEventBindings(gifts, sourceEvents, targetResult.rows);
   console.info(
     "[gate-2c-gift-bindings]",
+    JSON.stringify({
+      ...summary,
+      sourceMutated: false,
+      targetMutated: false,
+      storageBlobsCopied: false,
+    }),
+  );
+  return summary;
+}
+
+function isSupportedRegistryKeyUniqueIndex(columns, predicate) {
+  if (columns.length !== 1 || columns[0] !== "edition_registry_key") return false;
+  if (predicate === null || predicate === undefined) return true;
+  const normalized = String(predicate)
+    .toLowerCase()
+    .replace(/["()\s]/g, "")
+    .replace(/::text/g, "");
+  return normalized === "edition_registry_key<>''";
+}
+
+async function assertTargetTableExists(client, table) {
+  const result = await client.query("SELECT to_regclass($1) IS NOT NULL AS exists", [
+    `public.${table}`,
+  ]);
+  if (!result.rows[0]?.exists) throw new GateError(`target_table_missing:${table}`);
+}
+
+async function inspectEventDependencyState(client, gifts, sourceEventDependencies) {
+  await assertTargetTableExists(client, EVENT_TABLE);
+  await assertTargetTableExists(client, BUSINESS_TABLE);
+
+  const columnsResult = await client.query(
+    `SELECT column_name, is_nullable, udt_name
+       FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = $1
+      ORDER BY ordinal_position`,
+    [EVENT_TABLE],
+  );
+  const columnsByName = new Map(
+    columnsResult.rows.map((row) => [row.column_name, row]),
+  );
+  const missingMinimalEventColumns = MINIMAL_EVENT_TRANSFER_COLUMNS.filter(
+    (column) => !columnsByName.has(column),
+  );
+  for (const identityColumn of ["id", "business_id", "client_id", "edition_registry_key"]) {
+    if (!columnsByName.has(identityColumn)) {
+      throw new GateError(`target_columns_missing:events.${identityColumn}`);
+    }
+  }
+
+  const eventTypeName = columnsByName.get("type")?.udt_name;
+  const eventTypesResult = eventTypeName
+    ? await client.query(
+        `SELECT enumlabel
+           FROM pg_type type
+           JOIN pg_enum value ON value.enumtypid = type.oid
+          WHERE type.typname = $1
+          ORDER BY value.enumsortorder`,
+        [eventTypeName],
+      )
+    : { rows: [] };
+  const uniqueIndexesResult = await client.query(
+    `SELECT array_agg(attribute.attname ORDER BY key_position.ordinality) AS columns,
+            (
+              SELECT pg_get_expr(predicate_index.indpred, predicate_index.indrelid)
+                FROM pg_index predicate_index
+               WHERE predicate_index.indexrelid = index_definition.indexrelid
+            ) AS predicate
+       FROM pg_index index_definition
+       JOIN LATERAL unnest(index_definition.indkey) WITH ORDINALITY AS key_position(attnum, ordinality)
+         ON true
+       JOIN pg_attribute attribute
+         ON attribute.attrelid = index_definition.indrelid
+        AND attribute.attnum = key_position.attnum
+      WHERE index_definition.indrelid = $1::regclass
+        AND index_definition.indisunique
+        AND index_definition.indisvalid
+        AND index_definition.indisready
+      GROUP BY index_definition.indexrelid`,
+    [`public.${EVENT_TABLE}`],
+  );
+  const uniqueIndexes = uniqueIndexesResult.rows.map((row) => ({
+    columns: normalizeTargetColumnList(row.columns),
+    predicate: row.predicate,
+  }));
+  const clientForeignKeyResult = await client.query(
+    `SELECT EXISTS (
+       SELECT 1
+         FROM pg_constraint constraint_definition
+         JOIN LATERAL unnest(constraint_definition.conkey) AS key_column(attnum) ON true
+         JOIN pg_attribute attribute
+           ON attribute.attrelid = constraint_definition.conrelid
+          AND attribute.attnum = key_column.attnum
+        WHERE constraint_definition.conrelid = $1::regclass
+          AND constraint_definition.contype = 'f'
+          AND attribute.attname = 'client_id'
+          AND constraint_definition.confdeltype = 'n'
+     ) AS set_null`,
+    [`public.${EVENT_TABLE}`],
+  );
+  const nonEmptyRegistryResult = await client.query(
+    `SELECT count(*)::int AS row_count,
+            count(DISTINCT edition_registry_key)::int AS distinct_count
+       FROM public.events
+      WHERE edition_registry_key <> ''`,
+  );
+
+  const registryKeys = collectRegistryKeys(gifts, "registry_key", { required: true });
+  const sourceEventIds = collectNonEmptyStrings(sourceEventDependencies.events, "id");
+  const sourceBusinessIds = collectNonEmptyStrings(
+    sourceEventDependencies.events,
+    "business_id",
+  );
+  const targetEventsByRegistryResult = await client.query(
+    `SELECT id::text AS id,
+            business_id,
+            client_id::text AS client_id,
+            edition_registry_key
+       FROM public.events
+      WHERE edition_registry_key = ANY($1::text[])
+      ORDER BY edition_registry_key, id`,
+    [registryKeys],
+  );
+  const targetEventsByIdResult = sourceEventIds.length
+    ? await client.query(
+        `SELECT id::text AS id,
+                business_id,
+                client_id::text AS client_id,
+                edition_registry_key
+           FROM public.events
+          WHERE id = ANY($1::uuid[])
+          ORDER BY id`,
+        [sourceEventIds],
+      )
+    : { rows: [] };
+  const targetBusinessesResult = sourceBusinessIds.length
+    ? await client.query(
+        "SELECT id FROM public.businesses WHERE id = ANY($1::text[]) ORDER BY id",
+        [sourceBusinessIds],
+      )
+    : { rows: [] };
+  const nonEmptyRegistry = nonEmptyRegistryResult.rows[0] ?? {
+    row_count: 0,
+    distinct_count: 0,
+  };
+  const targetSchema = {
+    missingMinimalEventColumns,
+    clientIdNullable: columnsByName.get("client_id")?.is_nullable === "YES",
+    clientIdForeignKeySetNull: Boolean(clientForeignKeyResult.rows[0]?.set_null),
+    eventIdUnique: uniqueIndexes.some(
+      (index) => index.columns.length === 1 && index.columns[0] === "id",
+    ),
+    editionRegistryKeyUnique: uniqueIndexes.some((index) =>
+      isSupportedRegistryKeyUniqueIndex(index.columns, index.predicate),
+    ),
+    nonEmptyRegistryKeyCount: nonEmptyRegistry.row_count ?? 0,
+    nonEmptyRegistryKeyDuplicateCount:
+      (nonEmptyRegistry.row_count ?? 0) - (nonEmptyRegistry.distinct_count ?? 0),
+    eventTypeLabels: new Set(eventTypesResult.rows.map((row) => row.enumlabel)),
+  };
+  const summary = summarizeEventDependencies({
+    gifts,
+    sourceEvents: sourceEventDependencies.events,
+    sourceBusinesses: sourceEventDependencies.businesses,
+    sourceClients: sourceEventDependencies.clients,
+    targetEventsByRegistry: targetEventsByRegistryResult.rows,
+    targetEventsById: targetEventsByIdResult.rows,
+    targetBusinesses: targetBusinessesResult.rows,
+    targetSchema,
+  });
+  console.info(
+    "[gate-2c-event-dependencies]",
     JSON.stringify({
       ...summary,
       sourceMutated: false,
@@ -1016,6 +1412,7 @@ async function loadSourceData(options, env) {
   const giftAudit = await inspectSourceTable(supabase, GIFT_TABLE);
   const requiresPhotoData = modeRequiresPhotoData(options.mode);
   const requiresGiftBindingData = modeRequiresGiftBindingData(options.mode);
+  const requiresEventDependencyData = modeRequiresEventDependencyData(options.mode);
   const photoAudit = requiresPhotoData
     ? await Promise.all(PHOTO_TABLE_CANDIDATES.map((table) => inspectSourceTable(supabase, table)))
     : null;
@@ -1037,17 +1434,56 @@ async function loadSourceData(options, env) {
   }
 
   const gifts = await fetchAllSourceRows(supabase, GIFT_TABLE);
+  const giftRegistryKeys = collectRegistryKeys(gifts, "registry_key", { required: true });
   const sourceEvents = requiresGiftBindingData
-    ? await fetchAllSourceRows(supabase, "events", "edition_registry_key")
+    ? await fetchSourceRowsByValues(
+        supabase,
+        EVENT_TABLE,
+        "edition_registry_key",
+        giftRegistryKeys,
+        requiresEventDependencyData ? EVENT_AUDIT_COLUMNS.join(",") : "edition_registry_key",
+      )
+    : null;
+  const sourceBusinessIds = requiresEventDependencyData
+    ? collectNonEmptyStrings(sourceEvents ?? [], "business_id")
+    : [];
+  const sourceClientIds = requiresEventDependencyData
+    ? collectNonEmptyStrings(sourceEvents ?? [], "client_id")
+    : [];
+  const eventDependencies = requiresEventDependencyData
+    ? {
+        events: sourceEvents ?? [],
+        businesses: await fetchSourceRowsByValues(
+          supabase,
+          BUSINESS_TABLE,
+          "id",
+          sourceBusinessIds,
+          "id",
+        ),
+        clients: await fetchSourceRowsByValues(
+          supabase,
+          CLIENT_TABLE,
+          "id",
+          sourceClientIds,
+          "id",
+        ),
+      }
     : null;
   if (!requiresPhotoData) {
-    return { source, gifts, sourceEvents, photoTable: null, photos: null };
+    return {
+      source,
+      gifts,
+      sourceEvents,
+      eventDependencies,
+      photoTable: null,
+      photos: null,
+    };
   }
 
   const photoTable = selectPhotoTable(photoAudit, options.photoTable);
   const photos = await fetchAllSourceRows(supabase, photoTable);
 
-  return { source, sourceEvents, photoTable, gifts, photos };
+  return { source, sourceEvents, eventDependencies, photoTable, gifts, photos };
 }
 
 async function runGate(options, env = process.env) {
@@ -1064,6 +1500,7 @@ async function runGate(options, env = process.env) {
   const sourceData = await loadSourceData(options, env);
   const requiresPhotoData = modeRequiresPhotoData(options.mode);
   const requiresGiftBindingData = modeRequiresGiftBindingData(options.mode);
+  const requiresEventDependencyData = modeRequiresEventDependencyData(options.mode);
 
   if (options.mode === "source-audit") {
     console.info(
@@ -1115,6 +1552,13 @@ async function runGate(options, env = process.env) {
     }
     const giftBindingState = requiresGiftBindingData
       ? await inspectGiftEventBindings(client, sourceData.gifts, sourceData.sourceEvents ?? [])
+      : null;
+    const eventDependencyState = requiresEventDependencyData
+      ? await inspectEventDependencyState(
+          client,
+          sourceData.gifts,
+          sourceData.eventDependencies ?? { events: [], businesses: [], clients: [] },
+        )
       : null;
     const isPhotoCleanup = options.mode === "cleanup-preview-photos";
     const photoState = requiresPhotoData
@@ -1209,6 +1653,7 @@ async function runGate(options, env = process.env) {
           existingTargetChecksum: giftState.targetChecksum,
         },
         giftEventBindings: giftBindingState,
+        eventDependencies: eventDependencyState,
         photos: photoState
           ? {
               table: sourceData.photoTable,
@@ -1235,6 +1680,8 @@ async function runGate(options, env = process.env) {
       }
       return;
     }
+
+    if (options.mode === "audit-event-dependencies") return;
 
     if (options.mode === "preflight-gifts") return;
 

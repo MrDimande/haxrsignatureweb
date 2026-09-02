@@ -20,6 +20,7 @@ import {
   resolveSourceConfig,
   selectConflictKey,
   selectPhotoTable,
+  summarizeEventDependencies,
   summarizeGiftEventBindings,
   summarizeCleanupDependencies,
   summarizeTargetReconciliation,
@@ -82,7 +83,9 @@ describe("Gate 2C safety gates", () => {
     throwsCode(() => parseArgs(["apply"]), "invalid_mode");
     assert.equal(parseArgs(["apply-gifts"]).mode, "apply-gifts");
     assert.equal(parseArgs(["preflight-gift-bindings"]).mode, "preflight-gift-bindings");
+    assert.equal(parseArgs(["audit-event-dependencies"]).mode, "audit-event-dependencies");
     assert.equal(modeRequiresPhotoData("apply-gifts"), false);
+    assert.equal(modeRequiresPhotoData("audit-event-dependencies"), false);
     assert.equal(modeRequiresPhotoData("preflight-gifts"), false);
     assert.equal(modeRequiresPhotoData("cleanup-preview-photos"), true);
   });
@@ -385,6 +388,55 @@ describe("Gate 2C integrity helpers", () => {
       () => summarizeGiftEventBindings([{ registry_key: "" }], [], []),
       "registry_key_missing:registry_key",
     );
+  });
+
+  it("summarizes Edition event dependencies without returning identifiers or names", () => {
+    const summary = summarizeEventDependencies({
+      gifts: [{ registry_key: "registry-a" }, { registry_key: "registry-b" }],
+      sourceEvents: [
+        {
+          id: "event-a",
+          business_id: "business-a",
+          client_id: null,
+          edition_registry_key: "registry-a",
+          name: "Private Event A",
+          type: "wedding",
+          is_active: true,
+        },
+        {
+          id: "event-b",
+          business_id: "business-a",
+          client_id: "client-a",
+          edition_registry_key: "registry-b",
+          name: "Private Event B",
+          type: "wedding",
+          is_active: true,
+        },
+      ],
+      sourceBusinesses: [{ id: "business-a" }],
+      sourceClients: [{ id: "client-a" }],
+      targetEventsByRegistry: [],
+      targetEventsById: [],
+      targetBusinesses: [{ id: "business-a" }],
+      targetSchema: {
+        missingMinimalEventColumns: [],
+        clientIdNullable: true,
+        clientIdForeignKeySetNull: true,
+        eventIdUnique: true,
+        editionRegistryKeyUnique: false,
+        nonEmptyRegistryKeyCount: 0,
+        nonEmptyRegistryKeyDuplicateCount: 0,
+        eventTypeLabels: new Set(["wedding"]),
+      },
+    });
+
+    assert.equal(summary.source.eventCount, 2);
+    assert.equal(summary.source.businessReferenceCount, 1);
+    assert.equal(summary.source.clientReferenceCount, 1);
+    assert.equal(summary.target.state, "empty_for_requested_events");
+    assert.equal(summary.readyForEventDataImport, true);
+    assert.equal(summary.readyForSafeEventMigration, false);
+    assert.doesNotMatch(JSON.stringify(summary), /Private Event|business-a|client-a|registry-a/);
   });
 
   it("hashes conflict-key sets independently of target row order", () => {
