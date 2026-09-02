@@ -9,7 +9,7 @@ import {
   ExternalLink,
   Loader2,
   RefreshCw,
-  Sparkles,
+  Gem,
   Upload,
   X,
 } from "lucide-react";
@@ -407,7 +407,7 @@ export default function ConciergePanel({
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 p-5 border border-admin-gold/20 bg-admin-gold/5">
         <div className="flex items-start gap-3">
           <span className="inline-flex items-center justify-center w-10 h-10 border border-admin-gold/40 text-admin-gold">
-            <Sparkles className="w-5 h-5" strokeWidth={1.5} />
+            <Gem className="w-5 h-5" strokeWidth={1.5} />
           </span>
           <div>
             <h3 className="font-serif text-lg text-stone-100">HAXR Concierge</h3>

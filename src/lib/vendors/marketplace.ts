@@ -1,3 +1,10 @@
+import type { StyleQuizStyleKey } from "@/lib/marketing/style-quiz-packages";
+import { CATEGORY_DEFAULT_STYLES } from "@/lib/vendors/vendor-styles";
+import {
+  DEFAULT_VENDOR_SEASONALITY,
+  type VendorSeasonality,
+} from "@/lib/vendors/vendor-seasonality";
+
 export const SUPPLIER_CATEGORIES = [
   { id: "venues", label: "Espaços para eventos" },
   { id: "photographers", label: "Fotografia" },
@@ -29,6 +36,16 @@ export type SupplierProfileRow = {
   services: string[] | null;
   is_verified: boolean;
   published_at: string | null;
+  avatar_url?: string | null;
+  cover_image_url?: string | null;
+  portfolio_images?: string[] | null;
+  price_range?: string | null;
+  experience_years?: number | null;
+  featured_badge?: string | null;
+  response_time?: string | null;
+  satisfaction_rate?: number | null;
+  member_since?: string | null;
+  styles?: StyleQuizStyleKey[] | null;
 };
 
 export type PublicSupplierProfile = {
@@ -48,6 +65,17 @@ export type PublicSupplierProfile = {
   services: string[];
   verified: boolean;
   publishedAt: string | null;
+  avatarUrl: string | null;
+  coverImageUrl: string;
+  portfolioImages: string[];
+  priceRange: string;
+  experienceYears: number;
+  featuredBadge: string;
+  responseTime: string;
+  satisfactionRate: number;
+  memberSince: string;
+  styles: StyleQuizStyleKey[];
+  seasonality: VendorSeasonality;
 };
 
 const CATEGORY_ALIASES: Record<string, SupplierCategoryId> = {
@@ -78,15 +106,125 @@ const CATEGORY_ALIASES: Record<string, SupplierCategoryId> = {
   music: "music",
   beleza: "beauty",
   beauty: "beauty",
-  papelaria: "stationery",
+  maquilhagem: "beauty",
+  cabelo: "beauty",
   convites: "stationery",
   stationery: "stationery",
+  papelaria: "stationery",
+  design: "stationery",
+  planeamento: "planning",
+  planning: "planning",
   assessoria: "planning",
   coordenação: "planning",
   coordenacao: "planning",
-  planning: "planning",
-  other: "other",
   outro: "other",
+  outros: "other",
+  other: "other",
+};
+
+export const CATEGORY_CURATED_MEDIA: Record<
+  SupplierCategoryId,
+  { cover: string; portfolio: string[]; defaultPrice: string; defaultBadge: string }
+> = {
+  venues: {
+    cover: "/images/portfolio/mosaic-salao-branco-preparado.webp",
+    portfolio: [
+      "/images/portfolio/mosaic-salao-branco-preparado.webp",
+      "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+      "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+    ],
+    defaultPrice: "Sob Consulta",
+    defaultBadge: "Espaço Selecionado HAXR",
+  },
+  photographers: {
+    cover: "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+    portfolio: [
+      "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+      "/images/portfolio/mosaic-casal-painel-branco.webp",
+      "/images/portfolio-page-5.png",
+    ],
+    defaultPrice: "A partir de 45.000 MT",
+    defaultBadge: "Fotografia Editorial HAXR",
+  },
+  videographers: {
+    cover: "/images/portfolio-page-5.png",
+    portfolio: [
+      "/images/portfolio-page-5.png",
+      "/images/portfolio-page-6.png",
+      "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+    ],
+    defaultPrice: "A partir de 50.000 MT",
+    defaultBadge: "Cinematografia de Casamento",
+  },
+  caterers: {
+    cover: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+    portfolio: [
+      "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+      "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+      "/images/portfolio/mosaic-salao-branco-preparado.webp",
+    ],
+    defaultPrice: "Por pessoa · Sob Consulta",
+    defaultBadge: "Alta Gastronomia HAXR",
+  },
+  decor: {
+    cover: "/images/archive-03.webp",
+    portfolio: [
+      "/images/archive-03.webp",
+      "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+      "/images/archive-01.webp",
+    ],
+    defaultPrice: "A partir de 60.000 MT",
+    defaultBadge: "Design Floral & Cenografia",
+  },
+  music: {
+    cover: "/images/archive-01.webp",
+    portfolio: [
+      "/images/archive-01.webp",
+      "/images/portfolio/mosaic-salao-branco-preparado.webp",
+      "/images/archive-04.webp",
+    ],
+    defaultPrice: "A partir de 30.000 MT",
+    defaultBadge: "Entretenimento & DJ de Gala",
+  },
+  beauty: {
+    cover: "/images/archive-02.webp",
+    portfolio: [
+      "/images/archive-02.webp",
+      "/images/archive-04.webp",
+      "/images/portfolio/mosaic-casal-painel-branco.webp",
+    ],
+    defaultPrice: "A partir de 15.000 MT",
+    defaultBadge: "Beleza de Noiva & Alta-Costura",
+  },
+  stationery: {
+    cover: "/images/convite-mockup-vania-fabiao.png",
+    portfolio: [
+      "/images/convite-mockup-vania-fabiao.png",
+      "/images/convite-preview-portrait.png",
+      "/images/portfolio/mosaic-convite-jessica-samuel-dark.png",
+    ],
+    defaultPrice: "A partir de 12.500 MT",
+    defaultBadge: "Convites & Papelaria Fina",
+  },
+  planning: {
+    cover: "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+    portfolio: [
+      "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+      "/images/portfolio/mosaic-salao-branco-preparado.webp",
+      "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+    ],
+    defaultPrice: "Sob Consulta",
+    defaultBadge: "Assessoria & Coordenação VIP",
+  },
+  other: {
+    cover: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+    portfolio: [
+      "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+      "/images/casamento-vania-fabiao-evelyn-eventos.webp",
+    ],
+    defaultPrice: "Sob Consulta",
+    defaultBadge: "Serviço Verificado HAXR",
+  },
 };
 
 function normalizeSearchValue(value: string): string {
@@ -109,7 +247,7 @@ export function getSupplierCategoryLabel(category: SupplierCategoryId): string {
   );
 }
 
-function cleanOptionalUrl(value: string | null): string | null {
+function cleanOptionalUrl(value: string | null | undefined): string | null {
   const trimmed = value?.trim() ?? "";
   return /^https?:\/\//i.test(trimmed) ? trimmed : null;
 }
@@ -118,6 +256,13 @@ export function mapSupplierProfileRow(
   row: SupplierProfileRow,
 ): PublicSupplierProfile {
   const category = normalizeSupplierCategory(row.category);
+  const mediaFallback = CATEGORY_CURATED_MEDIA[category] ?? CATEGORY_CURATED_MEDIA.other;
+
+  const coverImageUrl = row.cover_image_url?.trim() || mediaFallback.cover;
+  const portfolioImages =
+    row.portfolio_images && row.portfolio_images.length > 0
+      ? row.portfolio_images
+      : mediaFallback.portfolio;
 
   return {
     id: row.id,
@@ -125,7 +270,7 @@ export function mapSupplierProfileRow(
     name: row.business_name.trim(),
     category,
     categoryLabel: getSupplierCategoryLabel(category),
-    city: row.city.trim(),
+    city: row.city.trim() || "Maputo",
     description: row.short_description?.trim() ?? "",
     about: row.about?.trim() ?? "",
     email: row.public_email?.trim() || null,
@@ -136,6 +281,20 @@ export function mapSupplierProfileRow(
     services: (row.services ?? []).map((service) => service.trim()).filter(Boolean),
     verified: row.is_verified,
     publishedAt: row.published_at,
+    avatarUrl: row.avatar_url?.trim() || null,
+    coverImageUrl,
+    portfolioImages,
+    priceRange: row.price_range?.trim() || mediaFallback.defaultPrice,
+    experienceYears: row.experience_years ?? 5,
+    featuredBadge: row.featured_badge?.trim() || mediaFallback.defaultBadge,
+    responseTime: row.response_time?.trim() || "Responde em menos de 2h",
+    satisfactionRate: row.satisfaction_rate ?? 98,
+    memberSince: row.member_since?.trim() || new Date().getFullYear().toString(),
+    styles:
+      row.styles && row.styles.length > 0
+        ? row.styles
+        : CATEGORY_DEFAULT_STYLES[category] ?? ["editorial", "minimalist"],
+    seasonality: DEFAULT_VENDOR_SEASONALITY,
   };
 }
 

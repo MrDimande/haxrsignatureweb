@@ -6,18 +6,32 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  Check,
+  Crown,
+  Mail,
+  MapPin,
+  Phone,
+  Send,
+  ShieldCheck,
+  User,
+} from "lucide-react";
 import { supplierJoinSchema } from "@/lib/email/email-schemas";
 import { submitSupplierJoin } from "@/lib/marketing/submit";
 import MarketingConsentField from "@/components/marketing/forms/MarketingConsentField";
 import { SUPPLIER_CATEGORIES as MARKETPLACE_SUPPLIER_CATEGORIES } from "@/lib/vendors/marketplace";
+import { MOZAMBIQUE_LOCATIONS } from "@/lib/vendors/mozambique-locations";
 
 type FormData = z.infer<typeof supplierJoinSchema>;
 
 const inputClass =
-  "w-full bg-transparent border-b border-brand-champagne/70 focus:border-brand-gold text-brand-text-dark font-sans text-sm py-3 px-0 outline-none placeholder:text-brand-text-dark/45 transition-colors duration-500";
+  "w-full rounded-xl border border-brand-champagne/45 bg-[#faf8f5] px-4 py-3 text-sm text-brand-text-dark outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/15 placeholder:text-brand-text-dark/40";
 
 const labelClass =
-  "block font-mono text-[8px] tracking-[0.4em] uppercase text-brand-gold mb-3";
+  "block font-mono text-[8px] font-bold tracking-[0.25em] uppercase text-brand-gold mb-2";
 
 const SUPPLIER_CATEGORIES = MARKETPLACE_SUPPLIER_CATEGORIES.map(
   (category) => category.label,
@@ -25,7 +39,7 @@ const SUPPLIER_CATEGORIES = MARKETPLACE_SUPPLIER_CATEGORIES.map(
 
 export default function SupplierJoinForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
-    "idle"
+    "idle",
   );
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -52,24 +66,37 @@ export default function SupplierJoinForm() {
       const result = await submitSupplierJoin(data);
       setSuccessMessage(
         result.message ??
-          "Recebemos a candidatura. O perfil permanecerá privado durante a revisão.",
+          "Recebemos a vossa candidatura. A equipa de curadoria HAXR analisará o portfólio com discrição e entrará em contacto.",
       );
       setStatus("success");
       reset();
     } catch (err) {
       setStatus("error");
       setErrorMessage(
-        err instanceof Error ? err.message : "Não foi possível enviar a candidatura."
+        err instanceof Error ? err.message : "Não foi possível enviar a candidatura.",
       );
     }
   };
 
   return (
-    <div>
-      <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-grey mb-8">
-        Candidatura de fornecedor
-      </p>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8" noValidate>
+    <div className="rounded-3xl border border-brand-champagne/50 bg-white p-6 sm:p-10 shadow-2xl space-y-6">
+      <div>
+        <div className="flex items-center gap-2 text-brand-gold mb-1">
+          <Crown className="h-4 w-4" />
+          <span className="font-mono text-[9px] font-bold uppercase tracking-[0.3em]">
+            Candidatura Oficial
+          </span>
+        </div>
+        <h3 className="font-serif text-2xl sm:text-3xl font-light text-brand-text-dark">
+          Junte o seu Atelier à Curadoria HAXR
+        </h3>
+        <p className="font-sans text-xs sm:text-sm font-light text-brand-text-dark/65 mt-2 leading-relaxed">
+          Partilhe os dados do seu negócio. Apenas profissionais reais e avaliados pela equipa
+          são publicados aos casais de Moçambique.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
         <input
           type="text"
           tabIndex={-1}
@@ -79,161 +106,176 @@ export default function SupplierJoinForm() {
           {...register("gotcha")}
         />
 
-        <p className="font-sans text-sm text-grey/80 leading-relaxed">
-          Partilhe o perfil do vosso negócio. A equipa HAXR analisa cada candidatura
-          com discrição e responde quando houver alinhamento com a nossa rede.
-        </p>
-        <p className="rounded-lg border border-brand-champagne/35 bg-brand-ivory/40 px-4 py-3 text-xs font-light leading-5 text-brand-text-dark/65">
-          Para ligar esta candidatura à sua conta HAXR, crie a conta ou inicie sessão antes de enviar.
-        </p>
-
-        <div className="space-y-8">
+        <div className="space-y-5">
+          {/* Nome do Fornecedor / Empresa */}
           <div>
             <label htmlFor="supplier-name" className={labelClass}>
-              Nome do fornecedor / empresa
+              Nome do Atelier / Fornecedor / Empresa
             </label>
             <input
               id="supplier-name"
               type="text"
-              placeholder="Nome do fornecedor / empresa"
+              placeholder="Ex: Evelyn Eventos / Atelier de Fotografia"
               className={inputClass}
               aria-invalid={errors.supplierName ? true : undefined}
-              aria-describedby={errors.supplierName ? "supplier-name-error" : undefined}
               {...register("supplierName")}
             />
-            {errors.supplierName ? (
-              <p id="supplier-name-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">
+            {errors.supplierName && (
+              <p className="text-red-500 text-xs mt-1.5 font-sans" role="alert">
                 {errors.supplierName.message}
               </p>
-            ) : null}
+            )}
           </div>
 
+          {/* Nome do Responsável */}
           <div>
             <label htmlFor="supplier-responsible-name" className={labelClass}>
-              Nome do responsável
+              Nome do Responsável / Director Artístico
             </label>
             <input
               id="supplier-responsible-name"
               type="text"
-              placeholder="Nome do responsável"
+              placeholder="Ex: Dra. Ana Paula Silva"
               autoComplete="name"
               className={inputClass}
               aria-invalid={errors.responsibleName ? true : undefined}
-              aria-describedby={errors.responsibleName ? "supplier-responsible-name-error" : undefined}
               {...register("responsibleName")}
             />
-            {errors.responsibleName ? (
-              <p id="supplier-responsible-name-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">
+            {errors.responsibleName && (
+              <p className="text-red-500 text-xs mt-1.5 font-sans" role="alert">
                 {errors.responsibleName.message}
               </p>
-            ) : null}
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Email e Telefone / WhatsApp */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="supplier-email" className={labelClass}>Email</label>
+              <label htmlFor="supplier-email" className={labelClass}>
+                Email Profissional
+              </label>
               <input
                 id="supplier-email"
                 type="email"
-                placeholder="Email"
+                placeholder="contacto@atelier.co.mz"
                 autoComplete="email"
                 className={inputClass}
                 aria-invalid={errors.email ? true : undefined}
-                aria-describedby={errors.email ? "supplier-email-error" : undefined}
                 {...register("email")}
               />
-              {errors.email ? (
-                <p id="supplier-email-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.email.message}</p>
-              ) : null}
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1.5 font-sans" role="alert">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
+
             <div>
-              <label htmlFor="supplier-phone" className={labelClass}>Telefone / WhatsApp</label>
+              <label htmlFor="supplier-phone" className={labelClass}>
+                WhatsApp / Telefone Directo
+              </label>
               <input
                 id="supplier-phone"
                 type="tel"
-                placeholder="Telefone / WhatsApp"
+                placeholder="+258 84 / 87 ..."
                 autoComplete="tel"
                 className={inputClass}
                 aria-invalid={errors.phone ? true : undefined}
-                aria-describedby={errors.phone ? "supplier-phone-error" : undefined}
                 {...register("phone")}
               />
-              {errors.phone ? (
-                <p id="supplier-phone-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.phone.message}</p>
-              ) : null}
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-1.5 font-sans" role="alert">
+                  {errors.phone.message}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Categoria e Localização em Moçambique */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="supplier-category" className={labelClass}>Categoria</label>
+              <label htmlFor="supplier-category" className={labelClass}>
+                Categoria Principal
+              </label>
               <select
                 id="supplier-category"
                 className={`${inputClass} appearance-none cursor-pointer`}
                 aria-invalid={errors.category ? true : undefined}
-                aria-describedby={errors.category ? "supplier-category-error" : undefined}
                 {...register("category")}
               >
-                <option value="" disabled className="bg-brand-ivory text-brand-text-dark">
-                  Categoria
-                </option>
+                <option value="">Selecionar categoria...</option>
                 {SUPPLIER_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat} className="bg-brand-ivory text-brand-text-dark">
+                  <option key={cat} value={cat}>
                     {cat}
                   </option>
                 ))}
               </select>
-              {errors.category ? (
-                <p id="supplier-category-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.category.message}</p>
-              ) : null}
+              {errors.category && (
+                <p className="text-red-500 text-xs mt-1.5 font-sans" role="alert">
+                  {errors.category.message}
+                </p>
+              )}
             </div>
+
             <div>
-              <label htmlFor="supplier-city" className={labelClass}>Cidade</label>
-              <input
+              <label htmlFor="supplier-city" className={labelClass}>
+                Localização / Província / Distrito
+              </label>
+              <select
                 id="supplier-city"
-                type="text"
-                placeholder="Cidade"
-                className={inputClass}
+                className={`${inputClass} appearance-none cursor-pointer`}
                 aria-invalid={errors.city ? true : undefined}
-                aria-describedby={errors.city ? "supplier-city-error" : undefined}
                 {...register("city")}
-              />
-              {errors.city ? (
-                <p id="supplier-city-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">{errors.city.message}</p>
-              ) : null}
+              >
+                <option value="">Selecionar localização...</option>
+                {MOZAMBIQUE_LOCATIONS.map((group) => (
+                  <optgroup key={group.province} label={group.province}>
+                    {group.locations.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc} ({group.province})
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {errors.city && (
+                <p className="text-red-500 text-xs mt-1.5 font-sans" role="alert">
+                  {errors.city.message}
+                </p>
+              )}
             </div>
           </div>
 
+          {/* Portfólio / Instagram URL */}
           <div>
             <label htmlFor="supplier-portfolio" className={labelClass}>
-              Portfólio / website{" "}
-              <span className="text-grey/40 normal-case tracking-normal">(opcional)</span>
+              Link do Instagram ou Website Oficial
             </label>
             <input
               id="supplier-portfolio"
               type="url"
-              placeholder="https://"
+              placeholder="https://instagram.com/o_vosso_atelier"
               className={inputClass}
               aria-invalid={errors.portfolioUrl ? true : undefined}
-              aria-describedby={errors.portfolioUrl ? "supplier-portfolio-error" : undefined}
               {...register("portfolioUrl")}
             />
-            {errors.portfolioUrl ? (
-              <p id="supplier-portfolio-error" className="text-gold/60 text-xs mt-2 font-sans" role="alert">
+            {errors.portfolioUrl && (
+              <p className="text-red-500 text-xs mt-1.5 font-sans" role="alert">
                 {errors.portfolioUrl.message}
               </p>
-            ) : null}
+            )}
           </div>
 
+          {/* Mensagem & Proposta de Valor */}
           <div>
             <label htmlFor="supplier-message" className={labelClass}>
-              Mensagem{" "}
-              <span className="text-grey/40 normal-case tracking-normal">(opcional)</span>
+              Apresentação & Especialidades{" "}
+              <span className="text-brand-text-dark/40 font-normal lowercase">(opcional)</span>
             </label>
             <textarea
               id="supplier-message"
-              placeholder="Conte-nos brevemente o vosso trabalho e tipo de eventos que acompanham."
-              rows={4}
+              placeholder="Conte-nos sobre a vossa trajetória, capacidade de atendimento e estilo estético em casamentos."
+              rows={3}
               className={`${inputClass} resize-none`}
               {...register("message")}
             />
@@ -245,53 +287,51 @@ export default function SupplierJoinForm() {
           />
         </div>
 
+        {/* Botão de Submissão */}
         <button
           type="submit"
           disabled={status === "loading"}
-          className="group inline-flex items-center gap-3 border border-gold-dim text-gold text-[11px] tracking-[0.3em] uppercase px-10 py-4 hover:border-gold hover:bg-gold/5 transition-all duration-700 disabled:opacity-50"
+          className="w-full inline-flex items-center justify-center gap-2.5 rounded-xl bg-brand-black hover:bg-brand-gold px-8 py-4 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-all shadow-md disabled:opacity-50 cursor-pointer"
         >
-          <span>{status === "loading" ? "A enviar…" : "Candidatar fornecedor"}</span>
-          <span className="inline-block transition-transform duration-500 group-hover:translate-x-1">
-            →
-          </span>
+          <span>{status === "loading" ? "A enviar candidatura…" : "Submeter Candidatura VIP"}</span>
+          <ArrowRight className="h-4 w-4" />
         </button>
 
         <AnimatePresence>
-          {status === "success" ? (
+          {status === "success" && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="rounded-xl border border-brand-gold/25 bg-brand-gold/5 p-4"
+              className="rounded-2xl border border-emerald-500/30 bg-emerald-50/80 p-5 space-y-3"
               role="status"
             >
-              <p className="font-serif text-sm font-light italic leading-relaxed text-brand-gold">
+              <div className="flex items-center gap-2 text-emerald-800">
+                <Check className="h-5 w-5" />
+                <h4 className="font-serif text-base font-medium">Candidatura Recebida com Sucesso</h4>
+              </div>
+              <p className="text-xs font-light text-emerald-900/80 leading-relaxed">
                 {successMessage}
               </p>
-              <p className="mt-2 text-xs font-light leading-5 text-brand-text-dark/60">
-                A candidatura não aparece no directório até ser aprovada.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-4 font-mono text-[8px] font-bold uppercase tracking-[0.16em]">
-                <Link href="/sign-up?from=%2Ffor-pros" className="text-brand-gold hover:underline">
-                  Criar conta
-                </Link>
-                <Link href="/fornecedores" className="text-brand-text-dark/60 hover:text-brand-gold">
-                  Ver directório
+              <div className="pt-1 flex items-center gap-4 text-[9px] font-mono font-bold uppercase tracking-wider">
+                <Link href="/fornecedores" className="text-brand-gold hover:text-brand-black">
+                  Ver Directório Atual →
                 </Link>
               </div>
             </motion.div>
-          ) : null}
-          {status === "error" ? (
+          )}
+
+          {status === "error" && (
             <motion.p
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="font-sans text-sm text-red-400/70"
+              className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl p-3"
               role="alert"
             >
               {errorMessage}
             </motion.p>
-          ) : null}
+          )}
         </AnimatePresence>
       </form>
     </div>

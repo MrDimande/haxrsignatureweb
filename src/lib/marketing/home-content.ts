@@ -11,7 +11,7 @@ import {
   Palette,
   QrCode,
   Receipt,
-  Sparkles,
+  Gem,
   Upload,
   UserCheck,
   Users,
@@ -265,7 +265,7 @@ export const homeConciergeSection = {
     {
       id: "vendors",
       scenarioId: "vendor_proposal" as ConciergeScenarioId,
-      icon: Sparkles,
+      icon: Gem,
       title: "Fornecedores",
       description:
         "Encaminhe uma proposta e o Concierge regista contacto, valor, condições e estado.",

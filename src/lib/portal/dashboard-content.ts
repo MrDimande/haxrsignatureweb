@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ClipboardList,
-  Sparkles,
+  Gem,
   Users,
   Wallet,
 } from "lucide-react";
@@ -92,7 +92,7 @@ export const assistantPromoContent = {
   ctaHref: "/contacto",
   secondaryLabel: "Saber mais",
   secondaryHref: "/#haxr-concierge",
-  icon: Sparkles,
+  icon: Gem,
 } as const;
 
 export const portalDashboardPreview = {

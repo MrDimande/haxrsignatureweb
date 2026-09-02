@@ -1,5 +1,5 @@
-import { invitationFaqs } from "@/lib/site-config";
 import { assessoriaFaqs, convidadosFaqs } from "@/lib/seo/service-faqs";
+import { invitationFaqs } from "@/lib/site-config";
 
 export type FaqSection = {
   id: string;
@@ -11,7 +11,7 @@ export type FaqSection = {
 export const plataformaFaqs = [
   {
     q: "O que é a Plataforma HAXR?",
-    a: "É o ecossistema digital proprietário da HAXR Signature — convidados, fornecedores, documentos, Concierge e operação do evento. Não é um produto à parte: estende a assessoria com tecnologia discreta.",
+    a: "É o ecossistema digital proprietário da HAXR Signature, convidados, fornecedores, documentos, Concierge e operação do evento. Não é um produto à parte: estende a assessoria com tecnologia discreta.",
   },
   {
     q: "Preciso de criar conta para usar as ferramentas?",
@@ -19,14 +19,14 @@ export const plataformaFaqs = [
   },
   {
     q: "O HAXR Concierge substitui a equipa?",
-    a: "Não. O Concierge organiza propostas, recibos e listas automaticamente, mas a equipa HAXR valida antes de aplicar — especialmente em orçamentos, fornecedores e convidados.",
+    a: "Não. O Concierge organiza propostas, recibos e listas automaticamente, mas a equipa HAXR valida antes de aplicar, especialmente em orçamentos, fornecedores e convidados.",
   },
 ] as const;
 
 export const geralFaqs = [
   {
     q: "A HAXR trabalha só em Maputo?",
-    a: "A sede e a curadoria principal são em Maputo, mas acompanhamos celebrações em todo Moçambique e destinos selecionados — conforme o âmbito do projecto.",
+    a: "A sede e a curadoria principal são em Maputo, mas acompanhamos celebrações em todo Moçambique e destinos selecionados, conforme o âmbito do projecto.",
   },
   {
     q: "Como pedir uma proposta?",

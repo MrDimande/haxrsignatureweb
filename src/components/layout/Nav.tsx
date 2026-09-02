@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle, Trash2, X } from "lucide-react";
+import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
+import { Heart, MessageCircle, Search, Trash2, X } from "lucide-react";
 import BrandLogo from "@/components/ui/BrandLogo";
 import NavMegaMenu, { type NavVariant } from "@/components/layout/NavMegaMenu";
 import NavMobileDrawer from "@/components/layout/NavMobileDrawer";
+import NavSearchModal from "@/components/layout/NavSearchModal";
+import NavUserMenu from "@/components/layout/NavUserMenu";
+import { useNavAuth } from "@/hooks/use-nav-auth";
 import {
   navAccountLink,
-  navCta,
   navDirectLinks,
   navGroups,
 } from "@/lib/marketing/navigation";
@@ -27,11 +29,29 @@ export default function Nav() {
   const isHome = pathname === "/";
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
 
+  // ── Reading Progress Indicator (Barra Sutil Dourada 1.5px) ──
+  const { scrollYProgress } = useScroll();
+  const readingProgress = useSpring(scrollYProgress, {
+    stiffness: 280,
+    damping: 30,
+    restDelta: 0.001,
+  });
+
+  // ── Dynamic Authentication State ──
+  const { isAuthenticated, userDisplay, signOut } = useNavAuth();
+
   const navVariant: NavVariant =
     isHome && !scrolled ? "hero" : "dark";
+
+  useEffect(() => {
+    const handleOpenSearch = () => setSearchOpen(true);
+    window.addEventListener("open-haxr-search", handleOpenSearch);
+    return () => window.removeEventListener("open-haxr-search", handleOpenSearch);
+  }, []);
 
   useEffect(() => {
     const loadFavorites = () => {
@@ -117,9 +137,10 @@ export default function Nav() {
             <BrandLogo variant="navbar" priority />
           </Link>
 
-          <NavMegaMenu groups={navGroups} variant={navVariant} />
+          {/* ── Grupo de Navegação & Ações alinhado à Direita (Padrão Loverly) ── */}
+          <div className="hidden lg:flex items-center gap-5 xl:gap-6 shrink-0">
+            <NavMegaMenu groups={navGroups} variant={navVariant} />
 
-          <div className="hidden lg:flex items-center gap-4 xl:gap-5 shrink-0">
             {navDirectLinks.map((link) => (
               <Link
                 key={link.href}
@@ -130,39 +151,53 @@ export default function Nav() {
               </Link>
             ))}
 
+            {/* ── Botão de Pesquisa (Substitui Favoritos — Padrão Loverly) ── */}
             <button
               type="button"
-              onClick={() => setFavoritesOpen(true)}
+              onClick={() => setSearchOpen(true)}
               className="relative p-2 text-white/80 hover:text-brand-gold transition-colors duration-300 cursor-pointer"
-              aria-label={`Favoritos (${favorites.length})`}
+              aria-label="Pesquisar na HAXR Signature"
+              title="Pesquisar (Cmd+K)"
             >
-              <Heart
-                className={`h-4 w-4 ${favorites.length > 0 ? "fill-brand-gold text-brand-gold" : ""}`}
-                strokeWidth={1.25}
+              <Search
+                className="h-4 w-4 text-white/85 hover:text-brand-gold transition-colors"
+                strokeWidth={1.5}
               />
-              {favorites.length > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-gold px-1 font-mono text-[8px] font-bold text-brand-black">
-                  {favorites.length}
-                </span>
-              ) : null}
             </button>
 
-            <Link
-              href={navAccountLink.href}
-              className="font-sans text-[11px] font-semibold tracking-[0.2em] uppercase text-white hover:text-brand-gold border border-white/20 px-4 py-2.5 hover:border-brand-gold hover:bg-white/5 transition-all duration-300 whitespace-nowrap"
-            >
-              {navAccountLink.label}
-            </Link>
-
-            <Link
-              href={navCta.href}
-              className="font-sans text-[11px] font-semibold tracking-[0.2em] uppercase text-brand-black bg-brand-gold border border-brand-gold px-4 py-2.5 hover:bg-brand-gold-light hover:border-brand-gold-light transition-colors duration-500 whitespace-nowrap"
-            >
-              {navCta.label}
-            </Link>
+            {/* ── Dynamic User Account Avatar or Sign-in CTA ── */}
+            {isAuthenticated && userDisplay ? (
+              <NavUserMenu userDisplay={userDisplay} onSignOut={signOut} />
+            ) : (
+              <Link
+                href={navAccountLink.href}
+                className="font-sans text-[11px] font-semibold tracking-[0.2em] uppercase text-brand-black bg-brand-gold border border-brand-gold px-5 py-2.5 hover:bg-brand-gold-light hover:border-brand-gold-light transition-colors duration-500 whitespace-nowrap"
+              >
+                {navAccountLink.label}
+              </Link>
+            )}
           </div>
 
           <div className="lg:hidden flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="p-2 text-white/80 hover:text-brand-gold transition-colors cursor-pointer"
+              aria-label="Pesquisar"
+            >
+              <Search className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+
+            {isAuthenticated && userDisplay ? (
+              <Link
+                href="/app/dashboard"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-brand-gold/70 bg-brand-black font-serif text-[10px] font-bold text-brand-gold"
+                aria-label="Painel do Casamento"
+              >
+                {userDisplay.initials}
+              </Link>
+            ) : null}
+
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -176,17 +211,34 @@ export default function Nav() {
             </button>
           </div>
         </div>
+
+        {/* ── Barra Sutil de Leitura Dourada (Reading Progress Indicator) ── */}
+        <motion.div
+          className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-brand-gold/60 via-brand-gold-light to-brand-gold origin-left z-30 shadow-[0_0_10px_rgba(184,138,42,0.7)] pointer-events-none"
+          style={{ scaleX: readingProgress }}
+        />
       </nav>
+
+      {/* ── Search Modal Global (Command Palette / Spotlight) ── */}
+      <NavSearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
 
       <NavMobileDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        onOpenSearch={() => setSearchOpen(true)}
         groups={navGroups}
         directLinks={navDirectLinks}
-        cta={navCta}
         favorites={favorites}
         onRemoveFavorite={removeFavorite}
         whatsAppShareHref={getWhatsAppShareLink()}
+        auth={{
+          isAuthenticated,
+          userDisplay,
+          signOut,
+        }}
       />
 
       <AnimatePresence>

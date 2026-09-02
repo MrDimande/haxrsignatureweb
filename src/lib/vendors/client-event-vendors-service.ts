@@ -140,7 +140,7 @@ function formatDeadlineLabel(deadline: string | null): string {
   });
 }
 
-function resolveNextAction(status: VendorStatus, deadline: string | null): string {
+function resolveNextAction(status: VendorStatus, _deadline: string | null): string {
   switch (status) {
     case "em_análise":
       return "Aguardar validação HAXR";

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 import {
   buildSignInPath,
   resolvePostLoginRedirectWithReturnPath,
@@ -18,14 +19,14 @@ import {
 } from "@/lib/auth/sign-up-auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AuthLegalDialog from "@/components/auth/auth-legal-dialog";
+import AuthRoleToggle from "@/components/auth/auth-role-toggle";
 import GoogleAuthButton from "@/components/auth/google-auth-button";
+import PasswordStrengthMeter from "@/components/auth/password-strength-meter";
 import type { AuthLegalDocumentId } from "@/lib/auth/legal-documents";
 
 type FieldErrors = {
-  fullName?: string;
   email?: string;
   password?: string;
-  confirmPassword?: string;
   termsAccepted?: string;
 };
 
@@ -34,10 +35,9 @@ export default function SignUpForm() {
   const searchParams = useSearchParams();
   const fromParam = searchParams?.get("from") ?? null;
   const isStyleQuizGate = fromParam === STYLE_QUIZ_PATH;
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -45,20 +45,24 @@ export default function SignUpForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [legalDocument, setLegalDocument] = useState<AuthLegalDocumentId | null>(null);
   const termsCheckboxRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     stashPostAuthReturn(fromParam);
   }, [fromParam]);
+
+  // Auto-focus first input on mount
+  useEffect(() => {
+    emailInputRef.current?.focus();
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormError(null);
 
     const validationErrors = validateSignUpCredentials({
-      fullName,
       email,
       password,
-      confirmPassword,
       termsAccepted,
     });
     if (hasSignUpFieldErrors(validationErrors)) {
@@ -72,10 +76,8 @@ export default function SignUpForm() {
     try {
       const supabase = createSupabaseBrowserClient();
       const result = await signUpWithEmailPassword(supabase, {
-        fullName,
         email,
         password,
-        confirmPassword,
         termsAccepted,
       });
 
@@ -106,7 +108,7 @@ export default function SignUpForm() {
   };
 
   const inputClass =
-    "w-full rounded-xl border bg-brand-ivory/55 px-4 py-3.5 font-sans text-sm font-light text-brand-text-dark placeholder:text-zinc-400 transition-all focus:bg-white focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
+    "w-full rounded-xl border bg-brand-ivory/55 px-4 py-3.5 font-sans text-sm font-light text-brand-text-dark placeholder:text-zinc-400 transition-all duration-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold/25 focus:border-brand-gold disabled:cursor-not-allowed disabled:opacity-60";
 
   const signInHref = buildSignInPath(fromParam);
   const authBusy = loading || oauthLoading;
@@ -127,151 +129,64 @@ export default function SignUpForm() {
   };
 
   return (
-    <div className="haxr-auth-card rounded-[1.75rem] p-6 backdrop-blur-xl sm:p-9">
-      <header className="mb-8 space-y-3 text-left">
-        <div className="flex items-center gap-3 font-mono text-[8px] font-semibold uppercase tracking-[0.3em] text-brand-gold">
-          <span className="h-px w-8 bg-brand-gold" aria-hidden />
-          Comece a vossa experiência
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className="haxr-auth-card rounded-[1.75rem] p-6 backdrop-blur-xl sm:p-9"
+    >
+      <header className="mb-7 space-y-4 text-center">
         <h1 className="font-serif text-3xl font-light leading-tight tracking-[-0.02em] text-brand-text-dark md:text-4xl">
-          O vosso casamento começa aqui
+          Crie a sua conta
         </h1>
-        <p className="font-sans text-sm font-light leading-relaxed text-brand-text-dark/70">
+
+        {/* ── Segmented Pill Toggle (Padrão Loverly) ── */}
+        <div className="flex justify-center">
+          <AuthRoleToggle currentRole="couple" vendorHref="/for-pros" />
+        </div>
+
+        <p className="font-sans text-sm font-light leading-relaxed text-brand-text-dark/65">
           {isStyleQuizGate
-            ? "Crie a vossa conta gratuita para aceder ao Style Quiz, guardar inspiração e organizar tudo num só painel."
-            : "Crie a vossa conta gratuita para desbloquear o painel de casamento, ferramentas e recomendações personalizadas."}
+            ? "Pode adicionar os detalhes do vosso casamento depois."
+            : "Pode adicionar os detalhes do vosso casamento depois."}
         </p>
       </header>
 
       {formError ? (
-        <p
+        <motion.p
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
           className="mb-5 rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-xs font-light text-red-700"
           role="alert"
         >
           {formError}
-        </p>
+        </motion.p>
       ) : null}
 
-      <div className="mb-5 space-y-3">
+      {/* ── Google OAuth (CTA primário — padrão Loverly) ── */}
+      <div className="mb-2 space-y-3">
         <GoogleAuthButton
           fromParam={fromParam}
           disabled={authBusy}
-          label="Criar conta com Google"
+          label="Continuar com Google"
           consentAccepted={termsAccepted}
           onConsentRequired={requireConsent}
           onError={(message) => setFormError(message || null)}
           onLoadingChange={setOauthLoading}
         />
-        <p className="text-center font-sans text-[11px] font-light text-brand-text-dark/55">
-          Registo rápido e seguro, sem criar uma nova palavra-passe.
-        </p>
       </div>
 
-      <div
-        className={`mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
-          fieldErrors.termsAccepted
-            ? "border-red-300 bg-red-50/70"
-            : "border-brand-champagne/35 bg-brand-ivory/40"
-        }`}
-      >
-        <input
-          ref={termsCheckboxRef}
-          id="sign-up-terms"
-          type="checkbox"
-          checked={termsAccepted}
-          onChange={(event) => {
-            setTermsAccepted(event.target.checked);
-            clearConsentError();
-          }}
-          disabled={authBusy}
-          aria-invalid={fieldErrors.termsAccepted ? true : undefined}
-          aria-labelledby="sign-up-terms-label"
-          aria-describedby={fieldErrors.termsAccepted ? "sign-up-terms-error" : undefined}
-          className="mt-0.5 h-4 w-4 rounded border-brand-champagne/60 text-brand-gold focus:ring-brand-gold/30"
-        />
-        <p
-          id="sign-up-terms-label"
-          className="font-sans text-xs font-light leading-relaxed text-brand-text-dark/75"
-        >
-          <label htmlFor="sign-up-terms" className="cursor-pointer">
-            Aceito os{" "}
-          </label>
-          <button
-            type="button"
-            onClick={() => setLegalDocument("terms")}
-            className="rounded-sm font-medium text-brand-gold underline decoration-brand-gold/45 underline-offset-2 transition-colors hover:text-brand-gold-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
-          >
-            termos de utilização
-          </button>{" "}
-          e a{" "}
-          <button
-            type="button"
-            onClick={() => setLegalDocument("privacy")}
-            className="rounded-sm font-medium text-brand-gold underline decoration-brand-gold/45 underline-offset-2 transition-colors hover:text-brand-gold-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2"
-          >
-            política de privacidade
-          </button>{" "}
-          <label htmlFor="sign-up-terms" className="cursor-pointer">
-            da HAXR Signature para criar a minha conta.
-          </label>
-        </p>
-      </div>
-      {fieldErrors.termsAccepted ? (
-        <p
-          id="sign-up-terms-error"
-          className="mb-5 pl-1 text-xs font-light text-red-600"
-          role="alert"
-        >
-          {fieldErrors.termsAccepted}
-        </p>
-      ) : null}
-
-      <div className="relative mb-6 flex items-center">
+      {/* ── Divider ── */}
+      <div className="relative my-6 flex items-center">
         <div className="grow border-t border-brand-champagne/35" />
         <span className="mx-4 shrink-0 font-mono text-[9px] uppercase tracking-wider text-brand-text-dark/45">
-          ou criar conta com email
+          ou
         </span>
         <div className="grow border-t border-brand-champagne/35" />
       </div>
 
+      {/* ── Formulário email + password ── */}
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        <div className="space-y-1.5">
-          <label
-            htmlFor="sign-up-name"
-            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
-          >
-            Nome completo
-          </label>
-          <input
-            id="sign-up-name"
-            name="fullName"
-            type="text"
-            autoComplete="name"
-            required
-            value={fullName}
-            onChange={(e) => {
-              setFullName(e.target.value);
-              if (fieldErrors.fullName) {
-                setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
-              }
-              if (formError) setFormError(null);
-            }}
-            aria-invalid={fieldErrors.fullName ? true : undefined}
-            placeholder="Ex: Jessica Silva"
-            disabled={authBusy}
-            className={`${inputClass} ${
-              fieldErrors.fullName
-                ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
-                : "border-brand-champagne/45 focus:border-brand-gold focus:ring-brand-gold/25"
-            }`}
-          />
-          {fieldErrors.fullName ? (
-            <p className="pl-1 text-xs font-light text-red-600" role="alert">
-              {fieldErrors.fullName}
-            </p>
-          ) : null}
-        </div>
-
         <div className="space-y-1.5">
           <label
             htmlFor="sign-up-email"
@@ -280,6 +195,7 @@ export default function SignUpForm() {
             Email
           </label>
           <input
+            ref={emailInputRef}
             id="sign-up-email"
             name="email"
             type="email"
@@ -315,29 +231,48 @@ export default function SignUpForm() {
           >
             Palavra-passe
           </label>
-          <input
-            id="sign-up-password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (fieldErrors.password) {
-                setFieldErrors((prev) => ({ ...prev, password: undefined }));
-              }
-              if (formError) setFormError(null);
-            }}
-            aria-invalid={fieldErrors.password ? true : undefined}
-            placeholder="Mínimo 8 caracteres"
-            disabled={authBusy}
-            className={`${inputClass} ${
-              fieldErrors.password
-                ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
-                : "border-brand-champagne/45 focus:border-brand-gold focus:ring-brand-gold/25"
-            }`}
-          />
+          <div className="relative">
+            <input
+              id="sign-up-password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                }
+                if (formError) setFormError(null);
+              }}
+              aria-invalid={fieldErrors.password ? true : undefined}
+              placeholder="Mínimo 8 caracteres"
+              disabled={authBusy}
+              className={`${inputClass} pr-11 ${
+                fieldErrors.password
+                  ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
+                  : "border-brand-champagne/45 focus:border-brand-gold focus:ring-brand-gold/25"
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-brand-text-dark/40 hover:text-brand-text-dark/70 transition-colors cursor-pointer"
+              aria-label={showPassword ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" strokeWidth={1.5} />
+              ) : (
+                <Eye className="h-4 w-4" strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
+
+          {/* ── Password Strength Meter (Live feedback) ── */}
+          <PasswordStrengthMeter password={password} />
+
           {fieldErrors.password ? (
             <p className="pl-1 text-xs font-light text-red-600" role="alert">
               {fieldErrors.password}
@@ -345,42 +280,65 @@ export default function SignUpForm() {
           ) : null}
         </div>
 
-        <div className="space-y-1.5">
-          <label
-            htmlFor="sign-up-confirm-password"
-            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
-          >
-            Confirmar palavra-passe
-          </label>
+        {/* ── Terms consent ── */}
+        <div
+          className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+            fieldErrors.termsAccepted
+              ? "border-red-300 bg-red-50/70"
+              : "border-brand-champagne/35 bg-brand-ivory/40"
+          }`}
+        >
           <input
-            id="sign-up-confirm-password"
-            name="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              if (fieldErrors.confirmPassword) {
-                setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
-              }
-              if (formError) setFormError(null);
+            ref={termsCheckboxRef}
+            id="sign-up-terms"
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(event) => {
+              setTermsAccepted(event.target.checked);
+              clearConsentError();
             }}
-            aria-invalid={fieldErrors.confirmPassword ? true : undefined}
-            placeholder="Repita a palavra-passe"
             disabled={authBusy}
-            className={`${inputClass} ${
-              fieldErrors.confirmPassword
-                ? "border-red-400/60 focus:border-red-500 focus:ring-red-500/20"
-                : "border-brand-champagne/45 focus:border-brand-gold focus:ring-brand-gold/25"
-            }`}
+            aria-invalid={fieldErrors.termsAccepted ? true : undefined}
+            aria-labelledby="sign-up-terms-label"
+            aria-describedby={fieldErrors.termsAccepted ? "sign-up-terms-error" : undefined}
+            className="mt-0.5 h-4 w-4 rounded border-brand-champagne/60 text-brand-gold focus:ring-brand-gold/30 cursor-pointer"
           />
-          {fieldErrors.confirmPassword ? (
-            <p className="pl-1 text-xs font-light text-red-600" role="alert">
-              {fieldErrors.confirmPassword}
-            </p>
-          ) : null}
+          <p
+            id="sign-up-terms-label"
+            className="font-sans text-xs font-light leading-relaxed text-brand-text-dark/75"
+          >
+            <label htmlFor="sign-up-terms" className="cursor-pointer">
+              Aceito os{" "}
+            </label>
+            <button
+              type="button"
+              onClick={() => setLegalDocument("terms")}
+              className="rounded-sm font-medium text-brand-gold underline decoration-brand-gold/45 underline-offset-2 transition-colors hover:text-brand-gold-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 cursor-pointer"
+            >
+              termos de utilização
+            </button>{" "}
+            e a{" "}
+            <button
+              type="button"
+              onClick={() => setLegalDocument("privacy")}
+              className="rounded-sm font-medium text-brand-gold underline decoration-brand-gold/45 underline-offset-2 transition-colors hover:text-brand-gold-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 cursor-pointer"
+            >
+              política de privacidade
+            </button>{" "}
+            <label htmlFor="sign-up-terms" className="cursor-pointer">
+              da HAXR Signature.
+            </label>
+          </p>
         </div>
+        {fieldErrors.termsAccepted ? (
+          <p
+            id="sign-up-terms-error"
+            className="pl-1 text-xs font-light text-red-600"
+            role="alert"
+          >
+            {fieldErrors.termsAccepted}
+          </p>
+        ) : null}
 
         <button
           type="submit"
@@ -393,7 +351,7 @@ export default function SignUpForm() {
               <span>A criar conta...</span>
             </>
           ) : (
-            <span>Começar agora</span>
+            <span>Criar conta</span>
           )}
         </button>
       </form>
@@ -424,6 +382,6 @@ export default function SignUpForm() {
         onSelect={setLegalDocument}
         onClose={() => setLegalDocument(null)}
       />
-    </div>
+    </motion.div>
   );
 }

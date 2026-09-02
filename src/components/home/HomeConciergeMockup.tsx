@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, FolderOpen, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, FolderOpen, Loader2, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ConciergeScenario } from "@/lib/marketing/home-content";
 import { homeConciergeSection } from "@/lib/marketing/home-content";
@@ -167,7 +167,7 @@ export default function HomeConciergeMockup({
           </div>
         </div>
         <div className="mt-3 flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3 text-brand-gold/70" strokeWidth={1.5} />
+          <ShieldCheck className="w-3 h-3 text-brand-gold/70" strokeWidth={1.5} />
           <p className="font-sans text-[10px] text-brand-ivory/50">
             {homeConciergeSection.validationNote}
           </p>
