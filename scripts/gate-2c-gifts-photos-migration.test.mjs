@@ -11,6 +11,7 @@ import {
   resolveSourceConfig,
   selectPhotoTable,
 } from "./gate-2c-gifts-photos-migration.mjs";
+import { REQUIRED_TABLES } from "./neon-health-check.mjs";
 
 function throwsCode(fn, code) {
   assert.throws(fn, (cause) => cause instanceof GateError && cause.message === code);
@@ -188,5 +189,31 @@ describe("Gate 2C integrity helpers", () => {
 
   it("rejects unsafe SQL identifiers", () => {
     throwsCode(() => quoteIdentifier('photos"; drop table events; --'), "identifier_invalid");
+  });
+});
+
+describe("Neon schema readiness contract", () => {
+  it("uses canonical repository table names", () => {
+    const required = new Set(REQUIRED_TABLES);
+    for (const table of [
+      "event_members",
+      "document_line_items",
+      "saved_supplier_profiles",
+      "concierge_uploads",
+      "finance_expenses",
+      "finance_monthly_targets",
+    ]) {
+      assert.equal(required.has(table), true, `missing canonical table ${table}`);
+    }
+    for (const alias of [
+      "client_event_members",
+      "document_items",
+      "supplier_favorites",
+      "concierge_requests",
+      "expenses",
+      "monthly_targets",
+    ]) {
+      assert.equal(required.has(alias), false, `unexpected alias ${alias}`);
+    }
   });
 });

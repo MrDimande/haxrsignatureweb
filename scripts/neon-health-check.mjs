@@ -7,28 +7,30 @@
  */
 
 import pg from "pg";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   assertPreviewNeonTarget,
   loadExplicitEnvFile,
 } from "./gate-2c-gifts-photos-migration.mjs";
 
-const REQUIRED_TABLES = Object.freeze([
+export const REQUIRED_TABLES = Object.freeze([
   "profiles",
   "client_events",
-  "client_event_members",
+  "event_members",
   "guests",
   "guest_groups",
   "guest_party_members",
   "guest_import_batches",
   "documents",
-  "document_items",
+  "document_line_items",
   "supplier_profiles",
   "supplier_applications",
-  "supplier_favorites",
-  "concierge_requests",
+  "saved_supplier_profiles",
+  "concierge_uploads",
   "payments",
-  "expenses",
-  "monthly_targets",
+  "finance_expenses",
+  "finance_monthly_targets",
   "marketing_contacts",
   "contact_inquiries",
   "edition_gift_reservations",
@@ -40,7 +42,7 @@ function parseEnvFileArg(argv) {
   return argument ? argument.slice("--env-file=".length) : null;
 }
 
-async function main() {
+export async function main() {
   loadExplicitEnvFile(parseEnvFileArg(process.argv.slice(2)));
   const target = assertPreviewNeonTarget(process.env, null, "preflight");
   const pool = new pg.Pool({
@@ -99,10 +101,16 @@ async function main() {
   }
 }
 
-main().catch((cause) => {
-  console.error(
-    "[neon-schema-readiness] blocked",
-    cause instanceof Error ? cause.message : "unknown_error",
-  );
-  process.exit(1);
-});
+const isEntrypoint = process.argv[1]
+  ? pathToFileURL(resolve(process.argv[1])).href === import.meta.url
+  : false;
+
+if (isEntrypoint) {
+  main().catch((cause) => {
+    console.error(
+      "[neon-schema-readiness] blocked",
+      cause instanceof Error ? cause.message : "unknown_error",
+    );
+    process.exit(1);
+  });
+}
