@@ -564,7 +564,7 @@ describe("Guest Batch Removal & Undo UI Contracts (Stage 4B2B2)", () => {
       const source = readFileSync(
         resolve(
           process.cwd(),
-          "src/lib/events/repositories/guest-import-batches.repository.ts"
+          "src/lib/events/repositories/guest-import-batches.supabase.repository.ts"
         ),
         "utf8"
       );
@@ -585,7 +585,7 @@ describe("Guest Batch Removal & Undo UI Contracts (Stage 4B2B2)", () => {
       const repoSource = readFileSync(
         resolve(
           process.cwd(),
-          "src/lib/events/repositories/guest-import-batches.repository.ts"
+          "src/lib/events/repositories/guest-import-batches.supabase.repository.ts"
         ),
         "utf8"
       );

@@ -36,7 +36,8 @@ export function getNeonPool(): Pool {
   return globalState.__haxrNeonPool;
 }
 
-export async function neonQuery<TRow extends QueryResultRow = QueryResultRow>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function neonQuery<TRow extends QueryResultRow = any>(
   text: string,
   values: readonly unknown[] = [],
 ): Promise<QueryResult<TRow>> {
