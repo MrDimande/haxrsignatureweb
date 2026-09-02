@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   GateError,
+  assertIdConflictTarget,
   assertPreviewNeonTarget,
   buildBatchInsert,
   checksumRows,
@@ -201,6 +202,29 @@ describe("Gate 2C safety gates", () => {
 });
 
 describe("Gate 2C integrity helpers", () => {
+  it("accepts a natural primary key when id has a separate unique index", () => {
+    assert.deepEqual(
+      assertIdConflictTarget(
+        "edition_gift_reservations",
+        ["registry_key", "gift_id"],
+        [["registry_key", "gift_id"], ["id"]],
+      ),
+      { primaryKey: ["registry_key", "gift_id"], idUnique: true },
+    );
+  });
+
+  it("blocks ON CONFLICT id when id is not uniquely indexed", () => {
+    throwsCode(
+      () =>
+        assertIdConflictTarget(
+          "edition_gift_reservations",
+          ["registry_key", "gift_id"],
+          [["registry_key", "gift_id"]],
+        ),
+      "target_id_not_unique:edition_gift_reservations",
+    );
+  });
+
   it("produces stable checksums independent of key and row order", () => {
     const left = [
       { id: "b", metadata: { z: 1, a: true } },

@@ -272,6 +272,14 @@ export function quoteIdentifier(identifier) {
   return `"${identifier}"`;
 }
 
+export function assertIdConflictTarget(table, primaryKey, uniqueKeys) {
+  const idUnique = uniqueKeys.some(
+    (columns) => columns.length === 1 && columns[0] === "id",
+  );
+  if (!idUnique) throw new GateError(`target_id_not_unique:${table}`);
+  return { primaryKey, idUnique };
+}
+
 function rowColumns(rows) {
   if (rows.length === 0) return [];
   const columns = Object.keys(rows[0]).sort();
@@ -314,9 +322,23 @@ async function inspectTargetTable(client, table, sourceRows) {
     [`public.${table}`],
   );
   const primaryKey = primaryKeyResult.rows[0]?.columns ?? [];
-  if (primaryKey.length !== 1 || primaryKey[0] !== "id") {
-    throw new GateError(`target_primary_key_invalid:${table}`);
-  }
+  const uniqueKeysResult = await client.query(
+    `SELECT array_agg(a.attname ORDER BY key_position.ordinality) AS columns
+       FROM pg_index i
+       JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS key_position(attnum, ordinality)
+         ON true
+       JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=key_position.attnum
+      WHERE i.indrelid=$1::regclass
+        AND i.indisunique
+        AND i.indisvalid
+        AND i.indisready
+        AND i.indpred IS NULL
+      GROUP BY i.indexrelid
+      ORDER BY i.indexrelid`,
+    [`public.${table}`],
+  );
+  const uniqueKeys = uniqueKeysResult.rows.map((row) => row.columns ?? []);
+  const identity = assertIdConflictTarget(table, primaryKey, uniqueKeys);
 
   const privilegesResult = await client.query(
     `SELECT
@@ -328,7 +350,7 @@ async function inspectTargetTable(client, table, sourceRows) {
     throw new GateError(`target_privileges_missing:${table}`);
   }
 
-  return { sourceColumns };
+  return { sourceColumns, ...identity };
 }
 
 async function fetchTargetRows(client, table, columns, sourceIds) {
@@ -365,7 +387,11 @@ async function assertForeignKeysPresent(client, table, rows) {
 }
 
 async function inspectTargetState(client, table, rows) {
-  const { sourceColumns } = await inspectTargetTable(client, table, rows);
+  const { sourceColumns, primaryKey, idUnique } = await inspectTargetTable(
+    client,
+    table,
+    rows,
+  );
   await assertForeignKeysPresent(client, table, rows);
   const sourceIds = rows.map((row) => row.id);
   const existingRows = await fetchTargetRows(client, table, sourceColumns, sourceIds);
@@ -380,6 +406,8 @@ async function inspectTargetState(client, table, rows) {
 
   return {
     columns: sourceColumns,
+    primaryKey,
+    idUnique,
     existingCount: existingRows.length,
     totalCount,
     sourceChecksum: checksumRows(rows),
@@ -539,6 +567,8 @@ async function runGate(options, env = process.env) {
         gifts: {
           sourceCount: sourceData.gifts.length,
           existingTargetCount: giftState.existingCount,
+          targetPrimaryKey: giftState.primaryKey,
+          targetIdUnique: giftState.idUnique,
           sourceChecksum: giftState.sourceChecksum,
           existingTargetChecksum: giftState.targetChecksum,
         },
@@ -546,6 +576,8 @@ async function runGate(options, env = process.env) {
           table: sourceData.photoTable,
           sourceCount: sourceData.photos.length,
           existingTargetCount: photoState.existingCount,
+          targetPrimaryKey: photoState.primaryKey,
+          targetIdUnique: photoState.idUnique,
           sourceChecksum: photoState.sourceChecksum,
           existingTargetChecksum: photoState.targetChecksum,
         },
