@@ -60,6 +60,11 @@ if (isMigrationPreview) {
         "--expected-gifts-checksum=7ff1cf6590b6d4e3989e0070fa61b619d23f5dfcae3a71f4e604f4ecdaf4a5d2",
       ],
     },
+    {
+      name: "gate-2c-photos-read-only-audit",
+      script: "scripts/audit-preview-photos.mjs",
+      args: [],
+    },
   ];
 
   for (const check of checks) {
