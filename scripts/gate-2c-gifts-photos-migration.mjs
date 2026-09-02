@@ -272,6 +272,18 @@ export function quoteIdentifier(identifier) {
   return `"${identifier}"`;
 }
 
+export function normalizeTargetColumnList(value) {
+  if (Array.isArray(value) && value.every((column) => typeof column === "string")) {
+    return value;
+  }
+  if (typeof value === "string" && /^\{[a-z0-9_,]*\}$/.test(value)) {
+    const body = value.slice(1, -1);
+    return body ? body.split(",") : [];
+  }
+  if (value === null || value === undefined) return [];
+  throw new GateError("target_constraint_metadata_invalid");
+}
+
 export function selectConflictKey(table, sourceColumns, primaryKey, uniqueKeys) {
   const idUnique = uniqueKeys.some(
     (columns) => columns.length === 1 && columns[0] === "id",
@@ -353,7 +365,7 @@ async function inspectTargetTable(client, table, sourceRows) {
       WHERE c.conrelid=$1::regclass AND c.contype='p'`,
     [`public.${table}`],
   );
-  const primaryKey = primaryKeyResult.rows[0]?.columns ?? [];
+  const primaryKey = normalizeTargetColumnList(primaryKeyResult.rows[0]?.columns);
   const uniqueKeysResult = await client.query(
     `SELECT array_agg(a.attname ORDER BY key_position.ordinality) AS columns
        FROM pg_index i
@@ -369,7 +381,7 @@ async function inspectTargetTable(client, table, sourceRows) {
       ORDER BY i.indexrelid`,
     [`public.${table}`],
   );
-  const uniqueKeys = uniqueKeysResult.rows.map((row) => row.columns ?? []);
+  const uniqueKeys = uniqueKeysResult.rows.map((row) => normalizeTargetColumnList(row.columns));
   console.info(
     "[gate-2c-target-contract]",
     JSON.stringify({

@@ -8,6 +8,7 @@ import {
   buildTargetRowFetch,
   checksumRows,
   main,
+  normalizeTargetColumnList,
   parseArgs,
   quoteIdentifier,
   resolveSourceConfig,
@@ -204,6 +205,19 @@ describe("Gate 2C safety gates", () => {
 });
 
 describe("Gate 2C integrity helpers", () => {
+  it("normalizes pg constraint arrays returned as text", () => {
+    assert.deepEqual(normalizeTargetColumnList("{id}"), ["id"]);
+    assert.deepEqual(
+      normalizeTargetColumnList("{registry_key,gift_id}"),
+      ["registry_key", "gift_id"],
+    );
+    assert.deepEqual(normalizeTargetColumnList("{}"), []);
+    throwsCode(
+      () => normalizeTargetColumnList('{id,"unsafe"}'),
+      "target_constraint_metadata_invalid",
+    );
+  });
+
   it("uses the natural primary key when id is not unique", () => {
     assert.deepEqual(
       selectConflictKey(
