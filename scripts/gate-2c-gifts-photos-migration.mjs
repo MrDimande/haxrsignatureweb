@@ -36,6 +36,7 @@ const PHOTO_TABLE_CANDIDATES = Object.freeze([
 ]);
 const SOURCE_PAGE_SIZE = 500;
 const INSERT_BATCH_SIZE = 250;
+const MAX_RECONCILIATION_AUDIT_ROWS = 512;
 
 export class GateError extends Error {
   constructor(code) {
@@ -324,14 +325,22 @@ export function assertSourceConflictKeys(table, rows, columns) {
   }
 }
 
+export function checksumConflictKeys(rows, conflictColumns) {
+  const keys = rows.map((row) => conflictKey(row, conflictColumns)).sort();
+  return createHash("sha256").update(JSON.stringify(keys)).digest("hex");
+}
+
 export function summarizeTargetReconciliation(
   sourceRows,
   matchingTargetRows,
-  targetRowCount,
+  allTargetRows,
   conflictColumns,
 ) {
   const sourceByConflictKey = new Map(
     sourceRows.map((row) => [conflictKey(row, conflictColumns), row]),
+  );
+  const targetOnlyRows = allTargetRows.filter(
+    (row) => !sourceByConflictKey.has(conflictKey(row, conflictColumns)),
   );
   const divergentRecordCount = matchingTargetRows.filter(
     (row) =>
@@ -349,13 +358,14 @@ export function summarizeTargetReconciliation(
 
   return {
     sourceRowCount: sourceRows.length,
-    targetRowCount,
+    targetRowCount: allTargetRows.length,
     matchedConflictKeyCount: matchingTargetRows.length,
     matchingRecordCount: matchingTargetRows.length - divergentRecordCount,
     divergentRecordCount,
     storagePathMatchCount,
     sourceOnlyCount: sourceRows.length - matchingTargetRows.length,
-    targetOnlyCount: targetRowCount - matchingTargetRows.length,
+    targetOnlyCount: targetOnlyRows.length,
+    targetOnlyKeyChecksum: checksumConflictKeys(targetOnlyRows, conflictColumns),
   };
 }
 
@@ -483,6 +493,29 @@ async function countTargetRows(client, table) {
   return result.rows[0]?.count ?? 0;
 }
 
+async function fetchAllTargetRowsForReconciliation(
+  client,
+  table,
+  columns,
+  conflictColumns,
+  targetRowCount,
+) {
+  if (targetRowCount > MAX_RECONCILIATION_AUDIT_ROWS) {
+    throw new GateError(`target_audit_row_limit:${table}`);
+  }
+  const selected = columns.map(quoteIdentifier).join(", ");
+  const orderBy = conflictColumns.map(quoteIdentifier).join(", ");
+  const result = await client.query(
+    `SELECT ${selected}
+       FROM public.${quoteIdentifier(table)}
+      ORDER BY ${orderBy}`,
+  );
+  if (result.rows.length !== targetRowCount) {
+    throw new GateError(`target_row_count_changed:${table}`);
+  }
+  return result.rows;
+}
+
 async function assertForeignKeysPresent(client, table, rows) {
   if (!rows.length || !Object.hasOwn(rows[0], "event_id")) return;
   const eventIds = [...new Set(rows.map((row) => row.event_id).filter(Boolean))];
@@ -512,10 +545,17 @@ async function inspectTargetState(client, table, rows) {
     rows,
   );
   const totalCount = await countTargetRows(client, table);
+  const allTargetRows = await fetchAllTargetRowsForReconciliation(
+    client,
+    table,
+    sourceColumns,
+    conflictColumns,
+    totalCount,
+  );
   const reconciliation = summarizeTargetReconciliation(
     rows,
     existingRows,
-    totalCount,
+    allTargetRows,
     conflictColumns,
   );
   console.info(

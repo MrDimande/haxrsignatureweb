@@ -6,6 +6,7 @@ import {
   assertPreviewNeonTarget,
   buildBatchInsert,
   buildTargetRowFetch,
+  checksumConflictKeys,
   checksumRows,
   main,
   normalizeTargetColumnList,
@@ -294,7 +295,11 @@ describe("Gate 2C integrity helpers", () => {
         { id: "source-a", storage_path: "source/a.jpg", caption: "same" },
         { id: "source-b", storage_path: "other/b.jpg", caption: "target" },
       ],
-      3,
+      [
+        { id: "source-a", storage_path: "source/a.jpg", caption: "same" },
+        { id: "source-b", storage_path: "other/b.jpg", caption: "target" },
+        { id: "target-extra", storage_path: "target/extra.jpg", caption: "outside" },
+      ],
       ["id"],
     );
 
@@ -307,7 +312,15 @@ describe("Gate 2C integrity helpers", () => {
       storagePathMatchCount: 1,
       sourceOnlyCount: 0,
       targetOnlyCount: 1,
+      targetOnlyKeyChecksum: checksumConflictKeys([{ id: "target-extra" }], ["id"]),
     });
+  });
+
+  it("hashes conflict-key sets independently of target row order", () => {
+    assert.equal(
+      checksumConflictKeys([{ id: "b" }, { id: "a" }], ["id"]),
+      checksumConflictKeys([{ id: "a" }, { id: "b" }], ["id"]),
+    );
   });
 
   it("produces stable checksums independent of key and row order", () => {
