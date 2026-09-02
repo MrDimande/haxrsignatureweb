@@ -14,6 +14,7 @@
  *     --expected-gifts-checksum=<sha256>
  *   node scripts/gate-2c-gifts-photos-migration.mjs apply-gifts \
  *     --expected-source-ref=<ref> --expected-gifts=38 \
+ *     --expected-existing-gifts=0 --expected-existing-gifts-checksum=<sha256> \
  *     --expected-neon-host=<exact-preview-host> \
  *     --confirm=GATE_2C_PREVIEW_GIFTS_WRITE
  */
@@ -79,6 +80,14 @@ export function parseArgs(argv) {
     expectedGiftsChecksum: parseExpectedChecksum(
       flags.get("expected-gifts-checksum"),
       "expected_gifts_checksum",
+    ),
+    expectedExistingGifts: parseExpectedCount(
+      flags.get("expected-existing-gifts"),
+      "expected_existing_gifts",
+    ),
+    expectedExistingGiftsChecksum: parseExpectedChecksum(
+      flags.get("expected-existing-gifts-checksum"),
+      "expected_existing_gifts_checksum",
     ),
     expectedPhotosChecksum: parseExpectedChecksum(
       flags.get("expected-photos-checksum"),
@@ -722,6 +731,15 @@ function assertExpectedChecksum(label, actual, expected) {
   if (actual !== expected) throw new GateError(`${label}_checksum_mismatch`);
 }
 
+export function assertExpectedGiftTargetBaseline(giftState, options) {
+  assertExpectedCount("existing_gifts", giftState.existingCount, options.expectedExistingGifts);
+  assertExpectedChecksum(
+    "existing_gifts",
+    giftState.targetChecksum,
+    options.expectedExistingGiftsChecksum,
+  );
+}
+
 function assertExpectedTargetOnlyPhotos(reconciliation, options) {
   assertExpectedCount(
     "target_only_photos",
@@ -990,6 +1008,9 @@ async function runGate(options, env = process.env) {
     if (connectionResult.rows[0]?.is_replica) throw new GateError("target_is_read_replica");
 
     const giftState = await inspectTargetState(client, GIFT_TABLE, sourceData.gifts);
+    if (options.mode === "apply-gifts") {
+      assertExpectedGiftTargetBaseline(giftState, options);
+    }
     const isPhotoCleanup = options.mode === "cleanup-preview-photos";
     const photoState = requiresPhotoData
       ? await inspectTargetState(client, sourceData.photoTable, sourceData.photos, {
@@ -1108,18 +1129,21 @@ async function runGate(options, env = process.env) {
       await client.query("SET LOCAL idle_in_transaction_session_timeout = '30s'");
       await client.query("SELECT pg_advisory_xact_lock(hashtext('haxr:gate-2c:gifts-photos'))");
 
+      const lockedGiftState = await inspectTargetState(client, GIFT_TABLE, sourceData.gifts);
+      assertExpectedGiftTargetBaseline(lockedGiftState, options);
+
       await insertRows(
         client,
         GIFT_TABLE,
-        giftState.columns,
+        lockedGiftState.columns,
         sourceData.gifts,
-        giftState.conflictColumns,
+        lockedGiftState.conflictColumns,
       );
       const verifiedGifts = await fetchTargetRows(
         client,
         GIFT_TABLE,
-        giftState.columns,
-        giftState.conflictColumns,
+        lockedGiftState.columns,
+        lockedGiftState.conflictColumns,
         sourceData.gifts,
       );
       const finalGiftCount = await countTargetRows(client, GIFT_TABLE);
@@ -1127,7 +1151,7 @@ async function runGate(options, env = process.env) {
       if (
         finalGiftCount !== sourceData.gifts.length ||
         verifiedGifts.length !== sourceData.gifts.length ||
-        checksumRows(verifiedGifts) !== giftState.sourceChecksum
+        checksumRows(verifiedGifts) !== lockedGiftState.sourceChecksum
       ) {
         throw new GateError("gift_verification_failed");
       }
@@ -1138,7 +1162,14 @@ async function runGate(options, env = process.env) {
           status: "committed_and_verified",
           sourceRef: sourceData.source.projectRef,
           target: "neon-vercel-preview",
-          gifts: { count: finalGiftCount, checksum: giftState.sourceChecksum },
+          gifts: {
+            baseline: {
+              count: lockedGiftState.existingCount,
+              checksum: lockedGiftState.targetChecksum,
+            },
+            count: finalGiftCount,
+            checksum: lockedGiftState.sourceChecksum,
+          },
           photos: { migrationDeferred: true },
           storageBlobsCopied: false,
         }),

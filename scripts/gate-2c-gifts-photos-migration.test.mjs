@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   GateError,
+  assertExpectedGiftTargetBaseline,
   assertSourceConflictKeys,
   assertPreviewNeonTarget,
   buildBatchInsert,
@@ -51,6 +52,29 @@ describe("Gate 2C safety gates", () => {
     ]);
     assert.equal(cleanup.expectedTargetOnlyPhotos, 6);
     assert.equal(cleanup.expectedTargetOnlyPhotosChecksum, checksum);
+  });
+
+  it("requires the exact target baseline before applying gifts", () => {
+    const checksum = "a".repeat(64);
+    const parsed = parseArgs([
+      "apply-gifts",
+      "--expected-existing-gifts=0",
+      `--expected-existing-gifts-checksum=${checksum}`,
+    ]);
+    assert.equal(parsed.expectedExistingGifts, 0);
+    assert.equal(parsed.expectedExistingGiftsChecksum, checksum);
+    throwsCode(
+      () => parseArgs(["apply-gifts", "--expected-existing-gifts=not-a-count"]),
+      "expected_existing_gifts_invalid",
+    );
+    throwsCode(
+      () =>
+        assertExpectedGiftTargetBaseline(
+          { existingCount: 1, targetChecksum: checksum },
+          { expectedExistingGifts: 0, expectedExistingGiftsChecksum: checksum },
+        ),
+      "existing_gifts_count_mismatch",
+    );
   });
 
   it("isolates gift writes from deferred photo metadata", () => {
