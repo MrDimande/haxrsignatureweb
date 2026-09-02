@@ -84,6 +84,7 @@ export async function main() {
         provider: "neon",
         runtime: "vercel-preview",
         connectionMode: target.connectionMode,
+        host: target.host,
         database: metadata.rows[0]?.database,
         serverVersion: metadata.rows[0]?.server_version_num,
         requiredTableCount: REQUIRED_TABLES.length,

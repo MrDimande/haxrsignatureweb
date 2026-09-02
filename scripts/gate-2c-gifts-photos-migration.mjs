@@ -301,7 +301,7 @@ async function inspectTargetTable(client, table, sourceRows) {
   if (!tableResult.rows[0]?.exists) throw new GateError(`target_table_missing:${table}`);
 
   const columnsResult = await client.query(
-    `SELECT column_name
+    `SELECT column_name, data_type, udt_name, is_nullable, column_default
        FROM information_schema.columns
       WHERE table_schema='public' AND table_name=$1
       ORDER BY ordinal_position`,
@@ -338,6 +338,21 @@ async function inspectTargetTable(client, table, sourceRows) {
     [`public.${table}`],
   );
   const uniqueKeys = uniqueKeysResult.rows.map((row) => row.columns ?? []);
+  console.info(
+    "[gate-2c-target-contract]",
+    JSON.stringify({
+      table,
+      columns: columnsResult.rows.map((row) => ({
+        name: row.column_name,
+        dataType: row.data_type,
+        udtName: row.udt_name,
+        nullable: row.is_nullable === "YES",
+        hasDefault: row.column_default !== null,
+      })),
+      primaryKey,
+      uniqueKeys,
+    }),
+  );
   const identity = assertIdConflictTarget(table, primaryKey, uniqueKeys);
 
   const privilegesResult = await client.query(
