@@ -83,6 +83,14 @@ export function parseArgs(argv) {
       flags.get("expected-target-only-photos-checksum"),
       "expected_target_only_photos_checksum",
     ),
+    expectedCascadeDependentRows: parseExpectedCount(
+      flags.get("expected-cascade-dependent-rows"),
+      "expected_cascade_dependent_rows",
+    ),
+    expectedCascadeDependencyPlanChecksum: parseExpectedChecksum(
+      flags.get("expected-cascade-dependency-plan-checksum"),
+      "expected_cascade_dependency_plan_checksum",
+    ),
     photoTable: flags.get("photo-table") || null,
     expectedNeonHost: flags.get("expected-neon-host") || null,
     confirmation: flags.get("confirm") || null,
@@ -726,6 +734,30 @@ export function foreignKeyDeleteAction(action) {
   return labels[action] || "unknown";
 }
 
+export function summarizeCleanupDependencies(relations) {
+  const canonicalRelations = relations.map(
+    ({ table, columns, onDelete, dependentRowCount }) => ({
+      id: `${table}:${columns.join(",")}:${onDelete}`,
+      table,
+      columns,
+      onDelete,
+      dependentRowCount,
+    }),
+  );
+  const cascadeDependentRowCount = relations
+    .filter(({ onDelete }) => onDelete === "cascade")
+    .reduce((count, { dependentRowCount }) => count + dependentRowCount, 0);
+  const blockingDependentRowCount = relations
+    .filter(({ onDelete }) => onDelete !== "cascade")
+    .reduce((count, { dependentRowCount }) => count + dependentRowCount, 0);
+
+  return {
+    cascadeDependentRowCount,
+    blockingDependentRowCount,
+    dependencyPlanChecksum: checksumRows(canonicalRelations),
+  };
+}
+
 async function auditTargetOnlyDependenciesForTable(client, table, conflictColumns, targetOnlyRows) {
   if (conflictColumns.length !== 1 || conflictColumns[0] !== "id") {
     throw new GateError(`target_cleanup_conflict_key_unsupported:${table}`);
@@ -791,6 +823,7 @@ async function auditTargetOnlyDependenciesForTable(client, table, conflictColumn
         AND tgenabled <> 'D'`,
     [`public.${table}`],
   );
+  const cleanupDependencies = summarizeCleanupDependencies(relations);
   const audit = {
     table,
     targetOnlyCount: targetOnlyRows.length,
@@ -798,6 +831,7 @@ async function auditTargetOnlyDependenciesForTable(client, table, conflictColumn
     dependentRowCount,
     activeTriggerCount: triggersResult.rows[0]?.count ?? 0,
     relations,
+    dependencyPlanChecksum: cleanupDependencies.dependencyPlanChecksum,
     sourceMutated: false,
     targetMutated: false,
   };
@@ -805,7 +839,7 @@ async function auditTargetOnlyDependenciesForTable(client, table, conflictColumn
   return audit;
 }
 
-async function assertCleanupDeleteSafety(client, table, conflictColumns, targetOnlyRows) {
+async function assertCleanupDeleteSafety(client, table, conflictColumns, targetOnlyRows, options) {
   const privilegesResult = await client.query(
     "SELECT has_table_privilege(current_user, $1, 'DELETE') AS can_delete",
     [`public.${table}`],
@@ -823,9 +857,21 @@ async function assertCleanupDeleteSafety(client, table, conflictColumns, targetO
   if (dependencyAudit.activeTriggerCount !== 0) {
     throw new GateError(`target_cleanup_triggers_present:${table}`);
   }
-  if (dependencyAudit.dependentRowCount !== 0) {
-    throw new GateError(`target_cleanup_references_present:${table}`);
+  const cleanupDependencies = summarizeCleanupDependencies(dependencyAudit.relations);
+  if (cleanupDependencies.blockingDependentRowCount !== 0) {
+    throw new GateError(`target_cleanup_non_cascade_references_present:${table}`);
   }
+  assertExpectedCount(
+    "cascade_dependent_rows",
+    cleanupDependencies.cascadeDependentRowCount,
+    options.expectedCascadeDependentRows,
+  );
+  assertExpectedChecksum(
+    "cascade_dependency_plan",
+    cleanupDependencies.dependencyPlanChecksum,
+    options.expectedCascadeDependencyPlanChecksum,
+  );
+  return cleanupDependencies;
 }
 
 function safeTableAudit(audit) {
@@ -952,11 +998,12 @@ async function runGate(options, env = process.env) {
           { allowTargetOnly: true },
         );
         assertExpectedTargetOnlyPhotos(lockedPhotoState.reconciliation, options);
-        await assertCleanupDeleteSafety(
+        const cleanupDependencies = await assertCleanupDeleteSafety(
           client,
           sourceData.photoTable,
           lockedPhotoState.conflictColumns,
           lockedPhotoState.targetOnlyRows,
+          options,
         );
         const deletedMetadataRows = await deleteRows(
           client,
@@ -982,6 +1029,8 @@ async function runGate(options, env = process.env) {
             target: "neon-vercel-preview",
             table: sourceData.photoTable,
             deletedMetadataRows,
+            cascadeDeletedDependentRows: cleanupDependencies.cascadeDependentRowCount,
+            cascadeDependencyPlanChecksum: cleanupDependencies.dependencyPlanChecksum,
             targetOnlyKeyChecksum: options.expectedTargetOnlyPhotosChecksum,
             storageBlobsDeleted: false,
             sourceMutated: false,

@@ -18,6 +18,7 @@ import {
   resolveSourceConfig,
   selectConflictKey,
   selectPhotoTable,
+  summarizeCleanupDependencies,
   summarizeTargetReconciliation,
 } from "./gate-2c-gifts-photos-migration.mjs";
 import { REQUIRED_TABLES } from "./neon-health-check.mjs";
@@ -402,6 +403,35 @@ describe("Gate 2C integrity helpers", () => {
     assert.equal(foreignKeyDeleteAction("r"), "restrict");
     assert.equal(foreignKeyDeleteAction("c"), "cascade");
     assert.equal(foreignKeyDeleteAction("n"), "set_null");
+  });
+
+  it("pins the cascade cleanup plan and keeps non-cascade dependents blocking", () => {
+    const relations = [
+      {
+        table: "public.memory_voice_upload_intents",
+        columns: ["photo_id"],
+        onDelete: "cascade",
+        dependentRowCount: 2,
+      },
+      {
+        table: "public.memory_voice_messages",
+        columns: ["photo_id"],
+        onDelete: "cascade",
+        dependentRowCount: 2,
+      },
+      {
+        table: "public.photo_reactions",
+        columns: ["photo_id"],
+        onDelete: "restrict",
+        dependentRowCount: 1,
+      },
+    ];
+    const summary = summarizeCleanupDependencies(relations);
+    const reorderedSummary = summarizeCleanupDependencies([...relations].reverse());
+
+    assert.equal(summary.cascadeDependentRowCount, 4);
+    assert.equal(summary.blockingDependentRowCount, 1);
+    assert.equal(summary.dependencyPlanChecksum, reorderedSummary.dependencyPlanChecksum);
   });
 
   it("uses a parameterized composite conflict key when needed", () => {
