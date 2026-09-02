@@ -31,20 +31,6 @@ if (isMigrationPreview) {
       args: [],
     },
     {
-      name: "gate-2c-apply-gifts",
-      script: "scripts/gate-2c-gifts-photos-migration.mjs",
-      args: [
-        "apply-gifts",
-        "--expected-source-ref=oxsrdmydlqyvnueedgtl",
-        "--expected-gifts=42",
-        "--expected-gifts-checksum=7ff1cf6590b6d4e3989e0070fa61b619d23f5dfcae3a71f4e604f4ecdaf4a5d2",
-        "--expected-existing-gifts=0",
-        "--expected-existing-gifts-checksum=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "--expected-neon-host=ep-super-fire-ayj2jnyh.c-5.us-east-2.aws.neon.tech",
-        "--confirm=GATE_2C_PREVIEW_GIFTS_WRITE",
-      ],
-    },
-    {
       name: "gate-2c-gifts-preflight",
       script: "scripts/gate-2c-gifts-photos-migration.mjs",
       args: [
