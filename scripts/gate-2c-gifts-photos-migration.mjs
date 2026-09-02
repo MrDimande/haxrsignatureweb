@@ -272,12 +272,44 @@ export function quoteIdentifier(identifier) {
   return `"${identifier}"`;
 }
 
-export function assertIdConflictTarget(table, primaryKey, uniqueKeys) {
+export function selectConflictKey(table, sourceColumns, primaryKey, uniqueKeys) {
   const idUnique = uniqueKeys.some(
     (columns) => columns.length === 1 && columns[0] === "id",
   );
-  if (!idUnique) throw new GateError(`target_id_not_unique:${table}`);
-  return { primaryKey, idUnique };
+  if (idUnique && sourceColumns.includes("id")) {
+    return { primaryKey, idUnique, conflictColumns: ["id"] };
+  }
+
+  const primaryKeyUsable =
+    primaryKey.length > 0 && primaryKey.every((column) => sourceColumns.includes(column));
+  if (primaryKeyUsable) {
+    return { primaryKey, idUnique, conflictColumns: primaryKey };
+  }
+
+  const compatibleUniqueKey = uniqueKeys.find(
+    (columns) => columns.length > 0 && columns.every((column) => sourceColumns.includes(column)),
+  );
+  if (compatibleUniqueKey) {
+    return { primaryKey, idUnique, conflictColumns: compatibleUniqueKey };
+  }
+
+  throw new GateError(`target_conflict_key_missing:${table}`);
+}
+
+function conflictKey(row, columns) {
+  return JSON.stringify(columns.map((column) => canonicalize(row[column])));
+}
+
+export function assertSourceConflictKeys(table, rows, columns) {
+  const seen = new Set();
+  for (const row of rows) {
+    if (columns.some((column) => row[column] === null || row[column] === undefined)) {
+      throw new GateError(`source_conflict_key_null:${table}`);
+    }
+    const key = conflictKey(row, columns);
+    if (seen.has(key)) throw new GateError(`source_conflict_key_duplicate:${table}`);
+    seen.add(key);
+  }
 }
 
 function rowColumns(rows) {
@@ -353,7 +385,7 @@ async function inspectTargetTable(client, table, sourceRows) {
       uniqueKeys,
     }),
   );
-  const identity = assertIdConflictTarget(table, primaryKey, uniqueKeys);
+  const identity = selectConflictKey(table, sourceColumns, primaryKey, uniqueKeys);
 
   const privilegesResult = await client.query(
     `SELECT
@@ -368,16 +400,32 @@ async function inspectTargetTable(client, table, sourceRows) {
   return { sourceColumns, ...identity };
 }
 
-async function fetchTargetRows(client, table, columns, sourceIds) {
-  if (sourceIds.length === 0) return [];
+export function buildTargetRowFetch(table, columns, conflictColumns, rows) {
+  if (rows.length === 0) return null;
   const selected = columns.map(quoteIdentifier).join(", ");
-  const result = await client.query(
+  const values = [];
+  const tuples = rows.map((row) => {
+    const placeholders = conflictColumns.map((column) => {
+      values.push(row[column]);
+      return `$${values.length}`;
+    });
+    return `(${placeholders.join(", ")})`;
+  });
+  const key = conflictColumns.map(quoteIdentifier).join(", ");
+  return {
+    sql:
     `SELECT ${selected}
        FROM public.${quoteIdentifier(table)}
-      WHERE id = ANY($1::uuid[])
-      ORDER BY id`,
-    [sourceIds],
-  );
+      WHERE (${key}) IN (${tuples.join(", ")})
+      ORDER BY ${key}`,
+    values,
+  };
+}
+
+async function fetchTargetRows(client, table, columns, conflictColumns, rows) {
+  const query = buildTargetRowFetch(table, columns, conflictColumns, rows);
+  if (!query) return [];
+  const result = await client.query(query.sql, query.values);
   return result.rows;
 }
 
@@ -402,19 +450,27 @@ async function assertForeignKeysPresent(client, table, rows) {
 }
 
 async function inspectTargetState(client, table, rows) {
-  const { sourceColumns, primaryKey, idUnique } = await inspectTargetTable(
+  const { sourceColumns, primaryKey, idUnique, conflictColumns } = await inspectTargetTable(
     client,
     table,
     rows,
   );
   await assertForeignKeysPresent(client, table, rows);
-  const sourceIds = rows.map((row) => row.id);
-  const existingRows = await fetchTargetRows(client, table, sourceColumns, sourceIds);
+  assertSourceConflictKeys(table, rows, conflictColumns);
+  const existingRows = await fetchTargetRows(
+    client,
+    table,
+    sourceColumns,
+    conflictColumns,
+    rows,
+  );
   const totalCount = await countTargetRows(client, table);
 
-  const sourceById = new Map(rows.map((row) => [row.id, row]));
+  const sourceByConflictKey = new Map(rows.map((row) => [conflictKey(row, conflictColumns), row]));
   const conflicts = existingRows.filter(
-    (row) => checksumRows([row]) !== checksumRows([sourceById.get(row.id)]),
+    (row) =>
+      checksumRows([row]) !==
+      checksumRows([sourceByConflictKey.get(conflictKey(row, conflictColumns))]),
   );
   if (conflicts.length) throw new GateError(`target_conflict:${table}`);
   if (totalCount !== existingRows.length) throw new GateError(`target_extra_rows:${table}`);
@@ -423,6 +479,7 @@ async function inspectTargetState(client, table, rows) {
     columns: sourceColumns,
     primaryKey,
     idUnique,
+    conflictColumns,
     existingCount: existingRows.length,
     totalCount,
     sourceChecksum: checksumRows(rows),
@@ -430,8 +487,9 @@ async function inspectTargetState(client, table, rows) {
   };
 }
 
-export function buildBatchInsert(table, columns, rows) {
+export function buildBatchInsert(table, columns, rows, conflictColumns) {
   if (!rows.length) return null;
+  if (!conflictColumns.length) throw new GateError(`target_conflict_key_missing:${table}`);
   const values = [];
   const tuples = rows.map((row) => {
     const placeholders = columns.map((column) => {
@@ -442,13 +500,20 @@ export function buildBatchInsert(table, columns, rows) {
   });
   const sql = `INSERT INTO public.${quoteIdentifier(table)} (${columns
     .map(quoteIdentifier)
-    .join(", ")}) VALUES ${tuples.join(", ")} ON CONFLICT (id) DO NOTHING`;
+    .join(", ")}) VALUES ${tuples.join(", ")} ON CONFLICT (${conflictColumns
+    .map(quoteIdentifier)
+    .join(", ")}) DO NOTHING`;
   return { sql, values };
 }
 
-async function insertRows(client, table, columns, rows) {
+async function insertRows(client, table, columns, rows, conflictColumns) {
   for (let start = 0; start < rows.length; start += INSERT_BATCH_SIZE) {
-    const batch = buildBatchInsert(table, columns, rows.slice(start, start + INSERT_BATCH_SIZE));
+    const batch = buildBatchInsert(
+      table,
+      columns,
+      rows.slice(start, start + INSERT_BATCH_SIZE),
+      conflictColumns,
+    );
     if (batch) await client.query(batch.sql, batch.values);
   }
 }
@@ -584,6 +649,7 @@ async function runGate(options, env = process.env) {
           existingTargetCount: giftState.existingCount,
           targetPrimaryKey: giftState.primaryKey,
           targetIdUnique: giftState.idUnique,
+          targetConflictKey: giftState.conflictColumns,
           sourceChecksum: giftState.sourceChecksum,
           existingTargetChecksum: giftState.targetChecksum,
         },
@@ -593,6 +659,7 @@ async function runGate(options, env = process.env) {
           existingTargetCount: photoState.existingCount,
           targetPrimaryKey: photoState.primaryKey,
           targetIdUnique: photoState.idUnique,
+          targetConflictKey: photoState.conflictColumns,
           sourceChecksum: photoState.sourceChecksum,
           existingTargetChecksum: photoState.targetChecksum,
         },
@@ -610,20 +677,34 @@ async function runGate(options, env = process.env) {
       await client.query("SET LOCAL idle_in_transaction_session_timeout = '30s'");
       await client.query("SELECT pg_advisory_xact_lock(hashtext('haxr:gate-2c:gifts-photos'))");
 
-      await insertRows(client, GIFT_TABLE, giftState.columns, sourceData.gifts);
-      await insertRows(client, sourceData.photoTable, photoState.columns, sourceData.photos);
+      await insertRows(
+        client,
+        GIFT_TABLE,
+        giftState.columns,
+        sourceData.gifts,
+        giftState.conflictColumns,
+      );
+      await insertRows(
+        client,
+        sourceData.photoTable,
+        photoState.columns,
+        sourceData.photos,
+        photoState.conflictColumns,
+      );
 
       const verifiedGifts = await fetchTargetRows(
         client,
         GIFT_TABLE,
         giftState.columns,
-        sourceData.gifts.map((row) => row.id),
+        giftState.conflictColumns,
+        sourceData.gifts,
       );
       const verifiedPhotos = await fetchTargetRows(
         client,
         sourceData.photoTable,
         photoState.columns,
-        sourceData.photos.map((row) => row.id),
+        photoState.conflictColumns,
+        sourceData.photos,
       );
       const finalGiftCount = await countTargetRows(client, GIFT_TABLE);
       const finalPhotoCount = await countTargetRows(client, sourceData.photoTable);

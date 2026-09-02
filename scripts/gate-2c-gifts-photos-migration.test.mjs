@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   GateError,
-  assertIdConflictTarget,
+  assertSourceConflictKeys,
   assertPreviewNeonTarget,
   buildBatchInsert,
+  buildTargetRowFetch,
   checksumRows,
   main,
   parseArgs,
   quoteIdentifier,
   resolveSourceConfig,
+  selectConflictKey,
   selectPhotoTable,
 } from "./gate-2c-gifts-photos-migration.mjs";
 import { REQUIRED_TABLES } from "./neon-health-check.mjs";
@@ -202,26 +204,68 @@ describe("Gate 2C safety gates", () => {
 });
 
 describe("Gate 2C integrity helpers", () => {
-  it("accepts a natural primary key when id has a separate unique index", () => {
+  it("uses the natural primary key when id is not unique", () => {
     assert.deepEqual(
-      assertIdConflictTarget(
+      selectConflictKey(
         "edition_gift_reservations",
+        ["id", "registry_key", "gift_id"],
         ["registry_key", "gift_id"],
-        [["registry_key", "gift_id"], ["id"]],
+        [["registry_key", "gift_id"]],
       ),
-      { primaryKey: ["registry_key", "gift_id"], idUnique: true },
+      {
+        primaryKey: ["registry_key", "gift_id"],
+        idUnique: false,
+        conflictColumns: ["registry_key", "gift_id"],
+      },
     );
   });
 
-  it("blocks ON CONFLICT id when id is not uniquely indexed", () => {
+  it("prefers id only when id is uniquely indexed", () => {
+    assert.deepEqual(
+      selectConflictKey(
+        "wedding_photos",
+        ["id", "storage_path"],
+        ["storage_path"],
+        [["storage_path"], ["id"]],
+      ),
+      { primaryKey: ["storage_path"], idUnique: true, conflictColumns: ["id"] },
+    );
+  });
+
+  it("blocks a target with no usable conflict key", () => {
     throwsCode(
       () =>
-        assertIdConflictTarget(
+        selectConflictKey(
           "edition_gift_reservations",
-          ["registry_key", "gift_id"],
-          [["registry_key", "gift_id"]],
+          ["id", "registry_key"],
+          ["gift_id"],
+          [["gift_id"]],
         ),
-      "target_id_not_unique:edition_gift_reservations",
+      "target_conflict_key_missing:edition_gift_reservations",
+    );
+  });
+
+  it("blocks null or duplicate source conflict keys", () => {
+    throwsCode(
+      () =>
+        assertSourceConflictKeys(
+          "edition_gift_reservations",
+          [
+            { registry_key: "rose", gift_id: "toaster" },
+            { registry_key: "rose", gift_id: "toaster" },
+          ],
+          ["registry_key", "gift_id"],
+        ),
+      "source_conflict_key_duplicate:edition_gift_reservations",
+    );
+    throwsCode(
+      () =>
+        assertSourceConflictKeys(
+          "edition_gift_reservations",
+          [{ registry_key: "rose", gift_id: null }],
+          ["registry_key", "gift_id"],
+        ),
+      "source_conflict_key_null:edition_gift_reservations",
     );
   });
 
@@ -252,10 +296,26 @@ describe("Gate 2C integrity helpers", () => {
         { id: "1", gift_name: "A" },
         { id: "2", gift_name: "B" },
       ],
+      ["id"],
     );
     assert.match(batch.sql, /VALUES \(\$1, \$2\), \(\$3, \$4\)/);
-    assert.match(batch.sql, /ON CONFLICT \(id\) DO NOTHING$/);
+    assert.match(batch.sql, /ON CONFLICT \("id"\) DO NOTHING$/);
     assert.deepEqual(batch.values, ["1", "A", "2", "B"]);
+  });
+
+  it("uses a parameterized composite conflict key when needed", () => {
+    const query = buildTargetRowFetch(
+      "edition_gift_reservations",
+      ["id", "registry_key", "gift_id"],
+      ["registry_key", "gift_id"],
+      [
+        { registry_key: "rose", gift_id: "toaster" },
+        { registry_key: "rose", gift_id: "mixer" },
+      ],
+    );
+    assert.match(query.sql, /WHERE \("registry_key", "gift_id"\) IN \(\(\$1, \$2\), \(\$3, \$4\)\)/);
+    assert.match(query.sql, /ORDER BY "registry_key", "gift_id"$/);
+    assert.deepEqual(query.values, ["rose", "toaster", "rose", "mixer"]);
   });
 
   it("rejects unsafe SQL identifiers", () => {
