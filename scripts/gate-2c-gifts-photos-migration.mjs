@@ -644,6 +644,19 @@ export function buildBatchDelete(table, conflictColumns, rows) {
   };
 }
 
+export function buildInboundReferenceCount(schemaName, table, column, ids) {
+  if (schemaName !== "public") throw new GateError("target_cleanup_inbound_fk_schema_unsupported");
+  if (!Array.isArray(ids) || !ids.length) {
+    throw new GateError("target_cleanup_inbound_fk_ids_missing");
+  }
+  return {
+    sql: `SELECT count(*)::int AS count FROM public.${quoteIdentifier(table)} WHERE ${quoteIdentifier(
+      column,
+    )} = ANY($1::uuid[])`,
+    values: [ids],
+  };
+}
+
 async function insertRows(client, table, columns, rows, conflictColumns) {
   for (let start = 0; start < rows.length; start += INSERT_BATCH_SIZE) {
     const batch = buildBatchInsert(
@@ -687,35 +700,85 @@ function assertExpectedTargetOnlyPhotos(reconciliation, options) {
   );
 }
 
-async function assertCleanupDeleteSafety(client, table) {
-  const [privilegesResult, inboundForeignKeysResult, triggersResult] = await Promise.all([
-    client.query("SELECT has_table_privilege(current_user, $1, 'DELETE') AS can_delete", [
-      `public.${table}`,
-    ]),
-    client.query(
-      `SELECT count(*)::int AS count
-         FROM pg_constraint
-        WHERE contype='f' AND confrelid=$1::regclass`,
-      [`public.${table}`],
-    ),
-    client.query(
-      `SELECT count(*)::int AS count
-         FROM pg_trigger
-        WHERE tgrelid=$1::regclass
-          AND NOT tgisinternal
-          AND tgenabled <> 'D'`,
-      [`public.${table}`],
-    ),
-  ]);
+async function assertCleanupDeleteSafety(client, table, conflictColumns, targetOnlyRows) {
+  if (conflictColumns.length !== 1 || conflictColumns[0] !== "id") {
+    throw new GateError(`target_cleanup_conflict_key_unsupported:${table}`);
+  }
+
+  const privilegesResult = await client.query(
+    "SELECT has_table_privilege(current_user, $1, 'DELETE') AS can_delete",
+    [`public.${table}`],
+  );
   if (!privilegesResult.rows[0]?.can_delete) {
     throw new GateError(`target_delete_privilege_missing:${table}`);
   }
-  if ((inboundForeignKeysResult.rows[0]?.count ?? 0) !== 0) {
-    throw new GateError(`target_cleanup_inbound_foreign_keys:${table}`);
+
+  const inboundForeignKeysResult = await client.query(
+    `SELECT namespace.nspname AS schema_name,
+            relation.relname AS table_name,
+            array_agg(referencing_column.attname ORDER BY key_position.ordinality) AS referencing_columns,
+            array_agg(referenced_column.attname ORDER BY key_position.ordinality) AS referenced_columns
+       FROM pg_constraint fk
+       JOIN pg_class relation ON relation.oid=fk.conrelid
+       JOIN pg_namespace namespace ON namespace.oid=relation.relnamespace
+       JOIN LATERAL unnest(fk.conkey, fk.confkey) WITH ORDINALITY
+            AS key_position(referencing_attnum, referenced_attnum, ordinality) ON true
+       JOIN pg_attribute referencing_column
+         ON referencing_column.attrelid=fk.conrelid
+        AND referencing_column.attnum=key_position.referencing_attnum
+       JOIN pg_attribute referenced_column
+         ON referenced_column.attrelid=fk.confrelid
+        AND referenced_column.attnum=key_position.referenced_attnum
+      WHERE fk.contype='f' AND fk.confrelid=$1::regclass
+      GROUP BY fk.oid, namespace.nspname, relation.relname
+      ORDER BY namespace.nspname, relation.relname, fk.oid`,
+    [`public.${table}`],
+  );
+  const targetIds = targetOnlyRows.map((row) => row.id);
+  let dependentRowCount = 0;
+  for (const row of inboundForeignKeysResult.rows) {
+    const referencingColumns = normalizeTargetColumnList(row.referencing_columns);
+    const referencedColumns = normalizeTargetColumnList(row.referenced_columns);
+    if (
+      referencingColumns.length !== 1 ||
+      referencedColumns.length !== 1 ||
+      referencedColumns[0] !== "id"
+    ) {
+      throw new GateError(`target_cleanup_inbound_fk_unsupported:${table}`);
+    }
+    const query = buildInboundReferenceCount(
+      row.schema_name,
+      row.table_name,
+      referencingColumns[0],
+      targetIds,
+    );
+    const result = await client.query(query.sql, query.values);
+    dependentRowCount += result.rows[0]?.count ?? 0;
   }
+
+  const triggersResult = await client.query(
+    `SELECT count(*)::int AS count
+       FROM pg_trigger
+      WHERE tgrelid=$1::regclass
+        AND NOT tgisinternal
+        AND tgenabled <> 'D'`,
+    [`public.${table}`],
+  );
   if ((triggersResult.rows[0]?.count ?? 0) !== 0) {
     throw new GateError(`target_cleanup_triggers_present:${table}`);
   }
+  console.info(
+    "[gate-2c-cleanup-dependency-audit]",
+    JSON.stringify({
+      table,
+      targetOnlyCount: targetOnlyRows.length,
+      inboundForeignKeyCount: inboundForeignKeysResult.rows.length,
+      dependentRowCount,
+      sourceMutated: false,
+      targetMutated: false,
+    }),
+  );
+  if (dependentRowCount !== 0) throw new GateError(`target_cleanup_references_present:${table}`);
 }
 
 function safeTableAudit(audit) {
@@ -841,7 +904,12 @@ async function runGate(options, env = process.env) {
           { allowTargetOnly: true },
         );
         assertExpectedTargetOnlyPhotos(lockedPhotoState.reconciliation, options);
-        await assertCleanupDeleteSafety(client, sourceData.photoTable);
+        await assertCleanupDeleteSafety(
+          client,
+          sourceData.photoTable,
+          lockedPhotoState.conflictColumns,
+          lockedPhotoState.targetOnlyRows,
+        );
         const deletedMetadataRows = await deleteRows(
           client,
           sourceData.photoTable,

@@ -6,6 +6,7 @@ import {
   assertPreviewNeonTarget,
   buildBatchInsert,
   buildBatchDelete,
+  buildInboundReferenceCount,
   buildTargetRowFetch,
   checksumConflictKeys,
   checksumRows,
@@ -380,6 +381,20 @@ describe("Gate 2C integrity helpers", () => {
       /^DELETE FROM public\."wedding_photos" WHERE \("id"\) IN \(\(\$1\), \(\$2\)\) RETURNING "id"$/,
     );
     assert.deepEqual(batch.values, ["photo-a", "photo-b"]);
+  });
+
+  it("counts inbound references through a parameterized UUID array", () => {
+    const query = buildInboundReferenceCount(
+      "public",
+      "photo_reactions",
+      "photo_id",
+      ["00000000-0000-0000-0000-000000000001"],
+    );
+    assert.equal(
+      query.sql,
+      'SELECT count(*)::int AS count FROM public."photo_reactions" WHERE "photo_id" = ANY($1::uuid[])',
+    );
+    assert.deepEqual(query.values, [["00000000-0000-0000-0000-000000000001"]]);
   });
 
   it("uses a parameterized composite conflict key when needed", () => {
