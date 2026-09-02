@@ -2,9 +2,9 @@
 /**
  * Gate 2C — Supabase -> Neon gift reservations and photo metadata.
  *
- * The command is read-only unless `apply-gifts` is selected and every Preview
- * gate passes. Photo metadata is intentionally deferred: this gate never
- * copies Storage blobs and never falls back to the anon key.
+ * The command is read-only unless an explicit `apply-*` mode is selected and
+ * every Preview gate passes. Photo metadata is intentionally deferred: this
+ * gate never copies Storage blobs and never falls back to the anon key.
  *
  * Examples:
  *   node scripts/gate-2c-gifts-photos-migration.mjs source-audit \
@@ -20,6 +20,15 @@
  *     --expected-existing-gifts=0 --expected-existing-gifts-checksum=<sha256> \
  *     --expected-neon-host=<exact-preview-host> \
  *     --confirm=GATE_2C_PREVIEW_GIFTS_WRITE
+ *   node scripts/gate-2c-gifts-photos-migration.mjs apply-events \
+ *     --expected-source-ref=<ref> --expected-gifts=42 \
+ *     --expected-events=2 --expected-event-id-checksum=<sha256> \
+ *     --expected-business-references=1 --expected-business-reference-checksum=<sha256> \
+ *     --expected-client-references=1 --expected-client-reference-checksum=<sha256> \
+ *     --expected-existing-event-bindings=0 --expected-existing-event-ids=0 \
+ *     --expected-non-empty-registry-keys=0 \
+ *     --expected-neon-host=<exact-preview-host> \
+ *     --confirm=GATE_2C_PREVIEW_EVENTS_WRITE
  */
 
 import { createHash } from "node:crypto";
@@ -31,11 +40,13 @@ import { createClient } from "@supabase/supabase-js";
 
 const MIGRATION_BRANCH = "migration/supabase-to-neon";
 const APPLY_GIFTS_CONFIRMATION = "GATE_2C_PREVIEW_GIFTS_WRITE";
+const APPLY_EVENTS_CONFIRMATION = "GATE_2C_PREVIEW_EVENTS_WRITE";
 const CLEANUP_CONFIRMATION = "GATE_2C_PREVIEW_CLEANUP";
 const GIFT_TABLE = "edition_gift_reservations";
 const EVENT_TABLE = "events";
 const BUSINESS_TABLE = "businesses";
 const CLIENT_TABLE = "clients";
+const EVENT_REGISTRY_UNIQUE_INDEX = "events_edition_registry_key_nonempty_uidx";
 const EVENT_AUDIT_COLUMNS = Object.freeze([
   "id",
   "business_id",
@@ -49,6 +60,16 @@ const EVENT_AUDIT_COLUMNS = Object.freeze([
 const MINIMAL_EVENT_TRANSFER_COLUMNS = Object.freeze([
   "id",
   "business_id",
+  "name",
+  "type",
+  "date",
+  "is_active",
+  "edition_registry_key",
+]);
+const EVENT_INSERT_COLUMNS = Object.freeze([
+  "id",
+  "business_id",
+  "client_id",
   "name",
   "type",
   "date",
@@ -78,11 +99,15 @@ export function modeRequiresPhotoData(mode) {
 }
 
 function modeRequiresGiftBindingData(mode) {
-  return mode === "preflight-gift-bindings" || mode === "audit-event-dependencies";
+  return (
+    mode === "preflight-gift-bindings" ||
+    mode === "audit-event-dependencies" ||
+    mode === "apply-events"
+  );
 }
 
 function modeRequiresEventDependencyData(mode) {
-  return mode === "audit-event-dependencies";
+  return mode === "audit-event-dependencies" || mode === "apply-events";
 }
 
 export function parseArgs(argv) {
@@ -93,6 +118,7 @@ export function parseArgs(argv) {
       "preflight-gifts",
       "preflight-gift-bindings",
       "audit-event-dependencies",
+      "apply-events",
       "apply-gifts",
       "cleanup-preview-photos",
     ]).has(mode)
@@ -118,6 +144,39 @@ export function parseArgs(argv) {
     expectedGiftsChecksum: parseExpectedChecksum(
       flags.get("expected-gifts-checksum"),
       "expected_gifts_checksum",
+    ),
+    expectedEvents: parseExpectedCount(flags.get("expected-events"), "expected_events"),
+    expectedEventIdChecksum: parseExpectedChecksum(
+      flags.get("expected-event-id-checksum"),
+      "expected_event_id_checksum",
+    ),
+    expectedBusinessReferences: parseExpectedCount(
+      flags.get("expected-business-references"),
+      "expected_business_references",
+    ),
+    expectedBusinessReferenceChecksum: parseExpectedChecksum(
+      flags.get("expected-business-reference-checksum"),
+      "expected_business_reference_checksum",
+    ),
+    expectedClientReferences: parseExpectedCount(
+      flags.get("expected-client-references"),
+      "expected_client_references",
+    ),
+    expectedClientReferenceChecksum: parseExpectedChecksum(
+      flags.get("expected-client-reference-checksum"),
+      "expected_client_reference_checksum",
+    ),
+    expectedExistingEventBindings: parseExpectedCount(
+      flags.get("expected-existing-event-bindings"),
+      "expected_existing_event_bindings",
+    ),
+    expectedExistingEventIds: parseExpectedCount(
+      flags.get("expected-existing-event-ids"),
+      "expected_existing_event_ids",
+    ),
+    expectedNonEmptyRegistryKeys: parseExpectedCount(
+      flags.get("expected-non-empty-registry-keys"),
+      "expected_non_empty_registry_keys",
     ),
     expectedExistingGifts: parseExpectedCount(
       flags.get("expected-existing-gifts"),
@@ -238,14 +297,24 @@ export function assertPreviewNeonTarget(env, confirmation, mode, expectedNeonHos
   if (env.VERCEL_GIT_COMMIT_REF !== MIGRATION_BRANCH) {
     throw new GateError("migration_branch_required");
   }
-  const requiresWriteConfirmation = mode === "apply-gifts" || mode === "cleanup-preview-photos";
+  const requiresWriteConfirmation = new Set([
+    "apply-gifts",
+    "apply-events",
+    "cleanup-preview-photos",
+  ]).has(mode);
   const expectedConfirmation =
-    mode === "apply-gifts" ? APPLY_GIFTS_CONFIRMATION : CLEANUP_CONFIRMATION;
+    mode === "apply-gifts"
+      ? APPLY_GIFTS_CONFIRMATION
+      : mode === "apply-events"
+        ? APPLY_EVENTS_CONFIRMATION
+        : CLEANUP_CONFIRMATION;
   if (requiresWriteConfirmation && confirmation !== expectedConfirmation) {
     throw new GateError(
       mode === "apply-gifts"
         ? "apply_gifts_confirmation_missing"
-        : "cleanup_confirmation_missing",
+        : mode === "apply-events"
+          ? "apply_events_confirmation_missing"
+          : "cleanup_confirmation_missing",
     );
   }
 
@@ -528,6 +597,14 @@ export function summarizeEventDependencies({
     targetBusinessReferenceFailures.length === 0 &&
     targetEmptyForRequestedEvents &&
     targetSchema.nonEmptyRegistryKeyDuplicateCount === 0;
+  const targetAlreadyConsistent =
+    sourceReady &&
+    targetSchemaReady &&
+    targetBusinessReferenceFailures.length === 0 &&
+    targetBindingComplete &&
+    targetIdMatches.length === giftRegistryKeys.length &&
+    targetEventsById.length === giftRegistryKeys.length &&
+    targetSchema.nonEmptyRegistryKeyDuplicateCount === 0;
 
   return {
     registryKeyCount: giftRegistryKeys.length,
@@ -583,9 +660,80 @@ export function summarizeEventDependencies({
     },
     readyForEventDataImport: targetReadyForEventDataImport,
     readyForSafeEventMigration:
-      targetReadyForEventDataImport && targetSchema.editionRegistryKeyUnique,
+      (targetReadyForEventDataImport || targetAlreadyConsistent) &&
+      targetSchema.editionRegistryKeyUnique,
     readyForGiftBindings: sourceReady && targetBindingComplete,
   };
+}
+
+export function prepareEventRowsForTarget(sourceEvents) {
+  return sourceEvents.map((row) => ({
+    id: row.id,
+    business_id: row.business_id,
+    client_id: null,
+    name: row.name,
+    type: row.type,
+    date: row.date,
+    is_active: row.is_active,
+    edition_registry_key: row.edition_registry_key,
+  }));
+}
+
+export function assertExpectedEventMigrationBaseline(state, options) {
+  assertExpectedCount("events", state.source.eventCount, options.expectedEvents);
+  assertExpectedCount("event_registry_keys", state.registryKeyCount, options.expectedEvents);
+  assertExpectedChecksum(
+    "event_ids",
+    state.source.eventIdChecksum,
+    options.expectedEventIdChecksum,
+  );
+  assertExpectedCount(
+    "business_references",
+    state.source.businessReferenceCount,
+    options.expectedBusinessReferences,
+  );
+  assertExpectedChecksum(
+    "business_references",
+    state.source.businessReferenceChecksum,
+    options.expectedBusinessReferenceChecksum,
+  );
+  assertExpectedCount(
+    "client_references",
+    state.source.clientReferenceCount,
+    options.expectedClientReferences,
+  );
+  assertExpectedChecksum(
+    "client_references",
+    state.source.clientReferenceChecksum,
+    options.expectedClientReferenceChecksum,
+  );
+  assertExpectedCount(
+    "existing_event_bindings",
+    state.target.registryBindingCount,
+    options.expectedExistingEventBindings,
+  );
+  assertExpectedCount(
+    "existing_event_ids",
+    state.target.matchingSourceIdCount + state.target.conflictingSourceIdCount,
+    options.expectedExistingEventIds,
+  );
+  assertExpectedCount(
+    "non_empty_registry_keys",
+    state.target.nonEmptyRegistryKeyCount,
+    options.expectedNonEmptyRegistryKeys,
+  );
+  if (state.target.nonEmptyRegistryKeyDuplicateCount !== 0) {
+    throw new GateError("target_event_registry_duplicates_present");
+  }
+  if (state.target.editionRegistryKeyUnique) {
+    throw new GateError("target_event_registry_unique_index_baseline_mismatch");
+  }
+  if (state.target.state !== "empty_for_requested_events") {
+    throw new GateError("target_event_baseline_not_empty");
+  }
+  if (!state.readyForEventDataImport) {
+    throw new GateError("event_dependency_baseline_not_ready");
+  }
 }
 
 export function quoteIdentifier(identifier) {
@@ -836,7 +984,7 @@ async function fetchAllTargetRowsForReconciliation(
   return result.rows;
 }
 
-async function inspectGiftEventBindings(client, gifts, sourceEvents) {
+async function inspectGiftEventBindings(client, gifts, sourceEvents, { log = true } = {}) {
   const eventTableResult = await client.query(
     "SELECT to_regclass($1) IS NOT NULL AS exists",
     ["public.events"],
@@ -865,15 +1013,17 @@ async function inspectGiftEventBindings(client, gifts, sourceEvents) {
     [giftRegistryKeys],
   );
   const summary = summarizeGiftEventBindings(gifts, sourceEvents, targetResult.rows);
-  console.info(
-    "[gate-2c-gift-bindings]",
-    JSON.stringify({
-      ...summary,
-      sourceMutated: false,
-      targetMutated: false,
-      storageBlobsCopied: false,
-    }),
-  );
+  if (log) {
+    console.info(
+      "[gate-2c-gift-bindings]",
+      JSON.stringify({
+        ...summary,
+        sourceMutated: false,
+        targetMutated: false,
+        storageBlobsCopied: false,
+      }),
+    );
+  }
   return summary;
 }
 
@@ -894,7 +1044,12 @@ async function assertTargetTableExists(client, table) {
   if (!result.rows[0]?.exists) throw new GateError(`target_table_missing:${table}`);
 }
 
-async function inspectEventDependencyState(client, gifts, sourceEventDependencies) {
+async function inspectEventDependencyState(
+  client,
+  gifts,
+  sourceEventDependencies,
+  { log = true } = {},
+) {
   await assertTargetTableExists(client, EVENT_TABLE);
   await assertTargetTableExists(client, BUSINESS_TABLE);
 
@@ -1037,16 +1192,55 @@ async function inspectEventDependencyState(client, gifts, sourceEventDependencie
     targetBusinesses: targetBusinessesResult.rows,
     targetSchema,
   });
-  console.info(
-    "[gate-2c-event-dependencies]",
-    JSON.stringify({
-      ...summary,
-      sourceMutated: false,
-      targetMutated: false,
-      storageBlobsCopied: false,
-    }),
-  );
+  if (log) {
+    console.info(
+      "[gate-2c-event-dependencies]",
+      JSON.stringify({
+        ...summary,
+        sourceMutated: false,
+        targetMutated: false,
+        storageBlobsCopied: false,
+      }),
+    );
+  }
   return summary;
+}
+
+async function assertEventIndexNameAvailable(client) {
+  const result = await client.query("SELECT to_regclass($1) IS NULL AS available", [
+    `public.${EVENT_REGISTRY_UNIQUE_INDEX}`,
+  ]);
+  if (!result.rows[0]?.available) {
+    throw new GateError("target_event_registry_index_name_unavailable");
+  }
+}
+
+async function createEventRegistryUniqueIndex(client) {
+  await client.query(
+    `CREATE UNIQUE INDEX ${quoteIdentifier(EVENT_REGISTRY_UNIQUE_INDEX)}
+       ON public.events (edition_registry_key)
+      WHERE edition_registry_key <> ''`,
+  );
+}
+
+async function fetchTargetEventTransferRows(client, sourceEvents) {
+  const ids = collectNonEmptyStrings(sourceEvents, "id");
+  if (!ids.length) return [];
+  const result = await client.query(
+    `SELECT id::text AS id,
+            business_id,
+            client_id::text AS client_id,
+            name,
+            type::text AS type,
+            to_jsonb(date) #>> '{}' AS date,
+            is_active,
+            edition_registry_key
+       FROM public.events
+      WHERE id = ANY($1::uuid[])
+      ORDER BY id`,
+    [ids],
+  );
+  return result.rows;
 }
 
 async function assertForeignKeysPresent(client, table, rows) {
@@ -1159,6 +1353,24 @@ export function buildBatchInsert(table, columns, rows, conflictColumns) {
   return { sql, values };
 }
 
+export function buildExactInsert(table, columns, rows) {
+  if (!rows.length) return null;
+  const values = [];
+  const tuples = rows.map((row) => {
+    const placeholders = columns.map((column) => {
+      values.push(row[column]);
+      return `$${values.length}`;
+    });
+    return `(${placeholders.join(", ")})`;
+  });
+  return {
+    sql: `INSERT INTO public.${quoteIdentifier(table)} (${columns
+      .map(quoteIdentifier)
+      .join(", ")}) VALUES ${tuples.join(", ")}`,
+    values,
+  };
+}
+
 export function buildBatchDelete(table, conflictColumns, rows) {
   if (!rows.length) return null;
   if (!conflictColumns.length) throw new GateError(`target_conflict_key_missing:${table}`);
@@ -1202,6 +1414,16 @@ async function insertRows(client, table, columns, rows, conflictColumns) {
     );
     if (batch) await client.query(batch.sql, batch.values);
   }
+}
+
+async function insertExactRows(client, table, columns, rows) {
+  const insert = buildExactInsert(table, columns, rows);
+  if (!insert) return 0;
+  const result = await client.query(insert.sql, insert.values);
+  if (result.rowCount !== rows.length) {
+    throw new GateError(`target_exact_insert_mismatch:${table}`);
+  }
+  return result.rowCount;
 }
 
 async function deleteRows(client, table, conflictColumns, rows) {
@@ -1560,6 +1782,7 @@ async function runGate(options, env = process.env) {
           sourceData.eventDependencies ?? { events: [], businesses: [], clients: [] },
         )
       : null;
+    const isEventApply = options.mode === "apply-events";
     const isPhotoCleanup = options.mode === "cleanup-preview-photos";
     const photoState = requiresPhotoData
       ? await inspectTargetState(client, sourceData.photoTable, sourceData.photos, {
@@ -1667,9 +1890,110 @@ async function runGate(options, env = process.env) {
             }
           : { migrationDeferred: true },
         storageBlobsCopied: false,
-        writeAuthorized: options.mode === "apply-gifts",
+        writeAuthorized: options.mode === "apply-gifts" || isEventApply,
       }),
     );
+
+    if (isEventApply) {
+      if (!sourceData.eventDependencies || !eventDependencyState) {
+        throw new GateError("event_dependency_data_missing");
+      }
+      assertExpectedEventMigrationBaseline(eventDependencyState, options);
+      const sourceEventRows = prepareEventRowsForTarget(
+        sourceData.eventDependencies.events,
+      );
+      const sourceEventChecksum = checksumRows(sourceEventRows);
+      await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+      try {
+        await client.query("SET LOCAL lock_timeout = '5s'");
+        await client.query("SET LOCAL statement_timeout = '30s'");
+        await client.query("SET LOCAL idle_in_transaction_session_timeout = '30s'");
+        await client.query(
+          "SELECT pg_advisory_xact_lock(hashtext('haxr:gate-2c:edition-events'))",
+        );
+
+        const lockedEventState = await inspectEventDependencyState(
+          client,
+          sourceData.gifts,
+          sourceData.eventDependencies,
+          { log: false },
+        );
+        assertExpectedEventMigrationBaseline(lockedEventState, options);
+        await assertEventIndexNameAvailable(client);
+        await createEventRegistryUniqueIndex(client);
+        const insertedEventCount = await insertExactRows(
+          client,
+          EVENT_TABLE,
+          EVENT_INSERT_COLUMNS,
+          sourceEventRows,
+        );
+        const verifiedEventRows = await fetchTargetEventTransferRows(client, sourceEventRows);
+        const verifiedEventChecksum = checksumRows(verifiedEventRows);
+        if (
+          verifiedEventRows.length !== options.expectedEvents ||
+          verifiedEventChecksum !== sourceEventChecksum
+        ) {
+          throw new GateError("event_verification_failed");
+        }
+        const verifiedDependencyState = await inspectEventDependencyState(
+          client,
+          sourceData.gifts,
+          sourceData.eventDependencies,
+          { log: false },
+        );
+        const verifiedGiftBindingState = await inspectGiftEventBindings(
+          client,
+          sourceData.gifts,
+          sourceData.sourceEvents ?? [],
+          { log: false },
+        );
+        if (
+          !verifiedDependencyState.target.editionRegistryKeyUnique ||
+          !verifiedDependencyState.readyForSafeEventMigration ||
+          !verifiedDependencyState.readyForGiftBindings ||
+          !verifiedGiftBindingState.ready
+        ) {
+          throw new GateError("event_post_write_preflight_failed");
+        }
+        if (
+          verifiedDependencyState.target.nonEmptyRegistryKeyCount !==
+          options.expectedNonEmptyRegistryKeys + options.expectedEvents
+        ) {
+          throw new GateError("non_empty_registry_keys_post_write_count_mismatch");
+        }
+
+        await client.query("COMMIT");
+        console.info(
+          "[gate-2c-apply-events]",
+          JSON.stringify({
+            status: "committed_and_verified",
+            sourceRef: sourceData.source.projectRef,
+            target: "neon-vercel-preview",
+            insertedEventCount,
+            eventChecksum: verifiedEventChecksum,
+            registryKeyCount: verifiedDependencyState.registryKeyCount,
+            registryKeyChecksum: verifiedDependencyState.registryKeyChecksum,
+            businessReferenceCount:
+              verifiedDependencyState.source.businessReferenceCount,
+            clientReferencesCopied: false,
+            targetClientIdNullCount: verifiedEventRows.filter(
+              (row) => row.client_id === null,
+            ).length,
+            partialUniqueIndexCreatedAndVerified: true,
+            giftBindingCount: verifiedGiftBindingState.targetEventBindingCount,
+            giftBindingsReady: verifiedGiftBindingState.ready,
+            giftsUnchanged: true,
+            photos: { migrationDeferred: true },
+            storageBlobsCopied: false,
+            sourceMutated: false,
+          }),
+        );
+        return;
+      } catch (cause) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw cause;
+      }
+    }
 
     if (options.mode === "preflight-gift-bindings") {
       if (giftBindingState.missingSourceEventBindingCount) {

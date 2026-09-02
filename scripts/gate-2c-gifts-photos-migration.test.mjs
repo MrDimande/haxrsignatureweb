@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   GateError,
+  assertExpectedEventMigrationBaseline,
   assertExpectedGiftTargetBaseline,
   assertSourceConflictKeys,
   assertPreviewNeonTarget,
   buildBatchInsert,
+  buildExactInsert,
   buildBatchDelete,
   buildInboundReferenceCount,
   buildTargetRowFetch,
@@ -16,6 +18,7 @@ import {
   modeRequiresPhotoData,
   normalizeTargetColumnList,
   parseArgs,
+  prepareEventRowsForTarget,
   quoteIdentifier,
   resolveSourceConfig,
   selectConflictKey,
@@ -84,7 +87,9 @@ describe("Gate 2C safety gates", () => {
     assert.equal(parseArgs(["apply-gifts"]).mode, "apply-gifts");
     assert.equal(parseArgs(["preflight-gift-bindings"]).mode, "preflight-gift-bindings");
     assert.equal(parseArgs(["audit-event-dependencies"]).mode, "audit-event-dependencies");
+    assert.equal(parseArgs(["apply-events"]).mode, "apply-events");
     assert.equal(modeRequiresPhotoData("apply-gifts"), false);
+    assert.equal(modeRequiresPhotoData("apply-events"), false);
     assert.equal(modeRequiresPhotoData("audit-event-dependencies"), false);
     assert.equal(modeRequiresPhotoData("preflight-gifts"), false);
     assert.equal(modeRequiresPhotoData("cleanup-preview-photos"), true);
@@ -184,6 +189,10 @@ describe("Gate 2C safety gates", () => {
       "apply_gifts_confirmation_missing",
     );
     throwsCode(
+      () => assertPreviewNeonTarget(base, null, "apply-events"),
+      "apply_events_confirmation_missing",
+    );
+    throwsCode(
       () => assertPreviewNeonTarget(base, "GATE_2C_PREVIEW_GIFTS_WRITE", "apply-gifts"),
       "expected_neon_host_missing",
     );
@@ -206,6 +215,15 @@ describe("Gate 2C safety gates", () => {
         base,
         "GATE_2C_PREVIEW_GIFTS_WRITE",
         "apply-gifts",
+        "ep-example.us-east-2.aws.neon.tech",
+      ).database,
+      "neondb",
+    );
+    assert.equal(
+      assertPreviewNeonTarget(
+        base,
+        "GATE_2C_PREVIEW_EVENTS_WRITE",
+        "apply-events",
         "ep-example.us-east-2.aws.neon.tech",
       ).database,
       "neondb",
@@ -437,6 +455,59 @@ describe("Gate 2C integrity helpers", () => {
     assert.equal(summary.readyForEventDataImport, true);
     assert.equal(summary.readyForSafeEventMigration, false);
     assert.doesNotMatch(JSON.stringify(summary), /Private Event|business-a|client-a|registry-a/);
+
+    const options = parseArgs([
+      "apply-events",
+      "--expected-events=2",
+      `--expected-event-id-checksum=${summary.source.eventIdChecksum}`,
+      "--expected-business-references=1",
+      `--expected-business-reference-checksum=${summary.source.businessReferenceChecksum}`,
+      "--expected-client-references=1",
+      `--expected-client-reference-checksum=${summary.source.clientReferenceChecksum}`,
+      "--expected-existing-event-bindings=0",
+      "--expected-existing-event-ids=0",
+      "--expected-non-empty-registry-keys=0",
+    ]);
+    assert.doesNotThrow(() => assertExpectedEventMigrationBaseline(summary, options));
+    throwsCode(
+      () =>
+        assertExpectedEventMigrationBaseline(
+          {
+            ...summary,
+            target: { ...summary.target, editionRegistryKeyUnique: true },
+          },
+          options,
+        ),
+      "target_event_registry_unique_index_baseline_mismatch",
+    );
+  });
+
+  it("prepares exactly the approved event fields and clears client bindings", () => {
+    const rows = prepareEventRowsForTarget([
+      {
+        id: "event-a",
+        business_id: "business-a",
+        client_id: "client-a",
+        name: "Private Event",
+        type: "wedding",
+        date: "2026-09-02",
+        is_active: true,
+        edition_registry_key: "registry-a",
+        notes: "must not migrate",
+      },
+    ]);
+    assert.deepEqual(rows, [
+      {
+        id: "event-a",
+        business_id: "business-a",
+        client_id: null,
+        name: "Private Event",
+        type: "wedding",
+        date: "2026-09-02",
+        is_active: true,
+        edition_registry_key: "registry-a",
+      },
+    ]);
   });
 
   it("hashes conflict-key sets independently of target row order", () => {
@@ -478,6 +549,20 @@ describe("Gate 2C integrity helpers", () => {
     assert.match(batch.sql, /VALUES \(\$1, \$2\), \(\$3, \$4\)/);
     assert.match(batch.sql, /ON CONFLICT \("id"\) DO NOTHING$/);
     assert.deepEqual(batch.values, ["1", "A", "2", "B"]);
+  });
+
+  it("builds a parameterized exact insert without suppressing conflicts", () => {
+    const insert = buildExactInsert(
+      "events",
+      ["id", "client_id", "name"],
+      [{ id: "event-a", client_id: null, name: "Private Event" }],
+    );
+    assert.equal(
+      insert.sql,
+      'INSERT INTO public."events" ("id", "client_id", "name") VALUES ($1, $2, $3)',
+    );
+    assert.deepEqual(insert.values, ["event-a", null, "Private Event"]);
+    assert.doesNotMatch(insert.sql, /ON CONFLICT/);
   });
 
   it("builds a parameterized cleanup for only the approved conflict keys", () => {

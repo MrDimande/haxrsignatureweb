@@ -41,6 +41,27 @@ if (isMigrationPreview) {
       ],
     },
     {
+      name: "gate-2c-apply-edition-events",
+      script: "scripts/gate-2c-gifts-photos-migration.mjs",
+      args: [
+        "apply-events",
+        "--expected-source-ref=oxsrdmydlqyvnueedgtl",
+        "--expected-gifts=42",
+        "--expected-gifts-checksum=7ff1cf6590b6d4e3989e0070fa61b619d23f5dfcae3a71f4e604f4ecdaf4a5d2",
+        "--expected-events=2",
+        "--expected-event-id-checksum=0f882860a3a4290c5a1469b20f6b3b1a40255b0722ebee024420de1d8eb8d747",
+        "--expected-business-references=1",
+        "--expected-business-reference-checksum=0d8acf2d3557c142c8705b17b3c7acd45379b74ec3c9e58c9b7d31369ed75040",
+        "--expected-client-references=1",
+        "--expected-client-reference-checksum=1241998d464282503ac0c8a62beb9af90d5eddd6e5892f0d61206d4e15631be0",
+        "--expected-existing-event-bindings=0",
+        "--expected-existing-event-ids=0",
+        "--expected-non-empty-registry-keys=0",
+        "--expected-neon-host=ep-super-fire-ayj2jnyh.c-5.us-east-2.aws.neon.tech",
+        "--confirm=GATE_2C_PREVIEW_EVENTS_WRITE",
+      ],
+    },
+    {
       name: "gate-2c-event-dependencies-audit",
       script: "scripts/gate-2c-gifts-photos-migration.mjs",
       args: [
