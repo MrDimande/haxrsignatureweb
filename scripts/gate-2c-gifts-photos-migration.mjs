@@ -12,6 +12,9 @@
  *   node scripts/gate-2c-gifts-photos-migration.mjs preflight-gifts \
  *     --expected-source-ref=<ref> --expected-gifts=38 \
  *     --expected-gifts-checksum=<sha256>
+ *   node scripts/gate-2c-gifts-photos-migration.mjs preflight-gift-bindings \
+ *     --expected-source-ref=<ref> --expected-gifts=38 \
+ *     --expected-gifts-checksum=<sha256>
  *   node scripts/gate-2c-gifts-photos-migration.mjs apply-gifts \
  *     --expected-source-ref=<ref> --expected-gifts=38 \
  *     --expected-existing-gifts=0 --expected-existing-gifts-checksum=<sha256> \
@@ -52,12 +55,20 @@ export function modeRequiresPhotoData(mode) {
   return mode === "source-audit" || mode === "cleanup-preview-photos";
 }
 
+function modeRequiresGiftBindingData(mode) {
+  return mode === "preflight-gift-bindings";
+}
+
 export function parseArgs(argv) {
   const [mode = "source-audit", ...rawFlags] = argv;
   if (
-    !new Set(["source-audit", "preflight-gifts", "apply-gifts", "cleanup-preview-photos"]).has(
-      mode,
-    )
+    !new Set([
+      "source-audit",
+      "preflight-gifts",
+      "preflight-gift-bindings",
+      "apply-gifts",
+      "cleanup-preview-photos",
+    ]).has(mode)
   ) {
     throw new GateError("invalid_mode");
   }
@@ -251,12 +262,12 @@ async function inspectSourceTable(supabase, table) {
   return { table, accessible: true, count: count ?? 0, errorCode: null };
 }
 
-async function fetchAllSourceRows(supabase, table) {
+async function fetchAllSourceRows(supabase, table, columns = "*") {
   const rows = [];
   for (let start = 0; ; start += SOURCE_PAGE_SIZE) {
     const { data, error } = await supabase
       .from(table)
-      .select("*")
+      .select(columns)
       .order("id", { ascending: true })
       .range(start, start + SOURCE_PAGE_SIZE - 1);
     if (error) throw new GateError(`source_read_failed:${table}:${error.code || "unknown"}`);
@@ -308,6 +319,49 @@ export function checksumRows(rows) {
     .map((row) => canonicalize(row))
     .sort((left, right) => String(left.id).localeCompare(String(right.id)));
   return createHash("sha256").update(JSON.stringify(canonicalRows)).digest("hex");
+}
+
+function collectRegistryKeys(rows, column, { required = false } = {}) {
+  const keys = new Set();
+  for (const row of rows) {
+    const value = row[column];
+    if (typeof value !== "string" || !value.trim()) {
+      if (required) throw new GateError(`registry_key_missing:${column}`);
+      continue;
+    }
+    keys.add(value.trim());
+  }
+  return [...keys].sort();
+}
+
+function checksumRegistryKeys(keys) {
+  return createHash("sha256").update(JSON.stringify(keys)).digest("hex");
+}
+
+export function summarizeGiftEventBindings(gifts, sourceEvents, targetEvents) {
+  const giftRegistryKeys = collectRegistryKeys(gifts, "registry_key", { required: true });
+  const sourceEventRegistryKeys = collectRegistryKeys(sourceEvents, "edition_registry_key");
+  const targetEventRegistryKeys = collectRegistryKeys(targetEvents, "edition_registry_key");
+  const sourceEventKeySet = new Set(sourceEventRegistryKeys);
+  const targetEventKeySet = new Set(targetEventRegistryKeys);
+  const sourceBoundKeys = giftRegistryKeys.filter((key) => sourceEventKeySet.has(key));
+  const targetBoundKeys = giftRegistryKeys.filter((key) => targetEventKeySet.has(key));
+  const missingSourceKeys = giftRegistryKeys.filter((key) => !sourceEventKeySet.has(key));
+  const missingTargetKeys = giftRegistryKeys.filter((key) => !targetEventKeySet.has(key));
+
+  return {
+    giftRegistryKeyCount: giftRegistryKeys.length,
+    giftRegistryKeyChecksum: checksumRegistryKeys(giftRegistryKeys),
+    sourceEventBindingCount: sourceBoundKeys.length,
+    sourceEventBindingChecksum: checksumRegistryKeys(sourceBoundKeys),
+    targetEventBindingCount: targetBoundKeys.length,
+    targetEventBindingChecksum: checksumRegistryKeys(targetBoundKeys),
+    missingSourceEventBindingCount: missingSourceKeys.length,
+    missingSourceEventBindingChecksum: checksumRegistryKeys(missingSourceKeys),
+    missingTargetEventBindingCount: missingTargetKeys.length,
+    missingTargetEventBindingChecksum: checksumRegistryKeys(missingTargetKeys),
+    ready: missingSourceKeys.length === 0 && missingTargetKeys.length === 0,
+  };
 }
 
 export function quoteIdentifier(identifier) {
@@ -556,6 +610,47 @@ async function fetchAllTargetRowsForReconciliation(
     throw new GateError(`target_row_count_changed:${table}`);
   }
   return result.rows;
+}
+
+async function inspectGiftEventBindings(client, gifts, sourceEvents) {
+  const eventTableResult = await client.query(
+    "SELECT to_regclass($1) IS NOT NULL AS exists",
+    ["public.events"],
+  );
+  if (!eventTableResult.rows[0]?.exists) throw new GateError("target_table_missing:events");
+
+  const eventColumnResult = await client.query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema='public'
+         AND table_name='events'
+         AND column_name='edition_registry_key'
+     ) AS exists`,
+  );
+  if (!eventColumnResult.rows[0]?.exists) {
+    throw new GateError("target_columns_missing:events.edition_registry_key");
+  }
+
+  const giftRegistryKeys = collectRegistryKeys(gifts, "registry_key", { required: true });
+  const targetResult = await client.query(
+    `SELECT DISTINCT edition_registry_key
+       FROM public.events
+      WHERE edition_registry_key = ANY($1::text[])
+      ORDER BY edition_registry_key`,
+    [giftRegistryKeys],
+  );
+  const summary = summarizeGiftEventBindings(gifts, sourceEvents, targetResult.rows);
+  console.info(
+    "[gate-2c-gift-bindings]",
+    JSON.stringify({
+      ...summary,
+      sourceMutated: false,
+      targetMutated: false,
+      storageBlobsCopied: false,
+    }),
+  );
+  return summary;
 }
 
 async function assertForeignKeysPresent(client, table, rows) {
@@ -920,6 +1015,7 @@ async function loadSourceData(options, env) {
   const supabase = createSupabase(source);
   const giftAudit = await inspectSourceTable(supabase, GIFT_TABLE);
   const requiresPhotoData = modeRequiresPhotoData(options.mode);
+  const requiresGiftBindingData = modeRequiresGiftBindingData(options.mode);
   const photoAudit = requiresPhotoData
     ? await Promise.all(PHOTO_TABLE_CANDIDATES.map((table) => inspectSourceTable(supabase, table)))
     : null;
@@ -941,12 +1037,17 @@ async function loadSourceData(options, env) {
   }
 
   const gifts = await fetchAllSourceRows(supabase, GIFT_TABLE);
-  if (!requiresPhotoData) return { source, gifts, photoTable: null, photos: null };
+  const sourceEvents = requiresGiftBindingData
+    ? await fetchAllSourceRows(supabase, "events", "edition_registry_key")
+    : null;
+  if (!requiresPhotoData) {
+    return { source, gifts, sourceEvents, photoTable: null, photos: null };
+  }
 
   const photoTable = selectPhotoTable(photoAudit, options.photoTable);
   const photos = await fetchAllSourceRows(supabase, photoTable);
 
-  return { source, photoTable, gifts, photos };
+  return { source, sourceEvents, photoTable, gifts, photos };
 }
 
 async function runGate(options, env = process.env) {
@@ -962,6 +1063,7 @@ async function runGate(options, env = process.env) {
         );
   const sourceData = await loadSourceData(options, env);
   const requiresPhotoData = modeRequiresPhotoData(options.mode);
+  const requiresGiftBindingData = modeRequiresGiftBindingData(options.mode);
 
   if (options.mode === "source-audit") {
     console.info(
@@ -1011,6 +1113,9 @@ async function runGate(options, env = process.env) {
     if (options.mode === "apply-gifts") {
       assertExpectedGiftTargetBaseline(giftState, options);
     }
+    const giftBindingState = requiresGiftBindingData
+      ? await inspectGiftEventBindings(client, sourceData.gifts, sourceData.sourceEvents ?? [])
+      : null;
     const isPhotoCleanup = options.mode === "cleanup-preview-photos";
     const photoState = requiresPhotoData
       ? await inspectTargetState(client, sourceData.photoTable, sourceData.photos, {
@@ -1103,6 +1208,7 @@ async function runGate(options, env = process.env) {
           sourceChecksum: giftState.sourceChecksum,
           existingTargetChecksum: giftState.targetChecksum,
         },
+        giftEventBindings: giftBindingState,
         photos: photoState
           ? {
               table: sourceData.photoTable,
@@ -1119,6 +1225,16 @@ async function runGate(options, env = process.env) {
         writeAuthorized: options.mode === "apply-gifts",
       }),
     );
+
+    if (options.mode === "preflight-gift-bindings") {
+      if (giftBindingState.missingSourceEventBindingCount) {
+        throw new GateError("gift_registry_source_event_missing");
+      }
+      if (giftBindingState.missingTargetEventBindingCount) {
+        throw new GateError("gift_registry_target_event_missing");
+      }
+      return;
+    }
 
     if (options.mode === "preflight-gifts") return;
 

@@ -20,6 +20,7 @@ import {
   resolveSourceConfig,
   selectConflictKey,
   selectPhotoTable,
+  summarizeGiftEventBindings,
   summarizeCleanupDependencies,
   summarizeTargetReconciliation,
 } from "./gate-2c-gifts-photos-migration.mjs";
@@ -80,6 +81,7 @@ describe("Gate 2C safety gates", () => {
   it("isolates gift writes from deferred photo metadata", () => {
     throwsCode(() => parseArgs(["apply"]), "invalid_mode");
     assert.equal(parseArgs(["apply-gifts"]).mode, "apply-gifts");
+    assert.equal(parseArgs(["preflight-gift-bindings"]).mode, "preflight-gift-bindings");
     assert.equal(modeRequiresPhotoData("apply-gifts"), false);
     assert.equal(modeRequiresPhotoData("preflight-gifts"), false);
     assert.equal(modeRequiresPhotoData("cleanup-preview-photos"), true);
@@ -360,6 +362,29 @@ describe("Gate 2C integrity helpers", () => {
       targetOnlyCount: 1,
       targetOnlyKeyChecksum: checksumConflictKeys([{ id: "target-extra" }], ["id"]),
     });
+  });
+
+  it("requires every migrated gift registry to have a source and target event binding", () => {
+    const summary = summarizeGiftEventBindings(
+      [
+        { registry_key: "registry-a" },
+        { registry_key: "registry-a" },
+        { registry_key: "registry-b" },
+      ],
+      [{ edition_registry_key: "registry-a" }, { edition_registry_key: "registry-b" }],
+      [{ edition_registry_key: "registry-b" }],
+    );
+
+    assert.equal(summary.giftRegistryKeyCount, 2);
+    assert.equal(summary.sourceEventBindingCount, 2);
+    assert.equal(summary.targetEventBindingCount, 1);
+    assert.equal(summary.missingSourceEventBindingCount, 0);
+    assert.equal(summary.missingTargetEventBindingCount, 1);
+    assert.equal(summary.ready, false);
+    throwsCode(
+      () => summarizeGiftEventBindings([{ registry_key: "" }], [], []),
+      "registry_key_missing:registry_key",
+    );
   });
 
   it("hashes conflict-key sets independently of target row order", () => {
