@@ -445,33 +445,31 @@ describe("HAXR Wedding Financial Report (PDF System)", () => {
 
   it("I. Contrato assinado sem contracted_amount: zero proposal-to-balance inference", async () => {
     // Cenário: proposal = 500000, contractSigned = true, contractedAmount = 0, paid = 0
-    const testEvent: ClientEventRow = {
-      ...baseEvent,
-      id: "ev-test-no-val",
-      slug: "test-slug",
-      event_name: "Casamento Teste Sem Valor",
-      event_date: "2026-12-01",
-      budget_min: 1000000,
-      budget_max: 1000000,
-      currency: "MZN",
-    };
-
     const ledger = buildNormalizedFinancialLedger({
-      event: testEvent,
-      paymentsPayload: {
-        summary: {
-          totalPaid: 0,
-          totalPending: 0,
-          totalOverdue: 0,
-          paymentCount: 0,
-          paidCount: 0,
-          pendingCount: 0,
-          overdueCount: 0,
-          nextPayment: null,
-        },
-        installments: [],
-        payments: [],
+      event: {
+        id: "ev-test-no-val",
+        owner_user_id: "u-123",
+        slug: "test-slug",
+        event_name: "Casamento Teste Sem Valor",
+        event_type: "wedding",
+        bride_name: "Noiva",
+        groom_name: "Noivo",
+        event_date: "2026-12-01",
+        event_location: "Maputo",
+        estimated_guests: 150,
+        budget_min: 1000000,
+        budget_max: 1000000,
+        status: "planning",
+        source: "manual",
+        services_interested: [],
+        phone: null,
+        operational_event_id: null,
+        is_active: true,
+        onboarding_fingerprint: null,
+        created_at: "2026-08-01T00:00:00Z",
+        updated_at: "2026-08-01T00:00:00Z",
       },
+      paymentsPayload: null,
       vendors: [
         {
           id: "v-signed-no-val",
