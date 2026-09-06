@@ -65,6 +65,10 @@ function extractBearerToken(request: Request): string | null {
 }
 
 export async function resolveAuthenticatedSupabaseClient(request: Request) {
+  if (!isSupabaseAnonConfigured()) {
+    return { user: null, supabase: null };
+  }
+
   const cookieClient = await createSupabaseServerAuthClient();
   const {
     data: { user: cookieUser },

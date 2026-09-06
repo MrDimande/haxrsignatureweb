@@ -48,12 +48,40 @@ type JsonRecord = Record<string, unknown>;
 
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null;
 let neonCompatClient: ClientAppAuthClient | null = null;
+let inertBrowserClient: ClientAppAuthClient | null = null;
+
+function createInertBrowserClient(): ClientAppAuthClient {
+  return {
+    auth: {
+      async signInWithPassword() {
+        return { error: { message: "Autenticação no browser não configurada." } };
+      },
+      async signUp() {
+        return { data: { session: null }, error: { message: "Registo no browser não configurado." } };
+      },
+      async signInWithOAuth() {
+        return { data: { url: null }, error: { message: "OAuth no browser não configurado." } };
+      },
+      async getSession() {
+        return { data: { session: null }, error: null };
+      },
+      async signOut() {
+        return { error: null };
+      },
+      async resetPasswordForEmail() {
+        return { error: { message: "Recuperação no browser não configurada." } };
+      },
+      async updateUser() {
+        return { error: { message: "Actualização no browser não configurada." } };
+      },
+    },
+  };
+}
 
 function getSupabaseBrowserClient(): ClientAppAuthClient {
   if (!isSupabaseAnonConfigured()) {
-    throw new Error(
-      "Supabase browser client: defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.",
-    );
+    if (!inertBrowserClient) inertBrowserClient = createInertBrowserClient();
+    return inertBrowserClient;
   }
 
   if (!browserClient) {
@@ -303,4 +331,9 @@ export async function resendNeonPasswordResetOtp(
 export function resetSupabaseBrowserClientForTests(): void {
   browserClient = null;
   neonCompatClient = null;
+  inertBrowserClient = null;
+}
+
+export function isBrowserSupabaseRuntimeRequired(): boolean {
+  return false;
 }

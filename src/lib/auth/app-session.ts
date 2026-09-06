@@ -1,4 +1,5 @@
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
+import { isSupabaseAnonConfigured } from "@/lib/supabase/config";
 import {
   buildAppUserDisplay,
   type AppUserDisplay,
@@ -30,6 +31,14 @@ export type CurrentAppSession = {
 };
 
 async function getCurrentSupabaseAppSession(): Promise<CurrentAppSession> {
+  if (!isSupabaseAnonConfigured()) {
+    return {
+      user: null,
+      profile: null,
+      display: buildAppUserDisplay({ user: null, profile: null }),
+    };
+  }
+
   const supabase = await createSupabaseServerAuthClient();
   const {
     data: { user },
