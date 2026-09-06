@@ -92,7 +92,7 @@ export default function Hero() {
             data-hero-item
             className="font-sans text-sm sm:text-base md:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed font-light"
           >
-            Assessoria cerimonial completa, alta-costura digital e tecnologia operacional privada para casamentos exclusivos em Moçambique. Rigor milimétrico e serenidade em cada detalhe.
+            Assessoria de eventos, Web-Convites interactivos de alta-costura e tecnologia operacional privada para celebrações exclusivas em Moçambique. Rigor milimétrico e serenidade em cada detalhe.
           </p>
 
           {/* Centered Input Form */}

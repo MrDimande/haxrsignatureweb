@@ -58,7 +58,7 @@ describe("homepage-structure-guardrail", () => {
   it("verifies homepage title uses absolute metadata and prevents duplicate brand suffix", () => {
     const meta = marketingMetadata("home");
     const expectedTitle =
-      "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital em Moçambique";
+      "HAXR Signature | Assessoria de Eventos e Convites Digitais";
 
     assert.deepEqual(meta.title, { absolute: expectedTitle });
 

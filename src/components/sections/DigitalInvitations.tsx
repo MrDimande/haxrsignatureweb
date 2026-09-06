@@ -56,7 +56,7 @@ export default function DigitalInvitations() {
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5 text-gold/80 shrink-0">
                   <path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9Z" />
                 </svg>
-                <span className="font-mono text-[9px] uppercase tracking-[0.38em] font-bold text-gold/90">Arte & Identidade Visual</span>
+                <span className="font-mono text-[9px] uppercase tracking-[0.38em] font-bold text-gold/90">Web-Convites HAXR • Arte & Identidade Visual</span>
               </div>
 
               <div className="relative pt-6">
@@ -64,7 +64,7 @@ export default function DigitalInvitations() {
                   O primeiro impacto
                 </p>
                 <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light text-white leading-tight">
-                  Convites Digitais de <br />
+                  Web-Convites HAXR de <br />
                   <span className="font-serif italic text-gold/95">Alta-Costura</span>
                 </h2>
               </div>
@@ -76,10 +76,10 @@ export default function DigitalInvitations() {
               </p>
               <div className="space-y-4 font-sans text-xs md:text-sm text-brand-ivory/70 leading-relaxed font-light">
                 <p>
-                  Não criamos apenas links. Criamos a primeira página da vossa história. Um convite digital HAXR Signature é uma experiência imersiva de luxo que combina tipografia editorial refinada, música envolvente e transições cinematográficas.
+                  Não criamos apenas links ou páginas estáticas. Os <strong className="font-medium text-white">Web-Convites HAXR</strong> são convites digitais interactivos concebidos como experiências digitais personalizadas — integrando identidade cerimonial, elementos multimédia envolventes, confirmação RSVP e informações essenciais do evento harmonizadas segundo cada Edição.
                 </p>
                 <p>
-                  Desenhado sob medida de raiz, cada pixel é trabalhado com a mesma curadoria de um papel de algodão físico, assegurando a confiança de que o vosso dia especial será memorável do início ao fim.
+                  Desenhado à medida de raiz, cada pixel é trabalhado com o rigor e a curadoria de um atelier de alta-costura, assegurando a confiança de que o vosso evento especial será memorável do início ao fim.
                 </p>
               </div>
             </RevealOnScroll>
@@ -108,7 +108,7 @@ export default function DigitalInvitations() {
             <RevealOnScroll delay={0.12} className="pt-2">
               <div className="bg-white/[0.02] border-l-2 border-gold/45 p-4 rounded-r-lg space-y-2">
                 <p className="font-serif text-xs italic text-brand-ivory/60 leading-relaxed">
-                  &ldquo;Quando os nossos convidados abriram o convite digital, o feedback foi imediato: nunca tinham visto nada tão sofisticado. Ali soubemos que a HAXR era o parceiro certo.&rdquo;
+                  &ldquo;Quando os nossos convidados abriram o nosso Web-Convite HAXR, o feedback foi imediato: nunca tinham visto nada tão sofisticado. Ali soubemos que a HAXR era o parceiro certo.&rdquo;
                 </p>
                 <p className="font-mono text-[8px] tracking-[0.25em] uppercase text-gold/80">
                   — Vânia Lucky & Fabião Dimande, Casamento em 2026
@@ -122,7 +122,7 @@ export default function DigitalInvitations() {
                 href="/contacto"
                 className="inline-flex items-center gap-2.5 bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[9px] md:text-[10px] tracking-widest uppercase font-bold py-4.5 px-9 rounded-sm shadow-lg transition-all hover:-translate-y-0.5 duration-300 cursor-pointer"
               >
-                <span>Desenhar o Meu Convite</span>
+                <span>Desenhar o Meu Web-Convite</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
 
@@ -144,7 +144,7 @@ export default function DigitalInvitations() {
                 <div className="mb-8 text-center max-w-md mx-auto">
                   <span className="inline-flex items-center gap-1.5 font-mono text-[8px] tracking-[0.45em] uppercase text-brand-gold mb-2 border border-brand-gold/30 px-3 py-1 rounded-full bg-gold/5">
                     <Heart className="w-2.5 h-2.5 animate-pulse" />
-                    Experiência Interactiva
+                    Web-Convites HAXR • Experiência Interactiva
                   </span>
                   <h3 className="font-serif text-lg sm:text-2xl font-light text-white mb-1.5">
                     O Toque da Sofisticação

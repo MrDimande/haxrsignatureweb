@@ -33,14 +33,13 @@ export const siteSeo = {
   language: "pt-MZ",
   country: "MZ",
   city: "Maputo",
-  title:
-    "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital em Moçambique",
+  title: "HAXR Signature | Assessoria de Eventos e Convites Digitais",
   titleTemplate: "%s | HAXR Signature",
-  shortTitle: "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital",
+  shortTitle: "HAXR Signature | Assessoria de Eventos e Convites Digitais",
   description:
-    "Assessoria completa, design cerimonial e alta-costura digital para casamentos exclusivos em Moçambique. Curadoria cerimonial e gestão de convidados com a assinatura HAXR.",
+    "Assessoria de eventos, Web-Convites interactivos, gestão de convidados e soluções digitais para celebrações e experiências memoráveis. Conheça a HAXR Signature.",
   ogDescription:
-    "Assessoria completa, design cerimonial e alta-costura digital para casamentos exclusivos em Moçambique. HAXR Signature — serenidade e precisão absoluta.",
+    "Assessoria de eventos, Web-Convites interactivos, gestão de convidados e soluções digitais para celebrações e experiências memoráveis. Conheça a HAXR Signature.",
   keywords: [
     "HAXR Signature",
     "assessoria de eventos",

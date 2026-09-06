@@ -36,7 +36,7 @@ HOMEPAGE_SECTION_ORDER_PRESERVED=true
 
 ## 2. SEO P0 & Identidade de Marca
 
-- **Resolução da Duplicação de Título:** O título global `%s | HAXR Signature` entrava em conflito com o título de raiz da página quando continha a marca. Aplicou-se a semântica canónica da Metadata API do Next.js através de `{ absolute: "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital em Moçambique" }`, garantindo que não ocorre sufixo duplo nas SERP.
+- **Resolução da Duplicação de Título & Patch Final de Posicionamento:** O título global `%s | HAXR Signature` foi configurado via Next.js Metadata API com `{ absolute: "HAXR Signature | Assessoria de Eventos e Convites Digitais" }`, garantindo que não ocorre sufixo duplo nas SERP e aplicando a nova categoria proprietária "Web-Convites" na meta descrição: *"Assessoria de eventos, Web-Convites interactivos, gestão de convidados e soluções digitais para celebrações e experiências memoráveis. Conheça a HAXR Signature."*
 - **Conformidade de Linguagem:** `lang="pt-MZ"` activo no nó raiz `<html>` com metadados geográficos calibrados para Moçambique (`MZ-MPM`, Maputo).
 - **Semântica OpenGraph e Twitter:** Metadados enriquecidos com imagem canónica de 1200x630 e cartões `summary_large_image`.
 
