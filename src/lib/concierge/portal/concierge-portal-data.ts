@@ -23,7 +23,9 @@ function buildWorkspaceMeta(
 
   return {
     persistenceMode,
-    storageMode: storageActive ? "supabase" : "metadata_only",
+    storageMode: storageActive
+      ? ((process.env.HAXR_PRIVATE_STORAGE_PROVIDER || "").includes("r2") ? "r2-s3" : "supabase")
+      : "metadata_only",
     persistenceLabel:
       persistenceMode === "memory" ? "Modo local" : "Guardado no workspace",
     storageLabel: storageActive

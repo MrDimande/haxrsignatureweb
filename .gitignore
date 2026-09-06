@@ -15,27 +15,23 @@ yarn-debug.log*
 yarn-error.log*
 
 # env
-.env
-.env*.local
+.env*
 !.env.example
-.env.vercel.core.preview
-.env.vercel.core.prod
-.env.vercel.*.preview
-.env.vercel.*.prod
-.env.staging.local
-.env.preview.local
-.env.production.local
 
 # typescript
 next-env.d.ts
+tsconfig.tsbuildinfo
 
 # misc
 .DS_Store
 .idea/
 .vscode/
 
-# cursor agent skills (local only)
+# agent & editor configs
 .agents/
+.agent/
+.claude/
+.cursor/
 skills-lock.json
 
 # vercel
@@ -46,3 +42,5 @@ backups/
 *.dump
 *.sql.gz
 pr4-*.local
+.neon
+scratch/

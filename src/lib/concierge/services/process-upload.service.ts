@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/server";
+import { getPrivateStorageProvider } from "@/lib/storage/private-storage";
 import { parseFileContent } from "@/lib/concierge/parse-file";
 import { extractWithGemini, isConciergeAiConfigured } from "@/lib/concierge/provider";
 import * as repo from "@/lib/concierge/repositories/concierge.repository";
@@ -48,21 +48,17 @@ export async function uploadAndProcessConciergeFile(input: {
   });
 
   const storagePath = `events/${eventId}/concierge/${upload.id}/${fileName}`;
-  const supabase = createAdminClient();
-
-  const { error: storageError } = await supabase.storage
-    .from(CONCIERGE_BUCKET)
-    .upload(storagePath, buffer, {
-      contentType: mimeType,
-      upsert: false,
-    });
-
-  if (storageError) {
+  try {
+    const storage = getPrivateStorageProvider();
+    await storage.uploadBuffer(CONCIERGE_BUCKET, storagePath, buffer, mimeType);
+  } catch (storageErr: unknown) {
+    const message =
+      storageErr instanceof Error ? storageErr.message : "Erro ao carregar ficheiro.";
     await repo.updateUpload(upload.id, {
       status: "failed",
-      error_message: storageError.message,
+      error_message: message,
     });
-    throw new Error(`Storage: ${storageError.message}`);
+    throw new Error(`Storage: ${message}`);
   }
 
   await repo.updateUploadStoragePath(upload.id, storagePath);

@@ -5,7 +5,7 @@ import type { PaymentMethod } from "@/lib/finance/types";
 import { registerPayment } from "@/lib/finance/services/register-payment.service";
 import * as portalPremiumRepo from "@/lib/portal/repositories/portal-premium.repository";
 import { onPortalDepositConfirmed } from "@/lib/portal/services/portal-timeline-progression.service";
-import { createAdminClient } from "@/lib/supabase/server";
+import { getPrivateStorageProvider } from "@/lib/storage/private-storage";
 
 export const PORTAL_PAYMENT_INSTRUCTIONS = {
   title: "Instruções de pagamento",
@@ -66,16 +66,20 @@ export async function submitPortalPaymentProof(
 
   let storagePath: string | undefined;
   if (input.fileBase64 && input.fileName) {
-    const supabase = createAdminClient();
-    const buffer = Buffer.from(input.fileBase64, "base64");
-    const path = `portal-proofs/${client.id}/${Date.now()}-${input.fileName}`;
-    const { error } = await supabase.storage
-      .from("concierge-uploads")
-      .upload(path, buffer, {
-        contentType: input.mimeType ?? "application/octet-stream",
-        upsert: false,
-      });
-    if (!error) storagePath = path;
+    try {
+      const storage = getPrivateStorageProvider();
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const path = `portal-proofs/${client.id}/${Date.now()}-${input.fileName}`;
+      await storage.uploadBuffer(
+        "concierge-uploads",
+        path,
+        buffer,
+        input.mimeType ?? "application/octet-stream"
+      );
+      storagePath = path;
+    } catch (storageErr) {
+      console.error("[PortalPayment] Falha ao armazenar comprovativo:", storageErr);
+    }
   }
 
   const proof = await portalPremiumRepo.createPaymentProof({

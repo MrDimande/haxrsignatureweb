@@ -196,7 +196,7 @@ export interface ConciergeEventOverview {
 
 export interface ConciergeWorkspaceMeta {
   persistenceMode: "memory" | "supabase" | "neon";
-  storageMode: "metadata_only" | "supabase";
+  storageMode: "metadata_only" | "supabase" | "r2-s3";
   persistenceLabel: string;
   storageLabel: string;
   actorRole: string;

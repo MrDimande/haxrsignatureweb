@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/server";
+import { getPrivateStorageProvider } from "@/lib/storage/private-storage";
 import { CONCIERGE_BUCKET } from "@/lib/concierge/types";
 
 const DEFAULT_EXPIRES_SECONDS = 3600;
@@ -23,14 +23,6 @@ export async function getConciergeSignedFileUrl(
 ): Promise<string> {
   assertConciergeStoragePath(eventId, storagePath);
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.storage
-    .from(CONCIERGE_BUCKET)
-    .createSignedUrl(storagePath, expiresInSeconds);
-
-  if (error || !data?.signedUrl) {
-    throw new Error(error?.message ?? "Não foi possível gerar link do ficheiro.");
-  }
-
-  return data.signedUrl;
+  const storage = getPrivateStorageProvider();
+  return storage.createSignedUrl(CONCIERGE_BUCKET, storagePath, expiresInSeconds);
 }
