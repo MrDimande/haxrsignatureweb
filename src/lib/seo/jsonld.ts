@@ -76,17 +76,9 @@ export function buildFullOrganization(): JsonLd {
     priceRange: "$$$",
     address: {
       "@type": "PostalAddress",
-      streetAddress: "Av. Julius Nyerere, 119, Polana Canico 'B'",
       addressLocality: "Maputo",
-      addressRegion: "Cidade de Maputo",
       addressCountry: "MZ",
     },
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: -25.9653,
-      longitude: 32.5892,
-    },
-    hasMap: siteContact.mapsHref,
     contactPoint: [
       {
         "@type": "ContactPoint",

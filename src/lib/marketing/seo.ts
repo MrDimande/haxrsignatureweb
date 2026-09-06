@@ -5,9 +5,9 @@ export const marketingPagesSeo = {
   home: {
     path: "/",
     title:
-      "HAXR Signature | Assessoria de Eventos, Convites Digitais e Gestão de Convidados",
+      "HAXR Signature | Assessoria e Design de Casamentos em Moçambique",
     description:
-      "Assessoria de eventos, convites digitais para casamentos, RSVP, Find Your Seat e gestão de convidados, Moçambique. Organização premium com assinatura HAXR.",
+      "Assessoria completa, design cerimonial e alta-costura digital para casamentos exclusivos em Moçambique. Organização impecável com a assinatura HAXR.",
     keywords: [
       "HAXR Signature",
       "assessoria de eventos",
@@ -314,13 +314,14 @@ export const marketingPagesSeo = {
   },
   haxrConcierge: {
     path: "/tools/haxr-concierge",
-    title: "HAXR Concierge — IA para Organizar o Casamento | HAXR Signature",
+    title: "HAXR Concierge — Assistência Privada e Inteligência Operacional",
     description:
-      "Reencaminhe propostas, listas e pagamentos por email ou WhatsApp. A IA HAXR organiza tudo no painel, com validação humana.",
+      "Reencaminhe propostas, listas e pagamentos por email ou WhatsApp. O Concierge HAXR organiza tudo no painel com validação humana e discrição absoluta.",
     keywords: [
       "concierge casamento",
-      "organização casamento IA",
+      "organização casamento",
       "HAXR Concierge",
+      "mordomia digital casamento",
       "assistente casamento Maputo",
     ],
   },

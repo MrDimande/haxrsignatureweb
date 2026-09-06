@@ -34,13 +34,13 @@ export const siteSeo = {
   country: "MZ",
   city: "Maputo",
   title:
-    "HAXR Signature | Assessoria de Eventos, Convites Digitais e Gestão de Convidados",
+    "HAXR Signature | Assessoria e Design de Casamentos em Moçambique",
   titleTemplate: "%s | HAXR Signature",
-  shortTitle: "HAXR Signature — Eventos, Convites e RSVP",
+  shortTitle: "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital",
   description:
-    "HAXR Signature — assessoria de eventos, convites digitais para casamentos, RSVP, Find Your Seat, check-in e gestão de convidados em Maputo, Moçambique. Organização premium para casamentos, lobolos e celebrações exclusivas.",
+    "Assessoria completa, design cerimonial e alta-costura digital para casamentos exclusivos em Moçambique. Curadoria cerimonial e gestão de convidados com a assinatura HAXR.",
   ogDescription:
-    "Assessoria de eventos, convites digitais, RSVP e Find Your Seat em Maputo. HAXR Signature — curadoria e tecnologia para casamentos e eventos exclusivos.",
+    "Assessoria completa, design cerimonial e alta-costura digital para casamentos exclusivos em Moçambique. HAXR Signature — serenidade e precisão absoluta.",
   keywords: [
     "HAXR Signature",
     "assessoria de eventos",

@@ -113,8 +113,6 @@ export function buildSiteMetadata(overrides?: Partial<Metadata>): Metadata {
     other: {
       "geo.region": "MZ-MPM",
       "geo.placename": `${siteSeo.city}, Moçambique`,
-      "geo.position": "-25.9653;32.5892",
-      ICBM: "-25.9653, 32.5892",
       "content-language": "pt-MZ",
     },
     ...overrides,
@@ -123,7 +121,7 @@ export function buildSiteMetadata(overrides?: Partial<Metadata>): Metadata {
 
 export function buildHomeMetadata(): Metadata {
   return {
-    title: siteSeo.title,
+    title: { absolute: siteSeo.title },
     description: siteSeo.description,
     alternates: {
       canonical: "/",
@@ -144,7 +142,7 @@ export function buildPageMetadata(config: PageSeoInput): Metadata {
   const { path, title, description, keywords } = config;
 
   return {
-    title,
+    title: path === "/" ? { absolute: title } : title,
     description,
     keywords: keywords ? [...keywords] : undefined,
     applicationName: siteSeo.name,
@@ -158,7 +156,7 @@ export function buildPageMetadata(config: PageSeoInput): Metadata {
     openGraph: {
       type: "website",
       locale: siteSeo.locale,
-      url: `${siteUrl}${path}`,
+      url: path === "/" ? siteUrl : `${siteUrl}${path}`,
       siteName: siteSeo.name,
       title,
       description,
