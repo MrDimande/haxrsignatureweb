@@ -1,5 +1,8 @@
-import type { User } from "@supabase/supabase-js";
-import type { CreateClientEventDeps } from "@/lib/events/client-event-service";
+import type { CreateClientEventInput } from "@/lib/events/create-event-validation";
+import type {
+  CreateClientEventDeps,
+  CreateClientEventResult,
+} from "@/lib/events/client-event-service";
 import { createClientEventFromPayload } from "@/lib/events/client-event-service";
 import { parseCreateClientEventPayload } from "@/lib/events/create-event-validation";
 import type { ClientAppAuthEnvCheck } from "@/lib/supabase/config";
@@ -36,13 +39,19 @@ export type CreateEventApiResult = {
   body: CreateEventApiResponseBody;
 };
 
+export type CreateEventExecutor = (
+  input: CreateClientEventInput,
+  deps: { ownerUserId: string; idempotencyKey?: string | null },
+) => Promise<CreateClientEventResult>;
+
 export type HandleCreateEventRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;
   serviceRoleCheck: ClientAppAuthEnvCheck;
-  user: Pick<User, "id"> | null;
+  user: { id: string } | null;
   rawBody: unknown;
   idempotencyKey: string | null;
   createDeps: Omit<CreateClientEventDeps, "ownerUserId"> | null;
+  createEvent?: CreateEventExecutor | null;
 };
 
 export async function handleCreateEventRequest(
@@ -83,24 +92,29 @@ export async function handleCreateEventRequest(
     };
   }
 
-  if (!deps.createDeps) {
+  if (!deps.createEvent && !deps.createDeps) {
     return {
       status: 503,
       body: {
         ok: false,
         error: "service_role_unavailable",
         message: deps.serviceRoleCheck.ok
-          ? "Supabase admin client indisponível."
+          ? "Cliente de persistência indisponível."
           : deps.serviceRoleCheck.message,
       },
     };
   }
 
-  const result = await createClientEventFromPayload(parsed.data, {
-    ...deps.createDeps,
-    ownerUserId: deps.user.id,
-    idempotencyKey: deps.idempotencyKey,
-  });
+  const result = deps.createEvent
+    ? await deps.createEvent(parsed.data, {
+        ownerUserId: deps.user.id,
+        idempotencyKey: deps.idempotencyKey,
+      })
+    : await createClientEventFromPayload(parsed.data, {
+        ...deps.createDeps!,
+        ownerUserId: deps.user.id,
+        idempotencyKey: deps.idempotencyKey,
+      });
 
   if (!result.ok) {
     return {

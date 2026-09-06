@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { getCurrentAppSession } from "@/lib/auth/app-session";
+import {
+  createClientEventOperationalRpcClient,
+  resolveClientEventReadRequestAuth,
+  validateClientEventAuthEnvironment,
+  validateClientEventOperationalEnvironment,
+} from "@/lib/auth/client-event-server-clients";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { handleClientEventFinancialReportRequest } from "@/lib/payments/client-event-payments-api";
+import type { ClientEventPaymentsRpcClient } from "@/lib/payments/client-event-payments-rpc";
 import type { ClientEventPaymentsAuthClient } from "@/lib/payments/client-event-payments-service";
-import {
-  validateClientAppAuthEnvironment,
-  validateClientAppServiceRoleEnvironment,
-} from "@/lib/supabase/config";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,6 @@ export async function GET(request: Request, context: RouteContext) {
     const { eventId } = await context.params;
     const trimmedEventId = eventId.trim();
 
-    // Rejeição estrita de eventos demo/mock para relatórios oficiais
     if (!isRealClientEventId(trimmedEventId)) {
       return NextResponse.json(
         {
@@ -30,19 +30,20 @@ export async function GET(request: Request, context: RouteContext) {
       );
     }
 
-    const envCheck = validateClientAppAuthEnvironment();
-    const serviceRoleCheck = validateClientAppServiceRoleEnvironment();
-    const session = await getCurrentAppSession();
-    const { user, supabase } = await resolveAuthenticatedSupabaseClient(request);
+    const envCheck = validateClientEventAuthEnvironment();
+    const serviceRoleCheck = validateClientEventOperationalEnvironment();
+    const auth = await resolveClientEventReadRequestAuth<ClientEventPaymentsAuthClient>(request);
+    const rpcClient = serviceRoleCheck.ok
+      ? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>()
+      : null;
 
     const result = await handleClientEventFinancialReportRequest({
       envCheck,
       serviceRoleCheck,
-      user: user ?? session.user,
+      user: auth.user,
       eventId: trimmedEventId,
-      authClient: envCheck.ok
-        ? (supabase as unknown as ClientEventPaymentsAuthClient)
-        : null,
+      authClient: auth.authClient,
+      rpcClient,
     });
 
     if (result.status !== 200 || !result.buffer) {
@@ -66,7 +67,7 @@ export async function GET(request: Request, context: RouteContext) {
         "Cache-Control": "private, no-store",
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         ok: false,

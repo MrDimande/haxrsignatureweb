@@ -1,17 +1,29 @@
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { InMemoryConciergePortalRepository } from "./in-memory-concierge-portal-repository";
+import { NeonConciergePortalRepository } from "./neon-concierge-portal-repository";
 import { SupabaseConciergePortalRepository } from "./supabase-concierge-portal-repository";
-import type { ConciergePortalRepository } from "./concierge-portal-repository";
+import type {
+  ConciergePortalPersistenceMode,
+  ConciergePortalRepository,
+} from "./concierge-portal-repository";
 import { isConciergePortalSchemaMissingError } from "./concierge-portal-repository";
 
-let cachedRepo: ConciergePortalRepository | null = null;
-let schemaProbeDone = false;
+let schemaProbeMode: ConciergePortalPersistenceMode | null = null;
 let schemaReady = false;
 
-async function probePortalSchema(): Promise<boolean> {
-  if (!isSupabaseConfigured()) return false;
+function createPersistentRepository(): ConciergePortalRepository | null {
+  if (shouldUseNeonServerDatabase()) {
+    return new NeonConciergePortalRepository();
+  }
+  if (isSupabaseConfigured()) {
+    return new SupabaseConciergePortalRepository();
+  }
+  return null;
+}
+
+async function probePortalSchema(repo: ConciergePortalRepository): Promise<boolean> {
   try {
-    const repo = new SupabaseConciergePortalRepository();
     await repo.listItems("__schema_probe__");
     return true;
   } catch (error) {
@@ -21,34 +33,29 @@ async function probePortalSchema(): Promise<boolean> {
 }
 
 export function createConciergePortalRepository(): ConciergePortalRepository {
-  if (!isSupabaseConfigured()) {
-    return new InMemoryConciergePortalRepository();
-  }
-  if (cachedRepo) return cachedRepo;
-  cachedRepo = new SupabaseConciergePortalRepository();
-  return cachedRepo;
+  return createPersistentRepository() ?? new InMemoryConciergePortalRepository();
 }
 
-/** Verifica se tabelas portal existem; em falha usa memória. */
+/** Verifica se as tabelas portal existem; em falha usa memória. */
 export async function createConciergePortalRepositorySafe(): Promise<ConciergePortalRepository> {
-  if (!isSupabaseConfigured()) {
+  const repo = createPersistentRepository();
+  if (!repo) {
     return new InMemoryConciergePortalRepository();
   }
 
-  if (!schemaProbeDone) {
-    schemaReady = await probePortalSchema();
-    schemaProbeDone = true;
+  if (schemaProbeMode !== repo.mode) {
+    schemaReady = await probePortalSchema(repo);
+    schemaProbeMode = repo.mode;
   }
 
   if (!schemaReady) {
     return new InMemoryConciergePortalRepository();
   }
 
-  return new SupabaseConciergePortalRepository();
+  return repo;
 }
 
 export function resetConciergePortalRepositoryCache(): void {
-  cachedRepo = null;
-  schemaProbeDone = false;
+  schemaProbeMode = null;
   schemaReady = false;
 }

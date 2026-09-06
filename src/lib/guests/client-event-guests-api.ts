@@ -1,4 +1,10 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
+import {
+  createClientEventOperationalRpcClient,
+  createClientEventReadAuthClient,
+  validateClientEventAuthEnvironment,
+  validateClientEventOperationalEnvironment,
+} from "@/lib/auth/client-event-server-clients";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import {
   getClientEventGuestsData,
@@ -6,13 +12,7 @@ import {
 } from "@/lib/guests/client-event-guests-service";
 import type { ClientEventGuestsRpcClient } from "@/lib/guests/client-event-guests-rpc";
 import type { GuestModuleData, ModuleDataResult } from "@/lib/event-modules/types";
-import {
-  validateClientAppAuthEnvironment,
-  validateClientAppServiceRoleEnvironment,
-  type ClientAppAuthEnvCheck,
-} from "@/lib/supabase/config";
-import { createAdminClient } from "@/lib/supabase/server";
-import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
+import type { ClientAppAuthEnvCheck } from "@/lib/supabase/config";
 
 export type HandleClientEventGuestsRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;
@@ -70,7 +70,7 @@ export async function handleClientEventGuestsRequest(
       body: {
         ok: false,
         error: "unavailable",
-        message: "Cliente Supabase indisponível.",
+        message: "Cliente de acesso indisponível.",
       },
     };
   }
@@ -87,7 +87,7 @@ export async function handleClientEventGuestsRequest(
   }
 
   const rpcClient =
-    deps.rpcClient ?? (createAdminClient() as unknown as ClientEventGuestsRpcClient);
+    deps.rpcClient ?? createClientEventOperationalRpcClient<ClientEventGuestsRpcClient>();
 
   try {
     const result = await getClientEventGuestsData({
@@ -174,17 +174,23 @@ export async function loadClientEventGuestsModuleData(
     };
   }
 
-  const envCheck = validateClientAppAuthEnvironment();
-  const serviceRoleCheck = validateClientAppServiceRoleEnvironment();
+  const envCheck = validateClientEventAuthEnvironment();
+  const serviceRoleCheck = validateClientEventOperationalEnvironment();
   const session = await getCurrentAppSession();
-  const supabase = envCheck.ok ? await createSupabaseServerAuthClient() : null;
+  const authClient = envCheck.ok
+    ? await createClientEventReadAuthClient<ClientEventGuestsAuthClient>()
+    : null;
+  const rpcClient = serviceRoleCheck.ok
+    ? createClientEventOperationalRpcClient<ClientEventGuestsRpcClient>()
+    : null;
 
   const result = await handleClientEventGuestsRequest({
     envCheck,
     serviceRoleCheck,
     user: session.user,
     eventId: trimmedEventId,
-    authClient: supabase as unknown as ClientEventGuestsAuthClient | null,
+    authClient,
+    rpcClient,
   });
 
   return result.body;

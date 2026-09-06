@@ -16,16 +16,18 @@ import type { ConciergeModuleData, ConciergeWorkspaceMeta } from "./types";
 
 function buildWorkspaceMeta(
   repo: ConciergePortalRepository,
-  actor: PortalConciergeActor
+  actor: PortalConciergeActor,
 ): ConciergeWorkspaceMeta {
   const persistenceMode = repo.mode;
   const storageActive = isConciergeStorageActive();
 
   return {
     persistenceMode,
-    storageMode: storageActive ? "supabase" : "metadata_only",
+    storageMode: storageActive
+      ? ((process.env.HAXR_PRIVATE_STORAGE_PROVIDER || "").includes("r2") ? "r2-s3" : "supabase")
+      : "metadata_only",
     persistenceLabel:
-      persistenceMode === "supabase" ? "Guardado no workspace" : "Modo local",
+      persistenceMode === "memory" ? "Modo local" : "Guardado no workspace",
     storageLabel: storageActive
       ? "Armazenamento activo"
       : "Armazenamento permanente em preparação",
@@ -46,7 +48,7 @@ function buildWorkspaceMeta(
 export async function loadConciergeModuleData(
   eventId: string,
   actor: PortalConciergeActor,
-  repo?: ConciergePortalRepository
+  repo?: ConciergePortalRepository,
 ): Promise<ConciergeModuleData> {
   const repository = repo ?? (await createConciergePortalRepositorySafe());
   const shell = createInitialConciergeModuleData(eventId);
@@ -77,5 +79,7 @@ export async function loadConciergeModuleData(
 }
 
 export function getAiEngineLabel(): string {
-  return isGeminiConfigured() ? "Classificação assistida (Gemini)" : "Classificação assistida (regras)";
+  return isGeminiConfigured()
+    ? "Classificação assistida (Gemini)"
+    : "Classificação assistida (regras)";
 }

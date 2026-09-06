@@ -1,10 +1,13 @@
 import { isEditionPersistenceConfigured } from "@/lib/edition/registry";
 import { getEditionRsvpEmailConfig } from "@/lib/edition/rsvp/config";
 import { persistEditionRsvp } from "@/lib/edition/rsvp/persist";
+import {
+  getEditionRsvpPersistenceBackend,
+  isEditionRsvpPersistenceConfigured,
+} from "@/lib/edition/rsvp/persist.repository";
 import { sendEditionRsvpNotificationEmail } from "@/lib/edition/rsvp/send-notification";
 import type { EditionRsvpResult, EditionRsvpSuccessPayload } from "@/lib/edition/rsvp/types";
 import { validateEditionRsvpBody } from "@/lib/edition/rsvp/validate";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 export async function processEditionRsvpSubmission(
   body: unknown,
@@ -30,8 +33,10 @@ export async function processEditionRsvpSubmission(
   }
 
   const submission = validated.submission;
+  const persistenceBackend = getEditionRsvpPersistenceBackend();
+  const persistenceConfigured = isEditionRsvpPersistenceConfigured();
   const persistenceRequired =
-    isSupabaseConfigured() && isEditionPersistenceConfigured(submission.slug);
+    persistenceConfigured && isEditionPersistenceConfigured(submission.slug);
 
   let persistResult: Awaited<ReturnType<typeof persistEditionRsvp>> | null =
     null;
@@ -52,9 +57,9 @@ export async function processEditionRsvpSubmission(
         },
       };
     }
-  } else if (isSupabaseConfigured()) {
+  } else if (persistenceConfigured) {
     console.warn(
-      `[edition/rsvp] Event ID não configurado para slug "${submission.slug}" — apenas email.`
+      `[edition/rsvp] Event ID não configurado para slug "${submission.slug}" — apenas email (backend=${persistenceBackend}).`
     );
   }
 

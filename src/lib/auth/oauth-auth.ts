@@ -1,4 +1,4 @@
-import { validateClientAppAuthEnvironment } from "@/lib/supabase/config";
+import { validateClientAppAuthEnvironment } from "@/lib/auth/client-auth-config";
 
 export type GoogleOAuthClient = {
   auth: {

@@ -1,4 +1,8 @@
 {
+  "env": {
+    "NEON_AUTH_BASE_URL": "https://ep-super-fire-ayj2jnyh.neonauth.c-5.us-east-2.aws.neon.tech/neondb/auth",
+    "HAXR_AUTH_PROVIDER": "neon"
+  },
   "crons": [
     {
       "path": "/api/cron/brevo-funnel",

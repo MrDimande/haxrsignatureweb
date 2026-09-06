@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { DocumentAnalyticsRow } from "@/lib/supabase/database.types";
 import type { BusinessId, DocumentStatus, DocumentType } from "@/lib/admin/types";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import { neonQuery } from "@/lib/neon/server-db";
 
 export type AnalyticsFilters = {
   businessId?: BusinessId;
@@ -10,8 +12,58 @@ export type AnalyticsFilters = {
   fiscalMonth?: number;
 };
 
-export async function queryDocumentAnalytics(
-  filters?: AnalyticsFilters
+type NeonAnalyticsRow = {
+  row: DocumentAnalyticsRow;
+};
+
+async function queryDocumentAnalyticsFromNeon(
+  filters?: AnalyticsFilters,
+): Promise<DocumentAnalyticsRow[]> {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  if (filters?.businessId) {
+    values.push(filters.businessId);
+    conditions.push(`a.business_id = $${values.length}`);
+  }
+  if (filters?.documentType) {
+    values.push(filters.documentType);
+    conditions.push(`a.document_type = $${values.length}`);
+  }
+  if (filters?.status) {
+    values.push(filters.status);
+    conditions.push(`a.status = $${values.length}`);
+  }
+  if (filters?.fiscalYear) {
+    values.push(filters.fiscalYear);
+    conditions.push(`a.fiscal_year = $${values.length}`);
+  }
+  if (filters?.fiscalMonth) {
+    values.push(filters.fiscalMonth);
+    conditions.push(`a.fiscal_month = $${values.length}`);
+  }
+
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(" AND ")}`
+    : "";
+
+  // to_jsonb preserves the JSON/PostgREST contract expected by the existing
+  // application (timestamps as strings and numeric values as JSON numbers).
+  const result = await neonQuery<NeonAnalyticsRow>(
+    `
+      SELECT to_jsonb(a) AS row
+      FROM public.document_analytics a
+      ${whereClause}
+      ORDER BY a.issue_date DESC
+    `,
+    values,
+  );
+
+  return result.rows.map(({ row }) => row);
+}
+
+async function queryDocumentAnalyticsFromSupabase(
+  filters?: AnalyticsFilters,
 ): Promise<DocumentAnalyticsRow[]> {
   const supabase = createAdminClient();
   let query = supabase.from("document_analytics").select("*");
@@ -37,8 +89,18 @@ export async function queryDocumentAnalytics(
   return (data ?? []) as DocumentAnalyticsRow[];
 }
 
+export async function queryDocumentAnalytics(
+  filters?: AnalyticsFilters,
+): Promise<DocumentAnalyticsRow[]> {
+  if (shouldUseNeonServerDatabase()) {
+    return queryDocumentAnalyticsFromNeon(filters);
+  }
+
+  return queryDocumentAnalyticsFromSupabase(filters);
+}
+
 export async function getRevenueByBusiness(
-  fiscalYear?: number
+  fiscalYear?: number,
 ): Promise<{ businessId: string; businessName: string; total: number }[]> {
   const rows = await queryDocumentAnalytics({
     fiscalYear,
@@ -62,7 +124,7 @@ export async function getRevenueByBusiness(
 
 export async function getRevenueByMonth(
   fiscalYear: number,
-  businessId?: BusinessId
+  businessId?: BusinessId,
 ): Promise<{ month: number; total: number; count: number }[]> {
   const rows = await queryDocumentAnalytics({
     fiscalYear,

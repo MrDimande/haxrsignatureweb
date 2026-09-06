@@ -1,42 +1,13 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import type { CheckinLookup } from "@/lib/events/types";
-import { parseEventLookup } from "@/lib/events/services/lookup-parser";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import * as neon from "@/lib/events/services/checkin.neon.service";
+import * as supabase from "@/lib/events/services/checkin.supabase.service";
 
-function getClient() {
-  return createAdminClient();
-}
+export const lookupCheckin: typeof supabase.lookupCheckin = (...args) =>
+  shouldUseNeonServerDatabase()
+    ? neon.lookupCheckin(...args)
+    : supabase.lookupCheckin(...args);
 
-export async function lookupCheckin(
-  eventId: string,
-  token: string
-): Promise<CheckinLookup> {
-  const supabase = getClient();
-  const { data, error } = await supabase.rpc("lookup_event_checkin", {
-    p_event_id: eventId,
-    p_token: token,
-  } as never);
-
-  if (error) throw new Error(error.message);
-  return parseEventLookup(data);
-}
-
-export async function performCheckin(
-  eventId: string,
-  token: string
-): Promise<CheckinLookup> {
-  const supabase = getClient();
-  const { data, error } = await supabase.rpc("perform_event_checkin", {
-    p_event_id: eventId,
-    p_token: token,
-  } as never);
-
-  if (error) throw new Error(error.message);
-  const result = parseEventLookup(data);
-  return {
-    ...result,
-    checkedIn: Boolean((data as Record<string, unknown>)?.checkedIn),
-    alreadyCheckedIn: Boolean(
-      (data as Record<string, unknown>)?.alreadyCheckedIn
-    ),
-  };
-}
+export const performCheckin: typeof supabase.performCheckin = (...args) =>
+  shouldUseNeonServerDatabase()
+    ? neon.performCheckin(...args)
+    : supabase.performCheckin(...args);

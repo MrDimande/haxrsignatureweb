@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { isSupabaseAnonConfigured } from "@/lib/supabase/config";
 import { buildAppUserDisplay, type AppUserDisplay } from "@/lib/auth/app-user-display";
 import { signOutFromSupabase } from "@/lib/auth/sign-in-auth";
 
@@ -21,34 +20,23 @@ export function useNavAuth(): NavAuthState {
   const router = useRouter();
 
   const checkUser = useCallback(async () => {
-    if (!isSupabaseAnonConfigured()) {
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const supabase = createSupabaseBrowserClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getSession();
+      const session = data?.session as {
+        user?: { email?: string; id?: string; user_metadata?: Record<string, unknown> };
+      } | null;
 
-      if (!user) {
+      if (!session?.user) {
         setIsAuthenticated(false);
         setUserDisplay(null);
         setIsLoading(false);
         return;
       }
 
-      // Fetch profile data
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, full_name, app_role, active_client_event_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
       const display = buildAppUserDisplay({
-        user,
-        profile: profile ?? null,
+        user: session.user,
+        profile: null,
       });
 
       setIsAuthenticated(true);
@@ -63,32 +51,9 @@ export function useNavAuth(): NavAuthState {
 
   useEffect(() => {
     void checkUser();
-
-    if (!isSupabaseAnonConfigured()) return;
-
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
-          void checkUser();
-        } else if (event === "SIGNED_OUT") {
-          setIsAuthenticated(false);
-          setUserDisplay(null);
-        }
-      });
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch {
-      // Supabase not available
-    }
   }, [checkUser]);
 
   const signOut = useCallback(async () => {
-    if (!isSupabaseAnonConfigured()) return;
     try {
       const supabase = createSupabaseBrowserClient();
       await signOutFromSupabase(supabase);

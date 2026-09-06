@@ -1,4 +1,5 @@
-import { validateClientAppAuthEnvironment } from "@/lib/supabase/config";
+import { validateClientAppAuthEnvironment } from "@/lib/auth/client-auth-config";
+import { stashPendingNeonEmailVerification } from "@/lib/neon/pending-auth";
 
 export type SignUpFieldErrors = {
   fullName?: string;
@@ -24,7 +25,7 @@ export type EmailPasswordSignUpClient = {
         };
       };
     }) => Promise<{
-      data: { session: unknown | null };
+      data: { session: unknown | null; verificationRequired?: boolean };
       error: { message: string } | null;
     }>;
   };
@@ -118,7 +119,7 @@ export function mapSupabaseSignUpError(message: string): string {
 }
 
 export type SignUpWithEmailPasswordResult =
-  | { ok: true; sessionCreated: boolean }
+  | { ok: true; sessionCreated: boolean; verificationRequired?: boolean }
   | { ok: false; fieldErrors?: SignUpFieldErrors; formError: string };
 
 export async function signUpWithEmailPassword(
@@ -159,7 +160,17 @@ export async function signUpWithEmailPassword(
       return { ok: false, formError: mapSupabaseSignUpError(error.message) };
     }
 
-    return { ok: true, sessionCreated: Boolean(data.session) };
+    const verificationRequired = data.verificationRequired === true;
+    if (verificationRequired && typeof window !== "undefined") {
+      stashPendingNeonEmailVerification(input.email.trim());
+      window.location.assign("/verify-email");
+    }
+
+    return {
+      ok: true,
+      sessionCreated: Boolean(data.session),
+      verificationRequired,
+    };
   } catch (cause) {
     const message =
       cause instanceof Error ? cause.message : "Erro de rede desconhecido.";

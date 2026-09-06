@@ -1,4 +1,6 @@
-import { createAdminClient } from "@/lib/supabase/server";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
+import { invokePersistentRateLimit as invokePersistentRateLimitNeon } from "@/lib/security/persistent-rate-limit.neon";
+import { invokePersistentRateLimit as invokePersistentRateLimitSupabase } from "@/lib/security/persistent-rate-limit.supabase";
 import {
   rateLimit,
   type RateLimitConfig,
@@ -23,22 +25,22 @@ function parseRpcResult(data: unknown): RateLimitResult | null {
   };
 }
 
-/** Rate limit persistente via Supabase; fallback em memória se RPC indisponível. */
+/** Rate limit persistente no backend activo; fallback em memória se indisponível. */
 export async function persistentRateLimit(
   key: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): Promise<RateLimitResult> {
   try {
-    const supabase = createAdminClient();
     const windowSeconds = Math.max(1, Math.ceil(config.windowMs / 1000));
-    const { data, error } = await supabase.rpc("check_api_rate_limit", {
-      p_bucket_key: key,
-      p_max_requests: config.max,
-      p_window_seconds: windowSeconds,
-    } as never);
+    const invokePersistentRateLimit = shouldUseNeonServerDatabase()
+      ? invokePersistentRateLimitNeon
+      : invokePersistentRateLimitSupabase;
 
-    if (error) throw new Error(error.message);
-
+    const data = await invokePersistentRateLimit(
+      key,
+      config.max,
+      windowSeconds,
+    );
     const parsed = parseRpcResult(data);
     if (parsed) return parsed;
   } catch (err) {

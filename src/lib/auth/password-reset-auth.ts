@@ -1,4 +1,5 @@
-import { validateClientAppAuthEnvironment } from "@/lib/supabase/config";
+import { validateClientAppAuthEnvironment } from "@/lib/auth/client-auth-config";
+import { stashPendingNeonPasswordReset } from "@/lib/neon/pending-auth";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -14,7 +15,10 @@ export type PasswordResetEmailClient = {
     resetPasswordForEmail: (
       email: string,
       options: { redirectTo: string },
-    ) => Promise<{ error: { message: string } | null }>;
+    ) => Promise<{
+      error: { message: string } | null;
+      delivery?: "link" | "otp";
+    }>;
   };
 };
 
@@ -91,7 +95,7 @@ export function mapSupabasePasswordResetError(message: string): string {
 }
 
 export type RequestPasswordResetResult =
-  | { ok: true }
+  | { ok: true; delivery: "link" | "otp" }
   | { ok: false; fieldErrors?: PasswordResetFieldErrors; formError: string };
 
 export async function requestPasswordResetEmail(
@@ -114,7 +118,7 @@ export async function requestPasswordResetEmail(
   }
 
   try {
-    const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
+    const { error, delivery } = await client.auth.resetPasswordForEmail(email.trim(), {
       redirectTo,
     });
 
@@ -122,7 +126,13 @@ export async function requestPasswordResetEmail(
       return { ok: false, formError: mapSupabasePasswordResetError(error.message) };
     }
 
-    return { ok: true };
+    const resolvedDelivery = delivery === "otp" ? "otp" : "link";
+    if (resolvedDelivery === "otp" && typeof window !== "undefined") {
+      stashPendingNeonPasswordReset(email.trim());
+      window.location.assign("/reset-password-otp");
+    }
+
+    return { ok: true, delivery: resolvedDelivery };
   } catch (cause) {
     const message =
       cause instanceof Error ? cause.message : "Erro de rede desconhecido.";

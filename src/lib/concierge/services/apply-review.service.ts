@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/server";
+import { getPrivateStorageProvider } from "@/lib/storage/private-storage";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import { importGuestsFromCsv } from "@/lib/events/services/import-csv.service";
 import { createPayment } from "@/lib/finance/repositories/payments.repository";
@@ -145,17 +145,8 @@ export async function applyApprovedReview(
 }
 
 export async function downloadUploadBuffer(storagePath: string): Promise<Buffer> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.storage
-    .from("concierge-uploads")
-    .download(storagePath);
-
-  if (error || !data) {
-    throw new Error(error?.message ?? "Falha ao descarregar ficheiro.");
-  }
-
-  const arrayBuffer = await data.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  const storage = getPrivateStorageProvider();
+  return storage.downloadBuffer("concierge-uploads", storagePath);
 }
 
 export function extractionToRecord(extraction: ConciergeExtraction): Record<string, unknown> {

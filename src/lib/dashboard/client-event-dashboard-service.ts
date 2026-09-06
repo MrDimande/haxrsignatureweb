@@ -1,5 +1,6 @@
 import { formatOnboardingEventDate } from "@/lib/auth/onboarding-storage";
 import type { ClientAppProfile } from "@/lib/auth/app-user-display";
+import { createClientEventOperationalRpcClient } from "@/lib/auth/client-event-server-clients";
 import {
   EMPTY_OPERATIONAL_KPIS,
   fetchOperationalKpis,
@@ -7,6 +8,10 @@ import {
   mapVendorStatusLabel,
   type ClientEventOperationalKpis,
 } from "@/lib/dashboard/client-event-operational-kpis";
+import {
+  fetchOperationalKpisNeon,
+  listOperationalVendorsNeon,
+} from "@/lib/dashboard/client-event-operational-kpis.neon";
 import type { DashboardData } from "@/lib/dashboard/types";
 import type {
   ClientEventRow,
@@ -38,6 +43,7 @@ import {
   type ClientEventDashboardVendorMetrics,
 } from "@/lib/vendors/client-event-vendors-dashboard";
 import { fetchClientEventVendorsViaRpc } from "@/lib/vendors/client-event-vendors-rpc";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export type ClientEventDashboardAccessResult =
@@ -454,18 +460,26 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
   let checklistSnapshot: DashboardData["checklistSnapshot"] = [];
   let documentSnapshot: DashboardData["documentSnapshot"] = [];
 
-  if (event.operational_event_id && isSupabaseConfigured()) {
+  const useNeon = shouldUseNeonServerDatabase();
+  const hasOperationalBackend = useNeon || isSupabaseConfigured();
+
+  if (event.operational_event_id && hasOperationalBackend) {
     try {
-      const adminClient = createAdminClient();
-      operationalKpis = await fetchOperationalKpis(
-        event.operational_event_id,
-        { clientEventId: event.id, slug: event.slug },
-        adminClient as never,
-      );
+      const adminClient = useNeon ? null : createAdminClient();
+      const rpcClient = createClientEventOperationalRpcClient<unknown>();
+      const portalScope = { clientEventId: event.id, slug: event.slug };
+
+      operationalKpis = useNeon
+        ? await fetchOperationalKpisNeon(event.operational_event_id, portalScope)
+        : await fetchOperationalKpis(
+            event.operational_event_id,
+            portalScope,
+            adminClient as never,
+          );
 
       try {
         const guestsPayload = await fetchClientEventGuestsViaRpc(
-          adminClient as never,
+          rpcClient as never,
           event.id,
         );
         guestMetrics = mapRpcPayloadToDashboardGuestMetrics(guestsPayload);
@@ -475,7 +489,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
 
       try {
         const paymentsPayload = await fetchClientEventPaymentsViaRpc(
-          adminClient as never,
+          rpcClient as never,
           event.id,
         );
         financeMetrics = mapRpcPayloadToDashboardFinanceMetrics(event, paymentsPayload);
@@ -485,17 +499,19 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
 
       try {
         const vendorsPayload = await fetchClientEventVendorsViaRpc(
-          adminClient as never,
+          rpcClient as never,
           event.id,
         );
         vendorMetrics = mapRpcPayloadToDashboardVendorMetrics(vendorsPayload);
         vendorSnapshot = vendorMetrics.vendorSnapshot;
       } catch {
         vendorMetrics = null;
-        const vendors = await listOperationalVendors(
-          event.operational_event_id,
-          adminClient as never,
-        );
+        const vendors = useNeon
+          ? await listOperationalVendorsNeon(event.operational_event_id)
+          : await listOperationalVendors(
+              event.operational_event_id,
+              adminClient as never,
+            );
         vendorSnapshot = vendors.map((vendor) => ({
           id: vendor.id,
           name: vendor.name,
@@ -506,7 +522,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
 
       try {
         const checklistPayload = await fetchClientEventChecklistViaRpc(
-          adminClient as never,
+          rpcClient as never,
           event.id,
         );
         checklistMetrics = mapRpcPayloadToDashboardChecklistMetrics(checklistPayload);
@@ -518,7 +534,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
 
       try {
         const documentsPayload = await fetchClientEventDocumentsViaRpc(
-          adminClient as never,
+          rpcClient as never,
           event.id,
         );
         documentMetrics = mapRpcPayloadToDashboardDocumentMetrics(event, documentsPayload);

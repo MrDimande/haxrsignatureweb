@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import VendorDirectory from "@/components/vendors/VendorDirectory";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
 import {
   listPublishedSupplierProfiles,
@@ -22,8 +23,9 @@ async function loadDirectory(): Promise<{
   unavailable: boolean;
 }> {
   try {
-    const client =
-      (await createSupabaseServerAuthClient()) as unknown as SupplierMarketplaceQueryClient;
+    const client = shouldUseNeonServerDatabase()
+      ? null
+      : ((await createSupabaseServerAuthClient()) as unknown as SupplierMarketplaceQueryClient);
     return {
       suppliers: await listPublishedSupplierProfiles(client),
       unavailable: false,

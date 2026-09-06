@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { getCurrentAppSession } from "@/lib/auth/app-session";
+import {
+  createClientEventOperationalRpcClient,
+  resolveClientEventReadRequestAuth,
+  validateClientEventAuthEnvironment,
+  validateClientEventOperationalEnvironment,
+} from "@/lib/auth/client-event-server-clients";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { getDocumentModuleData } from "@/lib/event-modules/get-event-module-data";
 import type { DocumentModuleData, ModuleDataResult } from "@/lib/event-modules/types";
 import { handleClientEventDocumentsRequest } from "@/lib/documents/client-event-documents-api";
+import type { ClientEventDocumentsRpcClient } from "@/lib/documents/client-event-documents-rpc";
 import type { ClientEventDocumentsAuthClient } from "@/lib/documents/client-event-documents-service";
-import {
-  validateClientAppAuthEnvironment,
-  validateClientAppServiceRoleEnvironment,
-} from "@/lib/supabase/config";
-import { resolveAuthenticatedSupabaseClient } from "@/lib/supabase/server-auth";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -30,19 +31,20 @@ export async function GET(request: Request, context: RouteContext) {
       });
     }
 
-    const envCheck = validateClientAppAuthEnvironment();
-    const serviceRoleCheck = validateClientAppServiceRoleEnvironment();
-    const session = await getCurrentAppSession();
-    const { user, supabase } = await resolveAuthenticatedSupabaseClient(request);
+    const envCheck = validateClientEventAuthEnvironment();
+    const serviceRoleCheck = validateClientEventOperationalEnvironment();
+    const auth = await resolveClientEventReadRequestAuth<ClientEventDocumentsAuthClient>(request);
+    const rpcClient = serviceRoleCheck.ok
+      ? createClientEventOperationalRpcClient<ClientEventDocumentsRpcClient>()
+      : null;
 
     const result = await handleClientEventDocumentsRequest({
       envCheck,
       serviceRoleCheck,
-      user: user ?? session.user,
+      user: auth.user,
       eventId: trimmedEventId,
-      authClient: envCheck.ok
-        ? (supabase as unknown as ClientEventDocumentsAuthClient)
-        : null,
+      authClient: auth.authClient,
+      rpcClient,
     });
 
     return NextResponse.json(result.body satisfies ModuleDataResult<DocumentModuleData>, {

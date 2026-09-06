@@ -1,10 +1,14 @@
-import type { User } from "@supabase/supabase-js";
-
 export type ClientAppProfile = {
   id: string;
   full_name: string | null;
   app_role: string | null;
   active_client_event_id: string | null;
+};
+
+export type AppAuthDisplayUser = {
+  email?: string | null;
+  name?: string | null;
+  user_metadata?: Record<string, unknown> | null;
 };
 
 export type AppUserDisplay = {
@@ -48,7 +52,7 @@ export function resolveAppRoleLabel(appRole: string | null | undefined): string 
 }
 
 export function buildAppUserDisplay(input: {
-  user: Pick<User, "email" | "user_metadata"> | null;
+  user: AppAuthDisplayUser | null;
   profile: Pick<ClientAppProfile, "full_name" | "app_role"> | null;
 }): AppUserDisplay {
   const email = input.user?.email?.trim() || "utilizador autenticado";
@@ -56,7 +60,11 @@ export function buildAppUserDisplay(input: {
     typeof input.user?.user_metadata?.full_name === "string"
       ? input.user.user_metadata.full_name
       : null;
-  const name = normalizeName(input.profile?.full_name) ?? normalizeName(metadataName) ?? email;
+  const name =
+    normalizeName(input.profile?.full_name) ??
+    normalizeName(metadataName) ??
+    normalizeName(input.user?.name) ??
+    email;
   const roleLabel = resolveAppRoleLabel(input.profile?.app_role);
 
   return {

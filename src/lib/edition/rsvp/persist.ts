@@ -1,4 +1,3 @@
-import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { normalizeGuestName } from "@/lib/events/normalize";
 import { getEditionEventBinding } from "@/lib/edition/registry";
 import * as guestsRepo from "@/lib/events/repositories/guests.repository";
@@ -11,9 +10,16 @@ import {
   type EditionGuestMatchCandidate,
 } from "@/lib/edition/rsvp/guest-match";
 import { evaluateEditionRsvpWriteGate } from "@/lib/edition/rsvp/write-gate";
-import { asTableRows } from "@/lib/supabase/helpers";
-import type { Tables } from "@/lib/supabase/database.types";
 import { generateQrToken } from "@/lib/events/tokens";
+import {
+  getEditionRsvpPersistenceBackend,
+  insertEditionGuest,
+  isEditionRsvpPersistenceConfigured,
+  loadEventGuestCandidates,
+  logEditionRsvpAudit,
+  submitEditionRsvpRpc,
+  updateEditionGuest,
+} from "@/lib/edition/rsvp/persist.repository";
 
 export type EditionRsvpPersistResult =
   | {
@@ -61,32 +67,20 @@ function buildNotes(input: {
   return notes;
 }
 
-async function loadEventGuestCandidates(
-  eventId: string
-): Promise<EditionGuestMatchCandidate[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("guests")
-    .select(
-      "id, event_id, name, name_normalized, email, phone, guest_source, qr_token"
-    )
-    .eq("event_id", eventId);
+async function syncEditionGuestContactProfile(
+  guestId: string,
+  eventId: string,
+  editionSlug: string,
+): Promise<void> {
+  const guest = await guestsRepo.getGuestById(guestId);
+  if (!guest) return;
 
-  if (error) {
-    console.error("[edition/rsvp] guest lookup failed");
-    throw new Error(error.message);
-  }
-
-  return asTableRows<"guests">(data).map((row: Tables<"guests">) => ({
-    id: row.id,
-    eventId: row.event_id,
-    name: row.name,
-    nameNormalized: row.name_normalized ?? normalizeGuestName(row.name),
-    email: row.email ?? "",
-    phone: row.phone ?? "",
-    guestSource: row.guest_source ?? "manual",
-    qrToken: row.qr_token ?? undefined,
-  }));
+  await safeSyncGuestContactProfile({
+    eventId,
+    guest,
+    source: "edition_rsvp",
+    metadata: { editionSlug },
+  });
 }
 
 async function insertEditionGuestDirect(params: {
@@ -98,7 +92,6 @@ async function insertEditionGuestDirect(params: {
   status: "confirmed" | "declined";
   nameNormalized: string;
 }): Promise<EditionRsvpPersistResult> {
-  const supabase = createAdminClient();
   const notes = buildNotes({
     editionSlug: params.editionSlug,
     messageForBride: params.submission.messageForBride,
@@ -107,49 +100,42 @@ async function insertEditionGuestDirect(params: {
   });
   const name = params.submission.name.trim();
 
-  const { data, error } = await supabase
-    .from("guests")
-    .insert({
-      event_id: params.eventId,
+  let guestId: string;
+  try {
+    guestId = await insertEditionGuest({
+      eventId: params.eventId,
       name,
-      name_normalized: params.nameNormalized,
+      nameNormalized: params.nameNormalized,
       email: params.submission.email?.trim() ?? "",
       phone: params.submission.phone?.trim() ?? "",
-      qr_token: generateQrToken(),
+      qrToken: generateQrToken(),
       status: params.status,
-      plus_ones: params.plusOnes,
-      guest_notes: notes,
-      guest_source: "edition_rsvp",
-    } as never)
-    .select("id")
-    .single();
-
-  if (error || !data) {
+      plusOnes: params.plusOnes,
+      guestNotes: notes,
+    });
+  } catch (error) {
     console.error("[edition/rsvp] direct guest insert failed");
-    return { ok: false, error: error?.message ?? "persist_failed" };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "persist_failed",
+    };
   }
 
-  const guestId = (data as { id: string }).id;
-
-  await supabase.from("guest_audit_log").insert({
-    guest_id: guestId,
-    event_id: params.eventId,
-    guest_name: name,
+  await logEditionRsvpAudit({
+    guestId,
+    eventId: params.eventId,
+    guestName: name,
     action: "RSVP Edition · novo convidado",
     details: params.submission.attending
       ? `Confirmado via edition (${params.editionSlug}) · ${params.partySize} pessoa(s)`
       : `Declinou via edition (${params.editionSlug})`,
-  } as never);
+  });
 
-  const guest = await guestsRepo.getGuestById(guestId);
-  if (guest) {
-    await safeSyncGuestContactProfile({
-      eventId: params.eventId,
-      guest,
-      source: "edition_rsvp",
-      metadata: { editionSlug: params.editionSlug },
-    });
-  }
+  await syncEditionGuestContactProfile(
+    guestId,
+    params.eventId,
+    params.editionSlug,
+  );
 
   return {
     ok: true,
@@ -171,7 +157,6 @@ async function updateMatchedGuest(params: {
   plusOnes: number;
   status: "confirmed" | "declined";
 }): Promise<EditionRsvpPersistResult> {
-  const supabase = createAdminClient();
   const notes = buildNotes({
     editionSlug: params.editionSlug,
     messageForBride: params.submission.messageForBride,
@@ -181,56 +166,55 @@ async function updateMatchedGuest(params: {
 
   const nextEmail = mergeNonEmptyContact(
     params.existing.email,
-    params.submission.email
+    params.submission.email,
   );
   const nextPhone = mergeNonEmptyContact(
     params.existing.phone,
-    params.submission.phone
+    params.submission.phone,
   );
   const nextName = params.submission.name.trim();
 
-  const { data, error } = await supabase
-    .from("guests")
-    .update({
+  let updated = false;
+  try {
+    updated = await updateEditionGuest({
+      guestId: params.guestId,
+      eventId: params.eventId,
       name: nextName,
-      name_normalized: normalizeGuestName(nextName),
+      nameNormalized: normalizeGuestName(nextName),
       email: nextEmail,
       phone: nextPhone,
       status: params.status,
-      plus_ones: params.submission.attending ? params.plusOnes : 0,
-      guest_notes: notes,
-      guest_source: "edition_rsvp",
-      updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id", params.guestId)
-    .eq("event_id", params.eventId)
-    .select("id")
-    .maybeSingle();
-
-  if (error || !data) {
+      plusOnes: params.submission.attending ? params.plusOnes : 0,
+      guestNotes: notes,
+    });
+  } catch (error) {
     console.error("[edition/rsvp] matched guest update failed");
-    return { ok: false, error: error?.message ?? "persist_failed" };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "persist_failed",
+    };
   }
 
-  await supabase.from("guest_audit_log").insert({
-    guest_id: params.guestId,
-    event_id: params.eventId,
-    guest_name: nextName,
+  if (!updated) {
+    console.error("[edition/rsvp] matched guest update returned no row");
+    return { ok: false, error: "persist_failed" };
+  }
+
+  await logEditionRsvpAudit({
+    guestId: params.guestId,
+    eventId: params.eventId,
+    guestName: nextName,
     action: "RSVP Edition · actualizado",
     details: params.submission.attending
       ? `Confirmado via edition (${params.editionSlug}) · ${params.partySize} pessoa(s)`
       : `Declinou via edition (${params.editionSlug})`,
-  } as never);
+  });
 
-  const guest = await guestsRepo.getGuestById(params.guestId);
-  if (guest) {
-    await safeSyncGuestContactProfile({
-      eventId: params.eventId,
-      guest,
-      source: "edition_rsvp",
-      metadata: { editionSlug: params.editionSlug },
-    });
-  }
+  await syncEditionGuestContactProfile(
+    params.guestId,
+    params.eventId,
+    params.editionSlug,
+  );
 
   return {
     ok: true,
@@ -244,7 +228,7 @@ async function updateMatchedGuest(params: {
 
 export async function persistEditionRsvp(
   submission: EditionRsvpSubmission,
-  options?: { presentedProxySecret?: string }
+  options?: { presentedProxySecret?: string },
 ): Promise<EditionRsvpPersistResult> {
   const writeGate = evaluateEditionRsvpWriteGate({
     resolvedSlug: submission.slug,
@@ -252,7 +236,7 @@ export async function persistEditionRsvp(
   });
   if (!writeGate.allowed) {
     console.warn(
-      `[edition/rsvp] persist blocked by write gate reason=${writeGate.reason} mode=${writeGate.mode}`
+      `[edition/rsvp] persist blocked by write gate reason=${writeGate.reason} mode=${writeGate.mode}`,
     );
     return {
       ok: false,
@@ -261,8 +245,13 @@ export async function persistEditionRsvp(
     };
   }
 
-  if (!isSupabaseConfigured()) {
-    return { ok: false, error: "supabase_not_configured", skipped: "supabase" };
+  const backend = getEditionRsvpPersistenceBackend();
+  if (!isEditionRsvpPersistenceConfigured()) {
+    return {
+      ok: false,
+      error: `${backend}_not_configured`,
+      skipped: backend,
+    };
   }
 
   const binding = getEditionEventBinding(submission.slug);
@@ -296,7 +285,7 @@ export async function persistEditionRsvp(
       email: submission.email,
       phone: submission.phone,
     },
-    candidates
+    candidates,
   );
 
   if (match.kind === "cross_event") {
@@ -305,7 +294,7 @@ export async function persistEditionRsvp(
 
   if (match.kind === "ambiguous") {
     console.warn(
-      `[edition/rsvp] ambiguous guest match via=${match.via} count=${match.count}`
+      `[edition/rsvp] ambiguous guest match via=${match.via} count=${match.count}`,
     );
     return { ok: false, error: "ambiguous_guest_match" };
   }
@@ -335,7 +324,7 @@ export async function persistEditionRsvp(
       nameNormalized,
       submission,
       candidates,
-      binding.eventId
+      binding.eventId,
     )
   ) {
     return insertEditionGuestDirect({
@@ -349,35 +338,26 @@ export async function persistEditionRsvp(
     });
   }
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.rpc("submit_edition_rsvp", {
-    p_event_id: binding.eventId,
-    p_name: submission.name.trim(),
-    p_name_normalized: nameNormalized,
-    p_attending: submission.attending,
-    p_party_size: partySize,
-    p_edition_slug: binding.slug,
-    p_email: submission.email?.trim() ?? "",
-    p_phone: submission.phone?.trim() ?? "",
-    p_message_for_bride: submission.messageForBride?.trim() ?? "",
-    p_size: submission.size?.trim() ?? "",
-    p_dress_code_confirmed: submission.dressCodeConfirmed ?? null,
-  } as never);
-
-  if (error) {
-    console.error("[edition/rsvp] Supabase persist failed:", error.message);
-    return { ok: false, error: error.message };
+  let payload;
+  try {
+    payload = await submitEditionRsvpRpc({
+      eventId: binding.eventId,
+      name: submission.name.trim(),
+      nameNormalized,
+      attending: submission.attending,
+      partySize,
+      editionSlug: binding.slug,
+      email: submission.email?.trim() ?? "",
+      phone: submission.phone?.trim() ?? "",
+      messageForBride: submission.messageForBride?.trim() ?? "",
+      size: submission.size?.trim() ?? "",
+      dressCodeConfirmed: submission.dressCodeConfirmed ?? null,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "persist_failed";
+    console.error(`[edition/rsvp] ${backend} persist failed:`, message);
+    return { ok: false, error: message };
   }
-
-  const payload = data as {
-    ok?: boolean;
-    error?: string;
-    guestId?: string;
-    status?: "confirmed" | "declined";
-    created?: boolean;
-    partySize?: number;
-    plusOnes?: number;
-  } | null;
 
   if (!payload?.ok || !payload.guestId || !payload.status) {
     return {
@@ -386,15 +366,11 @@ export async function persistEditionRsvp(
     };
   }
 
-  const guest = await guestsRepo.getGuestById(payload.guestId);
-  if (guest) {
-    await safeSyncGuestContactProfile({
-      eventId: binding.eventId,
-      guest,
-      source: "edition_rsvp",
-      metadata: { editionSlug: binding.slug },
-    });
-  }
+  await syncEditionGuestContactProfile(
+    payload.guestId,
+    binding.eventId,
+    binding.slug,
+  );
 
   return {
     ok: true,

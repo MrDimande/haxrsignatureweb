@@ -1,4 +1,4 @@
-import { validateClientAppAuthEnvironment } from "@/lib/supabase/config";
+import { validateClientAppAuthEnvironment } from "@/lib/auth/client-auth-config";
 
 export type SignInFieldErrors = {
   email?: string;
@@ -60,12 +60,13 @@ export function mapSupabaseSignInError(message: string): string {
 
   if (
     normalized.includes("invalid login credentials") ||
-    normalized.includes("invalid email or password")
+    normalized.includes("invalid email or password") ||
+    normalized.includes("invalid password")
   ) {
     return "Email ou palavra-passe incorrectos.";
   }
 
-  if (normalized.includes("email not confirmed")) {
+  if (normalized.includes("email not confirmed") || normalized.includes("email not verified")) {
     return "Confirme o seu email antes de entrar.";
   }
 
