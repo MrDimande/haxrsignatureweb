@@ -1,0 +1,119 @@
+{
+  "gate": "3H-E2A",
+  "repository": "MrDimande/haxrsignature-edition-engine",
+  "baseSha": "3429ea2d9df3967c0fd90d9e1ccc46fe2cdc483a",
+  "branch": "migration/edition-r2-integration",
+  "generatedAt": "2026-09-05T09:17:17.942Z",
+  "filesCount": 18,
+  "files": [
+    {
+      "path": "app/api/memories/upload-intent/route.ts",
+      "status": "modified",
+      "sha256": "bdfedaa3265a4e7749a7b22ea052bb5a055be51cdf099125dd1637befd13bd17",
+      "sizeBytes": 3084
+    },
+    {
+      "path": "lib/memories/gallery.ts",
+      "status": "modified",
+      "sha256": "37c2f1919af4ad6349f58ad9d3fd4d09d975af4754972ee727b571436e05e4ba",
+      "sizeBytes": 2209
+    },
+    {
+      "path": "lib/memories/storage/browser-contract.test.ts",
+      "status": "added",
+      "sha256": "ce05ad7a061b7acae7efbe2728ec8daeb875f02d34e0ec4299d004eb0f82fffe",
+      "sizeBytes": 3925
+    },
+    {
+      "path": "lib/memories/storage/factory.test.ts",
+      "status": "added",
+      "sha256": "d5f196ebca74dc64b67fd033650e69dffa3950cfffe7535335c7e2a2009ba71b",
+      "sizeBytes": 2327
+    },
+    {
+      "path": "lib/memories/storage/factory.ts",
+      "status": "added",
+      "sha256": "65d0e9823d3093360efa6dcbb2ad0ec6bf45737251f6061f3134dd6b88a24269",
+      "sizeBytes": 1363
+    },
+    {
+      "path": "lib/memories/storage/freeze.test.ts",
+      "status": "added",
+      "sha256": "8a080ab3ba95118dbf839b845067f03ff8a94b15a07195cccfd774c96c253fa3",
+      "sizeBytes": 2127
+    },
+    {
+      "path": "lib/memories/storage/freeze.ts",
+      "status": "added",
+      "sha256": "7cd852d526b2ec1daafdd6891a20bd884b22411652052ca2df4de6bcfc1ee5d9",
+      "sizeBytes": 647
+    },
+    {
+      "path": "lib/memories/storage/index.ts",
+      "status": "added",
+      "sha256": "458a0113ba918b74db5d35e42ab96582d7537cdbba368baafee6f8b1cdc888bf",
+      "sizeBytes": 179
+    },
+    {
+      "path": "lib/memories/storage/path-security.test.ts",
+      "status": "added",
+      "sha256": "775f5c4ef73d1f20e85d037b3e3e3d744577bc1f499218bebf92478e5504b1d9",
+      "sizeBytes": 2206
+    },
+    {
+      "path": "lib/memories/storage/path-security.ts",
+      "status": "added",
+      "sha256": "f9feb6af573d2c890e43b81c71e63ee00aad12165a3f363c81458e9e36296b0b",
+      "sizeBytes": 1186
+    },
+    {
+      "path": "lib/memories/storage/r2-provider.test.ts",
+      "status": "added",
+      "sha256": "2621953d0815ed58365eec6041e7bf304a5cb5840a956c091c326381c761ec26",
+      "sizeBytes": 6248
+    },
+    {
+      "path": "lib/memories/storage/r2-provider.ts",
+      "status": "added",
+      "sha256": "f9b7d227515408477ef54362bf1f93ada63b3ba10faaa5d99793867522c851af",
+      "sizeBytes": 5311
+    },
+    {
+      "path": "lib/memories/storage/supabase-provider.ts",
+      "status": "added",
+      "sha256": "cb62c939b48007d72ee2717c6d973bf46fe319843336f3f282e42ab1db613911",
+      "sizeBytes": 3364
+    },
+    {
+      "path": "lib/memories/storage/types.ts",
+      "status": "added",
+      "sha256": "4f0267e1abc6a98eba9e7802ef81ef1cc663b15da41796f57586df01d35462bc",
+      "sizeBytes": 1612
+    },
+    {
+      "path": "lib/memories/upload-integration.test.ts",
+      "status": "added",
+      "sha256": "b28bb27f7e1b810c4da4fd3f8f8312989977d1bfbdd9c3e60eabe6f456eba175",
+      "sizeBytes": 7386
+    },
+    {
+      "path": "lib/memories/upload.ts",
+      "status": "modified",
+      "sha256": "618b362389606125e4e3cb653aacab56a4a0c890df434a3293ce2927c7928dde",
+      "sizeBytes": 14412
+    },
+    {
+      "path": "package-lock.json",
+      "status": "modified",
+      "sha256": "1afde6ead1e141841ed533075f0579feb879e12c7a845a99211418dd22abd15e",
+      "sizeBytes": 277948
+    },
+    {
+      "path": "package.json",
+      "status": "modified",
+      "sha256": "f31a42febbb243252c2731eec7deed20bb049cea48447233fab06f89511ca5d6",
+      "sizeBytes": 2085
+    }
+  ],
+  "manifestChecksum": "e91dc1698d8ae9925936cba29cb060f8dfdfeec86fee1c81bc098fee0e414417"
+}

@@ -1,0 +1,99 @@
+{
+  "gate": "Gate 3F-D",
+  "timestamp": "2026-09-04T11:19:46.805Z",
+  "branch": "migration/supabase-to-neon",
+  "bucketName": "haxr-wedding-photos",
+  "r2InitialObjectCount": 147,
+  "r2InitialTotalBytes": 535493700,
+  "r2FinalObjectCount": 147,
+  "r2FinalTotalBytes": 535493700,
+  "r2Mutations": 0,
+  "neonMetadataCount": 147,
+  "exactSetEquality": true,
+  "representativeSampleSize": 9,
+  "representativeParity": [
+    {
+      "role": "first_manifest_object",
+      "storage_path": "jessicaesamueltraditionalwedding/012a2a33-e775-44c3-b1f7-008a46945e0d/original.jpg",
+      "size_bytes": 2778251,
+      "content_type": "image/jpeg",
+      "sha256": "615f0d8e8bee29f2655979d1f27f00d72aa443d8b8f2b4a0c34500606f915e1c",
+      "parity": true
+    },
+    {
+      "role": "middle_manifest_object",
+      "storage_path": "jessicaesamueltraditionalwedding/d9e52b29-59b1-4a5e-8bd5-0be0ce3d78aa/original.jpg",
+      "size_bytes": 96637,
+      "content_type": "image/jpeg",
+      "sha256": "626abfe387df6b2bfb7cd7bd31012fb558cd41f56216151a5a8d6042ca69c7e3",
+      "parity": true
+    },
+    {
+      "role": "last_manifest_object",
+      "storage_path": "jessicasamuelwedding/ff58a8fb-4bfa-427c-964e-947293157018/original.jpg",
+      "size_bytes": 1790353,
+      "content_type": "image/jpeg",
+      "sha256": "cd8e777897d643e4d7db542d3385730a82e7bb9955caedbd66f6362c96b29dad",
+      "parity": true
+    },
+    {
+      "role": "small_jpeg",
+      "storage_path": "jessicaesamueltraditionalwedding/0ec655a9-85e7-4d13-93d2-9d422fe06d4d/original.jpg",
+      "size_bytes": 90758,
+      "content_type": "image/jpeg",
+      "sha256": "453bf7d2f3ef181a89777e5d3850280fc306888ceb2668ec15219c6066637ae4",
+      "parity": true
+    },
+    {
+      "role": "large_jpeg",
+      "storage_path": "jessicaesamueltraditionalwedding/f2cf8223-bd0e-409d-bfc2-9e2d02662584/original.jpg",
+      "size_bytes": 10293982,
+      "content_type": "image/jpeg",
+      "sha256": "3bc05b5a866aae46930b329f058d561235e4074dfd3cd21a9daea2c4e39ba161",
+      "parity": true
+    },
+    {
+      "role": "heic",
+      "storage_path": "jessicaesamueltraditionalwedding/a610f41a-a81b-4521-a481-b893c52cc2d3/original.heic",
+      "size_bytes": 815617,
+      "content_type": "image/heic",
+      "sha256": "735d0581ea02e3078a094999d9d09e01af6dd3be451695403813c6d484f0f3b9",
+      "parity": true
+    },
+    {
+      "role": "mp4",
+      "storage_path": "jessicaesamueltraditionalwedding/d05bf42d-a1d3-49f1-8e85-2733b2bb72a7/original.mp4",
+      "size_bytes": 3981714,
+      "content_type": "video/mp4",
+      "sha256": "289e4e200e8cf6ba2ce9970b2676e83cbefa1d886efa9599f8357bd5785051eb",
+      "parity": true
+    },
+    {
+      "role": "mov",
+      "storage_path": "jessicasamuelwedding/2160cb79-30dc-4122-8406-551f085dd27e/original.mov",
+      "size_bytes": 1643501,
+      "content_type": "video/quicktime",
+      "sha256": "a2320c55e95fba73a6d8e1d8b0dbdab01af7b91894b37a964e9d66fdbe3e9c9e",
+      "parity": true
+    },
+    {
+      "role": "largest_object",
+      "storage_path": "jessicasamuelwedding/88161955-e5c4-4b08-b86e-910e4dddc112/original.mov",
+      "size_bytes": 52273233,
+      "content_type": "video/quicktime",
+      "sha256": "5fba06f6dc7ad55cf25a8e720100300509052784decb60c81bf9ffa563aa0fe4",
+      "parity": true
+    }
+  ],
+  "fullProviderReadCount": 147,
+  "fullProviderShaMatchCount": 147,
+  "fullProviderSizeMatchCount": 147,
+  "fullProviderMimeMatchCount": 147,
+  "fullProviderFailureCount": 0,
+  "missingObjectSemantics": "PASS",
+  "canonicalPathEnforcement": "PASS",
+  "presignedUrlStatus": 200,
+  "storageCutoverReady": false,
+  "cutoverReadinessRecommendation": "READY",
+  "gateStatus": "PASS"
+}

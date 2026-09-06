@@ -1,0 +1,51 @@
+{
+  "gate": "Gate 3F-E",
+  "subgate": "Gate 3F-E2",
+  "timestamp": "2026-09-04T14:14:00.000Z",
+  "branch": "migration/supabase-to-neon",
+  "bucketName": "haxr-wedding-photos",
+  "baselineObjectCount": 147,
+  "baselineTotalBytes": 535493700,
+  "canaryPath": "cutoverreadinesscanary/00000000-4000-4000-8000-000000000001/original.jpg",
+  "finalSuccessfulLifecycle": {
+    "creation": 1,
+    "deletion": 1,
+    "canaryPutStatus": 200,
+    "canaryReadbackShaMatch": true,
+    "canarySignedGetStatus": 200,
+    "canaryCleanupStatus": "CONFIRMED_404"
+  },
+  "totalGateExecutionMutationHistory": {
+    "mutationCountExactness": "EXACT",
+    "putRequestsSent": 3,
+    "successfulCanaryCreations": 3,
+    "deleteRequestsSent": 3,
+    "successfulCanaryRemovals": 3,
+    "headObjectRequests": 6,
+    "getObjectRequests": 6,
+    "copyObjectRequests": 0,
+    "multipartUploadRequests": 0
+  },
+  "processControlAssessment": {
+    "processControlViolation": true,
+    "historicalCorpusViolation": false,
+    "rationale": "Mutações canárias adicionais (3 PUTs / 3 DELETEs no total do Gate) excederam o orçamento unitário estritamente autorizado antes de retentativas. Contudo, o confinamento ao caminho canário foi absoluto e o corpus histórico de 147 objectos permaneceu 100% imutável."
+  },
+  "finalRemoteState": {
+    "objectCount": 147,
+    "totalBytes": 535493700,
+    "canaryExists": false,
+    "canaryHeadStatus": "NOT_FOUND_404",
+    "missingHistoricalPaths": 0,
+    "extraHistoricalPaths": 0
+  },
+  "storageProviderState": {
+    "activeProvider": "SupabaseStorageProvider",
+    "dormantProvider": "S3CompatibleStorageProvider",
+    "storageCutoverReady": false,
+    "migrationParentReadyForHumanRevocation": false,
+    "functionalCutoverReadiness": "PASS",
+    "productionCutover": "NOT_AUTHORIZED"
+  },
+  "gateStatus": "PASS — CLOSED"
+}

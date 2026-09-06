@@ -1,0 +1,133 @@
+{
+  "version": "Gate 3G-A2",
+  "timestamp": "2026-09-04T19:38:22.708Z",
+  "targetBranch": "gate/3g-a2-phase-a-verification",
+  "baseBranch": "origin/main",
+  "baseSha": "86d210daa64ab68c773e848fa0ee8a3d9b7aef47",
+  "manifestFileCount": 20,
+  "manifestAddedCount": 17,
+  "manifestModifiedCount": 3,
+  "phaseAManifestChecksum": "b9ad49e47ff9b1b3d1510e0d7717fda79d92c728e27136c9c98afb5d9920aa5a",
+  "files": [
+    {
+      "path": "package-lock.json",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "175bb4bd3544f563668b5682fbe2c0f75c626d60d26e9f7a00fefb17164d93c9",
+      "source": "phase_a_modified"
+    },
+    {
+      "path": "package.json",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "fc79f608b2015cccac540d7bcb8ededf66691896fdc9ec7dc3607add53f0c324",
+      "source": "phase_a_modified"
+    },
+    {
+      "path": "src/lib/edition/memories/config.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "14179c18b616780ebac0fa734eed3ab02ec011e1056380dc69b6bf452afb4677",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/memories/gallery.service.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "1817f0e0aaee846978b4a8dd48903f12f006b865f1408cd21ccc2de9d01d3e96",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/memories/index.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "8a3925c9af9b731b5fd3b38dd085ffa08a358c670607cb5afd813eb171fe7a35",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/memories/memories-integration.test.ts",
+      "classification": "TEST_ONLY",
+      "sha256": "2352ab5d585810dfd391b40110c64071f25ba2233b87f5fa758f144d4a192634",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/memories/memories.types.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "e7575f97a1e27e2db8de4d1dee21a8b462ab2197de21ba5824a2fc2b8ed618d0",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/memories/moderate.service.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "c42505c4bd67602f408fbb9178cd46e3d0cbe2ec7cdd0f2e8397fbe842a35a1d",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/memories/upload.service.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "ad1f424af73e64d073e109b2bd06992cbb229d8f1da1e0fed67acfdb3c8805a6",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/memories/write-freeze.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "7983ff7e202c92bc3de00d1458ec0d4d4b94d349e2d468631e85c269cc42bd44",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/canonical-path.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "e6c4a48cecead57ab5f09e41c353234eaaba1584e409ff7c4bd66437b65d2fce",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/fake-storage-provider.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "fbcc8e464b82c9bb6c8672a05ce5c08090c7e1b8486519c6ca4983ec1b18c1d8",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/gate-3f-d-storage-validation.test.ts",
+      "classification": "TEST_ONLY",
+      "sha256": "34c6494914e2a53d7ee5d3b264995c0e06c04a24ad1504eda88dc4c067955d2d",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/index.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "6eef59a290783fb3e2b57715aa58378f4f8de7dbd6dd7c7281c8b79897ca0233",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/s3-compatible-storage-provider.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "7a532828d150d82a3863d38c32117bfe6a01519e8b316b2ae2c0068d1115987f",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/storage-composition.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "4bfee0b3da4502de8841856df643525b3e2195e773092eb70656bd418e0ac4ee",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/storage-provider.test.ts",
+      "classification": "TEST_ONLY",
+      "sha256": "89c9890a7ebb8b01affb9ba321b383360257bc7c110e9e79f3979232eb51f297",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/storage-provider.types.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "4c5798462a23876a0344ce8862b38f196ea14925934f93b09508c0eafc165baa",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/edition/storage/supabase-storage-provider.ts",
+      "classification": "PRODUCTION_REQUIRED_PRE_CUTOVER",
+      "sha256": "9f5e5b5703f8ddeaf5cf90b4bf79e3c7fb00178a617b62afd4e581ed40939f8f",
+      "source": "phase_a_added"
+    },
+    {
+      "path": "src/lib/export/wedding-financial-report/wedding-financial-report.test.ts",
+      "classification": "PRE_EXISTING_MAIN_TYPECHECK_FIX_REQUIRED_FOR_RELEASE_VERIFICATION",
+      "sha256": "194e7e51b78ea797accc189a6ffe2576c7f68e9b90245ada10c4df18e01ac2e7",
+      "source": "phase_a_modified"
+    }
+  ]
+}
