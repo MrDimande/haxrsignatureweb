@@ -1,334 +1,257 @@
 # HAXR Signature
 
-**Plataforma institucional e operacional para experiências digitais premium.**
+**Plataforma de alta costura digital e infraestrutura operacional de planeamento de eventos.**
 
-Assessoria de eventos, convites digitais, gestão de convidados (RSVP, Find Your Seat, check-in) e fluxo comercial integrado — num único sistema desenhado para a HAXR Signature operar em Moçambique com rigor, elegância e escala.
+A HAXR Signature une a assessoria e produção executiva de casamentos e eventos de alto padrão em Moçambique a uma arquitetura tecnológica proprietária. O ecossistema suporta todo o ciclo operacional, desde o primeiro contacto editorial e qualificação comercial, passando pela gestão de convidados, check-in em tempo real e conciliação financeira, até ao arquivo documental seguro e integração com convites digitais de alta-costura.
 
-| Recurso | URL |
-|---------|-----|
-| **Website (canónico)** | [www.haxrsignature.com](https://www.haxrsignature.com) |
-| **Repositório** | [github.com/MrDimande/haxrsignatureweb](https://github.com/MrDimande/haxrsignatureweb) |
-
-O domínio `haxrsignature.com` redirecciona para `www`. URLs `*.vercel.app` não devem ser indexadas — o middleware e o Google Search Console apontam sempre para o domínio oficial.
-
----
-
-## Ecossistema de canais (tudo ligado)
-
-Os canais da HAXR Signature **devem comunicar entre si** — o mesmo tom, os mesmos contactos e o mesmo funil. A fonte única de verdade para links públicos é `src/lib/site-config.ts` → `siteContact`. Alterar aí propaga para site, footer, formulários, emails e SEO.
-
-| Canal | Identidade oficial | Onde aparece no sistema | Liga a |
-|-------|-------------------|-------------------------|--------|
-| **Website** | [www.haxrsignature.com](https://www.haxrsignature.com) | Páginas marketing, admin, convites por evento | Formulário → Supabase · Resend · Brevo |
-| **Email** | [hello@haxrsignature.com](mailto:hello@haxrsignature.com) | Footer, contacto, `replyTo` em todos os emails | Caixa principal · aliases Resend (`rsvp@`, `eventos@`, …) |
-| **WhatsApp** | [+258 87 088 3428](https://wa.me/258870883428) | Botão flutuante, footer, contacto, admin (convidados, documentos) | Propostas · RSVP em massa · follow-up comercial |
-| **Instagram** | [@haxrsignature](https://www.instagram.com/haxrsignature/) | Footer, página contacto, JSON-LD (`sameAs`) | Marca · portfólio · tráfego para o site |
-| **Facebook** | *A configurar* | `siteContact.facebook` (actualmente `null`) | Quando activo: mesmo padrão que Instagram no footer e SEO |
-
-### Fluxo omnicanal
-
-```
-Instagram / Facebook / WhatsApp
-         │
-         ▼
-   Website (SEO + páginas de serviço)
-         │
-         ├── Formulário /contacto ──► Supabase (leads)
-         │         ├──► Resend → hello@ (notificação + auto-resposta)
-         │         └──► Brevo → listas Leads / Newsletter + funil dias 0–21
-         │
-         ├── Convite digital do evento ──► RSVP público ──► email/telefone na BD
-         │
-         └── Admin ──► reenvio convite email · WhatsApp em massa · facturação
-```
-
-### Regras de consistência
-
-1. **Um só número WhatsApp** em site, emails e redes — o definido em `siteContact.whatsapp`.
-2. **Um só email de resposta** — `hello@haxrsignature.com` (ou `CONTACT_NOTIFY_EMAIL` para notificações internas).
-3. **Instagram e Facebook** devem apontar para o mesmo site e usar a mesma linguagem de marca.
-4. **Emails transaccionais** (Resend) e **marketing** (Brevo) partilham remetente de marca: `HAXR Signature <hello@haxrsignature.com>`.
-5. Ao activar **Facebook**, preencher em `site-config.ts`:
-
-```ts
-facebook: {
-  href: "https://www.facebook.com/haxrsignature",
-  label: "HAXR Signature",
-},
-```
-
-O footer e o JSON-LD passam a incluir automaticamente o link em `sameAs`.
+| Canal | Destino Canónico |
+| :--- | :--- |
+| **Website Oficial** | [https://www.haxrsignature.com](https://www.haxrsignature.com) |
+| **Motor de Convites (Edition)** | [https://edition.haxrsignature.com](https://edition.haxrsignature.com) |
+| **Repositório GitHub** | [MrDimande/haxrsignatureweb](https://github.com/MrDimande/haxrsignatureweb) |
 
 ---
 
-## Visão geral
+## 1. Visão Geral do Produto
 
-A HAXR Signature não é apenas um site. É um **ecossistema operacional**:
+A HAXR Signature opera como um atelier privado de planeamento onde a tecnologia é o sistema operativo invisível por trás de uma experiência física e humana impecável.
 
-- **Frente pública** — site editorial multi-página, SEO optimizado, experiências ao vivo e formulário de contacto.
-- **Painel administrativo** — clientes, documentos, eventos com convidados, caixa financeira e vista 360° do cliente.
-- **Fluxo comercial contínuo** — sem silos entre website, email, WhatsApp e CRM.
+O sistema integra três camadas interdependentes:
 
-```
-Cliente → Evento → RSVP → Convidados → Seating → Find Your Seat → Check-in
-       → Proforma → Factura → Recibo → Pagamento
-       → Lead (site) → Brevo funil → Reunião comercial
+1. **Frente Editorial Pública:** Apresentação da casa de eventos, portfólio, serviços de assessoria, guias de planeamento e ferramentas digitais para casais e profissionais.
+2. **Painel Operacional Administrativo:** Gestão de clientes, eventos com timeline e orçamento, credenciação e revisão de listas de convidados, controlo de pagamentos e proformas com emissão de PDF e triagem automatizada de pedidos via *HAXR Concierge*.
+3. **Portal do Cliente (Self-Service Seguro):** Área exclusiva do casal acedida por chave digital (token seguro sem atrito de password convencional), com aprovações em tempo real, consulta de orçamentos e upload de comprovativos.
+
+---
+
+## 2. Arquitetura de Produção
+
+A infraestrutura canónica opera inteiramente desacoplada de serviços BaaS monolíticos, ancorada em serviços de padrão internacional de alta performance e disponibilidade:
+
+```mermaid
+flowchart TD
+    subgraph Clients["Clientes & Navegadores"]
+        Browser["Navegador / Dispositivo Convidado"]
+        AdminBrowser["Painel de Operações / Concierge"]
+    end
+
+    subgraph Edge["Vercel Edge & Serverless Runtime"]
+        NextServer["Next.js 15 (App Router / React 19)"]
+        APIRoutes["Next.js API Routes & Server Actions"]
+        AuthMiddleware["Middleware & HMAC Session Guard"]
+    end
+
+    subgraph Data["Persistência & Armazenamento Canónico"]
+        NeonDB[("Neon Serverless PostgreSQL\n(Papel: haxrweb_runtime)\nConnection Pooling")]
+        R2Storage[("Cloudflare R2\n(Bucket: haxr-private-uploads)\nS3 API / URLs Assinadas")]
+    end
+
+    subgraph Integrations["Serviços Externos de Comunicação"]
+        Resend["Resend API (Emails Transacionais / Notificações)"]
+        Brevo["Brevo API (Funil Comercial / CRM Leads)"]
+        Twilio["Twilio WhatsApp API (Notificações / Campanhas)"]
+        Gemini["Google Gemini API (HAXR Concierge IA)"]
+    end
+
+    Browser --> AuthMiddleware
+    AdminBrowser --> AuthMiddleware
+    AuthMiddleware --> NextServer
+    NextServer --> APIRoutes
+
+    APIRoutes -->|"SQL Pooler (TLS)"| NeonDB
+    APIRoutes -->|"S3 SDK (Assinatura Presigned)"| R2Storage
+    APIRoutes -->|"REST API"| Resend
+    APIRoutes -->|"REST API"| Brevo
+    APIRoutes -->|"REST API"| Twilio
+    APIRoutes -->|"REST API"| Gemini
 ```
 
 ---
 
-## Stack técnica
+## 3. Domínios Centrais da Aplicação
 
-| Camada | Tecnologia |
-|--------|------------|
-| Framework | Next.js 15 · App Router · React 19 · TypeScript |
-| Estilos | Tailwind CSS 4 |
-| Base de dados | Supabase · PostgreSQL |
-| Validação | Zod · React Hook Form |
-| PDF | `@react-pdf/renderer` |
-| Email transaccional | Resend (`hello@`, `rsvp@`, canais por contexto) |
-| Email marketing | Brevo (leads, newsletter, funil automático) |
-| Animação | GSAP · Framer Motion · Lenis |
-| Auth admin | Sessão HMAC em cookie `httpOnly` |
-| Deploy | Vercel → domínio `www.haxrsignature.com` |
+- **Eventos & Cronogramas:** Gestão integral do ciclo de vida de casamentos e celebrações privadas (datas, fases cerimoniais, locais em Moçambique e parâmetros estéticos).
+- **Clientes & CRM:** Registo central de clientes com histórico de reuniões, propostas contratuais e preferências de atendimento.
+- **Gestão de Convidados (RSVP & Seating):** Gestão de mesas, acompanhantes, dietary requirements, códigos de confirmação e distribuição no salão.
+- **Check-in em Tempo Real:** Validação de entradas no dia do evento via `/event/[eventId]/checkin/[token]` e módulo de busca rápida *Find Your Seat*.
+- **Fornecedores & Parceiros:** Diretório curado de profissionais de eventos em Moçambique com classificação por categorias e pipeline de aprovação comercial.
+- **Financeiro & Pagamentos:** Controlo orçamental, emissão de proformas e recibos em PDF (`@react-pdf/renderer`), com verificação de comprovativos de transferência.
+- **HAXR Concierge:** Assistente de triagem assistida por IA que classifica pedidos não estruturados de noivos, sugere alocações orçamentais e rotas operacionais.
+- **Documentos Privados:** Gestão e arquivo de propostas comerciais e contratos com armazenamento encriptado e leitura por URL assinada de curta duração.
+- **Integração com Edition Engine:** Coordenação de RSVPs públicos e sincronização de dados entre a plataforma web e o motor de convites digitais.
 
 ---
 
-## Arquitectura do projecto
+## 4. Arquitetura da Base de Dados (Neon PostgreSQL)
 
-```
-src/
-├── app/
-│   ├── (marketing)/              # Site institucional (páginas editoriais)
-│   │   ├── assessoria-eventos/
-│   │   ├── convites-identidade-visual/
-│   │   ├── gestao-convidados/
-│   │   ├── plataforma-eventos/
-│   │   ├── portfolio/ · insights/ · contacto/ · sobre/
-│   │   └── experiencias/[slug]/  # Casos reais (convites ao vivo)
-│   ├── admin/                    # Painel administrativo
-│   ├── event/[eventId]/          # RSVP · find-seat · check-in (noindex)
-│   ├── sitemap.ts · robots.ts
-│   └── api/                      # contact · events · cron/brevo-funnel
-├── components/
-│   ├── marketing/ · sections/ · layout/
-│   ├── admin/ · events/ · seo/
-└── lib/
-    ├── site-config.ts            # ★ Contactos oficiais (WhatsApp, IG, email)
-    ├── marketing/seo.ts          # Metadata por página
-    ├── seo/                      # JSON-LD, sitemap, redirects, canonical
-    ├── contact/ · email/         # Formulário + templates Resend
-    ├── events/                   # Convidados, RSVP, convites email, Sheets
-    ├── admin/ · finance/
-    └── security/
+A camada de persistência canónica assenta em **Neon Serverless PostgreSQL** com isolamento estrito de privilégios:
 
-supabase/migrations/              # 001–024 — executar por ordem
-docs/                             # ELEVATION_REPORT, BREVO_CAMPAIGNS, RESEND_DNS_AUDIT
-```
+- **Papéis de Runtime e Menor Privilégio:** As conexões de aplicação utilizam o utilizador `haxrweb_runtime`, com privilégios limitados às tabelas do esquema operacional, sem autorização para execução de comandos DDL ou bypass administrativo.
+- **Connection Pooling:** Utilização nativa do pooler pgBouncer do Neon (`DATABASE_URL`) com limite rigoroso de pool (`max: 5`) para eliminar contenção em ambientes serverless Next.js, mantendo a URL direta (`DATABASE_URL_UNPOOLED`) exclusivamente para migrações e operações estruturais.
+- **Disciplina de Transações:** Operações críticas de mutação (como atualizações de inventário, conciliação e criação de lotes) utilizam o utilitário `withNeonTransaction` garantindo atomicidade estrita (`BEGIN ... COMMIT / ROLLBACK`).
 
 ---
 
-## Site institucional
+## 5. Arquitetura de Armazenamento (Cloudflare R2)
 
-Páginas editoriais com SEO e JSON-LD por serviço:
+O armazenamento privado de ficheiros é gerido pelo **Cloudflare R2**:
 
-| Página | Rota | Foco de pesquisa |
-|--------|------|------------------|
-| Home | `/` | Marca + visão geral |
-| Assessoria | `/assessoria-eventos` | Casamentos, wedding planner Maputo |
-| Convites | `/convites-identidade-visual` | Convites digitais, save the date |
-| Convidados | `/gestao-convidados` | RSVP, Find Your Seat, seating plan |
-| Plataforma | `/plataforma-eventos` | Operação e tecnologia HAXR |
-| Portfólio | `/portfolio` | Casos reais |
-| Contacto | `/contacto` | Propostas · WhatsApp · email |
-| Experiências | `/experiencias/[slug]` | Demos de convites ao vivo |
+- **Modelo de Bucket Privado:** O bucket `haxr-private-uploads` é 100% privado, sem qualquer exposição de leitura pública anónima.
+- **Estratégia de URLs Assinadas:** Qualquer download ou visualização de ficheiros (ex: PDFs de propostas, comprovativos de transferência) é feito através de presigned URLs geradas com o `@aws-sdk/s3-request-presigner` com validade curta (default: 600 segundos).
+- **Estrutura de Chaves Canónicas:**
 
-**Incluído:** metadata por rota, sitemap XML, robots.txt, JSON-LD (Organização, Serviços, FAQ), redirects SEO (`/find-your-seat`, `/wedding-planner`, …), botão WhatsApp fixo, formulário com honeypot e rate limit.
+  ```text
+  events/{eventId}/concierge/{itemId}/{filename}
+  clients/{clientId}/documents/{documentId}/{filename}
+  ```
+
+- **Proteção de Path Traversal:** Função nativa `assertSafeStoragePath` que bloqueia sequências `..`, barras iniciais erróneas ou carateres nulos antes de qualquer chamada à API S3.
 
 ---
 
-## Painel administrativo
+## 6. Autenticação & Segurança
 
-Acesso em `/admin`, protegido por credenciais e sessão HMAC.
-
-| Módulo | Rota | Função |
-|--------|------|--------|
-| Dashboard | `/admin/dashboard` | KPIs, pipeline, resumo financeiro |
-| Clientes | `/admin/clients` | CRUD e perfil 360° |
-| Documentos | `/admin/documents` | Proformas, facturas, recibos PDF |
-| Eventos | `/admin/events` | Convidados, lugares, Sheets, check-in, **reenvio convite email** |
-| Caixa | `/admin/cash` | Pagamentos, despesas, metas, analytics |
-| Leads | `/admin/leads` | Pedidos do formulário (sync Brevo) |
-| Definições | `/admin/settings` | Empresas e catálogo |
+- **Sessão Administrativa Baseada em HMAC:** O acesso ao `/admin` é protegido por cookies `httpOnly`, `SameSite=Lax`, assinados criptograficamente com HMAC-SHA256 (`ADMIN_SESSION_SECRET`). O painel não depende de serviços externos de auth para o controlo administrativo direto.
+- **Acesso ao Portal do Cliente:** Links mágicos encriptados com tokens de uso único e prazo de expiração para noivos e clientes, garantindo acesso direto aos seus eventos sem passwords partilhadas.
+- **Isolamento de Segredos de Servidor:** Credenciais sensíveis (chaves secretas R2, segredos Brevo/Resend, credenciais de base de dados) operam exclusivamente no servidor e nunca são prefixadas com `NEXT_PUBLIC_`.
 
 ---
 
-## Módulo Eventos (destaques)
+## 7. Desenvolvimento Local
 
-| Capacidade | Descrição |
-|------------|-----------|
-| Convidados | Import CSV (Nome, Email, Telefone), filtros, WhatsApp em massa |
-| Email convite | Reenvio individual ou em lote via Resend (link RSVP personalizado) |
-| RSVP público | Recolhe email/telefone → grava na BD → email de confirmação |
-| Find Your Seat | `/event/[id]/find-seat` — consulta de lugar por nome |
-| Check-in | QR Code e registo de presença |
-| Google Sheets | Sync `master` ou `rsvp` |
+### Pré-requisitos
 
-Páginas de evento têm `noindex` — não aparecem no Google; o site institucional sim.
+- Node.js 20+ (recomendado Node.js 22 LTS ou 24)
+- npm 10+
+- Acesso de rede à instância de desenvolvimento Neon e bucket de testes Cloudflare R2
 
----
-
-## SEO e indexação
-
-| Recurso | Ficheiro |
-|---------|----------|
-| URL canónica | `src/lib/seo/canonical-host.ts` |
-| Metadata global | `src/lib/seo/site-meta.ts` |
-| Metadata por página | `src/lib/marketing/seo.ts` |
-| Sitemap | `src/app/sitemap.ts` + `src/lib/seo/sitemap-config.ts` |
-| Redirects SEO | `src/lib/seo/redirects.ts` |
-| JSON-LD | `src/lib/seo/jsonld.ts` |
-| Robots | `src/app/robots.ts` |
-
-**Produção:** `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com`
-
-**Google Search Console:** sitemap `https://www.haxrsignature.com/sitemap.xml` · remoção de URLs `vercel.app` se ainda indexadas.
-
----
-
-## Email (Resend) e marketing (Brevo)
-
-| Serviço | Papel | Liga ao canal |
-|---------|-------|---------------|
-| **Resend** | Transaccional — contacto, convites, RSVP, confirmações | `hello@` · `replyTo` para conversa contínua |
-| **Brevo** | CRM — leads, newsletter, funil dias 0 / 3 / 7 / 14 / 21 | Mesmo email do lead · atributos `PROJECT_TYPE`, etc. |
-
-### Formulário de contacto
-
-1. Grava lead no Supabase (`contact_inquiries`).
-2. **Resend** → notificação para `hello@` + auto-resposta ao cliente (com link WhatsApp e email no corpo).
-3. **Brevo** → upsert contacto + listas (falha no Brevo não bloqueia o envio).
-
-### Funil Brevo (cron)
-
-`GET /api/cron/brevo-funnel` com header `Authorization: Bearer $CRON_SECRET` — configurar no Vercel Cron.
-
-Ver: `docs/BREVO_CAMPAIGNS.md` · `npm run verify:brevo`
-
----
-
-## Variáveis de ambiente
-
-Copiar `.env.example` → `.env.local`:
-
-```env
-# Site (canónico)
-NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com
-NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
-
-# Admin
-ADMIN_EMAIL=admin@haxrsignature.com
-ADMIN_PASSWORD=
-ADMIN_SESSION_SECRET=
-
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Resend
-RESEND_API_KEY=
-CONTACT_NOTIFY_EMAIL=hello@haxrsignature.com
-RESEND_BRAND_DOMAIN=true
-
-# Brevo
-BREVO_API_KEY=
-BREVO_LIST_LEADS=
-BREVO_LIST_NEWSLETTER=
-BREVO_SENDER_EMAIL=hello@haxrsignature.com
-BREVO_SENDER_NAME=HAXR Signature
-BREVO_FUNNEL_ENABLED=true
-
-# Cron (funil Brevo na Vercel)
-CRON_SECRET=
-```
-
-Sincronizar com Vercel: `npm run vercel:env`
-
-**Nunca commitar** `.env.local` nem secrets.
-
----
-
-## Base de dados
-
-Executar migrations **por ordem** no Supabase (001–024). Destaques recentes:
-
-| # | Conteúdo |
-|---|----------|
-| 019 | Segurança Find Your Seat |
-| 022–024 | Tracking funil Brevo (dias 7, 14, 21) |
-| 023 | Intenção no formulário de contacto |
-
----
-
-## Comandos úteis
+### Instalação
 
 ```bash
+git clone https://github.com/MrDimande/haxrsignatureweb.git
+cd haxrsignatureweb
 npm install
-npm run dev              # http://localhost:3000
-npm run build
-npm run verify:qa        # auditoria rápida
-npm run verify:qa -- --full
-npm run verify:jsonld    # validar schemas SEO
-npm run verify:brevo
-npm run verify:resend    # auditoria DNS Resend
-npm run sync:brevo       # leads Supabase → Brevo
 ```
 
-| URL local | Destino |
-|-----------|---------|
-| Site | http://localhost:3000 |
-| Admin | http://localhost:3000/admin |
-
----
-
-## Deploy e push para GitHub
-
-O push para `main` dispara deploy automático na Vercel.
+### Comandos de Execução
 
 ```bash
-git add README.md
-git status
-git commit -m "docs: README actualizado — canais integrados e estado do projecto"
-git push origin main
+# Iniciar servidor local de desenvolvimento
+npm run dev
+
+# Executar verificação de tipos TypeScript
+npx tsc --noEmit
+
+# Executar linter ESLint
+npm run lint
+
+# Executar build de produção para validação
+npm run build
 ```
 
-Deploy manual: `npx vercel --prod`
+---
 
-### Checklist pós-deploy
+## 8. Variáveis de Ambiente
 
-- [ ] `NEXT_PUBLIC_SITE_URL=https://www.haxrsignature.com` na Vercel (Production)
-- [ ] `RESEND_BRAND_DOMAIN=true` e domínio verificado (`npm run verify:resend`)
-- [ ] Migrations 001–024 aplicadas em produção
-- [ ] Formulário de contacto → email + lead + Brevo
-- [ ] WhatsApp e Instagram correctos no site (footer e contacto)
-- [ ] Sitemap submetido no Google Search Console
-- [ ] Facebook activado em `siteContact` quando a página estiver pronta
+As variáveis devem ser configuradas no ficheiro `.env.local` (ignorado pelo Git). **Nunca versione ficheiros de ambiente.**
+
+| Variável | Obrigatória | Âmbito | Finalidade |
+| :--- | :---: | :--- | :--- |
+| `DATABASE_URL` | **Sim** | Server | Connection string do Neon com pooler (`sslmode=require`) |
+| `DATABASE_URL_UNPOOLED` | Não | Server | Connection string direta do Neon para migrações e scripts DDL |
+| `HAXR_DATABASE_PROVIDER` | **Sim** | Server | Define o provedor de dados canónico (`neon`) |
+| `HAXR_PRIVATE_STORAGE_PROVIDER` | **Sim** | Server | Define o provedor de storage privado (`r2-s3`) |
+| `CLOUDFLARE_R2_PRIVATE_ACCOUNT_ID` | **Sim** | Server | ID de conta Cloudflare |
+| `CLOUDFLARE_R2_PRIVATE_ACCESS_KEY_ID` | **Sim** | Server | Chave de acesso S3 para o bucket privado R2 |
+| `CLOUDFLARE_R2_PRIVATE_SECRET_ACCESS_KEY` | **Sim** | Server | Segredo de acesso S3 para o bucket privado R2 |
+| `CLOUDFLARE_R2_PRIVATE_ENDPOINT` | **Sim** | Server | Endpoint S3 HTTPS do Cloudflare R2 |
+| `CLOUDFLARE_R2_PRIVATE_BUCKET` | **Sim** | Server | Nome do bucket R2 privado (`haxr-private-uploads`) |
+| `ADMIN_EMAIL` | **Sim** | Server | Email do utilizador de operações e administração |
+| `ADMIN_PASSWORD` | **Sim** | Server | Palavra-passe administrativa |
+| `ADMIN_SESSION_SECRET` | **Sim** | Server | Chave de assinatura criptográfica de sessões de cookies |
+| `RESEND_API_KEY` | **Sim** | Server | Chave da API Resend para notificações e auto-respostas |
+| `BREVO_API_KEY` | Opcional | Server | Chave de integração comercial do Brevo (CRM / funil) |
+| `GEMINI_API_KEY` | Opcional | Server | Chave Google Gemini AI para o motor HAXR Concierge |
+| `NEXT_PUBLIC_SITE_URL` | **Sim** | Public | URL canónico público (`https://www.haxrsignature.com`) |
 
 ---
 
-## Documentação adicional
+## 9. Testes e Validação Operacional
 
-| Documento | Conteúdo |
-|-----------|----------|
-| `docs/ELEVATION_REPORT.md` | Evolução editorial e técnica da marca |
-| `docs/BREVO_CAMPAIGNS.md` | Funil e campanhas Brevo |
-| `docs/RESEND_DNS_AUDIT.md` | SPF, DKIM, DMARC |
-| `docs/AREA_CLIENTE_SPEC.md` | Portal do cliente (especificação) |
-| `docs/QA_FASE10_REPORT.md` | Relatório QA |
+O repositório inclui utilitários de auditoria e validação canónica em `scripts/`:
+
+```bash
+# Validação da saúde canónica de produção (rotas, admin, check-in, leitura R2)
+node scripts/test-canonical-health.cjs
+
+# Validação estrita de credenciais e permissões R2
+node scripts/validate-private-r2-credential.cjs
+
+# Auditoria de leitura e verificação de integridade SHA-256 em R2
+node scripts/validate-production-read.cjs
+
+# Inventário e auditoria de ficheiros R2
+node scripts/verify-r2-read-only-inventory.mjs
+```
 
 ---
 
-## Licença
+## 10. Deployment
 
-Projecto privado — **HAXR Signature** © 2026–2027.
+O deployment em produção é executado de forma contínua através da **Vercel** acoplada ao branch `main` do repositório:
+
+- Cada pull request gera um ambiente de Preview isolado.
+- Commits no branch `main` desencadeiam a validação de tipos, build e deploy atómico em produção.
+- O domínio público oficial e canónico é `https://www.haxrsignature.com`.
+
+---
+
+## 11. Recuperação de Desastres & Política de Backup
+
+- **Base de Dados (Neon):** Recuperação pontual no tempo (*Point-in-Time Restore*) e branching instantâneo nativo do Neon para salvaguarda de dados sem impacto de downtime.
+- **Armazenamento (Cloudflare R2):** Ficheiros preservados com redundância distribuída em múltiplos data centers Cloudflare.
+- **Disciplina de Resposta a Incidentes (*Repair-Forward*):** Em caso de falha ou anomalia operacional, a abordagem obrigatória é a correção progressiva para a frente (*repair-forward*). É estritamente proibido efetuar restauro cego a partir do snapshot legado da Supabase, uma vez que este representa um arquivo frio pré-migração.
+
+---
+
+## 12. Histórico de Migração
+
+A migração de saída da infraestrutura Supabase para Neon PostgreSQL e Cloudflare R2 foi formalmente concluída e selada em **2026-09-06** (Tag: `supabase-exit-2026-09-06`).
+
+Para consultar a cronologia completa dos Gates técnicos (Gates 3A a 3H), inventários de transferência e relatórios de segurança, consulte:
+👉 [**docs/migrations/README.md**](./docs/migrations/README.md)
+
+---
+
+## 13. Estrutura do Repositório
+
+```text
+haxrsignatureweb/
+├── docs/
+│   ├── migrations/          # Relatórios técnicos e manifests da migração
+│   └── audits/              # Auditorias de arquitetura, SEO e benchmark
+├── public/                  # Imagens, tipografia e assets estáticos de marca
+├── scripts/                 # Ferramentas operacionais de validação e auditoria
+├── src/
+│   ├── app/                 # Next.js App Router (marketing, admin, portal, api)
+│   ├── components/          # Componentes visuais modulares e editoriais
+│   ├── hooks/               # Custom hooks de interface e estado
+│   ├── lib/
+│   │   ├── admin/           # Lógica do painel de controlo e operações
+│   │   ├── concierge/       # Motor HAXR Concierge assistido por IA
+│   │   ├── neon/            # Configuração de base de dados e pooling Neon
+│   │   ├── storage/         # Abstração de storage privado Cloudflare R2
+│   │   └── site-config.ts   # Fonte única de verdade de contactos e metadados
+│   └── middleware.ts        # Redirecionamentos canónicos e segurança
+├── neon.ts                  # Configuração de políticas de branches Neon CLI
+├── package.json             # Dependências e scripts do ecossistema
+└── tsconfig.json            # Configuração TypeScript
+```
+
+---
+
+## 14. Convenções de Desenvolvimento
+
+1. **Rigor de Branches:** Nenhuma alteração direta em `main`. Todo o desenvolvimento deve ocorrer em branches de feature/fix com pull requests revisados.
+2. **Higienização de Segredos:** Ficheiros `.env*` nunca são versionados. É estritamente proibido imprimir chaves, passwords ou tokens em logs ou commits.
+3. **Respeito pela Identidade de Alta-Costura:** Proibido o uso de ícones genéricos (ex: `Sparkles`) ou linguagem infantil/clichê. A estética obedece à alta costura digital HAXR Signature.
