@@ -32,31 +32,31 @@
 
 ## Pilha Tecnológica Canónica (Technology Stack)
 
-A tabela seguinte reflecte rigorosamente as dependências e versões instaladas e em execução activa no projecto (`package.json` e `package-lock.json`), sem aproximações ou versões presumidas:
+A tabela seguinte reflecte rigorosamente a reconciliação entre as versões declaradas em `package.json` e as versões efectivamente resolvidas e instaladas em `package-lock.json` / `node_modules`:
 
-| Camada Arquitectural | Tecnologia / Pacote | Versão Instalada | Finalidade no Projecto |
-| :--- | :--- | :--- | :--- |
-| **Framework Web** | `Next.js` | `15.5.19` | App Router, Server Components, Server Actions e API Routes |
-| **Biblioteca de Interface** | `React` / `React DOM` | `19.1.0` | Renderização concorrente e componentes de alta-costura |
-| **Linguagem de Tipagem** | `TypeScript` | `5.8.3` | Tipagem estrita de contratos de dados e segurança de código |
-| **Ambiente de Execução** | `Node.js` | `^22.13.0` / `24.x LTS` | Runtime serverless em produção (Vercel) e desenvolvimento local |
-| **Estilos & Design System** | `Tailwind CSS` | `4.1.7` (`@tailwindcss/postcss`) | Motor CSS moderno de alta performance e design editorial |
-| **Animação & Motion** | `GSAP` | `3.13.0` | Coreografia visual de entrada, scroll suave e transições |
-| **Micro-Interacções** | `Framer Motion` | `12.9.2` | Transições de modais, diálogos e componentes reactivos |
-| **Base de Dados Principal** | `PostgreSQL (Neon)` | `pg ^8.21.0` | Driver nativo com pooling pgBouncer e disciplina transaccional |
-| **SDK Neon Serverless** | `@neondatabase/serverless` | `^1.0.2` | Conexões optimizadas para ambientes edge e serverless |
-| **Armazenamento de Objectos**| `@aws-sdk/client-s3` | `^3.1125.0` | Cliente oficial S3 para o Cloudflare R2 |
-| **Segurança de Objectos** | `@aws-sdk/s3-request-presigner`| `^3.1126.0` | Emissão de URLs assinadas temporárias com prazo curto |
-| **Validação de Esquemas** | `Zod` | `^3.25.28` | Validação defensiva de formulários, dados de entrada e APIs |
-| **Gestão de Formulários** | `React Hook Form` | `^7.56.3` | Gestão de formulários complexos acoplada a `@hookform/resolvers` (`^5.0.1`) |
-| **Criptografia & Sessões** | `Jose` | `^6.2.10` | Manipulação criptográfica de tokens e assinaturas de sessão |
-| **Serviço de Email** | `Resend` | `^6.12.4` | Transmissão de notificações operacionais e confirmações |
-| **Geração de Documentos** | `@react-pdf/renderer` | `^4.5.1` | Emissão programática de proformas e recibos contratuais em PDF |
-| **Manipulação de Folhas** | `ExcelJS` | `^4.4.0` | Exportação de listas de convidados e tabelas de assentos |
-| **Inteligência Artificial** | `@google/generative-ai` | `^0.24.1` | Motor assistivo HAXR Concierge para triagem de pedidos |
-| **Iconografia Editorial** | `Lucide React` | `^1.16.0` | Ícones minimalistas curados (sem símbolos mágicos/infantis) |
-| **Testes Automatizados** | Node Test Runner / `tsx` | `tsx ^4.22.4` | Execução de testes unitários e testes de regressão de integração |
-| **Plataforma de Alojamento** | `Vercel` | Edge / Serverless | Deployment atómico contínuo acoplado ao branch `main` |
+| Camada Arquitectural | Tecnologia / Pacote | Versão Declarada (`package.json`) | Versão Resolvida (`lockfile`) | Finalidade no Projecto |
+| :--- | :--- | :---: | :---: | :--- |
+| **Framework Web** | `Next.js` | `^15.3.2` | `15.5.19` | App Router, Server Components, Server Actions e rotas de API |
+| **Biblioteca de Interface** | `React` / `React DOM` | `^19.1.0` | `19.2.7` | Renderização concorrente e componentes de alta-costura |
+| **Linguagem de Tipagem** | `TypeScript` | `^5.8.3` | `5.9.3` | Tipagem estrita de contratos de dados e segurança de código |
+| **Ambiente de Execução** | `Node.js` | `Node.js 20+ / 22.x LTS` | `v24.15.0 LTS` | Runtime serverless em produção (Vercel) e desenvolvimento local |
+| **Estilos & Design System** | `Tailwind CSS` | `^4.1.7` | `4.3.0` | Motor CSS moderno de alta performance e design editorial |
+| **Animação & Motion** | `GSAP` | `^3.13.0` | `3.15.0` | Coreografia visual de entrada, scroll suave e transições |
+| **Micro-Interacções** | `Framer Motion` | `^12.9.2` | `12.40.0` | Transições de modais, diálogos e componentes reactivos |
+| **Base de Dados Principal** | `PostgreSQL (Neon)` | `pg ^8.21.0` | `8.21.0` | Driver nativo com pooling pgBouncer e disciplina transaccional |
+| **SDK Neon Serverless** | `@neon/config` / `@neon/env` | `^1.3.0` / `^1.2.1` | `1.3.0` / `1.2.1` | Configuração e pooling de base de dados para ambientes serverless |
+| **Armazenamento de Objectos**| `@aws-sdk/client-s3` | `^3.1125.0` | `3.1125.0` | Cliente oficial S3 para o Cloudflare R2 |
+| **Segurança de Objectos** | `@aws-sdk/s3-request-presigner`| `^3.1126.0` | `3.1126.0` | Emissão de URLs assinadas temporárias com prazo curto (600s) |
+| **Validação de Esquemas** | `Zod` | `^3.25.28` | `3.25.76` | Validação defensiva de formulários, dados de entrada e APIs |
+| **Gestão de Formulários** | `React Hook Form` | `^7.56.3` | `7.78.0` | Gestão de formulários complexos acoplada a `@hookform/resolvers` (`5.4.0`) |
+| **Criptografia & Sessões** | `Jose` | `^6.2.10` | `6.2.10` | Manipulação criptográfica de tokens e assinaturas de sessão |
+| **Serviço de Email** | `Resend` | `^6.12.4` | `6.12.4` | Transmissão de notificações operacionais e confirmações |
+| **Geração de Documentos** | `@react-pdf/renderer` | `^4.5.1` | `4.5.1` | Emissão programática de proformas e recibos contratuais em PDF |
+| **Manipulação de Folhas** | `ExcelJS` | `^4.4.0` | `4.4.0` | Exportação de listas de convidados e tabelas de assentos |
+| **Inteligência Artificial** | `@google/generative-ai` | `^0.24.1` | `0.24.1` | Motor assistivo HAXR Concierge para triagem de pedidos |
+| **Iconografia Editorial** | `Lucide React` | `^1.18.0` | `1.18.0` | Ícones minimalistas curados (sem símbolos mágicos/infantis) |
+| **Testes Automatizados** | Node Test Runner / `tsx` | `tsx ^4.22.4` | `4.22.4` | Execução de testes unitários e testes de regressão de integração |
+| **Plataforma de Alojamento** | `Vercel` | Edge / Serverless | Edge / Serverless | Deployment atómico contínuo acoplado ao branch `main` |
 
 ---
 

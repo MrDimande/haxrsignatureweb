@@ -2,6 +2,7 @@
   "name": "haxrsignature",
   "version": "0.0.1",
   "private": true,
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/run-production-build.mjs",
