@@ -74,9 +74,9 @@ export default function Hero() {
           {/* Subtitle */}
           <p
             data-hero-item
-            className="font-mono text-[10px] md:text-xs font-semibold tracking-[0.45em] uppercase text-brand-gold mb-2"
+            className="font-mono text-[10px] md:text-xs font-semibold tracking-[0.45em] uppercase text-brand-gold mb-3"
           >
-            SIMPLES. ORGANIZADO. SEM ESFORÇO.
+            ASSESSORIA DE CASAMENTOS & ALTA-COSTURA DIGITAL
           </p>
 
           {/* Main Headline */}
@@ -87,21 +87,31 @@ export default function Hero() {
             A forma mais fácil de planear
           </h1>
 
+          {/* Supporting Copy */}
+          <p
+            data-hero-item
+            className="font-sans text-sm sm:text-base md:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed font-light"
+          >
+            Assessoria cerimonial completa, alta-costura digital e tecnologia operacional privada para casamentos exclusivos em Moçambique. Rigor milimétrico e serenidade em cada detalhe.
+          </p>
+
           {/* Centered Input Form */}
-          <div data-hero-item className="max-w-xl mx-auto pt-4">
+          <div data-hero-item className="max-w-xl mx-auto pt-2">
             <form
               onSubmit={handleSubmit}
-              className="flex flex-col sm:flex-row items-stretch gap-3 bg-white/5 backdrop-blur-md p-2 border border-white/10 rounded-sm shadow-2xl"
+              className="flex flex-col sm:flex-row items-stretch gap-3 bg-white/5 backdrop-blur-md p-2 border border-white/15 rounded-sm shadow-2xl focus-within:border-brand-gold/60 transition-colors"
             >
               <div className="relative flex-1 flex items-center pl-4">
                 <Calendar className="w-4.5 h-4.5 text-brand-gold shrink-0 mr-3" strokeWidth={1.5} />
                 <input
                   type="date"
                   required
+                  aria-label="Qual é a data do vosso casamento?"
+                  title="Qual é a data do vosso casamento?"
                   placeholder="Qual é a data do vosso casamento?"
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full bg-transparent text-white font-sans text-xs md:text-sm outline-none placeholder:text-white/40 h-12 cursor-pointer [color-scheme:dark]"
+                  className="w-full bg-transparent text-white font-sans text-xs md:text-sm outline-none placeholder:text-white/50 h-12 cursor-pointer [color-scheme:dark]"
                 />
               </div>
               <button
@@ -117,10 +127,10 @@ export default function Hero() {
           {/* Bottom Account & Partner Links */}
           <div
             data-hero-item
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 pt-4 font-sans text-xs text-white/60 font-light"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 pt-4 font-sans text-xs text-white/70 font-light"
           >
             <p>
-              Já tem uma conta?{" "}
+              Já tem conta?{" "}
               <Link
                 href="/dashboard"
                 className="text-brand-gold hover:text-brand-gold-light font-medium underline underline-offset-4 transition-colors"
@@ -130,12 +140,12 @@ export default function Hero() {
             </p>
             <span className="hidden sm:inline text-white/20">|</span>
             <p>
-              É um fornecedor?{" "}
+              É um profissional de eventos?{" "}
               <Link
-                href="/contacto?intent=fornecedor"
+                href="/for-pros"
                 className="text-brand-gold hover:text-brand-gold-light font-medium underline underline-offset-4 transition-colors"
               >
-                Crie a sua conta aqui
+                Conheça a nossa rede
               </Link>
             </p>
           </div>

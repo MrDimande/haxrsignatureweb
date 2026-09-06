@@ -13,7 +13,7 @@ export default function HomeToolsGrid() {
     {
       id: "concierge",
       title: "HAXR Concierge™",
-      description: "O vosso Concierge lê propostas de fornecedores, recibos e inspiração, e organiza tudo automaticamente nas vossas ferramentas de planeamento.",
+      description: "Triagem inteligente de propostas, facturas e comprovativos por email ou WhatsApp, integrados directamente no vosso painel operacional.",
       image: "/images/tools/concierge-bg.png",
       cta: "Começar Agora",
       href: "/contacto",
@@ -24,7 +24,7 @@ export default function HomeToolsGrid() {
               <FileText className="w-4 h-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold truncate">Fatura_Catering.pdf</p>
+              <p className="font-semibold truncate">Factura_Catering.pdf</p>
               <p className="text-[7px] text-zinc-400">PDF Document · 145 KB</p>
             </div>
           </div>
@@ -38,7 +38,7 @@ export default function HomeToolsGrid() {
     {
       id: "guest-list",
       title: "Gestor de Convidados",
-      description: "Esta ferramenta permite construir a vossa lista de convidados, gerir as informações de contacto e monitorizar os RSVPs de forma integrada.",
+      description: "Construção e gestão da lista de convidados, grupos familiares, restrições alimentares e acompanhamento de confirmações RSVP em tempo real.",
       image: "/images/tools/guest-list-bg.png",
       cta: "Gerir Convidados",
       href: "/tools/guest-list",
@@ -60,7 +60,7 @@ export default function HomeToolsGrid() {
     {
       id: "vendor-manager",
       title: "Gestor de Fornecedores",
-      description: "Registe, organize e monitorize as informações de todos os fornecedores do vosso casamento e acompanhe os pagamentos efetuados.",
+      description: "Registo centralizado de contactos, propostas, contratos e acompanhamento minucioso de pagamentos efectuados a fornecedores.",
       image: "/images/tools/vendor-manager-bg.png",
       cta: "Gerir Fornecedores",
       href: "/tools/vendor-manager",
@@ -83,7 +83,7 @@ export default function HomeToolsGrid() {
     {
       id: "budget-tracker",
       title: "Gestor de Orçamento",
-      description: "Registe e organize todas as despesas e pagamentos a fornecedores para planear com total confiança e manter-se dentro do limite estipulado.",
+      description: "Planeamento orçamental minucioso em meticais (MT), controlo de estimativas e pagamentos para manter cada capítulo financeiro seguro.",
       image: "/images/tools/budget-tracker-bg.png",
       cta: "Organizar Orçamento",
       href: "/tools/budget-tracker",

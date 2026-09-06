@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Users, Heart, ArrowLeft, ArrowRight } from "lucide-react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
@@ -33,7 +34,7 @@ const weddingProjects: WeddingProject[] = [
     ],
     guests: "120 convidados",
     services: "Assessoria Completa · Identidade Visual",
-    description: "Uma celebração de linhas limpas e elegância discreta na capital moçambicana. O foco foi a sobriedade cromática e a iluminação cénica desenhada à medida, realçando a arquitetura do espaço e criando uma atmosfera íntima.",
+    description: "Uma celebração de linhas limpas e elegância discreta na capital moçambicana. O foco foi a sobriedade cromática e a iluminação cénica desenhada à medida, realçando a arquitectura do espaço e criando uma atmosfera íntima.",
     quote: "A HAXR organizou tudo com um rigor impecável, mas o resultado final foi de uma sensibilidade e beleza poética indescritíveis.",
     author: "Vânia Fabião"
   },
@@ -140,7 +141,7 @@ export default function HomeWeddingGallery() {
               Histórias de Assinatura
             </h2>
             <p className="font-sans text-sm md:text-base text-brand-ivory/60 leading-relaxed font-light max-w-xl">
-              Cada celebração é um projeto de curadoria único. Explore os casamentos reais que desenhámos e coordenámos em Moçambique.
+              Cada celebração é um projecto de curadoria único. Explore os casamentos reais que desenhámos e coordenámos em Moçambique.
             </p>
           </RevealOnScroll>
 
@@ -181,11 +182,12 @@ export default function HomeWeddingGallery() {
               className="snap-start shrink-0 w-[280px] sm:w-[360px] md:w-[420px] aspect-[4/5] rounded-[2rem] overflow-hidden relative cursor-pointer group shadow-2xl border border-white/5 select-none"
             >
               {/* Background Cover Image */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={project.mainImage}
-                alt={project.couple}
-                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
+                alt={`Casamento de ${project.couple} em ${project.location}`}
+                fill
+                sizes="(max-width: 640px) 280px, (max-width: 768px) 360px, 420px"
+                className="object-cover group-hover:scale-[1.03] transition-transform duration-700"
               />
 
               {/* Dark Gradient Overlay */}
@@ -206,7 +208,7 @@ export default function HomeWeddingGallery() {
                 </p>
                 <div className="pt-2">
                   <span className="inline-flex items-center gap-1.5 font-mono text-[8px] md:text-[9px] tracking-widest uppercase font-bold text-brand-gold hover:text-white transition-colors border-b border-brand-gold/40 pb-0.5">
-                    Ver Projeto
+                    Ver Projecto
                   </span>
                 </div>
               </div>
@@ -249,11 +251,12 @@ export default function HomeWeddingGallery() {
 
                 {/* Active Image */}
                 <div className="w-full h-full relative overflow-hidden flex-1">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={selectedProject.galleryImages[currentSlideIndex]}
-                    alt={`${selectedProject.couple} - foto ${currentSlideIndex + 1}`}
-                    className="w-full h-full object-cover"
+                    alt={`${selectedProject.couple} — registo ${currentSlideIndex + 1}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
                 </div>

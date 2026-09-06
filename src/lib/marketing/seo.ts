@@ -5,7 +5,7 @@ export const marketingPagesSeo = {
   home: {
     path: "/",
     title:
-      "HAXR Signature | Assessoria e Design de Casamentos em Moçambique",
+      "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital em Moçambique",
     description:
       "Assessoria completa, design cerimonial e alta-costura digital para casamentos exclusivos em Moçambique. Organização impecável com a assinatura HAXR.",
     keywords: [

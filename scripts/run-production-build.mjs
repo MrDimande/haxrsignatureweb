@@ -80,11 +80,8 @@ if (isMigrationPreview) {
   }
 }
 
-try {
-  rmSync(resolve(process.cwd(), ".next/cache"), { recursive: true, force: true });
-} catch {
-  // ignore
-}
+// Preserve .next/cache across builds so downloaded Google Fonts and webpack artifacts are retained
+
 
 const nextBin = resolve(process.cwd(), "node_modules/next/dist/bin/next");
 const result = spawnSync(process.execPath, [nextBin, "build"], {

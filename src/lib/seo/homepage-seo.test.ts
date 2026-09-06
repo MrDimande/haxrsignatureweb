@@ -9,7 +9,7 @@ describe("homepage-seo-foundation", () => {
 
     // Must be absolute object to bypass %s | HAXR Signature template
     assert.deepEqual(meta.title, {
-      absolute: "HAXR Signature | Assessoria e Design de Casamentos em Moçambique",
+      absolute: "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital em Moçambique",
     });
 
     // Verify title string does not contain duplicate brand suffix

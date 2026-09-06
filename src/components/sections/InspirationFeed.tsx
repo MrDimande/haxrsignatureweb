@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,7 +27,7 @@ const inspirationItems: InspirationItem[] = [
     category: "assessoria",
     tag: "O PAPEL DO ASSESSOR",
     title: "O que faz um Assessor de Casamentos e por que é a alma da celebração?",
-    excerpt: "Muito além da escolha de flores e fornecedores. Como o assessor HAXR atua na gestão de riscos, blindagem do orçamento e na garantia de paz para o casal.",
+    excerpt: "Muito além da escolha de flores e fornecedores. Como o assessor HAXR actua na gestão de riscos, blindagem do orçamento e na garantia de serenidade para o casal.",
     image: magazineAssets.capaAssessor,
     href: "/assessoria-eventos",
     actionLabel: "Ler Artigo de Assessoria",
@@ -36,7 +37,7 @@ const inspirationItems: InspirationItem[] = [
     category: "casamentos",
     tag: "SELEÇÃO HAXR TOPS",
     title: "Os Casamentos mais Icónicos e Exclusivos com a Assinatura HAXR",
-    excerpt: "Conheça os projetos de referência que redefiniram o luxo e a excelência em Moçambique, das praias de Vilankulos aos salões nobres de Maputo.",
+    excerpt: "Conheça os projectos de referência que redefiniram o luxo e a excelência em Moçambique, das praias de Vilankulos aos salões nobres de Maputo.",
     image: magazineAssets.capaCasamentosTops,
     href: "/portfolio",
     actionLabel: "Ver Casamentos Tops",
@@ -45,8 +46,8 @@ const inspirationItems: InspirationItem[] = [
     id: "feed-3",
     category: "tendencias",
     tag: "CURIOSIDADES DO PLANEAMENTO",
-    title: "Segredos de Bastidores: O que ninguém te conta sobre organizar eventos de luxo",
-    excerpt: "As horas invisíveis de coordenação técnica, a gestão psicológica e as soluções rápidas que mantêm a harmonia perfeita longe dos olhos dos convidados.",
+    title: "Segredos de Bastidores: O que não se conta sobre organizar celebrações de luxo",
+    excerpt: "As horas invisíveis de coordenação técnica, a gestão minuciosa de timings e as soluções rápidas que mantêm a harmonia perfeita longe dos olhos dos convidados.",
     image: magazineAssets.capaSegredosPlaneamento,
     href: "/sobre",
     actionLabel: "Descobrir Segredos",
@@ -55,7 +56,7 @@ const inspirationItems: InspirationItem[] = [
     id: "feed-4",
     category: "design",
     tag: "BASTIDORES & MONTAGEM",
-    title: "Dos Esboços à Realidade: Como a magia acontece no dia do evento",
+    title: "Dos Esboços à Realidade: Como a visão ganha vida no dia do evento",
     excerpt: "Acompanhe a complexa logística de coordenação com mais de 30 fornecedores locais para construir cenografias e decorações de alto impacto técnico.",
     image: magazineAssets.capaBastidoresMontagem,
     href: "/plataforma-eventos",
@@ -141,13 +142,14 @@ export default function InspirationFeed() {
               >
                 {/* Capa do Artigo */}
                 <div className="aspect-[16/10] relative overflow-hidden bg-zinc-100 rounded-sm shadow-xs mb-8">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={item.image}
                     alt={item.title}
-                    className="object-cover w-full h-full group-hover:scale-102 transition-transform duration-[1.2s] ease-out"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover group-hover:scale-102 transition-transform duration-[1.2s] ease-out"
                   />
-                  <div className="absolute top-4 left-4 bg-brand-text-dark/95 backdrop-blur-xs text-brand-gold font-mono text-[8px] tracking-[0.25em] uppercase font-bold py-1.5 px-3.5 rounded-xs">
+                  <div className="absolute top-4 left-4 bg-brand-text-dark/95 backdrop-blur-xs text-brand-gold font-mono text-[8px] tracking-[0.25em] uppercase font-bold py-1.5 px-3.5 rounded-xs z-10">
                     {item.tag}
                   </div>
                 </div>

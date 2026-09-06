@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import { ShieldCheck, Calendar, Users, HelpCircle, Crown, Clock } from "lucide-react";
 
@@ -12,7 +13,7 @@ const advisoryPillars = [
   {
     icon: Calendar,
     title: "Assessoria Parcial",
-    desc: "Apoio direcionado para casais que já iniciaram o planeamento, mas pretendem suporte especializado para consolidar e validar as etapas seguintes.",
+    desc: "Apoio direccionado para casais que já iniciaram o planeamento, mas pretendem suporte especializado para consolidar e validar as etapas seguintes.",
   },
   {
     icon: Clock,
@@ -80,12 +81,12 @@ export default function WeddingAdvisory() {
         </div>
 
         <RevealOnScroll className="text-center" delay={0.1}>
-          <a
+          <Link
             href="/contacto?tipo=assessoria"
             className="btn-editorial btn-editorial--solid inline-flex"
           >
             Agendar conversa
-          </a>
+          </Link>
         </RevealOnScroll>
       </div>
     </section>

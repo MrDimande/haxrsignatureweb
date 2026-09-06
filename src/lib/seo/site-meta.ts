@@ -34,7 +34,7 @@ export const siteSeo = {
   country: "MZ",
   city: "Maputo",
   title:
-    "HAXR Signature | Assessoria e Design de Casamentos em Moçambique",
+    "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital em Moçambique",
   titleTemplate: "%s | HAXR Signature",
   shortTitle: "HAXR Signature — Assessoria de Casamentos & Alta-Costura Digital",
   description:

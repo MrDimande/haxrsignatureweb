@@ -59,7 +59,7 @@ export const homeHowWeWork = [
   {
     phase: "02 · Planeamento",
     items: [
-      "Desenho de conceito estético e direcional",
+      "Desenho de conceito estético e direccional",
       "Controlo de orçamento inicial transparente",
       "Cronograma detalhado com prazos e etapas",
     ],

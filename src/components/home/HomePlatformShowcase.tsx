@@ -55,19 +55,19 @@ export default function HomePlatformShowcase() {
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5 text-brand-gold shrink-0">
                 <path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9Z" />
               </svg>
-              <span className="font-mono text-[9px] uppercase tracking-widest font-bold">Ecossistema HAXR</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest font-bold">Infra-estrutura Operacional Privada</span>
             </div>
 
             <h2 className="font-serif text-3xl sm:text-5xl font-light text-brand-text-dark leading-tight">
               O vosso Painel de Casamento Exclusivo e Inteligente
             </h2>
 
-            <p className="font-sans text-sm md:text-base text-brand-text-dark/75 leading-relaxed font-light">
-              Planeie o vosso casamento de sonho com total tranquilidade e clareza. Comece hoje a usar o vosso gestor digital HAXR Signature — o vosso assessor de eventos virtual para acompanhar cada detalhe.
+            <p className="font-sans text-sm md:text-base text-brand-text-dark/80 leading-relaxed font-light">
+              Planeie o vosso casamento com serenidade absoluta, precisão milimétrica e controlo total. A plataforma HAXR Signature é a infra-estrutura digital privada desenhada sob medida para orquestrar cada capítulo da vossa celebração.
             </p>
 
-            <p className="font-sans text-xs md:text-sm text-brand-text-dark/65 leading-relaxed font-light">
-              Da gestão orçamental e checklists detalhadas à inspiração e coordenação de fornecedores em Moçambique, simplificamos toda a organização. Esteja no início dos preparativos ou nos detalhes finais, a HAXR Signature reúne tudo num único ecossistema refinado.
+            <p className="font-sans text-xs md:text-sm text-brand-text-dark/70 leading-relaxed font-light">
+              Do controlo orçamental em meticais (MT) e checklists minuciosas à coordenação directa com fornecedores de elite em Moçambique, unificamos toda a operação num único ecossistema refinado, seguro e discreto.
             </p>
 
             <div className="pt-4">

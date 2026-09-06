@@ -20,7 +20,7 @@ export default function DigitalInvitations() {
     },
     {
       title: "Música de Entrada",
-      desc: "Trilha sonora integrada com fade-in suave que desperta a emoção do convidado logo no primeiro clique."
+      desc: "Composição sonora integrada com fade-in suave que desperta a emoção do convidado logo no primeiro clique."
     },
     {
       title: "RSVP Concierge",
@@ -28,7 +28,7 @@ export default function DigitalInvitations() {
     },
     {
       title: "Direções & Mapa",
-      desc: "Localização precisa do espaço e integração direta com Waze e Google Maps com um único toque."
+      desc: "Localização precisa do espaço e integração directa com Waze e Google Maps com um único toque."
     }
   ];
 
@@ -144,7 +144,7 @@ export default function DigitalInvitations() {
                 <div className="mb-8 text-center max-w-md mx-auto">
                   <span className="inline-flex items-center gap-1.5 font-mono text-[8px] tracking-[0.45em] uppercase text-brand-gold mb-2 border border-brand-gold/30 px-3 py-1 rounded-full bg-gold/5">
                     <Heart className="w-2.5 h-2.5 animate-pulse" />
-                    Experiência Interativa
+                    Experiência Interactiva
                   </span>
                   <h3 className="font-serif text-lg sm:text-2xl font-light text-white mb-1.5">
                     O Toque da Sofisticação
@@ -193,7 +193,7 @@ export default function DigitalInvitations() {
                             className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border border-gold/40 bg-gold/15 hover:bg-gold/30 text-gold font-mono text-[9px] tracking-widest uppercase font-bold transition-all duration-300 shadow-md hover:scale-105 cursor-pointer"
                           >
                             <Smartphone className="w-3 h-3" />
-                            <span>Abrir no Telemóvel 📱</span>
+                            <span>Abrir no Telemóvel</span>
                           </button>
                           <a
                             href={project.href}

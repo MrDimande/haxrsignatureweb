@@ -121,7 +121,7 @@ export default function HomeConciergeAisle() {
                             <span>Dados</span>
                           </div>
                           <span className="font-mono text-[5px] md:text-[6px] bg-brand-gold/10 text-brand-gold px-1.5 py-0.5 rounded-sm">
-                            Planilha Ativa
+                            Folha de cálculo activa
                           </span>
                         </div>
 
@@ -231,7 +231,7 @@ export default function HomeConciergeAisle() {
                             <p className="text-zinc-500 font-light">Maputo, Moçambique</p>
                           </div>
                           <div className="text-right space-y-0.5">
-                            <p className="text-zinc-400 uppercase font-mono text-[3.8px] tracking-wider">Fatura / ID:</p>
+                            <p className="text-zinc-400 uppercase font-mono text-[3.8px] tracking-wider">Factura / ID:</p>
                             <p className="font-bold text-[#2d2a29]">Invoice: 2026 - 184A</p>
                             <p className="text-zinc-500 font-light">Fornecedor por associar</p>
                             <p className="text-zinc-500 font-light">18 de Outubro</p>
@@ -417,7 +417,7 @@ export default function HomeConciergeAisle() {
                   {/* Bubble 2 (Concierge - left, White WhatsApp Bubble) */}
                   <div className="self-start bg-white rounded-r-lg rounded-bl-lg px-2 py-1.5 max-w-[85%] shadow-[0_1px_1.5px_rgba(0,0,0,0.08)] text-left relative z-10">
                     <p className="leading-snug text-zinc-800 text-[6.5px] md:text-[7.8px]">
-                      Olá Sofia! Recebido com sucesso. Já carreguei os vossos convidados. Pode atualizar o ecrã do seu computador para ver a lista ativa! 😊
+                      Olá Sofia! Recebido com sucesso. Já carreguei os vossos convidados. Pode actualizar o ecrã do seu computador para ver a lista activa! 😊
                     </p>
                     <div className="text-[4px] md:text-[5px] text-zinc-400 text-right mt-1 select-none">
                       <span>12:16</span>
