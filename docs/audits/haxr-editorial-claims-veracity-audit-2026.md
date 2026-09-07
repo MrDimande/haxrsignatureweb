@@ -184,18 +184,23 @@ A inspecção ao ficheiro `src/lib/seo/jsonld.ts` confirmou uma postura de **ele
 
 ---
 
-### 3.6. Conflito Comercial e Disparidade de Preçário
+### 3.6. Conflito Comercial e Disparidade de Preçário (RESOLVIDO)
 
-Identificou-se uma discrepância expressiva entre os pacotes e preços de convites digitais apresentados em diferentes secções da plataforma:
+A discrepância histórica entre os pacotes e preços de convites digitais apresentados em diferentes secções da plataforma foi definitivamente harmonizada e congelada por decisão explícita do Proprietário:
 
-| Nível / Pacote | Configuração Global (`site-config.ts:406`) | Atelier Interactivo (`InvitationAtelierExperience.tsx:48`) | Diferença (MZN) |
+| Nível / Pacote | Tabela Canónica Aprovada | Valor Oficial (MZN) | Estado de Governação |
 | :--- | :---: | :---: | :---: |
-| **Entrada** | *Essencial* — **5.999 MT** | *Prólogo* — **7.999 MT** | **+2.000 MT (+33%)** |
-| **Intermédio** | *Signature* — **12.999 MT** | *Elo* — **15.999 MT** | **+3.000 MT (+23%)** |
-| **Topo de Gama** | *Royal* — **19.999 MT** | *Legado* — **25.000 MT** | **+5.001 MT (+25%)** |
+| **Edicional I** | **Prólogo** | **7.999 MT** | `PACKAGE_NAMES_OWNER_CONFIRMED=true`<br>`PRICE_OWNER_CONFIRMED=true` |
+| **Edicional II** | **Elo** | **15.999 MT** | `PACKAGE_NAMES_OWNER_CONFIRMED=true`<br>`PRICE_OWNER_CONFIRMED=true` |
+| **Alta-Costura** | **Legado** | **25.000 MT** | `PACKAGE_NAMES_OWNER_CONFIRMED=true`<br>`PRICE_OWNER_CONFIRMED=true` |
 
-- **Diagnóstico:** A nomenclatura e os valores nominais não estão sincronizados. Um utilizador que consulte o resumo do atelier vê "7.999 MT a 25.000 MT", mas noutras menções ou dados partilhados surgem "5.999 MT a 19.999 MT".
-- **Acção Obrigatória:** O Proprietário deve estabelecer formalmente a tabela canónica em vigor e a nomenclatura oficial dos serviços.
+- **Decisão do Proprietário (Canónica):**
+  - Pacotes actuais oficiais: `Prólogo — 7.999 MT`, `Elo — 15.999 MT`, `Legado — 25.000 MT`.
+  - Pacotes legados arquivados (`LEGACY_PACKAGES_PUBLIC=false`): *Essencial*, *Signature* (apenas nível de pacote; *"HAXR Signature"* permanece intocável como nome de marca), *Royal*.
+  - Classificação de Governação Comercial:
+    `PACKAGE_NAMES_OWNER_CONFIRMED=true`
+    `PRICE_OWNER_CONFIRMED=true`
+    `COMMERCIAL_BLOCKERS_REMAINING=0`
 
 ---
 
@@ -227,7 +232,7 @@ Abaixo apresenta-se o quadro consolidado das incidências mais relevantes catalo
 | **CLM-SEC-08** | `/` (Advisory) | *«...garantindo que o casal vive a experiência...»* | Garantia | **MEDIUM** | Substituir por «para que o casal viva a experiência...». |
 | **CLM-SEC-11** | `/convites-*` | *«Find Your Seat (<3s)»* | Performance | **MEDIUM** | Suavizar para «Pesquisa instantânea de mesa». |
 | **CLM-BRD-01** | `Hero` | *«A forma mais fácil de planear»* | Superlativo | **MEDIUM** | Substituir por «A forma mais serena de planear». |
-| **CLM-BRD-08** | `/convites-*` | Divergência de preçário (5.999–19.999 MT vs 7.999–25.000 MT) | Preçário | **HIGH** | Unificar preçário canónico aprovado pelo proprietário. |
+| **CLM-BRD-08** | `/convites-*` | Preçário Canónico: Prólogo (7.999 MT), Elo (15.999 MT), Legado (25.000 MT) | Preçário | **RESOLVED** | Harmonização canónica concluída; aprovado formalmente pelo Proprietário. |
 
 ---
 
