@@ -38,7 +38,7 @@ export default function HomeTestimonialsTeaser({
             <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light text-white leading-tight max-w-2xl">
               O Que Dizem os Nossos Clientes
             </h2>
-            <p className="font-signature text-3xl md:text-4xl text-brand-gold/55 absolute -top-5 left-72 pointer-events-none select-none">
+            <p className="font-signature text-3xl md:text-4xl text-brand-gold/55 absolute -top-5 left-64 md:left-72 pointer-events-none select-none hidden sm:block">
               Amor & Confiança
             </p>
           </div>

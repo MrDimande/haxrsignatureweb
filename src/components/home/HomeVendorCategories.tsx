@@ -103,6 +103,7 @@ export default function HomeVendorCategories() {
             <Search className="w-4 h-4 text-brand-text-dark/40 mr-3 shrink-0" />
             <input
               type="text"
+              aria-label="Pesquisar fornecedores"
               placeholder="Pesquisar fornecedores (ex: Fotógrafos, Espaços)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

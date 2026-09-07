@@ -34,20 +34,20 @@ export default function HomeConciergeAisle() {
 
       {/* Background Ambient Glow */}
       <div
-        className="absolute left-1/3 top-1/2 -translate-y-1/2 w-[350px] h-[350px] opacity-10 bg-brand-gold blur-[100px] pointer-events-none rounded-full"
+        className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-[min(350px,90vw)] h-[min(350px,90vw)] opacity-10 bg-brand-gold blur-[100px] pointer-events-none rounded-full"
       />
 
       {/* Left Column: Side-by-Side MacBook Pro & iPhone Showcase (No Overlap) */}
-      <div className="lg:col-span-8 flex items-center justify-center relative order-2 lg:order-1 pt-8 pb-16 select-none">
+      <div className="lg:col-span-8 flex items-center justify-center relative order-2 lg:order-1 pt-8 pb-16 select-none overflow-hidden sm:overflow-visible">
 
         {/* Device Container */}
-        <div className="w-full max-w-[640px] flex flex-col sm:flex-row items-end justify-center gap-10 md:gap-14 relative z-10">
+        <div className="w-full max-w-[640px] flex flex-col sm:flex-row items-center sm:items-end justify-center gap-8 sm:gap-10 md:gap-14 relative z-10">
 
           {/* Ambient shadow beneath both devices */}
           <div className="absolute bottom-[-15px] left-0 right-0 h-6 bg-black/60 blur-[30px] rounded-full pointer-events-none -z-10 animate-pulse" />
 
           {/* 1. MacBook Pro (Clean, Facing Front, Space Gray Metallic Bezel) */}
-          <div className="w-full max-w-[360px] md:max-w-[430px] shrink-0">
+          <div className="w-full max-w-[320px] sm:max-w-[360px] md:max-w-[430px] shrink-0">
 
             {/* Screen Bezel with metallic border */}
             <div className="relative border-[10px] md:border-[12px] border-zinc-900 bg-zinc-950 rounded-t-2xl shadow-[0_30px_60px_rgba(0,0,0,0.85)] overflow-hidden aspect-[16/10] flex flex-col justify-between">
@@ -121,7 +121,7 @@ export default function HomeConciergeAisle() {
                             <span>Dados</span>
                           </div>
                           <span className="font-mono text-[5px] md:text-[6px] bg-brand-gold/10 text-brand-gold px-1.5 py-0.5 rounded-sm">
-                            Planilha Ativa
+                            Folha de cálculo activa
                           </span>
                         </div>
 
@@ -231,7 +231,7 @@ export default function HomeConciergeAisle() {
                             <p className="text-zinc-500 font-light">Maputo, Moçambique</p>
                           </div>
                           <div className="text-right space-y-0.5">
-                            <p className="text-zinc-400 uppercase font-mono text-[3.8px] tracking-wider">Fatura / ID:</p>
+                            <p className="text-zinc-400 uppercase font-mono text-[3.8px] tracking-wider">Factura / ID:</p>
                             <p className="font-bold text-[#2d2a29]">Invoice: 2026 - 184A</p>
                             <p className="text-zinc-500 font-light">Fornecedor por associar</p>
                             <p className="text-zinc-500 font-light">18 de Outubro</p>
@@ -333,7 +333,7 @@ export default function HomeConciergeAisle() {
             </div>
 
             {/* MacBook Pro Base Keyboard Frame */}
-            <div className="relative w-[114%] -ml-[7%] h-[10px] md:h-[12px] bg-gradient-to-r from-zinc-700 via-zinc-800 to-zinc-700 rounded-b-xl border-t border-zinc-600 shadow-[0_15px_35px_rgba(0,0,0,0.65)] flex items-center justify-center z-10">
+            <div className="relative w-[104%] -ml-[2%] sm:w-[114%] sm:-ml-[7%] h-[10px] md:h-[12px] bg-gradient-to-r from-zinc-700 via-zinc-800 to-zinc-700 rounded-b-xl border-t border-zinc-600 shadow-[0_15px_35px_rgba(0,0,0,0.65)] flex items-center justify-center z-10">
               <div className="w-16 h-1 bg-zinc-950 rounded-b-sm" />
             </div>
 
@@ -417,7 +417,7 @@ export default function HomeConciergeAisle() {
                   {/* Bubble 2 (Concierge - left, White WhatsApp Bubble) */}
                   <div className="self-start bg-white rounded-r-lg rounded-bl-lg px-2 py-1.5 max-w-[85%] shadow-[0_1px_1.5px_rgba(0,0,0,0.08)] text-left relative z-10">
                     <p className="leading-snug text-zinc-800 text-[6.5px] md:text-[7.8px]">
-                      Olá Sofia! Recebido com sucesso. Já carreguei os vossos convidados. Pode atualizar o ecrã do seu computador para ver a lista ativa! 😊
+                      Olá Sofia! Recebido com sucesso. Já carreguei os vossos convidados. Pode actualizar o ecrã do seu computador para ver a lista activa! 😊
                     </p>
                     <div className="text-[4px] md:text-[5px] text-zinc-400 text-right mt-1 select-none">
                       <span>12:16</span>

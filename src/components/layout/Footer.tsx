@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, Clock } from "lucide-react";
-import { IconInstagram, IconFacebook, IconWhatsApp, IconMail, IconMapPin } from "@/components/ui/FooterIcons";
-import BrandLogo from "@/components/ui/BrandLogo";
-import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import NewsletterSignupForm from "@/components/marketing/forms/NewsletterSignupForm";
+import BrandLogo from "@/components/ui/BrandLogo";
+import { IconFacebook, IconInstagram, IconMail, IconMapPin, IconWhatsApp } from "@/components/ui/FooterIcons";
+import RevealOnScroll from "@/components/ui/RevealOnScroll";
 import SignaturePad from "@/components/ui/SignaturePad";
 import { footerLinkGroups } from "@/lib/marketing/navigation";
 import { portfolioCopy, siteContact } from "@/lib/site-config";
+import { AnimatePresence, motion } from "framer-motion";
+import { Clock, Phone, X } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const legalTabs = ["condicoes", "termos", "privacidade"] as const;
 type LegalTab = (typeof legalTabs)[number];
@@ -194,11 +194,11 @@ export default function Footer() {
                         <span>{siteContact.whatsapp.display} (WhatsApp)</span>
                       </a>
                       <a
-                        href="tel:+258820883428"
+                        href="tel:+258870883428"
                         className="font-serif text-md text-white/85 group-hover:text-gold transition-colors duration-500 flex items-center gap-2"
                       >
-                        <IconWhatsApp className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0 opacity-0 pointer-events-none" />
-                        <span>+258 82 088 3428 (Chamadas)</span>
+                        <Phone className="w-4 h-4 text-white/40 group-hover:text-gold transition-colors shrink-0" />
+                        <span>+258 87 088 3428 (Chamadas)</span>
                       </a>
                     </div>
                   </div>
