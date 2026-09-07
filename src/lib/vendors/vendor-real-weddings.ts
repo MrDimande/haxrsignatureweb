@@ -24,8 +24,16 @@ export type PublicationPermissionStatus =
   | "CLIENT_PERMISSION_REQUIRED"
   | "NOT_APPLICABLE";
 
+export type HaxrDigitalService =
+  | "Web-Convite HAXR"
+  | "Gestão de Convidados"
+  | "Plus Memories"
+  | "Assessoria Completa"
+  | "Coordenação de Dia";
+
 export type RealWedding = {
   id: string;
+  coupleId?: string;
   eventType: RealWeddingEventType;
   /**
    * Título público para renderização em componentes.
@@ -45,12 +53,19 @@ export type RealWedding = {
   venue: string;
   city: string;
   date?: string;
+  eventDate?: string; // Data ISO, ex: "2026-08-08" ou "2026-08-15"
+  eventDateEnd?: string; // Data ISO de fecho para eventos de múltiplos dias, ex: "2026-08-16"
   /**
    * Escala de assistência aproximada estritamente preservada conforme confirmada pelo proprietário:
    * "cerca de 250 convidados", "mais de 300 convidados", "cerca de 300 convidados".
    * Proibida a conversão em número exacto arbitrário.
    */
   guestScale: string;
+  /**
+   * Serviços digitais e operacionais HAXR efectivamente contratados e utilizados.
+   * Não inferir serviços não confirmados pelo proprietário.
+   */
+  servicesUsed?: HaxrDigitalService[];
   coverImage: string;
   slug: string;
   vendorCategories: SupplierCategoryId[];
@@ -58,12 +73,24 @@ export type RealWedding = {
   evidenceStatus: RealWeddingEvidenceStatus;
   clientPublicationPermission: PublicationPermissionStatus;
   photoPublicationPermission: PublicationPermissionStatus;
+  plusMemoriesMarketingPermission?: PublicationPermissionStatus;
   testimonialPermission?: PublicationPermissionStatus;
   /**
    * Controla a elegibilidade para exibição pública em páginas de marketing.
    * OBRIGATÓRIO: isPublic === true para inclusão em directórios ou galerias públicas.
    */
   isPublic: boolean;
+};
+
+/**
+ * Modelo de jornada contínua de celebrações de um cliente/casal HAXR.
+ * Permite associar múltiplos eventos (ex.: Lobolo → Casamento) a um mesmo casal.
+ */
+export type HaxrClientCelebrationJourney = {
+  coupleId: string;
+  coupleNames: string;
+  clientPublicationPermission: PublicationPermissionStatus;
+  celebrations: RealWedding[];
 };
 
 /**
@@ -85,6 +112,7 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
   // ── CASO 1 (CONFIRMADO PELO PROPRIETÁRIO) ────────────────────────────────────
   {
     id: "evelyn-eventos-casamento",
+    coupleId: "vania-luky-fabiao-dimande",
     eventType: "Casamento",
     couple: "Casamento no Evelyn Eventos — cerca de 250 convidados",
     coupleNames: "Vânia Luky & Fabião Dimande",
@@ -92,7 +120,14 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
     venue: "Evelyn Eventos",
     city: "Maputo",
     date: "Maio 2026",
+    eventDate: "2026-05-16",
     guestScale: "cerca de 250 convidados",
+    servicesUsed: [
+      "Web-Convite HAXR",
+      "Gestão de Convidados",
+      "Assessoria Completa",
+      "Coordenação de Dia",
+    ],
     coverImage: "/images/casamento-vania-fabiao-evelyn-eventos.webp",
     slug: "/portfolio",
     vendorCategories: [
@@ -114,17 +149,64 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
     isPublic: true,
   },
 
-  // ── CASO 2 (CONFIRMADO PELO PROPRIETÁRIO) ────────────────────────────────────
+  // ── CASO 2: EVENTO 1 DA JORNADA JÉSSICA & SAMUEL (LOBOLO KUTENGA) ─────────────
+  // Associação factual confirmada pelo proprietário: 8 de Agosto de 2026 na Casa d'Artista Kutenga
+  {
+    id: "kutenga-lobolo",
+    coupleId: "jessica-muege-samuel-govene",
+    eventType: "Lobolo",
+    couple: "Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados",
+    coupleNames: "Jéssica Muege & Samuel Govene",
+    anonymisedTitle: "Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados",
+    venue: "Casa d'Artista Kutenga",
+    city: "Maputo",
+    date: "8 de Agosto de 2026",
+    eventDate: "2026-08-08",
+    guestScale: "cerca de 300 convidados",
+    servicesUsed: [
+      "Web-Convite HAXR",
+      "Gestão de Convidados",
+      "Plus Memories",
+    ],
+    coverImage: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+    slug: "/portfolio",
+    vendorCategories: [
+      "venues",
+      "caterers",
+      "decor",
+      "music",
+      "planning",
+    ],
+    editorial:
+      "Celebração tradicional de Lobolo na Casa d'Artista Kutenga para cerca de 300 convidados, integrando Web-Convite HAXR, gestão de convidados e registo de memórias Plus Memories.",
+    evidenceStatus: "OWNER_CONFIRMED",
+    clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
+    photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
+    plusMemoriesMarketingPermission: "CLIENT_PERMISSION_REQUIRED",
+    testimonialPermission: "CLIENT_PERMISSION_REQUIRED",
+    isPublic: true,
+  },
+
+  // ── CASO 2: EVENTO 2 DA JORNADA JÉSSICA & SAMUEL (CASAMENTO VILA VERDE) ───────
+  // Associação factual confirmada pelo proprietário: 15 e 16 de Agosto de 2026 na Vila Verde
   {
     id: "vila-verde-casamento",
+    coupleId: "jessica-muege-samuel-govene",
     eventType: "Casamento",
     couple: "Casamento na Vila Verde — mais de 300 convidados",
     coupleNames: "Jéssica Muege & Samuel Govene",
     anonymisedTitle: "Casamento na Vila Verde — mais de 300 convidados",
     venue: "Vila Verde",
     city: "Maputo",
-    date: "Agosto 2026",
+    date: "15 e 16 de Agosto de 2026",
+    eventDate: "2026-08-15",
+    eventDateEnd: "2026-08-16",
     guestScale: "mais de 300 convidados",
+    servicesUsed: [
+      "Web-Convite HAXR",
+      "Gestão de Convidados",
+      "Plus Memories",
+    ],
     coverImage: "/images/portfolio/mosaic-salao-branco-preparado.webp",
     slug: "/portfolio",
     vendorCategories: [
@@ -136,39 +218,12 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
       "planning",
     ],
     editorial:
-      "Celebração de casamento na Vila Verde para mais de 300 convidados, com planeamento e coordenação operacional HAXR Signature.",
+      "Celebração de casamento na Vila Verde acolhendo mais de 300 convidados, com Web-Convite HAXR, gestão de convidados e experiência digital interactiva Plus Memories.",
     evidenceStatus: "OWNER_CONFIRMED",
     clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
+    plusMemoriesMarketingPermission: "CLIENT_PERMISSION_REQUIRED",
     testimonialPermission: "CLIENT_PERMISSION_REQUIRED",
-    isPublic: true,
-  },
-
-  // ── CASO 3 (CONFIRMADO PELO PROPRIETÁRIO — LOBOLO KUTENGA) ──────────────────
-  // Nota de Governação: NÃO associar a Jéssica Muege & Samuel Govene salvo confirmação expressa do proprietário.
-  {
-    id: "kutenga-lobolo",
-    eventType: "Lobolo",
-    couple: "Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados",
-    anonymisedTitle: "Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados",
-    venue: "Casa d'Artista Kutenga",
-    city: "Maputo",
-    guestScale: "cerca de 300 convidados",
-    coverImage: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
-    slug: "/portfolio",
-    vendorCategories: [
-      "venues",
-      "caterers",
-      "decor",
-      "music",
-      "planning",
-    ],
-    editorial:
-      "Cerimónia tradicional de Lobolo na Casa d'Artista Kutenga para cerca de 300 convidados, com acompanhamento de protocolo e recepção HAXR Signature.",
-    evidenceStatus: "OWNER_CONFIRMED",
-    clientPublicationPermission: "NOT_APPLICABLE",
-    photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
-    testimonialPermission: "NOT_APPLICABLE",
     isPublic: true,
   },
 
@@ -233,6 +288,38 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
     isPublic: false,
   },
 ];
+
+/**
+ * Jornadas Contínuas de Clientes HAXR Signature.
+ * Modela explicitamente a relação entre celebrações de um mesmo cliente/casal.
+ */
+export const HAXR_CLIENT_JOURNEYS: HaxrClientCelebrationJourney[] = [
+  {
+    coupleId: "jessica-muege-samuel-govene",
+    coupleNames: "Jéssica Muege & Samuel Govene",
+    clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
+    celebrations: HAXR_REAL_WEDDINGS.filter(
+      (w) => w.coupleId === "jessica-muege-samuel-govene",
+    ),
+  },
+  {
+    coupleId: "vania-luky-fabiao-dimande",
+    coupleNames: "Vânia Luky & Fabião Dimande",
+    clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
+    celebrations: HAXR_REAL_WEDDINGS.filter(
+      (w) => w.coupleId === "vania-luky-fabiao-dimande",
+    ),
+  },
+];
+
+/**
+ * Retorna as celebrações associadas a um casal específico.
+ */
+export function getCelebrationsForCouple(coupleId: string): RealWedding[] {
+  return HAXR_REAL_WEDDINGS.filter(
+    (w) => w.coupleId === coupleId && w.isPublic === true,
+  );
+}
 
 /**
  * Retorna os casamentos reais curados que correspondem

@@ -334,23 +334,33 @@ A estrutura de dados em `src/lib/vendors/vendor-real-weddings.ts` foi expandida 
    - Titulares: Vânia Luky & Fabião Dimande (Maio 2026)
    - Espaço: Evelyn Eventos
    - Escala: *cerca de 250 convidados*
+   - Serviços HAXR: Web-Convite HAXR, Gestão de Convidados, Assessoria Completa, Coordenação de Dia
    - Estatuto: `EVIDENCE_STATUS=OWNER_CONFIRMED`
    - Direitos de Publicação: `CLIENT_NAME_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PHOTO_PERMISSION=CLIENT_PERMISSION_REQUIRED`
    - Renderização Pública: Formato seguro e anónimo — *«Casamento no Evelyn Eventos — cerca de 250 convidados»*.
-2. **Caso 2 — Casamento na Vila Verde**:
-   - Titulares: Jéssica Muege & Samuel Govene (Agosto 2026)
-   - Espaço: Vila Verde
-   - Escala: *mais de 300 convidados*
-   - Estatuto: `EVIDENCE_STATUS=OWNER_CONFIRMED`
-   - Direitos de Publicação: `CLIENT_NAME_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PHOTO_PERMISSION=CLIENT_PERMISSION_REQUIRED`
-   - Renderização Pública: Formato seguro e anónimo — *«Casamento na Vila Verde — mais de 300 convidados»*.
-3. **Caso 3 — Lobolo na Casa d'Artista Kutenga**:
-   - Tipo de Evento: Lobolo
-   - Espaço: Casa d'Artista Kutenga
-   - Escala: *cerca de 300 convidados*
-   - Estatuto: `EVIDENCE_STATUS=OWNER_CONFIRMED`
-   - Guardrail de Governação: **NÃO associado** a Jéssica Muege & Samuel Govene (conforme salvaguarda expressa do proprietário).
-   - Renderização Pública: Formato seguro e anónimo — *«Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados»*.
+2. **Caso 2 — Jornada de Celebrações de Jéssica Muege & Samuel Govene**:
+   - Titulares: **Jéssica Muege & Samuel Govene**
+   - Relação Arquitectural: Os dois eventos formam uma jornada contínua de celebrações do mesmo casal cliente HAXR (`coupleId: "jessica-muege-samuel-govene"`).
+   - **Evento 1: Lobolo na Casa d'Artista Kutenga**:
+     - Data: 8 de Agosto de 2026 (`eventDate: "2026-08-08"`)
+     - Espaço: Casa d'Artista Kutenga
+     - Escala: *cerca de 300 convidados*
+     - Serviços HAXR Utilizados: `Web-Convite HAXR`, `Gestão de Convidados`, `Plus Memories`
+     - Estatuto de Evidência: `EVIDENCE_STATUS=OWNER_CONFIRMED`
+     - Associação de Casal: `KUTENGA_LOBOLO_COUPLE_ASSOCIATION=OWNER_CONFIRMED`
+     - Direitos de Publicação: `CLIENT_NAME_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PHOTO_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PLUS_MEMORIES_MARKETING_PERMISSION=CLIENT_PERMISSION_REQUIRED`
+     - Renderização Pública: Formato seguro e anónimo — *«Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados»*.
+   - **Evento 2: Casamento na Vila Verde**:
+     - Datas: 15 e 16 de Agosto de 2026 (`eventDate: "2026-08-15"`, `eventDateEnd: "2026-08-16"`)
+     - Espaço: Vila Verde
+     - Escala: *mais de 300 convidados*
+     - Serviços HAXR Utilizados: `Web-Convite HAXR`, `Gestão de Convidados`, `Plus Memories`
+     - Estatuto de Evidência: `EVIDENCE_STATUS=OWNER_CONFIRMED`
+     - Direitos de Publicação: `CLIENT_NAME_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PHOTO_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PLUS_MEMORIES_MARKETING_PERMISSION=CLIENT_PERMISSION_REQUIRED`
+     - Renderização Pública: Formato seguro e anónimo — *«Casamento na Vila Verde — mais de 300 convidados»*.
+
+> [!IMPORTANT]
+> **Salvaguarda de Direitos de Autor e Plus Memories**: A participação dos convidados e do casal no Plus Memories não confere autorização automática para utilização pública promocional de fotografias ou vídeos enviados. Essa autorização carece de termo de consentimento autónomo.
 
 ---
 
@@ -363,14 +373,39 @@ HAXR SIGNATURE — POLANA & REAL EVENTS REMEDIATION EVIDENCE
 POLANA_PUBLIC_OCCURRENCES_BEFORE=5
 POLANA_PUBLIC_OCCURRENCES_AFTER=0
 
+COUPLE="Jéssica Muege & Samuel Govene"
+
+LOBOLO:
+DATE=2026-08-08
+VENUE="Casa d'Artista Kutenga"
+GUEST_SCALE="cerca de 300 convidados"
+
+WEDDING:
+DATE_START=2026-08-15
+DATE_END=2026-08-16
+VENUE="Vila Verde"
+GUEST_SCALE="mais de 300 convidados"
+
+SERVICES_USED_BOTH_EVENTS=[
+  "Web-Convite HAXR",
+  "Gestão de Convidados",
+  "Plus Memories"
+]
+
+COUPLE_ASSOCIATION_CORRECTED=true
+AUDIT_DOCUMENTATION_CORRECTED=true
+PUBLIC_ANONYMISATION_PRESERVED=true
+CLIENT_NAME_PERMISSION=CLIENT_PERMISSION_REQUIRED
+PHOTO_PERMISSION=CLIENT_PERMISSION_REQUIRED
+PLUS_MEMORIES_MARKETING_PERMISSION=CLIENT_PERMISSION_REQUIRED
+
 OWNER_CONFIRMED_REAL_EVENTS_ADDED=3
 
 EVLYN_EVENT_STATUS=OWNER_CONFIRMED (CLIENT_PERMISSION_REQUIRED)
 VILA_VERDE_EVENT_STATUS=OWNER_CONFIRMED (CLIENT_PERMISSION_REQUIRED)
-KUTENGA_LOBOLO_STATUS=OWNER_CONFIRMED (NOT_APPLICABLE for couple; CLIENT_PERMISSION_REQUIRED for photos)
+KUTENGA_LOBOLO_STATUS=OWNER_CONFIRMED (CLIENT_PERMISSION_REQUIRED)
 
 CLIENT_PERMISSION_REQUIRED_COUNT=3
-
 ANONYMISED_PUBLIC_FALLBACKS_USED=true
 ================================================================
 ```

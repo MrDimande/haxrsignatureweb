@@ -44,7 +44,7 @@ const weddingProjects: WeddingProject[] = [
     id: "vila-verde",
     couple: "Casamento na Vila Verde",
     location: "Maputo · Moçambique",
-    tagline: "mais de 300 convidados · Gestão de Fluxos e Acolhimento",
+    tagline: "mais de 300 convidados · 15 e 16 de Agosto de 2026",
     mainImage: "/images/portfolio/mosaic-salao-branco-preparado.webp",
     galleryImages: [
       "/images/portfolio/mosaic-salao-branco-preparado.webp",
@@ -52,18 +52,18 @@ const weddingProjects: WeddingProject[] = [
       "/images/categories/caterer.png",
     ],
     guests: "mais de 300 convidados",
-    services: "Coordenação Operacional de Dia · RSVP",
+    services: "Web-Convite HAXR · Gestão de Convidados · Plus Memories",
     description:
-      "Celebração de grande escala na Vila Verde acolhendo mais de 300 convidados. A coordenação da HAXR Signature garantiu fluidez nos acessos, orientação serena às mesas e acompanhamento contínuo dos bastidores.",
+      "Celebração de casamento na Vila Verde acolhendo mais de 300 convidados ao longo de dois dias (15 e 16 de Agosto de 2026). A experiência integrou Web-Convite HAXR, gestão digital de convidados e registo interactivo no Plus Memories.",
     quote:
-      "A integração do acolhimento com a gestão de mesas permitiu receber mais de 300 convidados com tranquilidade e sofisticação.",
+      "A integração do Web-Convite com a gestão de convidados e o Plus Memories permitiu acolher mais de 300 convidados com tranquilidade e sofisticação.",
     author: "Casamento na Vila Verde",
   },
   {
     id: "kutenga-lobolo",
     couple: "Lobolo na Casa d'Artista Kutenga",
     location: "Maputo · Moçambique",
-    tagline: "cerca de 300 convidados · Celebração Tradicional",
+    tagline: "cerca de 300 convidados · 8 de Agosto de 2026",
     mainImage: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
     galleryImages: [
       "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
@@ -71,11 +71,11 @@ const weddingProjects: WeddingProject[] = [
       "/images/categories/music.png",
     ],
     guests: "cerca de 300 convidados",
-    services: "Acompanhamento Cultural · Protocolo de Recepção",
+    services: "Web-Convite HAXR · Gestão de Convidados · Plus Memories",
     description:
-      "Cerimónia tradicional de Lobolo realizada na Casa d'Artista Kutenga para cerca de 300 convidados. A curadoria HAXR honrou os momentos protocolares com organização impecável e discrição absoluta.",
+      "Cerimónia tradicional de Lobolo na Casa d'Artista Kutenga para cerca de 300 convidados (8 de Agosto de 2026). A celebração integrou Web-Convite HAXR, acolhimento digital e cobertura colaborativa Plus Memories.",
     quote:
-      "O respeito pelos ritos tradicionais e a precisão no acolhimento proporcionaram uma celebração memorável e cheia de dignidade.",
+      "A harmonização dos ritos tradicionais com a tecnologia do Web-Convite e do Plus Memories acolheu as famílias com distinção e dignidade.",
     author: "Lobolo na Casa d'Artista Kutenga",
   },
 ];
