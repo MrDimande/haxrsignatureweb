@@ -30,7 +30,7 @@ export const ferramentasCatalog: readonly FerramentaItem[] = [
     href: "/tools/guest-list",
     image: "/images/tools/guest-list-bg.png",
     tier: "core",
-    includedIn: "Pacotes Signature e Royal",
+    includedIn: "Pacotes Elo e Legado",
     cta: "Explorar lista",
   },
   {
@@ -100,7 +100,7 @@ export const ferramentasCatalog: readonly FerramentaItem[] = [
     href: "/tools/vision-boards",
     image: "/images/tools/concierge-bg.png",
     tier: "planeamento",
-    includedIn: "Assessoria e Signature",
+    includedIn: "Assessoria e Edição Legado",
     cta: "Criar moodboard",
   },
   {
@@ -120,7 +120,7 @@ export const ferramentasCatalog: readonly FerramentaItem[] = [
     href: "/gestao-convidados",
     image: "/images/tools/guest-list-bg.png",
     tier: "operacao",
-    includedIn: "Pacote Royal e assessoria",
+    includedIn: "Pacote Legado e assessoria",
     cta: "Saber mais",
   },
   {
@@ -130,7 +130,7 @@ export const ferramentasCatalog: readonly FerramentaItem[] = [
     href: "/gestao-convidados",
     image: "/images/tools/guest-list-bg.png",
     tier: "operacao",
-    includedIn: "Pacote Royal e operações premium",
+    includedIn: "Pacote Legado e operações premium",
     cta: "Saber mais",
   },
   {
@@ -140,7 +140,7 @@ export const ferramentasCatalog: readonly FerramentaItem[] = [
     href: "/tools/cash-registry/setup",
     image: "/images/tools/budget-tracker-bg.png",
     tier: "comercial",
-    includedIn: "Add-on ou pacote Royal",
+    includedIn: "Add-on ou pacote Legado",
     cta: "Configurar lista",
   },
   {
@@ -150,7 +150,7 @@ export const ferramentasCatalog: readonly FerramentaItem[] = [
     href: "/tools/wedding-website/setup",
     image: "/images/tools/concierge-bg.png",
     tier: "comercial",
-    includedIn: "Pacotes Signature e Royal",
+    includedIn: "Pacotes Elo e Legado",
     cta: "Pré-visualizar",
   },
   {

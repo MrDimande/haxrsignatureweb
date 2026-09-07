@@ -369,7 +369,9 @@ export default function SupplierProfileClient({
                                   : wedding.anonymisedTitle}
                               </p>
                               <p className="mt-0.5 font-mono text-[8px] uppercase tracking-wider text-brand-gold">
-                                {wedding.venue} {wedding.date ? `· ${wedding.date}` : ""}
+                                {wedding.clientPublicationPermission === "GRANTED"
+                                  ? `${wedding.venue}${wedding.date ? ` · ${wedding.date}` : ""}`
+                                  : `${wedding.city} · ${wedding.guestScale}`}
                               </p>
                             </div>
                           </div>
@@ -457,7 +459,7 @@ export default function SupplierProfileClient({
                         Resposta
                       </p>
                       <p className="font-sans text-xs font-medium text-brand-text-dark">
-                        {supplier.responseTime}
+                        {supplier.responseTime ?? "Sob consulta"}
                       </p>
                     </div>
 
@@ -467,7 +469,7 @@ export default function SupplierProfileClient({
                         Satisfação
                       </p>
                       <p className="font-sans text-xs font-medium text-brand-text-dark">
-                        {supplier.satisfactionRate}%
+                        {supplier.satisfactionRate != null ? `${supplier.satisfactionRate}%` : "A confirmar"}
                       </p>
                     </div>
 
@@ -477,7 +479,9 @@ export default function SupplierProfileClient({
                         Experiência
                       </p>
                       <p className="font-sans text-xs font-medium text-brand-text-dark">
-                        {supplier.experienceYears} anos
+                        {supplier.experienceYears != null
+                          ? `${supplier.experienceYears} ${supplier.experienceYears === 1 ? "ano" : "anos"}`
+                          : "Sob consulta"}
                       </p>
                     </div>
 
@@ -487,7 +491,7 @@ export default function SupplierProfileClient({
                         Membro
                       </p>
                       <p className="font-sans text-xs font-medium text-brand-text-dark">
-                        Desde {supplier.memberSince}
+                        {supplier.memberSince ? `Desde ${supplier.memberSince}` : "Membro Verificado"}
                       </p>
                     </div>
                   </div>

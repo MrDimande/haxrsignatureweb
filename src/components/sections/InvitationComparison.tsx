@@ -60,13 +60,13 @@ export default function InvitationComparison() {
                         Serviço
                       </th>
                       <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-brand-text-dark/50 font-normal text-center">
-                        Essencial
+                        Prólogo
                       </th>
                       <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-brand-gold font-medium text-center border-x border-brand-gold/20 bg-brand-gold/[0.04]">
-                        Signature
+                        Elo
                       </th>
                       <th className="py-4 px-3 font-mono text-[8px] tracking-[0.35em] uppercase text-brand-text-dark/50 font-normal text-center">
-                        Royal
+                        Legado
                       </th>
                     </tr>
                   </thead>
@@ -80,13 +80,13 @@ export default function InvitationComparison() {
                           {row.service}
                         </td>
                         <td className="py-3.5 text-center">
-                          <CellIcon level={row.essencial} />
+                          <CellIcon level={row.prologo} />
                         </td>
                         <td className="py-3.5 text-center border-x border-brand-gold/20 bg-brand-gold/[0.03]">
-                          <CellIcon level={row.signature} />
+                          <CellIcon level={row.elo} />
                         </td>
                         <td className="py-3.5 text-center">
-                          <CellIcon level={row.royal} />
+                          <CellIcon level={row.legado} />
                         </td>
                       </tr>
                     ))}

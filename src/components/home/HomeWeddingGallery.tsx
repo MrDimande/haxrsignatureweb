@@ -44,7 +44,7 @@ const weddingProjects: WeddingProject[] = [
     id: "vila-verde",
     couple: "Casamento na Vila Verde",
     location: "Maputo · Moçambique",
-    tagline: "mais de 300 convidados · 15 e 16 de Agosto de 2026",
+    tagline: "mais de 300 convidados · Web-Convite e Memórias",
     mainImage: "/images/portfolio/mosaic-salao-branco-preparado.webp",
     galleryImages: [
       "/images/portfolio/mosaic-salao-branco-preparado.webp",
@@ -54,16 +54,16 @@ const weddingProjects: WeddingProject[] = [
     guests: "mais de 300 convidados",
     services: "Web-Convite HAXR · Gestão de Convidados · Plus Memories",
     description:
-      "Celebração de casamento na Vila Verde acolhendo mais de 300 convidados ao longo de dois dias (15 e 16 de Agosto de 2026). A experiência integrou Web-Convite HAXR, gestão digital de convidados e registo interactivo no Plus Memories.",
+      "Celebração de casamento na Vila Verde acolhendo mais de 300 convidados. A experiência integrou Web-Convite HAXR, gestão digital de convidados e registo interactivo no Plus Memories.",
     quote:
       "A integração do Web-Convite com a gestão de convidados e o Plus Memories permitiu acolher mais de 300 convidados com tranquilidade e sofisticação.",
     author: "Casamento na Vila Verde",
   },
   {
     id: "kutenga-lobolo",
-    couple: "Lobolo na Casa d'Artista Kutenga",
+    couple: "Lobolo em Maputo",
     location: "Maputo · Moçambique",
-    tagline: "cerca de 300 convidados · 8 de Agosto de 2026",
+    tagline: "cerca de 300 convidados · Web-Convite e Memórias",
     mainImage: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
     galleryImages: [
       "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
@@ -73,10 +73,10 @@ const weddingProjects: WeddingProject[] = [
     guests: "cerca de 300 convidados",
     services: "Web-Convite HAXR · Gestão de Convidados · Plus Memories",
     description:
-      "Cerimónia tradicional de Lobolo na Casa d'Artista Kutenga para cerca de 300 convidados (8 de Agosto de 2026). A celebração integrou Web-Convite HAXR, acolhimento digital e cobertura colaborativa Plus Memories.",
+      "Cerimónia tradicional de Lobolo acolhendo cerca de 300 convidados na capital moçambicana. A celebração integrou Web-Convite HAXR, acolhimento digital e cobertura colaborativa Plus Memories.",
     quote:
       "A harmonização dos ritos tradicionais com a tecnologia do Web-Convite e do Plus Memories acolheu as famílias com distinção e dignidade.",
-    author: "Lobolo na Casa d'Artista Kutenga",
+    author: "Lobolo em Maputo",
   },
 ];
 

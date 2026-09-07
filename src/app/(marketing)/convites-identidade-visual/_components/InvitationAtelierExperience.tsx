@@ -1,5 +1,6 @@
 "use client";
 
+import IPhone17Frame from "@/components/ui/IPhone17Frame";
 import {
   ArrowRight,
   ChevronDown,
@@ -24,7 +25,6 @@ import Link from "next/link";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useRef, useState } from "react";
 import styles from "./invitation-atelier.module.css";
-import IPhone17Frame from "@/components/ui/IPhone17Frame";
 
 type Project = {
   number: string;
@@ -94,7 +94,7 @@ const projects: readonly Project[] = [
     imageAlt: "Abertura real do Web-Convite Jessica Kulaya",
     external: true,
     tone: "kulaya",
-    details: ["Simbolismo Cultural", "Abertura Majestosa", "Direção Artística Única", "Presença Institucional"],
+    details: ["Simbolismo Cultural", "Abertura Majestosa", "Direcção Artística Única", "Presença Institucional"],
   },
 ] as const;
 
@@ -141,7 +141,7 @@ const packages: readonly Package[] = [
     editionNumber: "Edicional N.º I",
     name: "Prólogo",
     price: "MT 7.999",
-    product: "Web-Convite HAXR · Essencial",
+    product: "Web-Convite HAXR · Prólogo",
     tagline: "A essência pura do primeiro encontro.",
     manifesto: "Desenhado para quem deseja uma introdução poética e imediata — sem ruído, com tipografia impecável e presença digital irrepreensível.",
     icon: Feather,

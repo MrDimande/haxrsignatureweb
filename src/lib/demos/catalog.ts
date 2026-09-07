@@ -33,7 +33,7 @@ export const demoCatalog: readonly DemoProject[] = [
     title: "Vânia & Fabiao — Convite de Casamento",
     shortTitle: "Vânia & Fabiao",
     category: "Casamento",
-    format: "Pacote Royal · Convite Digital",
+    format: "Edição Legado · Web-Convite HAXR",
     occasion: "Curadoria Digital & Identidade",
     caption: "Convite de Casamento Signature",
     editorialNote:
@@ -54,7 +54,7 @@ export const demoCatalog: readonly DemoProject[] = [
     title: "Jessica & Samuel — Save the Date",
     shortTitle: "Jessica & Samuel",
     category: "Save the Date",
-    format: "Pacote Royal · Save The Date",
+    format: "Edição Legado · Save The Date",
     occasion: "Narrativa Editorial & RSVP",
     caption: "Save the Date Bespoke",
     editorialNote:

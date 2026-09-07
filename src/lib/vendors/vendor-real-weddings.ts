@@ -38,7 +38,7 @@ export type RealWedding = {
   /**
    * Título público para renderização em componentes.
    * Se os direitos de nome estiverem pendentes (CLIENT_PERMISSION_REQUIRED),
-   * contém o formato seguro e anónimo (ex: "Casamento no Evelyn Eventos — cerca de 250 convidados").
+   * contém o formato seguro minimizado (ex: "Casamento no Evelyn Eventos — cerca de 250 convidados").
    */
   couple: string;
   /**
@@ -47,7 +47,7 @@ export type RealWedding = {
    */
   coupleNames?: string;
   /**
-   * Rótulo seguro e anónimo canónico.
+   * Rótulo seguro minimizado canónico.
    */
   anonymisedTitle: string;
   venue: string;
@@ -76,6 +76,15 @@ export type RealWedding = {
   plusMemoriesMarketingPermission?: PublicationPermissionStatus;
   testimonialPermission?: PublicationPermissionStatus;
   /**
+   * Classificação rigorosa de privacidade e reidentificação:
+   * PUBLIC_NAME_REMOVED=true
+   * CLIENT_IDENTITY_DIRECTLY_DISPLAYED=false
+   * REIDENTIFICATION_RISK="REQUIRES_REVIEW"
+   */
+  publicNameRemoved: boolean;
+  clientIdentityDirectlyDisplayed: boolean;
+  reidentificationRisk: "REQUIRES_REVIEW" | "LOW" | "MEDIUM";
+  /**
    * Controla a elegibilidade para exibição pública em páginas de marketing.
    * OBRIGATÓRIO: isPublic === true para inclusão em directórios ou galerias públicas.
    */
@@ -102,6 +111,17 @@ export function getPublicRealWeddingTitle(wedding: RealWedding): string {
     return wedding.coupleNames;
   }
   return wedding.anonymisedTitle;
+}
+
+/**
+ * Retorna o subtítulo público minimizado para evitar a combinação simultânea
+ * de data exacta, local, escala e serviços antes de autorização formal do cliente.
+ */
+export function getPublicRealWeddingSubtitle(wedding: RealWedding): string {
+  if (wedding.clientPublicationPermission === "GRANTED") {
+    return `${wedding.venue}${wedding.date ? ` · ${wedding.date}` : ""}`;
+  }
+  return `${wedding.city} · ${wedding.guestScale}`;
 }
 
 /**
@@ -146,18 +166,22 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
     clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     testimonialPermission: "CLIENT_PERMISSION_REQUIRED",
+    publicNameRemoved: true,
+    clientIdentityDirectlyDisplayed: false,
+    reidentificationRisk: "REQUIRES_REVIEW",
     isPublic: true,
   },
 
   // ── CASO 2: EVENTO 1 DA JORNADA JÉSSICA & SAMUEL (LOBOLO KUTENGA) ─────────────
   // Associação factual confirmada pelo proprietário: 8 de Agosto de 2026 na Casa d'Artista Kutenga
+  // Minimização de dados públicos: "Lobolo em Maputo — cerca de 300 convidados" (não expõe local específico + data exacta simultaneamente na oferta pública aberta)
   {
     id: "kutenga-lobolo",
     coupleId: "jessica-muege-samuel-govene",
     eventType: "Lobolo",
-    couple: "Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados",
+    couple: "Lobolo em Maputo — cerca de 300 convidados",
     coupleNames: "Jéssica Muege & Samuel Govene",
-    anonymisedTitle: "Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados",
+    anonymisedTitle: "Lobolo em Maputo — cerca de 300 convidados",
     venue: "Casa d'Artista Kutenga",
     city: "Maputo",
     date: "8 de Agosto de 2026",
@@ -178,17 +202,21 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
       "planning",
     ],
     editorial:
-      "Celebração tradicional de Lobolo na Casa d'Artista Kutenga para cerca de 300 convidados, integrando Web-Convite HAXR, gestão de convidados e registo de memórias Plus Memories.",
+      "Celebração tradicional de Lobolo acolhendo cerca de 300 convidados em Maputo, integrando Web-Convite HAXR, gestão de convidados e registo de memórias Plus Memories.",
     evidenceStatus: "OWNER_CONFIRMED",
     clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     plusMemoriesMarketingPermission: "CLIENT_PERMISSION_REQUIRED",
     testimonialPermission: "CLIENT_PERMISSION_REQUIRED",
+    publicNameRemoved: true,
+    clientIdentityDirectlyDisplayed: false,
+    reidentificationRisk: "REQUIRES_REVIEW",
     isPublic: true,
   },
 
   // ── CASO 2: EVENTO 2 DA JORNADA JÉSSICA & SAMUEL (CASAMENTO VILA VERDE) ───────
   // Associação factual confirmada pelo proprietário: 15 e 16 de Agosto de 2026 na Vila Verde
+  // Minimização de dados públicos: "Casamento na Vila Verde — mais de 300 convidados"
   {
     id: "vila-verde-casamento",
     coupleId: "jessica-muege-samuel-govene",
@@ -224,6 +252,9 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
     photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     plusMemoriesMarketingPermission: "CLIENT_PERMISSION_REQUIRED",
     testimonialPermission: "CLIENT_PERMISSION_REQUIRED",
+    publicNameRemoved: true,
+    clientIdentityDirectlyDisplayed: false,
+    reidentificationRisk: "REQUIRES_REVIEW",
     isPublic: true,
   },
 
@@ -255,6 +286,9 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
     clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     testimonialPermission: "CLIENT_PERMISSION_REQUIRED",
+    publicNameRemoved: false,
+    clientIdentityDirectlyDisplayed: false,
+    reidentificationRisk: "REQUIRES_REVIEW",
     isPublic: false,
   },
 
@@ -285,6 +319,9 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
     clientPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     photoPublicationPermission: "CLIENT_PERMISSION_REQUIRED",
     testimonialPermission: "CLIENT_PERMISSION_REQUIRED",
+    publicNameRemoved: false,
+    clientIdentityDirectlyDisplayed: false,
+    reidentificationRisk: "REQUIRES_REVIEW",
     isPublic: false,
   },
 ];
