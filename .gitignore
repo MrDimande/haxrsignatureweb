@@ -28,7 +28,8 @@ tsconfig.tsbuildinfo
 .vscode/
 
 # agent & editor configs
-.agents/
+.agents/*
+!.agents/rules/
 .agent/
 .claude/
 .cursor/
