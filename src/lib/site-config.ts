@@ -177,8 +177,8 @@ export const portfolioCopy = {
     headline: "Discrição absoluta e proteção da sua identidade.",
     paragraphs: [
       "A HAXR Signature compromete-se a proteger a privacidade dos seus clientes e convidados. Toda e qualquer informação, dados pessoais, fotografias ou localizações partilhados connosco são estritamente confidenciais.",
-      // LEGAL_REVIEW_REQUIRED=true — Substituição de declaração absoluta inverificável por formulação tecnicamente precisa de protecção e subprocessamento de infra-estrutura essencial
-      "Os dados recolhidos através do RSVP dos convidados são encriptados em trânsito e em repouso e tratados com estrita confidencialidade exclusivamente para a coordenação do evento, sendo processados unicamente por infra-estruturas técnicas essenciais de alojamento e notificações transaccionais, sem qualquer cedência ou comercialização a terceiros para fins publicitários ou de marketing.",
+      // LEGAL_REVIEW_REQUIRED=true — Declaração conservadora e verificável sobre privacidade e subprocessamento essencial de RSVP
+      "Os dados fornecidos através do RSVP são tratados de forma confidencial para a gestão da participação no evento e podem ser processados por prestadores tecnológicos essenciais à operação da plataforma e ao envio de notificações. A HAXR não comercializa estes dados nem os disponibiliza a terceiros para fins publicitários.",
       "Respeitamos o direito à privacidade e ao anonimato dos nossos clientes de alto perfil, assegurando que nenhum detalhe do projeto seja divulgado sem consentimento expresso por escrito.",
     ],
   },

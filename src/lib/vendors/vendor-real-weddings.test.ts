@@ -108,4 +108,37 @@ describe("HAXR Real Weddings & Privacy Governance", () => {
     assert.doesNotMatch(publicSubtitle, /Kutenga/);
     assert.doesNotMatch(publicSubtitle, /Agosto/);
   });
+
+  it("enforces canonical dates for Jessica & Samuel and prevents contradictory dates", () => {
+    const JESSICA_SAMUEL_LOBOLO_DATE = "2026-08-08";
+    const JESSICA_SAMUEL_WEDDING_START = "2026-08-15";
+    const JESSICA_SAMUEL_WEDDING_END = "2026-08-16";
+
+    const celebrations = getCelebrationsForCouple("jessica-muege-samuel-govene");
+    const lobolo = celebrations.find((c) => c.eventType === "Lobolo");
+    const casamento = celebrations.find((c) => c.eventType === "Casamento");
+
+    assert.ok(lobolo);
+    assert.ok(casamento);
+
+    assert.equal(lobolo?.eventDate, JESSICA_SAMUEL_LOBOLO_DATE);
+    assert.equal(casamento?.eventDate, JESSICA_SAMUEL_WEDDING_START);
+    assert.equal(casamento?.eventDateEnd, JESSICA_SAMUEL_WEDDING_END);
+
+    // REGRESSION GUARD: Ensure no contradictory dates (such as 17 de Outubro / 2026-10-17) exist
+    for (const c of celebrations) {
+      assert.doesNotMatch(c.date ?? "", /17 de Outubro|Outubro de 2026/);
+      assert.notEqual(c.eventDate, "2026-10-17");
+      if (c.eventDateEnd) {
+        assert.notEqual(c.eventDateEnd, "2026-10-17");
+      }
+    }
+
+    const vilaVerde = HAXR_REAL_WEDDINGS.find((w) => w.id === "vila-verde-casamento");
+    assert.ok(vilaVerde);
+    assert.equal(vilaVerde?.eventDate, JESSICA_SAMUEL_WEDDING_START);
+    assert.equal(vilaVerde?.eventDateEnd, JESSICA_SAMUEL_WEDDING_END);
+    assert.doesNotMatch(vilaVerde?.date ?? "", /Outubro/);
+  });
 });
+
