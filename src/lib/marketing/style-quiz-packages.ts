@@ -10,32 +10,32 @@ export type RecommendedPackage = {
 
 export const styleQuizPackageMap: Record<StyleQuizStyleKey, RecommendedPackage> = {
   minimalist: {
-    slug: "essencial",
-    name: "Essencial",
-    tagline: "Elegância essencial — convite digital e RSVP com clareza.",
+    slug: "prologo",
+    name: "Prólogo",
+    tagline: "Elegância essencial — introdução poética e presença digital irrepreensível.",
     href: "/convites-identidade-visual#pacotes",
-    contactHref: "/contacto?tipo=casamento&pacote=essencial",
+    contactHref: "/contacto?tipo=casamento&pacote=prologo",
   },
   editorial: {
-    slug: "signature",
-    name: "Signature",
-    tagline: "Narrativa editorial, identidade forte e experiência imersiva.",
+    slug: "elo",
+    name: "Elo",
+    tagline: "Narrativa editorial, identidade forte e acolhimento colaborativo de convidados.",
     href: "/convites-identidade-visual#pacotes",
-    contactHref: "/contacto?tipo=casamento&pacote=signature",
+    contactHref: "/contacto?tipo=casamento&pacote=elo",
   },
   opulent: {
-    slug: "royal",
-    name: "Royal",
-    tagline: "Operação completa — QR, lugares, galeria e suporte até ao dia.",
+    slug: "legado",
+    name: "Legado",
+    tagline: "Alta-costura digital — ecossistema unificado antes, durante e perpetuado após o grande dia.",
     href: "/convites-identidade-visual#pacotes",
-    contactHref: "/contacto?tipo=casamento&pacote=royal",
+    contactHref: "/contacto?tipo=casamento&pacote=legado",
   },
   romantic: {
-    slug: "signature",
-    name: "Signature",
-    tagline: "Romance poético com convite digital e curadoria HAXR.",
+    slug: "elo",
+    name: "Elo",
+    tagline: "Romance poético com Web-Convite HAXR, curadoria visual e memórias partilhadas.",
     href: "/convites-identidade-visual#pacotes",
-    contactHref: "/contacto?tipo=casamento&pacote=signature",
+    contactHref: "/contacto?tipo=casamento&pacote=elo",
   },
 };
 

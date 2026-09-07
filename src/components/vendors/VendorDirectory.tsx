@@ -726,19 +726,23 @@ export default function VendorDirectory({
                         </span>
                       </span>
 
-                      <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-stone-700">
-                        <Clock className="h-2.5 w-2.5" />
-                        <span className="font-mono text-[7px] font-bold uppercase tracking-wider">
-                          {supplier.responseTime}
+                      {supplier.responseTime && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-stone-700">
+                          <Clock className="h-2.5 w-2.5" />
+                          <span className="font-mono text-[7px] font-bold uppercase tracking-wider">
+                            {supplier.responseTime}
+                          </span>
                         </span>
-                      </span>
+                      )}
 
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
-                        <Star className="h-2.5 w-2.5" />
-                        <span className="font-mono text-[7px] font-bold uppercase tracking-wider">
-                          {supplier.satisfactionRate}%
+                      {supplier.satisfactionRate != null && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
+                          <Star className="h-2.5 w-2.5" />
+                          <span className="font-mono text-[7px] font-bold uppercase tracking-wider">
+                            {supplier.satisfactionRate}%
+                          </span>
                         </span>
-                      </span>
+                      )}
                     </div>
                   </div>
                 </div>

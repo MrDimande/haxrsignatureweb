@@ -20,9 +20,13 @@ const labelClass =
   "block font-mono text-[8px] tracking-[0.4em] uppercase text-brand-gold mb-3";
 
 const PACKAGE_LABELS: Record<string, string> = {
-  essencial: "Essencial",
-  signature: "Signature",
-  royal: "Royal",
+  prologo: "Prólogo",
+  elo: "Elo",
+  legado: "Legado",
+  // Compatibilidade com ligações históricas
+  essencial: "Prólogo",
+  signature: "Elo",
+  royal: "Legado",
 };
 
 export default function QuoteRequestForm() {

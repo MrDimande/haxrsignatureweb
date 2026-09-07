@@ -69,11 +69,11 @@ export type PublicSupplierProfile = {
   coverImageUrl: string;
   portfolioImages: string[];
   priceRange: string;
-  experienceYears: number;
-  featuredBadge: string;
-  responseTime: string;
-  satisfactionRate: number;
-  memberSince: string;
+  experienceYears: number | null;
+  featuredBadge: string | null;
+  responseTime: string | null;
+  satisfactionRate: number | null;
+  memberSince: string | null;
   styles: StyleQuizStyleKey[];
   seasonality: VendorSeasonality;
 };
@@ -285,11 +285,11 @@ export function mapSupplierProfileRow(
     coverImageUrl,
     portfolioImages,
     priceRange: row.price_range?.trim() || mediaFallback.defaultPrice,
-    experienceYears: row.experience_years ?? 5,
-    featuredBadge: row.featured_badge?.trim() || mediaFallback.defaultBadge,
-    responseTime: row.response_time?.trim() || "Responde em menos de 2h",
-    satisfactionRate: row.satisfaction_rate ?? 98,
-    memberSince: row.member_since?.trim() || new Date().getFullYear().toString(),
+    experienceYears: row.experience_years ?? null,
+    featuredBadge: row.featured_badge?.trim() || null,
+    responseTime: row.response_time?.trim() || null,
+    satisfactionRate: row.satisfaction_rate ?? null,
+    memberSince: row.member_since?.trim() || null,
     styles:
       row.styles && row.styles.length > 0
         ? row.styles

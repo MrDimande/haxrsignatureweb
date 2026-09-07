@@ -48,17 +48,17 @@ ${cta("https://www.haxrsignature.com", "Visitar o website")}`,
       ),
   },
   lead_portfolio: {
-    subject: "Qual pacote combina com o seu evento?",
+    subject: "Qual edição combina com o seu evento?",
     previewText:
-      "Essencial, Signature e Royal — descubra qual experiência combina com o seu evento.",
+      "Prólogo, Elo e Legado — descubra qual experiência combina com o seu evento.",
     html: ({ firstName }) =>
       shell(
         "Três níveis. Uma assinatura.",
         `${paragraph(`Olá ${escapeHtml(firstName)},`)}
-${paragraph("Cada evento pede um nível de detalhe diferente. Na HAXR Signature desenhamos experiências em três pacotes — do essencial ao royal — sempre com rigor editorial e identidade visual coerente.")}
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 12px;border:1px solid #2a2418;"><tr><td style="padding:20px 24px;"><p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#c9a962;">01 · Essencial</p><p style="margin:0;font-size:15px;line-height:1.6;color:#d4cfc6;">Convite digital elegante, RSVP e presença digital impecável.</p></td></tr></table>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 12px;border:1px solid #3d3528;"><tr><td style="padding:20px 24px;"><p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#c9a962;">02 · Signature</p><p style="margin:0;font-size:15px;line-height:1.6;color:#d4cfc6;">Identidade visual completa, save the date e coordenação editorial.</p></td></tr></table>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 28px;border:1px solid #2a2418;"><tr><td style="padding:20px 24px;"><p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#c9a962;">03 · Royal</p><p style="margin:0;font-size:15px;line-height:1.6;color:#d4cfc6;">Experiência integral — convite, gestão de convidados e dia do evento.</p></td></tr></table>
+${paragraph("Cada evento pede um nível de detalhe diferente. Na HAXR Signature desenhamos experiências em três edições — Prólogo, Elo e Legado — sempre com rigor editorial e identidade visual coerente.")}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 12px;border:1px solid #2a2418;"><tr><td style="padding:20px 24px;"><p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#c9a962;">01 · Prólogo</p><p style="margin:0;font-size:15px;line-height:1.6;color:#d4cfc6;">Web-Convite digital essencial, RSVP e presença digital impecável.</p></td></tr></table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 12px;border:1px solid #3d3528;"><tr><td style="padding:20px 24px;"><p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#c9a962;">02 · Elo</p><p style="margin:0;font-size:15px;line-height:1.6;color:#d4cfc6;">Narrativa visual expandida, curadoria pre-wedding e acolhimento colaborativo.</p></td></tr></table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 28px;border:1px solid #2a2418;"><tr><td style="padding:20px 24px;"><p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#c9a962;">03 · Legado</p><p style="margin:0;font-size:15px;line-height:1.6;color:#d4cfc6;">Alta-costura digital — ecossistema unificado antes, durante e após o evento.</p></td></tr></table>
 ${cta("https://www.haxrsignature.com/#convites", "Ver portfólio")}`,
         `<p style="margin:0 0 8px;font-size:13px;color:#8a8478;">Respondemos com prazer a qualquer dúvida.</p>
 <p style="margin:0;font-size:14px;color:#c9a962;">Equipa HAXR Signature</p>`

@@ -14,7 +14,7 @@ export default function HomePlatformShowcase() {
       title: "Chá de Panelas",
       date: "08-11-2025",
       time: "13:00",
-      location: "Polana Serena, Maputo",
+      location: "Casa d'Artista Kutenga, Maputo",
       budget: "120.000 MT",
       guests: "25",
     },

@@ -187,22 +187,26 @@ export default function VendorCompareModal({
                 <MetricRow
                   icon={Calendar}
                   label="Anos de Experiência"
-                  values={suppliers.map((s) => `${s.experienceYears} anos`)}
+                  values={suppliers.map((s) =>
+                    s.experienceYears != null ? `${s.experienceYears} anos` : "Sob consulta"
+                  )}
                 />
                 <MetricRow
                   icon={Star}
                   label="Taxa de Satisfação"
-                  values={suppliers.map((s) => `${s.satisfactionRate}%`)}
+                  values={suppliers.map((s) =>
+                    s.satisfactionRate != null ? `${s.satisfactionRate}%` : "Sob consulta"
+                  )}
                 />
                 <MetricRow
                   icon={Clock}
                   label="Tempo de Resposta"
-                  values={suppliers.map((s) => s.responseTime)}
+                  values={suppliers.map((s) => s.responseTime ?? "Sob consulta")}
                 />
                 <MetricRow
                   icon={ShieldCheck}
                   label="Membro Desde"
-                  values={suppliers.map((s) => s.memberSince)}
+                  values={suppliers.map((s) => (s.memberSince ? `Desde ${s.memberSince}` : "Verificado"))}
                 />
                 <MetricRow
                   icon={BadgeCheck}

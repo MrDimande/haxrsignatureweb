@@ -50,36 +50,36 @@ const intents: Intent[] = [
     id: "prices-overview",
     keywords: ["preco", "precos", "quanto", "custa", "custo", "valor", "valores", "orcamento", "cotacao", "pacote", "pacotes", "tabela"],
     response:
-      "Os nossos convites digitais para casamento estão organizados em 3 pacotes:\n\n✦ **Essencial** — 5.999 MT\nConvite elegante com RSVP, mapa, música e contagem regressiva.\n\n✦ **Signature** — 12.999 MT\nGaleria editorial, storytelling, cronograma e dashboard de RSVP.\n\n✦ **Royal** — 19.999 MT\nAbertura cinemática, QR Code, gestão de mesas e acompanhamento premium.\n\nTemos também pacotes para noivados (a partir de 5.999 MT), aniversários e eventos corporativos.",
-    quickReplies: ["Pacote Essencial", "Pacote Signature", "Pacote Royal", "Noivado", "Corporativo"],
+      "Os nossos Web-Convites HAXR para casamento estão organizados em 3 edições:\n\n✦ **Prólogo** — 7.999 MT\nWeb-Convite elegante com RSVP, mapa, música e contagem regressiva.\n\n✦ **Elo** — 15.999 MT\nGaleria editorial, pre-wedding, dress code e memórias interactivas Plus Memories.\n\n✦ **Legado** — 25.000 MT\nAlta-Costura Digital, vídeo cinematográfico, Find Your Seat e acervo perpétuo.\n\nTemos também pacotes para noivados (a partir de 5.999 MT), aniversários e eventos corporativos.",
+    quickReplies: ["Pacote Prólogo", "Pacote Elo", "Pacote Legado", "Noivado", "Corporativo"],
   },
   {
-    id: "package-essencial",
-    keywords: ["essencial", "basico", "simples", "5999", "5.999"],
+    id: "package-prologo",
+    keywords: ["prologo", "prólogo", "essencial", "basico", "simples", "7999", "7.999"],
     response:
-      "**Pacote Essencial — 5.999 MT**\n\nO minimalismo funcional para o vosso grande dia:\n\n• Página de convite digital de alta performance\n• Design de autor HAXR Signature\n• Integração com Google Maps\n• Curadoria musical para ambiente sonoro\n• Contagem decrescente dinâmica\n• Confirmação de presença (RSVP) integrada\n• Artefato digital para partilha via WhatsApp\n\nIdeal para casais que procuram sofisticação sem complicações.",
-    quickReplies: ["Comparar pacotes", "Pacote Signature", "Solicitar proposta", "Prazo de entrega"],
+      "**Edição Prólogo — 7.999 MT**\n\nA introdução poética e imediata para o vosso grande dia:\n\n• Web-Convite com Direcção Visual HAXR\n• Abertura sonora e música de fundo ambiente\n• Declaração autêntica dos noivos\n• Galeria fotográfica de ritmo editorial\n• Confirmação de presença (RSVP) integrada no próprio link\n• Contagem decrescente dinâmica viva\n• Geolocalização via Google Maps e Waze\n• Save the Date básico em vídeo curto\n\nIdeal para casais que procuram sofisticação, tipografia impecável e presença digital irrepreensível.",
+    quickReplies: ["Comparar pacotes", "Pacote Elo", "Solicitar proposta", "Prazo de entrega"],
   },
   {
-    id: "package-signature",
-    keywords: ["signature", "intermedio", "medio", "12999", "12.999"],
+    id: "package-elo",
+    keywords: ["elo", "signature", "intermedio", "medio", "15999", "15.999", "mais solicitado"],
     response:
-      "**Pacote Signature — 12.999 MT**\n\nA vossa narrativa visual elevada ao estado de arte. Inclui tudo do Essencial, mais:\n\n• Galeria editorial de memórias visuais\n• Módulo de storytelling do casal\n• Cronograma interativo do evento\n• Dashboard inteligente de RSVP\n• Lista de convidados digitalizada\n• Controlo preciso de acompanhantes\n• Direção de arte estendida\n\nPara quem concebe o evento como uma história.",
-    quickReplies: ["Comparar pacotes", "Pacote Royal", "Solicitar proposta", "Como funciona"],
+      "**Edição Elo — 15.999 MT**\n\nA ponte viva entre a expectativa e a memória. Inclui tudo do Prólogo, mais:\n\n• Design e composição personalizada HAXR\n• Sessão fotográfica pre-wedding (3 obras curadas)\n• Save the Date personalizado em vídeo\n• Guia de dress code e recomendações de vestuário\n• Informação de lista de presentes\n• Lembrete automático da data aos convidados\n• Plus Memories: Galeria colaborativa para até 150 convidados com QR Code\n\nA escolha mais solicitada para celebrar com os convidados.",
+    quickReplies: ["Comparar pacotes", "Pacote Legado", "Solicitar proposta", "Como funciona"],
   },
   {
-    id: "package-royal",
-    keywords: ["royal", "premium", "completo", "exclusivo", "luxo", "19999", "19.999", "melhor"],
+    id: "package-legado",
+    keywords: ["legado", "royal", "alta-costura", "premium", "completo", "exclusivo", "luxo", "25000", "25.000", "melhor"],
     response:
-      "**Pacote Royal — 19.999 MT**\n\nA alta-costura do convite digital. Inclui tudo do Signature, mais:\n\n• Abertura cinemática e motion design\n• Credenciação por QR Code individual\n• Painel de controlo master de RSVP\n• Espaço curado para presentes e donativos\n• Gestão arquitetónica de mesas e setores\n• Acompanhamento premium HAXR até ao dia\n• Data & Analytics do perfil de convidados\n\nUma obra sob medida para eventos de grande escala.",
+      "**Edição Legado — 25.000 MT**\n\nA obra máxima de Alta-Costura Digital HAXR. Inclui tudo do Elo, mais:\n\n• Direcção de arte de alta-costura sob medida\n• Sessão fotográfica pre-wedding (5 obras de autor)\n• Save the Date premium em vídeo cinematográfico\n• Vídeo pre-wedding integrado no Web-Convite\n• Find Your Seat: Localização instantânea de mesas por QR Code no recinto\n• Plus Memories ilimitado com áudio das felicitações\n• Credenciação digital individual por QR Code\n• Acompanhamento e curadoria dedicada HAXR\n\nUm ecossistema digital completo que vive antes, durante e após a celebração.",
     quickReplies: ["Comparar pacotes", "Solicitar proposta", "Assessoria de eventos", "Prazo de entrega"],
   },
   {
     id: "compare-packages",
     keywords: ["comparar", "comparacao", "diferenca", "diferencas", "qual escolher", "qual melhor"],
     response:
-      "**Comparação rápida dos pacotes de casamento:**\n\n| | Essencial | Signature | Royal |\n|---|---|---|---|\n| Preço | 5.999 MT | 12.999 MT | 19.999 MT |\n| Galeria de fotos | Opcional | ✓ | ✓ |\n| Storytelling | — | ✓ | ✓ |\n| QR Code entrada | — | — | ✓ |\n| Gestão de mesas | — | — | ✓ |\n| Abertura cinemática | — | — | ✓ |\n| Alterações | 2 rondas | 4 rondas | Sob medida |\n\nCada pacote pode ser complementado com funcionalidades adicionais.",
-    quickReplies: ["Pacote Essencial", "Pacote Royal", "Solicitar proposta", "Falar com alguém"],
+      "**Comparação rápida das edições de casamento:**\n\n| | Prólogo | Elo | Legado |\n|---|---|---|---|\n| Preço | 7.999 MT | 15.999 MT | 25.000 MT |\n| RSVP Directo | ✓ | ✓ | ✓ |\n| Galeria Editorial | ✓ | ✓ | ✓ |\n| Sessão Pre-Wedding | — | 3 obras | 5 obras |\n| Plus Memories | Opcional | Até 150 convidados | Ilimitado + Áudio |\n| Find Your Seat | — | — | ✓ |\n| QR Code Entrada | — | — | ✓ |\n| Alterações | 2 rondas | 4 rondas | Curadoria Contínua |\n\nCada edição pode ser personalizada com extensões adicionais do ecossistema HAXR.",
+    quickReplies: ["Pacote Prólogo", "Pacote Legado", "Solicitar proposta", "Falar com alguém"],
   },
   {
     id: "noivado",
@@ -134,7 +134,7 @@ const intents: Intent[] = [
     id: "alteracoes",
     keywords: ["alteracao", "alteracoes", "mudanca", "mudar", "revisao", "revisoes", "ronda"],
     response:
-      "Cada pacote inclui um número definido de rondas de alteração:\n\n• **Essencial** — até 2 rondas\n• **Signature** — até 4 rondas\n• **Royal** — rondas definidas conforme a complexidade\n\nAjustes adicionais para além das rondas incluídas podem ter custo extra.",
+      "Cada pacote inclui um número definido de rondas de alteração:\n\n• **Prólogo** — até 2 rondas\n• **Elo** — até 4 rondas\n• **Legado** — curadoria contínua sob medida\n\nAjustes adicionais para além das rondas incluídas podem ter custo extra.",
     quickReplies: ["Comparar pacotes", "Solicitar proposta", "Preços"],
   },
   {
@@ -155,8 +155,8 @@ const intents: Intent[] = [
     id: "rsvp",
     keywords: ["rsvp", "confirmacao", "presenca", "convidados", "lista", "convite"],
     response:
-      "Todos os nossos convites digitais incluem **confirmação de presença (RSVP) integrada**.\n\nOs pacotes Signature e Royal adicionam:\n• Dashboard inteligente de RSVP\n• Lista de convidados digitalizada\n• Controlo de acompanhantes\n• Relatório final de confirmações\n\nO pacote Royal acrescenta credenciação por QR Code individual e gestão de mesas.",
-    quickReplies: ["Comparar pacotes", "Pacote Royal", "Solicitar proposta"],
+      "Todos os nossos Web-Convites HAXR incluem **confirmação de presença (RSVP) directa no link**.\n\nAs edições Elo e Legado expandem a experiência com:\n• Galeria colaborativa Plus Memories\n• Acesso por QR Code para convidados\n• Relatórios e lembretes automáticos\n\nA edição Legado acrescenta o localizador de mesas Find Your Seat e acervo audiovisual perpétuo.",
+    quickReplies: ["Comparar edições", "Pacote Legado", "Solicitar proposta"],
   },
   {
     id: "eventos-tipos",

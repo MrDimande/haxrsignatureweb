@@ -74,6 +74,42 @@ describe("supplier marketplace", () => {
     assert.equal(mapped.category, "photographers");
     assert.equal(mapped.websiteUrl, null);
     assert.equal("rating" in mapped, false);
+    assert.equal(mapped.experienceYears, null);
+    assert.equal(mapped.responseTime, null);
+    assert.equal(mapped.satisfactionRate, null);
+  });
+
+  it("does not inject synthetic vendor metric fallbacks when data is missing", () => {
+    const rowWithoutMetrics = {
+      id: "supplier-no-metrics",
+      slug: "supplier-no-metrics",
+      business_name: "Fornecedor Teste",
+      category: "venues",
+      city: "Maputo",
+      short_description: null,
+      about: null,
+      public_email: null,
+      public_phone: null,
+      website_url: null,
+      instagram_url: null,
+      service_level: null,
+      services: [],
+      is_verified: false,
+      published_at: null,
+      experience_years: null,
+      response_time: null,
+      satisfaction_rate: null,
+    };
+
+    const mapped = mapSupplierProfileRow(rowWithoutMetrics);
+
+    // REGRESSION GUARD: Missing data must never become positive invented data
+    assert.equal(mapped.experienceYears, null, "Must not fallback to 5 years");
+    assert.equal(mapped.responseTime, null, "Must not fallback to 'Responde em menos de 2h'");
+    assert.equal(mapped.satisfactionRate, null, "Must not fallback to 98% satisfaction");
+    assert.notEqual(mapped.experienceYears, 5);
+    assert.notEqual(mapped.responseTime, "Responde em menos de 2h");
+    assert.notEqual(mapped.satisfactionRate, 98);
   });
 
   it("filters by category, location and free text", () => {

@@ -270,10 +270,10 @@ const styleResults: Record<string, StyleResult> = {
       "Festa de gala com orquestra ou banda cénica e bar de cocktails premium",
     ],
     featuredWedding: {
-      couple: "Tatiana & Celso",
-      venue: "Grande Salão Nobre · Polana Serena Hotel, Maputo",
+      couple: "Casamento na Vila Verde",
+      venue: "Vila Verde · mais de 300 convidados",
       image: "/images/portfolio/mosaic-salao-branco-preparado.webp",
-      quote: "Banquete imperial com lustres de cristal e protocolo impecável.",
+      quote: "Celebração imponente com acolhimento estruturado para mais de 300 convidados.",
       href: "/portfolio",
     },
   },

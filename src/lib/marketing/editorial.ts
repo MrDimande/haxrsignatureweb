@@ -310,7 +310,7 @@ export const caseStudies: CaseStudy[] = [
     challenge:
       "Comunicar data, dress code e narrativa do casal numa experiência leve, memorável e partilhável.",
     solution:
-      "Save the date em capítulos, referências visuais de dress code e RSVP integrado, assinatura Royal HAXR.",
+      "Save the date em capítulos, referências visuais de dress code e RSVP integrado, assinatura Edição Legado HAXR.",
     result:
       "O primeiro contacto com os convidados estabeleceu expectativa, tom e elegância antes de qualquer outro detalhe.",
     image: portfolioAssets.saveTheDate,
