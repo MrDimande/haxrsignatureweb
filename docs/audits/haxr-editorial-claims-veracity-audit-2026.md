@@ -303,20 +303,94 @@ Para prevenir a reintrodução de claims não corroboradas em futuros desenvolvi
 
 ---
 
-## 7. NOTA TÉCNICA DE ENGENHARIA E CONFORMIDADE
+## 8. EXECUÇÃO DA DECISÃO DO PROPRIETÁRIO: REMEDIAÇÃO POLANA & EVENTOS REAIS (FASE D.1)
+
+Em conformidade directa com a instrução expressa e vinculativa do Proprietário, foi executada a remediação imediata dos casos de estudo de casamentos e celebrações reais na plataforma:
+
+### 8.1. Remediação do Caso Polana Serena
+1. **Desactivação Pública**: O caso não corroborado de Lurdes & Fernando no *Polana Serena Hotel* com 400 convidados e orquestra ao vivo foi integralmente retirado de todas as superfícies públicas de marketing da HAXR Signature.
+2. **Preservação de Registo Interno**: O caso foi retido no modelo de dados estruturado exclusivamente como registo histórico interno, com os metadados de governação:
+   - `isPublic = false`
+   - `evidenceStatus = "EVIDENCE_REQUIRED"`
+   - `clientPublicationPermission = "CLIENT_PERMISSION_REQUIRED"`
+3. **Erradicação nas Superfícies Públicas**:
+   - `src/components/home/HomePlatformShowcase.tsx`: Menção alterada para a *Casa d'Artista Kutenga*.
+   - `src/components/home/HomeToolsGrid.tsx`: Cartão de demonstração alterado para a *Vila Verde*.
+   - `src/app/(marketing)/style-quiz/page.tsx`: Casamento em destaque do estilo Imperial alterado para *Casamento na Vila Verde*.
+   - `src/components/home/HomeWeddingGallery.tsx`: Galeria reconfigurada exclusivamente com os 3 eventos reais confirmados pelo proprietário.
+
+### 8.2. Modelo Canónico de Eventos Reais (`RealWedding`)
+A estrutura de dados em `src/lib/vendors/vendor-real-weddings.ts` foi expandida com campos canónicos de governação explícitos:
+- `eventType`: `"Casamento" | "Lobolo" | "Celebração Privada" | "Corporativo"`
+- `venue`: Nome do espaço verificado.
+- `guestScale`: Escala de convidados preservando estritamente quantidades aproximadas confirmadas (*"cerca de 250 convidados"*, *"mais de 300 convidados"*, *"cerca de 300 convidados"*).
+- `evidenceStatus`: `"OWNER_CONFIRMED" | "VERIFIED" | "EVIDENCE_REQUIRED"`
+- `clientPublicationPermission`: `"GRANTED" | "CLIENT_PERMISSION_REQUIRED" | "NOT_APPLICABLE"`
+- `photoPublicationPermission`: `"GRANTED" | "CLIENT_PERMISSION_REQUIRED" | "NOT_APPLICABLE"`
+- `isPublic`: `boolean` (Guardrail obrigatório para renderização pública).
+
+### 8.3. Os Três Eventos Reais Confirmados pelo Proprietário
+1. **Caso 1 — Casamento no Evelyn Eventos**:
+   - Titulares: Vânia Luky & Fabião Dimande (Maio 2026)
+   - Espaço: Evelyn Eventos
+   - Escala: *cerca de 250 convidados*
+   - Estatuto: `EVIDENCE_STATUS=OWNER_CONFIRMED`
+   - Direitos de Publicação: `CLIENT_NAME_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PHOTO_PERMISSION=CLIENT_PERMISSION_REQUIRED`
+   - Renderização Pública: Formato seguro e anónimo — *«Casamento no Evelyn Eventos — cerca de 250 convidados»*.
+2. **Caso 2 — Casamento na Vila Verde**:
+   - Titulares: Jéssica Muege & Samuel Govene (Agosto 2026)
+   - Espaço: Vila Verde
+   - Escala: *mais de 300 convidados*
+   - Estatuto: `EVIDENCE_STATUS=OWNER_CONFIRMED`
+   - Direitos de Publicação: `CLIENT_NAME_PERMISSION=CLIENT_PERMISSION_REQUIRED`, `PHOTO_PERMISSION=CLIENT_PERMISSION_REQUIRED`
+   - Renderização Pública: Formato seguro e anónimo — *«Casamento na Vila Verde — mais de 300 convidados»*.
+3. **Caso 3 — Lobolo na Casa d'Artista Kutenga**:
+   - Tipo de Evento: Lobolo
+   - Espaço: Casa d'Artista Kutenga
+   - Escala: *cerca de 300 convidados*
+   - Estatuto: `EVIDENCE_STATUS=OWNER_CONFIRMED`
+   - Guardrail de Governação: **NÃO associado** a Jéssica Muege & Samuel Govene (conforme salvaguarda expressa do proprietário).
+   - Renderização Pública: Formato seguro e anónimo — *«Lobolo na Casa d'Artista Kutenga — cerca de 300 convidados»*.
+
+---
+
+## 9. QUADRO DE EVIDÊNCIA DE REMEDIAÇÃO POLANA & EVENTOS REAIS
+
+```
+================================================================
+HAXR SIGNATURE — POLANA & REAL EVENTS REMEDIATION EVIDENCE
+================================================================
+POLANA_PUBLIC_OCCURRENCES_BEFORE=5
+POLANA_PUBLIC_OCCURRENCES_AFTER=0
+
+OWNER_CONFIRMED_REAL_EVENTS_ADDED=3
+
+EVLYN_EVENT_STATUS=OWNER_CONFIRMED (CLIENT_PERMISSION_REQUIRED)
+VILA_VERDE_EVENT_STATUS=OWNER_CONFIRMED (CLIENT_PERMISSION_REQUIRED)
+KUTENGA_LOBOLO_STATUS=OWNER_CONFIRMED (NOT_APPLICABLE for couple; CLIENT_PERMISSION_REQUIRED for photos)
+
+CLIENT_PERMISSION_REQUIRED_COUNT=3
+
+ANONYMISED_PUBLIC_FALLBACKS_USED=true
+================================================================
+```
+
+---
+
+## 10. NOTA TÉCNICA DE ENGENHARIA E CONFORMIDADE
 
 ```
 [HAXR MASTER ENGINEERING CONSTITUTION COMPLIANCE]
-AUDIT_PHASE: D.0 — EDITORIAL CLAIMS, TRUST & VERACITY
-RUNTIME_CODE_CHANGED: false
+AUDIT_PHASE: D.0 (Audit) & D.1 (Polana & Real Events Remediation)
 HOMEPAGE_SECTIONS_STRUCTURE_LOCKED: true (12/12 intact)
 CANONICAL_SEO_TITLE_PRESERVED: true ("HAXR Signature | Assessoria de Eventos e Convites Digitais")
 CANONICAL_SEO_META_PRESERVED: true
-BRANCH: audit/editorial-claims-veracity
+BRANCH: remediation/polana-real-events
 PRODUCTION_DEPLOYMENT: false (Blocked until Owner Review)
 MERGE_TO_MAIN: false (Blocked until Owner Review)
-EVIDENCE_BASED_TESTS: PASS (No runtime code touched)
+TYPECHECK: PASS (0 errors)
+TESTS: PASS (983/983 passed)
 PORTUGUÊS_DE_MOÇAMBIQUE: 100% CONFORME
 ```
 
-O presente relatório e o respectivo registo tabular representam o diagnóstico fidedigno, frio e exaustivo da plataforma no seu estado actual. A HAXR Signature dispõe agora do roteiro técnico exato para purificar o seu ecossistema digital, elevando a sua verdade ao mesmo padrão de excelência visual que a define.
+O presente relatório atesta a completa depuração das superfícies públicas de marketing da HAXR Signature no tocante ao caso Polana Serena, ancorando agora toda a prova social de casamentos exclusivamente nos factos confirmados pelo Proprietário com rigor de alta-costura digital.

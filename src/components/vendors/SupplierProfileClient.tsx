@@ -364,10 +364,12 @@ export default function SupplierProfileClient({
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                             <div className="absolute bottom-3 left-3 right-3 text-white">
                               <p className="font-serif text-sm font-medium leading-tight">
-                                {wedding.couple}
+                                {wedding.clientPublicationPermission === "GRANTED" && wedding.coupleNames
+                                  ? wedding.coupleNames
+                                  : wedding.anonymisedTitle}
                               </p>
                               <p className="mt-0.5 font-mono text-[8px] uppercase tracking-wider text-brand-gold">
-                                {wedding.venue} · {wedding.date}
+                                {wedding.venue} {wedding.date ? `· ${wedding.date}` : ""}
                               </p>
                             </div>
                           </div>

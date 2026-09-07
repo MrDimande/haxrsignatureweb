@@ -68,8 +68,8 @@ export default function HomeToolsGrid() {
         <div className="absolute inset-x-4 bottom-4 md:bottom-6 bg-white/95 backdrop-blur-md p-3 rounded-xl border border-white/20 shadow-lg space-y-2 text-left text-[8px] md:text-[10px] text-brand-text-dark font-sans">
           <div className="space-y-0.5">
             <span className="block text-[7px] text-zinc-400 font-mono uppercase tracking-wider">Espaço Seleccionado</span>
-            <h5 className="font-serif text-[9px] md:text-[11px] font-bold text-brand-text-dark">Polana Serena Hotel</h5>
-            <p className="text-zinc-500 font-light text-[7px] md:text-[8px]">Av. da Marginal, Maputo</p>
+            <h5 className="font-serif text-[9px] md:text-[11px] font-bold text-brand-text-dark">Vila Verde</h5>
+            <p className="text-zinc-500 font-light text-[7px] md:text-[8px]">Espaço Seleccionado · Maputo</p>
           </div>
           <div className="flex justify-between items-center border-t border-zinc-100 pt-1.5 text-[7px] md:text-[9px]">
             <span className="text-zinc-500">Estado do Sinal</span>

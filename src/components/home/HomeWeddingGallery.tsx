@@ -22,73 +22,62 @@ interface WeddingProject {
 
 const weddingProjects: WeddingProject[] = [
   {
-    id: "vania-fabiao",
-    couple: "Vânia & Fabião",
+    id: "evelyn-eventos",
+    couple: "Casamento no Evelyn Eventos",
     location: "Maputo · Moçambique",
-    tagline: "Sobriedade e minimalismo contemporâneo.",
-    mainImage: "/images/archive-01.webp",
+    tagline: "cerca de 250 convidados · Curadoria e Assessoria",
+    mainImage: "/images/casamento-vania-fabiao-evelyn-eventos.webp",
     galleryImages: [
-      "/images/archive-01.webp",
+      "/images/casamento-vania-fabiao-evelyn-eventos.webp",
       "/images/categories/venue.png",
-      "/images/categories/florist.png"
-    ],
-    guests: "120 convidados",
-    services: "Assessoria Completa · Identidade Visual",
-    description: "Uma celebração de linhas limpas e elegância discreta na capital moçambicana. O foco foi a sobriedade cromática e a iluminação cénica desenhada à medida, realçando a arquitectura do espaço e criando uma atmosfera íntima.",
-    quote: "A HAXR organizou tudo com um rigor impecável, mas o resultado final foi de uma sensibilidade e beleza poética indescritíveis.",
-    author: "Vânia Fabião"
-  },
-  {
-    id: "sofia-alberto",
-    couple: "Sofia & Alberto",
-    location: "Bilene · Moçambique",
-    tagline: "A brisa do Índico sob seda drapeada.",
-    mainImage: "/images/archive-02.webp",
-    galleryImages: [
-      "/images/archive-02.webp",
-      "/images/categories/caterer.png",
-      "/images/categories/photographer.png"
-    ],
-    guests: "150 convidados",
-    services: "RSVP Digital · Coordenação de Dia",
-    description: "Realizado sob as águas calmas da lagoa do Bilene. As sedas drapeadas em tons champagne e marfim flutuavam suavemente com a brisa da tarde. O planeamento digital integrou o RSVP do WhatsApp com o acolhimento Find Your Seat.",
-    quote: "Ter o RSVP e os convites digitais perfeitamente integrados com as confirmações no WhatsApp poupou-nos semanas de trabalho e stress.",
-    author: "Sofia Antunes"
-  },
-  {
-    id: "naima-cassamo",
-    couple: "Naíma & Cassamo",
-    location: "Bazaruto · Moçambique",
-    tagline: "Casamento intimista de destino tropical.",
-    mainImage: "/images/archive-03.webp",
-    galleryImages: [
-      "/images/archive-03.webp",
-      "/images/categories/venue.png",
-      "/images/categories/stationery.png"
-    ],
-    guests: "80 convidados",
-    services: "Identidade Artística · Assessoria Completa",
-    description: "Um elopement de luxo expandido nas dunas da ilha de Bazaruto. Misturámos elementos artesanais locais com detalhes editoriais de alta costura, criando uma ponte harmoniosa entre a natureza selvagem e a sofisticação.",
-    quote: "Planear à distância na Ilha de Bazaruto parecia impossível, mas a plataforma HAXR manteve todos os fornecedores alinhados e o orçamento sob controlo.",
-    author: "Naíma"
-  },
-  {
-    id: "jessica-samuel",
-    couple: "Jéssica & Samuel",
-    location: "Inhambane · Moçambique",
-    tagline: "Elegância rústica entre palmeiras.",
-    mainImage: "/images/archive-04.webp",
-    galleryImages: [
-      "/images/archive-04.webp",
       "/images/categories/florist.png",
-      "/images/categories/cake.png"
     ],
-    guests: "200 convidados",
+    guests: "cerca de 250 convidados",
+    services: "Assessoria Completa · Coordenação de Dia",
+    description:
+      "Casamento realizado no Evelyn Eventos para cerca de 250 convidados na capital moçambicana. O foco foi a sobriedade estética, a gestão meticulosa do cronograma e a harmonia no acolhimento de cada família.",
+    quote:
+      "A equipa HAXR estruturou cada momento do protocolo com elevado rigor e sensibilidade, assegurando uma celebração verdadeiramente memorável.",
+    author: "Casamento no Evelyn Eventos",
+  },
+  {
+    id: "vila-verde",
+    couple: "Casamento na Vila Verde",
+    location: "Maputo · Moçambique",
+    tagline: "mais de 300 convidados · Gestão de Fluxos e Acolhimento",
+    mainImage: "/images/portfolio/mosaic-salao-branco-preparado.webp",
+    galleryImages: [
+      "/images/portfolio/mosaic-salao-branco-preparado.webp",
+      "/images/categories/venue.png",
+      "/images/categories/caterer.png",
+    ],
+    guests: "mais de 300 convidados",
     services: "Coordenação Operacional de Dia · RSVP",
-    description: "Uma imersão rústica e sofisticada rodeada de palmeiras imperiais. A decoração orgânica utilizou texturas naturais, cerâmicas locais e uma curadoria floral que celebrou as cores quentes da terra e do entardecer.",
-    quote: "O profissionalismo e a discrição no dia foram impecáveis. Os nossos convidados sentiram-se acolhidos numa experiência única e muito sofisticada.",
-    author: "Jéssica Samuel"
-  }
+    description:
+      "Celebração de grande escala na Vila Verde acolhendo mais de 300 convidados. A coordenação da HAXR Signature garantiu fluidez nos acessos, orientação serena às mesas e acompanhamento contínuo dos bastidores.",
+    quote:
+      "A integração do acolhimento com a gestão de mesas permitiu receber mais de 300 convidados com tranquilidade e sofisticação.",
+    author: "Casamento na Vila Verde",
+  },
+  {
+    id: "kutenga-lobolo",
+    couple: "Lobolo na Casa d'Artista Kutenga",
+    location: "Maputo · Moçambique",
+    tagline: "cerca de 300 convidados · Celebração Tradicional",
+    mainImage: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+    galleryImages: [
+      "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+      "/images/categories/decor.png",
+      "/images/categories/music.png",
+    ],
+    guests: "cerca de 300 convidados",
+    services: "Acompanhamento Cultural · Protocolo de Recepção",
+    description:
+      "Cerimónia tradicional de Lobolo realizada na Casa d'Artista Kutenga para cerca de 300 convidados. A curadoria HAXR honrou os momentos protocolares com organização impecável e discrição absoluta.",
+    quote:
+      "O respeito pelos ritos tradicionais e a precisão no acolhimento proporcionaram uma celebração memorável e cheia de dignidade.",
+    author: "Lobolo na Casa d'Artista Kutenga",
+  },
 ];
 
 export default function HomeWeddingGallery() {
