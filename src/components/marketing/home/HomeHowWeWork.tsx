@@ -29,7 +29,7 @@ export default function HomeHowWeWork({ phases }: HomeHowWeWorkProps) {
             <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light text-brand-text-dark leading-tight max-w-3xl">
               Como funciona: do primeiro alinhamento à execução impecável.
             </h2>
-            <p className="font-signature text-3xl md:text-4xl text-brand-gold/55 absolute -top-5 left-72 pointer-events-none select-none">
+            <p className="font-signature text-3xl md:text-4xl text-brand-gold/55 absolute -top-5 left-64 md:left-72 pointer-events-none select-none hidden sm:block">
               O Nosso Método
             </p>
           </div>

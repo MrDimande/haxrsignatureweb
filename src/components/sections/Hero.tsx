@@ -74,9 +74,9 @@ export default function Hero() {
           {/* Subtitle */}
           <p
             data-hero-item
-            className="font-mono text-[10px] md:text-xs font-semibold tracking-[0.45em] uppercase text-brand-gold mb-3"
+            className="font-mono text-[10px] md:text-xs font-semibold tracking-[0.25em] sm:tracking-[0.45em] uppercase text-brand-gold mb-3 px-2"
           >
-            ASSESSORIA DE CASAMENTOS & ALTA-COSTURA DIGITAL
+            ASSESSORIA DE EVENTOS & ALTA-COSTURA DIGITAL
           </p>
 
           {/* Main Headline */}
@@ -96,12 +96,12 @@ export default function Hero() {
           </p>
 
           {/* Centered Input Form */}
-          <div data-hero-item className="max-w-xl mx-auto pt-2">
+          <div data-hero-item className="max-w-xl mx-auto pt-2 w-full px-2 sm:px-0">
             <form
               onSubmit={handleSubmit}
               className="flex flex-col sm:flex-row items-stretch gap-3 bg-white/5 backdrop-blur-md p-2 border border-white/15 rounded-sm shadow-2xl focus-within:border-brand-gold/60 transition-colors"
             >
-              <div className="relative flex-1 flex items-center pl-4">
+              <div className="relative flex-1 flex items-center pl-3 sm:pl-4">
                 <Calendar className="w-4.5 h-4.5 text-brand-gold shrink-0 mr-3" strokeWidth={1.5} />
                 <input
                   type="date"
@@ -116,7 +116,7 @@ export default function Hero() {
               </div>
               <button
                 type="submit"
-                className="bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[10px] tracking-widest uppercase font-bold py-3.5 px-8 transition-all duration-300 rounded-sm shrink-0 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg active:scale-98"
+                className="bg-brand-gold hover:bg-brand-gold-light text-white font-mono text-[10px] tracking-widest uppercase font-bold py-3.5 px-6 sm:px-8 transition-all duration-300 rounded-sm shrink-0 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg active:scale-98"
               >
                 <span>Começar a Planear</span>
                 <ArrowRight className="w-4 h-4" />

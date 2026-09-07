@@ -97,19 +97,19 @@ export default function HomePlatformShowcase() {
           <div className="absolute inset-0 bg-gradient-to-r from-brand-ivory/15 via-transparent to-black/10 z-1" />
 
           {/* iPad Pro Device Mockup */}
-          <div className="relative z-10 w-full max-w-[520px] rounded-3xl border-[10px] md:border-[13px] border-[#080706] bg-[#080706] shadow-[0_30px_80px_rgba(0,0,0,0.55)] overflow-hidden aspect-[4/3] transform hover:scale-[1.01] transition-transform duration-500">
+          <div className="relative z-10 w-full max-w-[520px] rounded-3xl border-[10px] md:border-[13px] border-[#080706] bg-[#080706] shadow-[0_30px_80px_rgba(0,0,0,0.55)] overflow-hidden aspect-[4/5] sm:aspect-[4/3] transform hover:scale-[1.01] transition-transform duration-500">
 
             {/* Screen Glass Reflection Sheen */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none z-20" />
 
             {/* Screen Content: Loverly-style Dashboard */}
-            <div className="w-full h-full bg-[#FCFAF7] p-4 md:p-6 font-sans text-brand-text-dark text-[8px] md:text-[10px] flex flex-col justify-between select-none">
+            <div className="w-full h-full bg-[#FCFAF7] p-3.5 sm:p-4 md:p-6 font-sans text-brand-text-dark text-[8px] md:text-[10px] flex flex-col justify-between select-none">
 
               {/* Tablet Header Bar */}
-              <div className="flex justify-between items-center border-b border-brand-champagne/30 pb-3 shrink-0">
-                <div className="flex items-center gap-4">
-                  <span className="font-serif text-[10px] md:text-sm font-bold tracking-wide text-brand-text-dark">HAXR Signature</span>
-                  <div className="flex items-center gap-1.5 bg-brand-champagne/15 border border-brand-champagne/30 px-2 py-1 rounded-sm text-[6px] md:text-[8px] font-mono text-brand-text-dark/65 cursor-pointer">
+              <div className="flex justify-between items-center border-b border-brand-champagne/30 pb-2.5 sm:pb-3 shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-4">
+                  <span className="font-serif text-[10px] sm:text-xs md:text-sm font-bold tracking-wide text-brand-text-dark">HAXR Signature</span>
+                  <div className="flex items-center gap-1.5 bg-brand-champagne/15 border border-brand-champagne/30 px-2 py-0.5 sm:py-1 rounded-sm text-[7px] md:text-[8px] font-mono text-brand-text-dark/65 cursor-pointer">
                     <span>Todos os eventos</span>
                     <ChevronDown className="w-2.5 h-2.5" />
                   </div>
@@ -117,15 +117,47 @@ export default function HomePlatformShowcase() {
 
                 <button
                   type="button"
-                  className="bg-brand-text-dark hover:bg-brand-gold text-white font-mono text-[6px] md:text-[7.5px] tracking-wider uppercase font-bold py-1.5 px-3 rounded-sm flex items-center gap-1 transition-colors"
+                  className="bg-brand-text-dark hover:bg-brand-gold text-white font-mono text-[6.5px] sm:text-[7.5px] tracking-wider uppercase font-bold py-1 sm:py-1.5 px-2.5 sm:px-3 rounded-sm flex items-center gap-1 transition-colors"
                 >
                   <Plus className="w-2.5 h-2.5" />
                   <span>Adicionar evento</span>
                 </button>
               </div>
 
-              {/* Event Cards Section */}
-              <div className="grid grid-cols-3 gap-3 my-4 shrink-0">
+              {/* Event Cards Section: Mobile (Featured Single Card) vs Tablet/Desktop (3 Columns) */}
+              <div className="block sm:hidden my-2.5 shrink-0">
+                <div className="bg-white border border-brand-champagne/30 p-2.5 rounded-sm space-y-1.5 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-brand-champagne/15 pb-1">
+                    <h4 className="font-serif text-[9.5px] font-semibold text-brand-text-dark">
+                      {events[2].title}
+                    </h4>
+                    <span className="font-mono text-[7px] font-semibold text-brand-gold bg-brand-gold/10 px-1.5 py-0.5 rounded-xs">
+                      Principal
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[7.5px] text-brand-text-dark/75 font-light">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-2.5 h-2.5 text-brand-gold shrink-0" strokeWidth={1.5} />
+                      <span className="truncate">{events[2].date}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-2.5 h-2.5 text-brand-gold shrink-0" strokeWidth={1.5} />
+                      <span className="truncate">Vilankulos</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-2.5 h-2.5 text-brand-gold shrink-0" strokeWidth={1.5} />
+                      <span>{events[2].time}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-2.5 h-2.5 text-brand-gold shrink-0" strokeWidth={1.5} />
+                      <span>{events[2].guests}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop/Tablet 3-Col Event Cards */}
+              <div className="hidden sm:grid grid-cols-3 gap-3 my-4 shrink-0">
                 {events.map((event) => (
                   <div
                     key={event.title}
@@ -150,11 +182,11 @@ export default function HomePlatformShowcase() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Wallet className="w-3 h-3 text-brand-gold shrink-0" strokeWidth={1.5} />
-                        <span className="font-medium text-brand-text-dark">{event.budget}</span>
+                        <span className="font-medium text-brand-text-dark">{event.budget || "Confirmado"}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Users className="w-3 h-3 text-brand-gold shrink-0" strokeWidth={1.5} />
-                        <span>{event.guests} convidados</span>
+                        <span>{event.guests}</span>
                       </div>
                     </div>
                   </div>

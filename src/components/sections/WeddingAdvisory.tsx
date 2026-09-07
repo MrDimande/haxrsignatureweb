@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
-import { ShieldCheck, Calendar, Users, HelpCircle, Crown, Clock } from "lucide-react";
+import { Calendar, Clock, Crown, HelpCircle, ShieldCheck, Users } from "lucide-react";
+import Link from "next/link";
 
 const advisoryPillars = [
   {
@@ -52,7 +52,7 @@ export default function WeddingAdvisory() {
           </RevealOnScroll>
           <RevealOnScroll delay={0.1}>
             <p className="font-sans text-sm text-brand-text-dark/75 leading-relaxed font-light">
-              Oferecemos uma estrutura de suporte completa e profissional em Maputo, pensada para assegurar que cada detalhe operacional e estético decorra com absoluta tranquilidade, rigor e elegância.
+              Oferecemos uma estrutura de suporte completa e profissional, pensada para assegurar que cada detalhe operacional e estético decorra com absoluta tranquilidade, rigor e elegância.
             </p>
           </RevealOnScroll>
         </div>
@@ -62,7 +62,7 @@ export default function WeddingAdvisory() {
             const Icon = pillar.icon;
             return (
               <RevealOnScroll key={pillar.title} delay={i * 0.05}>
-                <article className="h-full bg-white/60 backdrop-blur-sm border border-brand-champagne/45 p-8 rounded-2xl hover:border-brand-gold/60 hover:shadow-[0_12px_40px_rgba(184,138,42,0.04)] transition-all duration-500 flex flex-col gap-6 text-left">
+                <article className="h-full bg-white/60 backdrop-blur-sm border border-brand-champagne/45 p-6 sm:p-8 rounded-2xl hover:border-brand-gold/60 hover:shadow-[0_12px_40px_rgba(184,138,42,0.04)] transition-all duration-500 flex flex-col gap-5 sm:gap-6 text-left">
                   <div className="w-10 h-10 rounded-full border border-brand-gold/25 flex items-center justify-center bg-brand-champagne/10 shrink-0">
                     <Icon className="w-5 h-5 text-brand-gold stroke-[1.25]" />
                   </div>

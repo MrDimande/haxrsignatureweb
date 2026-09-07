@@ -101,7 +101,7 @@ export default function InspirationFeed() {
                 <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light text-brand-text-dark leading-tight">
                   Inspiração & Serviços Curados
                 </h2>
-                <p className="font-signature text-3xl text-brand-gold/55 absolute -top-5 left-48 pointer-events-none select-none">
+                <p className="font-signature text-3xl text-brand-gold/55 absolute -top-5 left-48 pointer-events-none select-none hidden sm:block">
                   A Revista
                 </p>
               </div>
