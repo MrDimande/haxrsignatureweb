@@ -60,7 +60,7 @@ Em todos os atributos factuais e técnicos, a ausência de prova documental ou v
 ### 3.3. Distinção entre Escala de Evento Observada e Lotação Verificada
 A realização prévia de celebrações no espaço não comprova a sua capacidade arquitectónica máxima regulamentar:
 - `OBSERVED_EVENT_GUEST_SCALE`: Registo histórico verídico da assistência de um evento específico coordenado ou atendido (ex.: Casamento no Evelyn Eventos com cerca de 250 convidados; Casamento na Vila Verde com mais de 300 convidados; Lobolo na Casa d'Artista Kutenga com cerca de 300 convidados);
-- `VERIFIED_VENUE_CAPACITY`: Medição técnica in situ calculada a partir de plantas baixas, rotas de fuga dos bombeiros e espaçamento mínimo de circulação entre mesas (mínimo de 1,80 m entre eixos de mesas de 10 lugares).
+- `VERIFIED_VENUE_CAPACITY`: Medição técnica in situ calculada a partir de plantas baixas cotadas, rotas de evacuação regulamentares (`REQUIRES_REGULATORY_SOURCE`) e directriz editorial HAXR de circulação confortável (recomendação interna de 1,80 m entre eixos de mesas de 10 lugares para vestidos de gala).
 
 ### 3.4. Transparência Comercial Imutável
 A eventual celebração de acordos comerciais ou de publicidade com salões ou quintas **nunca** confere automaticamente:
