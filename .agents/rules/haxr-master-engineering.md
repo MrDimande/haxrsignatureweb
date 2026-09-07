@@ -129,7 +129,18 @@ A sequência das 12 secções da Homepage é uma **decisão de produto fechada d
 ### 11. SEGURANÇA E DADOS
 - Segredos mantidos exclusivamente no lado servidor (`process.env`).
 - Proibição absoluta de comitar chaves, tokens, ficheiros `.env` ou expor credenciais em logs e documentação.
-- **Segredos de Preview e Bypass Vercel**: Segredos de bypass de Vercel Deployment Protection, tokens de acesso de Preview, credenciais de automação e valores equivalentes são tratados como segredos de alta criticidade. É expressamente proibido imprimi-los ou incluí-los em relatórios, transcrições de terminal destinadas a documentação, walkthroughs, capturas de ecrã, scripts rastreados no repositório ou artefactos de auditoria. Devem utilizar-se variáveis de ambiente protegidas ou manipulação em memória segura em runtime. Os relatórios técnicos podem indicar exclusivamente os estados `SET`, `MISSING`, `ROTATED`, `INVALIDATED` ou `REDACTED` (com fingerprinting se aplicável), nunca valores em bruto.
+- **Padrão de Segurança para Acesso a Preview Vercel**:
+  - **Inspecção Local e por Agentes**: Preferir estritamente `vercel curl` através da Vercel CLI autenticada. Não recorrer a `VERCEL_AUTOMATION_BYPASS_SECRET` apenas por o Preview estar protegido se o `vercel curl` autenticado satisfizer a verificação.
+  - **Automação Machine-to-Machine**: Preferir Vercel Trusted Sources ou tokens de identidade OIDC de curta duração. Utilizar credenciais de longa duração de *Protection Bypass for Automation* exclusivamente quando alternativas OIDC ou autenticadas não puderem satisfazer o caso de uso.
+  - **Higiene Rígida de Segredos**: Qualquer credencial de bypass é estritamente confidencial:
+    - NUNCA imprimir;
+    - NUNCA codificar em Base64 para documentação ou relatórios;
+    - NUNCA incluir em comandos transcritos para relatórios;
+    - NUNCA comitar;
+    - NUNCA armazenar em scripts temporários ou de rascunho (`scratch/`);
+    - NUNCA incluir prefixos, sufixos, hashes ou impressões digitais (*fingerprints*) em relatórios voltados para o utilizador.
+  - **Notação em Relatórios**: Os relatórios técnicos e de auditoria devem declarar exclusivamente os estados:
+    `SET` | `MISSING` | `ROTATED` | `INVALIDATED`
 
 ---
 
