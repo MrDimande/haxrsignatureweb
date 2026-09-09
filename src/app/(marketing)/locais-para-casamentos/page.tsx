@@ -23,10 +23,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { siteUrl } from "@/lib/seo";
-import {
-  getPublicVenuesForCanonicalEnvironment,
-  mapVenueToPublicCard,
-} from "@/lib/venues";
+import { getPublicVenuesForCanonicalEnvironment } from "@/lib/venues/server";
+import { mapVenueToPublicCard } from "@/lib/venues";
 import VenueCard from "@/components/venues/VenueCard";
 
 export const metadata: Metadata = {
@@ -196,8 +194,8 @@ export default function LocaisParaCasamentosPage() {
               Espaços em Maputo
             </h2>
             <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light max-w-2xl">
-              Consulte a selecção editorial preliminar. Quatro espaços de referência
-              com capacidade declarada em fontes oficiais e infra-estrutura apta para grandes celebrações.
+              Consulte a selecção editorial preliminar. Quatro espaços
+              com capacidade declarada em fontes oficiais e infra-estrutura apta para celebrações.
             </p>
           </div>
 

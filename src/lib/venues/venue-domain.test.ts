@@ -16,7 +16,7 @@ import {
   isVenueEligibleForPublication,
   isVenueHaxrVerified,
   validateCapacityDistinction,
-} from "./index";
+} from "./server";
 import type { Venue } from "./types";
 import { navGroups, navDirectLinks } from "@/lib/marketing/navigation";
 

@@ -20,10 +20,13 @@ import {
   getPublicVenues,
   getPublicVenuesForCanonicalEnvironment,
   isVenueEligibleForEnvironment,
+  assertServerContext,
+} from "./server";
+import {
   mapVenueToPublicCard,
   VENUE_PUBLIC_EDITORIAL_REGISTRY,
-  assertServerContext,
 } from "./index";
+import * as clientVenuesBarrel from "./index";
 import { navGroups, navDirectLinks } from "@/lib/marketing/navigation";
 import { metadata } from "@/app/(marketing)/locais-para-casamentos/page";
 
@@ -188,7 +191,7 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
     });
 
     it("proves assertServerContext throws if executed in a browser window context", () => {
-      const globalScope = globalThis as typeof globalThis & { window?: unknown };
+      const globalScope = globalThis as Record<string, unknown>;
       const originalWindow = globalScope.window;
       try {
         globalScope.window = {};
@@ -201,10 +204,46 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
         );
       } finally {
         if (originalWindow === undefined) {
-          delete globalScope.window;
+          Reflect.deleteProperty(globalScope, "window");
         } else {
           globalScope.window = originalWindow;
         }
+      }
+    });
+
+    it("enforces SERVER_ONLY_PUBLICATION_BOUNDARY=ENFORCED: proves client barrel (@/lib/venues) exposes zero server internals", () => {
+      const serverInternals = [
+        "HAXR_INTERNAL_VENUES",
+        "getPublicVenues",
+        "getPublicVenuesForCanonicalEnvironment",
+        "isVenueEligibleForEnvironment",
+        "isVenueEligibleForPublication",
+        "validateVenueDataset",
+        "assertServerContext",
+        "VENUE_EDITORIAL_PUBLICATION_REGISTRY",
+      ];
+
+      for (const internalSymbol of serverInternals) {
+        assert.equal(
+          internalSymbol in clientVenuesBarrel,
+          false,
+          `VIOLAÇÃO DE FRONTEIRA ARQUITECTURAL: Símbolo de servidor '${internalSymbol}' exposto no barrel client-safe @/lib/venues`
+        );
+      }
+
+      // Confirma que apenas símbolos estritamente seguros para cliente são exportados
+      const exportedKeys = Object.keys(clientVenuesBarrel);
+      const allowedClientExports = [
+        "mapVenueToPublicCard",
+        "formatVenueTypeLabel",
+        "VENUE_PUBLIC_EDITORIAL_REGISTRY",
+      ];
+      for (const key of exportedKeys) {
+        assert.equal(
+          allowedClientExports.includes(key),
+          true,
+          `Exportação inesperada no barrel de cliente: ${key}`
+        );
       }
     });
   });
@@ -328,6 +367,61 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
           );
         }
       }
+    });
+
+    it("enforces UNSUPPORTED_PUBLIC_EDITORIAL_CLAIMS=0: strictly validates that editorial copy contains zero unverified claims", () => {
+      const unevidencedClaims = [
+        "património histórico",
+        "debruçado sobre a baía",
+        "terraço para celebrações",
+        "vocacionado para",
+        "ideal para",
+        "perfeito para",
+        "recomendado para",
+        "múltiplos salões",
+        "recepções de escala formal",
+        "recepções sociais",
+        "banquetes formais",
+      ];
+
+      for (const [venueId, copy] of Object.entries(VENUE_PUBLIC_EDITORIAL_REGISTRY)) {
+        if (!copy) continue;
+        const lowerCopy = copy.toLowerCase();
+
+        for (const claim of unevidencedClaims) {
+          assert.equal(
+            lowerCopy.includes(claim.toLowerCase()),
+            false,
+            `Alegação editorial não comprovada '${claim}' detectada no local ${venueId}`
+          );
+        }
+      }
+
+      // Verificação específica: Radisson Blu não pode inventar "Grande Salão Ballroom" (deve usar a evidenciada Sala Zambeze)
+      const radissonCopy = VENUE_PUBLIC_EDITORIAL_REGISTRY.RADISSON_BLU_MAPUTO ?? "";
+      assert.equal(
+        radissonCopy.includes("Grande Salão Ballroom"),
+        false,
+        "Radisson Blu não pode conter 'Grande Salão Ballroom' (alegação não suportada)"
+      );
+      assert.equal(
+        radissonCopy.includes("Sala Zambeze"),
+        true,
+        "Radisson Blu deve referenciar a Sala Zambeze oficialmente comprovada na evidência"
+      );
+
+      // Verificação de Polana Serena: usa Salão Nobre comprovado e não alega escala formal nem património histórico
+      const polanaCopy = VENUE_PUBLIC_EDITORIAL_REGISTRY.POLANA_SERENA_HOTEL ?? "";
+      assert.equal(polanaCopy.includes("Salão Nobre"), true);
+      assert.equal(polanaCopy.includes("300 convidados em banquete"), true);
+
+      // Verificação de Southern Sun: usa sala principal comprovada de 100 pax
+      const southernCopy = VENUE_PUBLIC_EDITORIAL_REGISTRY.SOUTHERN_SUN_MAPUTO ?? "";
+      assert.equal(southernCopy.includes("100 convidados em banquete"), true);
+
+      // Verificação de Hotel Glória: usa salão principal modular de 1.000 pax
+      const gloriaCopy = VENUE_PUBLIC_EDITORIAL_REGISTRY.HOTEL_GLORIA_CCJC ?? "";
+      assert.equal(gloriaCopy.includes("1.000 convidados em banquete"), true);
     });
   });
 

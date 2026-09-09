@@ -19,40 +19,42 @@
 import type { Venue, VenueId, PublicVenueCard } from "./types";
 
 /**
- * Traduz o tipo de espaço para designação editorial sofisticada.
+ * Traduz o tipo de espaço para designação factual contida.
  */
-function formatVenueTypeLabel(type: Venue["venueType"]): string {
+export function formatVenueTypeLabel(type: Venue["venueType"]): string {
   switch (type) {
     case "hotel_urbano":
-      return "Hotel Urbano & Celebrações";
+      return "Hotel Urbano";
     case "resort_praia":
-      return "Resort & Celebrações à Beira-Mar";
+      return "Resort de Praia";
     case "centro_conferencias":
-      return "Centro de Conferências & Grandes Recepções";
+      return "Centro de Conferências";
     case "salao_eventos":
-      return "Salão Exclusivo para Eventos";
+      return "Salão para Eventos";
     case "quinta_eventos":
-      return "Quinta & Jardim para Celebrações";
+      return "Quinta para Eventos";
     case "jardim_privado":
-      return "Jardim Privado para Celebrações";
+      return "Jardim Privado";
     case "espaco_cultural":
-      return "Espaço Cultural & Histórico";
+      return "Espaço Cultural";
   }
 }
 
 /**
  * Registo canónico de cópia editorial pública para espaços revistos em Preview.
- * Desacoplado categoricamente de Venue.notes (notas internas de auditoria técnica).
+ * Desacoplado categoricamente de Venue.notes (notas internas de auditoria técnica)
+ * e estritamente restrito a atributos factuais verificados no modelo de evidência E.1.
+ * ZERO adjectivação não comprovada, ZERO inferência de celebrações.
  */
 export const VENUE_PUBLIC_EDITORIAL_REGISTRY: Partial<Record<VenueId, string>> = {
   POLANA_SERENA_HOTEL:
-    "Hotel de património histórico na Avenida Julius Nyerere, dispondo do Salão Nobre para banquetes e recepções de escala formal.",
+    "Hotel urbano na Avenida Julius Nyerere, Polana Cimento, dispondo do Salão Nobre com capacidade declarada para até 300 convidados em banquete e jardins exteriores.",
   SOUTHERN_SUN_MAPUTO:
-    "Hotel de referência na Avenida Marginal debruçado sobre a baía de Maputo, dispondo de salão de eventos e terraço para celebrações.",
+    "Hotel urbano na Avenida da Marginal, Sommerschield, dispondo de sala principal com capacidade declarada para até 100 convidados em banquete e esplanada exterior.",
   HOTEL_GLORIA_CCJC:
-    "Complexo hoteleiro e de conferências em Sommerschield II, vocacionado para celebrações de grande escala com múltiplos salões de banquetes.",
+    "Complexo hoteleiro e centro de conferências na Avenida da Marginal, Sommerschield II, dispondo de salão principal modular com capacidade declarada para até 1.000 convidados em banquete.",
   RADISSON_BLU_MAPUTO:
-    "Hotel contemporâneo na Avenida Marginal, dispondo do Grande Salão Ballroom para recepções sociais e banquetes formais.",
+    "Hotel urbano na Avenida Marginal, Sommerschield, dispondo da Sala Zambeze com capacidade declarada para até 160 convidados em banquete e área de jardim privativo.",
 };
 
 /**
