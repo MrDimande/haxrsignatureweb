@@ -22,6 +22,7 @@
  *   Total: 16
  */
 
+import "server-only";
 import type { Venue } from "./types";
 
 export const HAXR_INTERNAL_VENUES: Venue[] = [

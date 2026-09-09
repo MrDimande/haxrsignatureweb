@@ -10,6 +10,7 @@
  * - Guardrails de confiança, direitos de imagem, indexação e boundaries de superfície
  */
 
+import "../../../scripts/register-server-only.mjs";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -242,14 +243,26 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
         );
       }
 
-      // 3. Verifica que src/lib/venues/server.ts possui a directiva oficial Next.js import 'server-only'
+      // 3. Verifica que todos os módulos sensíveis de servidor possuem a directiva oficial Next.js import 'server-only'
+      const serverModules = [
+        "src/lib/venues/server.ts",
+        "src/lib/venues/venue-data.ts",
+        "src/lib/venues/publication.ts",
+        "src/lib/venues/public-mapper.ts",
+      ];
+
+      for (const modPath of serverModules) {
+        const fullPath = path.resolve(process.cwd(), modPath);
+        const source = fs.readFileSync(fullPath, "utf-8");
+        assert.equal(
+          source.includes('import "server-only";') || source.includes("import 'server-only';"),
+          true,
+          `VIOLAÇÃO DE COMPILAÇÃO: ${modPath} DEVE importar 'server-only' para rejeitar compilação directa no cliente`
+        );
+      }
+
       const serverSourcePath = path.resolve(process.cwd(), "src/lib/venues/server.ts");
       const serverSource = fs.readFileSync(serverSourcePath, "utf-8");
-      assert.equal(
-        serverSource.includes('import "server-only";') || serverSource.includes("import 'server-only';"),
-        true,
-        "VIOLAÇÃO DE COMPILAÇÃO: src/lib/venues/server.ts DEVE importar 'server-only' para rejeitar compilação no cliente"
-      );
       assert.equal(
         serverSource.includes("getPublicVenueCardsForCanonicalEnvironment"),
         true,

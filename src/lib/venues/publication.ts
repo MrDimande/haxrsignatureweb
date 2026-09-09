@@ -14,6 +14,7 @@
  * - Em Preview: PREVIEW_VENUES_RENDERABLE = 4 (apenas os 4 candidatos de revisão).
  */
 
+import "server-only";
 import type { Venue, VenueId, VenueEditorialPublicationStatus } from "./types";
 import { HAXR_INTERNAL_VENUES } from "./venue-data";
 import { isVenueEligibleForPublication } from "./venue-validation";

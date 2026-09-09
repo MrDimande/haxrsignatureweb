@@ -16,6 +16,7 @@
  * 7. Eliminação total de enums técnicos internos na interface humana.
  */
 
+import "server-only";
 import type { Venue, VenueId, PublicVenueCard } from "./types";
 
 /**

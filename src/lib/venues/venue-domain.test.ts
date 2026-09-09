@@ -5,6 +5,7 @@
  * contagens canónicas e guardrails estritos de publicação da Fase E.1.
  */
 
+import "../../../scripts/register-server-only.mjs";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
