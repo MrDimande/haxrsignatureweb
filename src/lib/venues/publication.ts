@@ -1,16 +1,17 @@
 /**
- * HAXR Signature — Venue Editorial Publication & Whitelist Gate (Phase E.2)
+ * HAXR Signature — Venue Editorial Publication & Whitelist Gate (Phase E.2 Corrective)
  *
- * Governação estrita de publicação:
+ * Governação estrita de publicação no servidor:
  * 1. DOMAIN_READINESS (readiness primária e dimensões de confiança)
  * 2. EDITORIAL_APPROVAL (aprovação explícita no registo editorial)
- * 3. ENVIRONMENT_VISIBILITY (conjunção server-side com VERCEL_ENV)
+ * 3. ENVIRONMENT_VISIBILITY (conjunção server-side exclusiva com VERCEL_ENV)
  *
- * Proibições Estritas:
- * - Nunca permitir que cookies, query strings ou parâmetros de cliente alterem a visibilidade;
- * - Locais RESEARCH_ONLY ou com IDENTITY=A_CONFIRMAR são categoricamente excluídos;
- * - Em Produção: PRODUCTION_VENUES_RENDERABLE = 0 (nenhum local tem aprovação definitiva ainda);
- * - Em Preview: PREVIEW_VENUES_RENDERABLE = 4 (apenas os 4 candidatos de revisão do proprietário).
+ * Proibições Estritas de Segurança (Blocker 4 & Blocker 5):
+ * - Execução restrita ao servidor (assertServerContext);
+ * - Nunca permitir que cookies, query strings, searchParams, headers ou estado
+ *   de cliente alterem a visibilidade (CLIENT_SIDE_PRODUCTION_UNLOCK = false);
+ * - Em Produção: PRODUCTION_VENUES_RENDERABLE = 0;
+ * - Em Preview: PREVIEW_VENUES_RENDERABLE = 4 (apenas os 4 candidatos de revisão).
  */
 
 import type { Venue, VenueId, VenueEditorialPublicationStatus } from "./types";
@@ -20,9 +21,24 @@ import { isVenueEligibleForPublication } from "./venue-validation";
 export type PublicationEnvironment = "production" | "preview" | "development";
 
 /**
- * Detecção canónica do ambiente server-side via variáveis do Vercel/Node.
+ * Barreira de execução estritamente do lado servidor.
+ * Impede execução acidental ou tentativa de importação/unlock no browser.
+ */
+export function assertServerContext(): void {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "SECURITY_VIOLATION: O módulo de publicação de locais só pode ser executado no ambiente servidor."
+    );
+  }
+}
+
+/**
+ * Detecção canónica do ambiente server-side via variáveis de ambiente da Vercel / Node.
+ * Não aceita nem inspecciona searchParams, cookies, cabeçalhos de pedido ou estado de cliente.
  */
 export function getCanonicalEnvironment(): PublicationEnvironment {
+  assertServerContext();
+
   const vercelEnv = process.env.VERCEL_ENV;
   if (vercelEnv === "production") return "production";
   if (vercelEnv === "preview") return "preview";
@@ -73,6 +89,8 @@ export function isVenueEligibleForEnvironment(
   venue: Venue,
   env: PublicationEnvironment = getCanonicalEnvironment()
 ): boolean {
+  assertServerContext();
+
   const editorialStatus =
     VENUE_EDITORIAL_PUBLICATION_REGISTRY[venue.id] ?? "DRAFT";
 
@@ -111,12 +129,26 @@ export function isVenueEligibleForEnvironment(
 }
 
 /**
- * Obtém a colecção de locais elegíveis para o ambiente solicitado.
+ * Ponto de entrada canónico no servidor (zero argumentos) para a rota pública.
+ * Obtém os locais elegíveis determinando o ambiente exclusivamente no servidor.
  */
-export function getPublicVenues(
-  env: PublicationEnvironment = getCanonicalEnvironment()
-): Venue[] {
+export function getPublicVenuesForCanonicalEnvironment(): Venue[] {
+  assertServerContext();
+  const env = getCanonicalEnvironment();
   return HAXR_INTERNAL_VENUES.filter((venue) =>
     isVenueEligibleForEnvironment(venue, env)
   );
 }
+
+/**
+ * Obtém a colecção de locais elegíveis para o ambiente explicitado (usado para testes de integração e lógica pura).
+ */
+export function getPublicVenues(
+  env: PublicationEnvironment = getCanonicalEnvironment()
+): Venue[] {
+  assertServerContext();
+  return HAXR_INTERNAL_VENUES.filter((venue) =>
+    isVenueEligibleForEnvironment(venue, env)
+  );
+}
+

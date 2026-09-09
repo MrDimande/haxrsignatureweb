@@ -100,26 +100,6 @@ export default function VenueCard({ venue }: VenueCardProps) {
               </div>
             </div>
           </div>
-
-          {/* Tags de Formato e Celebrações */}
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {venue.environments.map((env) => (
-              <span
-                key={env}
-                className="px-2.5 py-0.5 rounded-full bg-brand-champagne/20 text-brand-text-dark font-sans text-[11px] font-medium"
-              >
-                {env}
-              </span>
-            ))}
-            {venue.celebrationsSupported.map((cel) => (
-              <span
-                key={cel}
-                className="px-2.5 py-0.5 rounded-full bg-brand-ivory border border-brand-champagne/30 text-brand-text-dark/80 font-sans text-[11px] font-light"
-              >
-                {cel}
-              </span>
-            ))}
-          </div>
         </div>
 
         {/* Card Footer: Canais Disponíveis & Ação de Assessoria */}

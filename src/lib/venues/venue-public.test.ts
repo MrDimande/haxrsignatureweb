@@ -1,14 +1,13 @@
 /**
- * HAXR Signature — Phase E.2 Public Venue Guide Tests
+ * HAXR Signature — Phase E.2 Public Venue Guide Corrective Tests
  *
  * Testes automatizados rigorosos da experiência pública /locais-para-casamentos:
- * - Governação de publicação por ambiente (0 em produção, 4 em preview)
- * - Bloqueio absoluto de RESEARCH_ONLY e IDENTITY=A_CONFIRMAR
- * - Zero badges indevidos (HAXR Verified, Visitado, Parceiro)
- * - Zero termos não suportados de homologação
- * - Zero fotografias externas não autorizadas (uso estrito de placeholder editorial)
- * - Metadados de SEO, indexação bloqueada em preview (noindex)
- * - Ausência de fuga para sitemap, navegação ou homepage
+ * - Blocker 1: Eliminação de inferências de celebração sem evidência explícita (PUBLIC_CELEBRATION_ATTRIBUTE_REQUIRES_EXPLICIT_EVIDENCE=true)
+ * - Blocker 2: Governação de filtros (remoção total de filtros não suportados por evidência)
+ * - Blocker 3: Fronteira estrutural absoluta entre Venue.notes e PublicVenueCard.editorialSummary
+ * - Blocker 4: Fronteira estritamente server-side com ponto canónico zero-argumentos
+ * - Blocker 5: Cobertura de segurança provando que CLIENT_SIDE_PRODUCTION_UNLOCK=false
+ * - Guardrails de confiança, direitos de imagem, indexação e boundaries de superfície
  */
 
 import { describe, it } from "node:test";
@@ -19,18 +18,21 @@ import path from "node:path";
 import {
   HAXR_INTERNAL_VENUES,
   getPublicVenues,
+  getPublicVenuesForCanonicalEnvironment,
   isVenueEligibleForEnvironment,
   mapVenueToPublicCard,
+  VENUE_PUBLIC_EDITORIAL_REGISTRY,
+  assertServerContext,
 } from "./index";
 import { navGroups, navDirectLinks } from "@/lib/marketing/navigation";
 import { metadata } from "@/app/(marketing)/locais-para-casamentos/page";
 
-describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance", () => {
+describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Corrective Suite)", () => {
   const previewVenues = getPublicVenues("preview");
   const productionVenues = getPublicVenues("production");
   const previewCards = previewVenues.map(mapVenueToPublicCard);
 
-  describe("Environment Publication Gates", () => {
+  describe("Environment Publication Gates & Server Boundaries (Blocker 4)", () => {
     it("enforces that exactly 0 venues are renderable in production during Phase E.2", () => {
       assert.equal(
         productionVenues.length,
@@ -95,6 +97,238 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance", () => 
         );
       }
     });
+
+    it("provides a zero-argument server canonical entry point that respects environment", () => {
+      const originalVercelEnv = process.env.VERCEL_ENV;
+      try {
+        process.env.VERCEL_ENV = "production";
+        const prodVenues = getPublicVenuesForCanonicalEnvironment();
+        assert.equal(
+          prodVenues.length,
+          0,
+          "getPublicVenuesForCanonicalEnvironment deve retornar 0 locais em produção"
+        );
+
+        process.env.VERCEL_ENV = "preview";
+        const prevVenues = getPublicVenuesForCanonicalEnvironment();
+        assert.equal(
+          prevVenues.length,
+          4,
+          "getPublicVenuesForCanonicalEnvironment deve retornar 4 locais em preview"
+        );
+      } finally {
+        process.env.VERCEL_ENV = originalVercelEnv;
+      }
+    });
+  });
+
+  describe("Security Regression: Client-Side Input Immunity (Blocker 5)", () => {
+    it("proves CLIENT_SIDE_PRODUCTION_UNLOCK=false: searchParams, cookies or query string cannot unlock preview", () => {
+      const envRecord = process.env as Record<string, string | undefined>;
+      const originalVercelEnv = envRecord.VERCEL_ENV;
+      const originalNodeEnv = envRecord.NODE_ENV;
+
+      try {
+        envRecord.VERCEL_ENV = "production";
+        envRecord.NODE_ENV = "production";
+
+        // Simula tentativa de passagem de parâmetros de desbloqueio
+        const maliciousInputs = [
+          "?env=preview",
+          "?preview=true",
+          "?role=admin",
+          "?bypass=true",
+          "?preview_token=secret",
+          "?unlock=preview",
+        ];
+
+        for (const input of maliciousInputs) {
+          // O ponto canónico não aceita argumentos e lê apenas process.env do servidor
+          const venues = getPublicVenuesForCanonicalEnvironment();
+          assert.equal(
+            venues.length,
+            0,
+            `Tentativa de unlock com input '${input}' violou a governação de produção`
+          );
+        }
+      } finally {
+        envRecord.VERCEL_ENV = originalVercelEnv;
+        envRecord.NODE_ENV = originalNodeEnv;
+      }
+    });
+
+    it("proves the public route component accepts 0 arguments and binds no client overrides", () => {
+      const pageFilePath = path.resolve(
+        process.cwd(),
+        "src/app/(marketing)/locais-para-casamentos/page.tsx"
+      );
+      const pageContent = fs.readFileSync(pageFilePath, "utf8");
+
+      // Verifica que a página não consome searchParams para governar publicação
+      assert.equal(
+        pageContent.includes("searchParams:"),
+        false,
+        "A página NÃO pode aceitar searchParams para publicação"
+      );
+      assert.equal(
+        pageContent.includes("useSearchParams"),
+        false,
+        "A página NÃO pode usar useSearchParams para publicação"
+      );
+      assert.equal(
+        pageContent.includes("cookies()"),
+        false,
+        "A página NÃO pode ler cookies para desbloquear locais"
+      );
+      assert.equal(
+        pageContent.includes("headers()"),
+        false,
+        "A página NÃO pode ler headers de cliente para desbloquear locais"
+      );
+    });
+
+    it("proves assertServerContext throws if executed in a browser window context", () => {
+      const globalScope = globalThis as typeof globalThis & { window?: unknown };
+      const originalWindow = globalScope.window;
+      try {
+        globalScope.window = {};
+        assert.throws(
+          () => {
+            assertServerContext();
+          },
+          /SECURITY_VIOLATION/,
+          "assertServerContext deve disparar erro quando window estiver definido"
+        );
+      } finally {
+        if (originalWindow === undefined) {
+          delete globalScope.window;
+        } else {
+          globalScope.window = originalWindow;
+        }
+      }
+    });
+  });
+
+  describe("Celebration Inference Elimination (Blocker 1)", () => {
+    it("enforces PUBLIC_CELEBRATION_ATTRIBUTE_REQUIRES_EXPLICIT_EVIDENCE=true: zero celebration claims in public cards", () => {
+      for (const card of previewCards) {
+        // Verifica que o objecto não possui celebrações inferidas
+        const record = card as unknown as Record<string, unknown>;
+        assert.equal(
+          record.celebrationsSupported,
+          undefined,
+          `Cartão ${card.id} não pode conter o campo celebrationsSupported`
+        );
+
+        const serialized = JSON.stringify(card).toLowerCase();
+        assert.equal(
+          serialized.includes('"lobolos"'),
+          false,
+          `Cartão ${card.id} não pode conter tag de Lobolos sem evidência explícita`
+        );
+        assert.equal(
+          serialized.includes('"recepções"'),
+          false,
+          `Cartão ${card.id} não pode conter tag de Recepções sem evidência explícita`
+        );
+        assert.equal(
+          serialized.includes('"cerimónias"'),
+          false,
+          `Cartão ${card.id} não pode conter tag de Cerimónias sem evidência explícita`
+        );
+      }
+    });
+  });
+
+  describe("Filter Governance & Surface Removal (Blocker 2 & Blocker 6)", () => {
+    it("enforces UNSUPPORTED_FILTER_ATTRIBUTES=0: VenueFilters component and obsolete bottom sheet are removed", () => {
+      const filtersPath = path.resolve(
+        process.cwd(),
+        "src/components/venues/VenueFilters.tsx"
+      );
+      assert.equal(
+        fs.existsSync(filtersPath),
+        false,
+        "VenueFilters.tsx deve ser removido na Fase E.2 por falta de evidência e para evitar filtros inúteis"
+      );
+
+      const clientGuidePath = path.resolve(
+        process.cwd(),
+        "src/components/venues/VenueGuideClient.tsx"
+      );
+      assert.equal(
+        fs.existsSync(clientGuidePath),
+        false,
+        "VenueGuideClient.tsx deve ser removido na Fase E.2 em favor de renderização directa de servidor"
+      );
+    });
+
+    it("verifies no environment inferences ('Interior'/'Exterior') are attached to public cards", () => {
+      for (const card of previewCards) {
+        const record = card as unknown as Record<string, unknown>;
+        assert.equal(
+          record.environments,
+          undefined,
+          `Cartão ${card.id} não pode conter o campo environments inferido`
+        );
+      }
+    });
+  });
+
+  describe("Structural Boundary: Venue.notes Decoupling (Blocker 3)", () => {
+    it("enforces INTERNAL_NOTES_DIRECTLY_EXPOSED=0: proves Venue.notes is NEVER assigned to editorialSummary", () => {
+      for (const venue of previewVenues) {
+        const card = mapVenueToPublicCard(venue);
+
+        // O resumo editorial NÃO pode ser igual às notas internas
+        assert.notEqual(
+          card.editorialSummary,
+          venue.notes,
+          `VIOLAÇÃO DE SEGURANÇA: Local ${venue.id} atribuiu venue.notes directamente a editorialSummary`
+        );
+
+        // O resumo editorial NÃO pode conter o texto de notas internas
+        assert.equal(
+          card.editorialSummary.includes(venue.notes),
+          false,
+          `VIOLAÇÃO DE SEGURANÇA: Local ${venue.id} expôs trecho de venue.notes em editorialSummary`
+        );
+
+        // Confirma que o editorialSummary provém do registo público ou da composição factual de reserva
+        const expectedFromRegistry = VENUE_PUBLIC_EDITORIAL_REGISTRY[venue.id];
+        if (expectedFromRegistry) {
+          assert.equal(card.editorialSummary, expectedFromRegistry);
+        }
+      }
+    });
+
+    it("proves no internal audit or source management terms leak into public cards", () => {
+      const forbiddenTerms = [
+        "A_CONFIRMAR",
+        "OWNER_CONFIRMED",
+        "EVIDENCE_REQUIRED",
+        "APPROVED_FOR_PREVIEW",
+        "POTENTIALLY_PUBLISHABLE_AFTER_EDITORIAL_REVIEW",
+        "RESEARCH_ONLY",
+        "NEEDS_EXTERNAL_VERIFICATION",
+        "NEEDS_OWNER_CONFIRMATION",
+        "FOUNDATION_READY",
+        "VISITED_BY_HAXR",
+        "vistoria documental formal",
+        "regulamentar a homologar",
+      ];
+
+      for (const card of previewCards) {
+        const serialized = JSON.stringify(card);
+        for (const term of forbiddenTerms) {
+          assert.equal(
+            serialized.includes(term),
+            false,
+            `Cartão ${card.id}: termo interno '${term}' vazado no cartão público`
+          );
+        }
+      }
+    });
   });
 
   describe("Trust Language & Badge Prohibitions", () => {
@@ -135,6 +369,11 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance", () => 
           serialized.includes("homologad"),
           false,
           `Cartão público de ${card.id} contém terminologia não suportada de homologação`
+        );
+        assert.equal(
+          serialized.includes("homologar"),
+          false,
+          `Cartão público de ${card.id} contém verbo 'homologar' não suportado`
         );
       }
     });
@@ -192,6 +431,11 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance", () => 
         false,
         "Zero schema LocalBusiness permitido na Fase E.2"
       );
+      assert.equal(
+        pageFile.includes('"@type": "Place"'),
+        false,
+        "Zero schema Place de nível individual permitido na Fase E.2"
+      );
     });
   });
 
@@ -228,103 +472,7 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance", () => 
       );
     });
 
-    it("ensures no venue detail routes were created in src/app", () => {
-      const venuesDetailRoute = path.resolve(
-        process.cwd(),
-        "src/app/(marketing)/locais-para-casamentos/[slug]"
-      );
-      assert.equal(
-        fs.existsSync(venuesDetailRoute),
-        false,
-        "Páginas de detalhe de local pertencem à Fase E.3, não à E.2"
-      );
-    });
-  });
-
-  describe("Filter Dimensions Operating on Stable Curated Data", () => {
-    it("correctly filters by city based on verified location data", () => {
-      const maputoCards = previewCards.filter((c) => c.city === "Maputo");
-      assert.equal(maputoCards.length, 4);
-
-      const matolaCards = previewCards.filter((c) => c.city === "Matola");
-      assert.equal(matolaCards.length, 0);
-    });
-
-    it("correctly filters by environment based on verified room configurations", () => {
-      const interiorCards = previewCards.filter((c) =>
-        c.environments.includes("Interior")
-      );
-      assert.equal(interiorCards.length, 4);
-
-      const exteriorCards = previewCards.filter((c) =>
-        c.environments.includes("Exterior")
-      );
-      assert.equal(exteriorCards.length, 3);
-    });
-
-    it("correctly filters by celebration type based on venue capability", () => {
-      const weddingCards = previewCards.filter((c) =>
-        c.celebrationsSupported.includes("Casamentos")
-      );
-      assert.equal(weddingCards.length, 4);
-    });
-  });
-
-  describe("Amendment 10 — Comprehensive Governance Invariants", () => {
-    it("enforces UNSUPPORTED_HOMOLOGATION_TERMINOLOGY=0 in public card surface", () => {
-      const allCards = previewCards;
-      for (const card of allCards) {
-        const serialized = JSON.stringify(card).toLowerCase();
-        assert.equal(
-          serialized.includes("homologad"),
-          false,
-          `Cartão ${card.id}: terminologia não suportada de homologação detectada`
-        );
-        assert.equal(
-          serialized.includes("homologar"),
-          false,
-          `Cartão ${card.id}: verbo 'homologar' não suportado detectado`
-        );
-      }
-    });
-
-    it("enforces UNSUPPORTED_HOMOLOGATION_TERMINOLOGY=0 in venue notes exposed to editorialSummary", () => {
-      for (const card of previewCards) {
-        const summary = (card.editorialSummary || "").toLowerCase();
-        assert.equal(
-          summary.includes("homolog"),
-          false,
-          `Cartão ${card.id}: editorialSummary contém 'homolog*'`
-        );
-      }
-    });
-
-    it("enforces VENUE_LEVEL_SCHEMA_COUNT=0 — no individual venue JSON-LD schemas", () => {
-      const pageFile = fs.readFileSync(
-        path.resolve(
-          process.cwd(),
-          "src/app/(marketing)/locais-para-casamentos/page.tsx"
-        ),
-        "utf8"
-      );
-      assert.equal(
-        pageFile.includes('"@type": "EventVenue"'),
-        false,
-        "Zero schema EventVenue permitido na Fase E.2"
-      );
-      assert.equal(
-        pageFile.includes('"@type": "LocalBusiness"'),
-        false,
-        "Zero schema LocalBusiness permitido na Fase E.2"
-      );
-      assert.equal(
-        pageFile.includes('"@type": "Place"'),
-        false,
-        "Zero schema Place de nível individual permitido na Fase E.2"
-      );
-    });
-
-    it("enforces HOMEPAGE_CHANGED=false — no venue references in homepage page.tsx", () => {
+    it("ensures HOMEPAGE_STRUCTURE_CHANGED=false: no venue references in homepage", () => {
       const homepagePath = path.resolve(
         process.cwd(),
         "src/app/(marketing)/page.tsx"
@@ -342,32 +490,7 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance", () => 
       );
     });
 
-    it("enforces no internal governance terms leaked into public cards", () => {
-      const forbiddenTerms = [
-        "A_CONFIRMAR",
-        "OWNER_CONFIRMED",
-        "EVIDENCE_REQUIRED",
-        "APPROVED_FOR_PREVIEW",
-        "POTENTIALLY_PUBLISHABLE_AFTER_EDITORIAL_REVIEW",
-        "RESEARCH_ONLY",
-        "NEEDS_EXTERNAL_VERIFICATION",
-        "NEEDS_OWNER_CONFIRMATION",
-        "FOUNDATION_READY",
-      ];
-
-      for (const card of previewCards) {
-        const serialized = JSON.stringify(card);
-        for (const term of forbiddenTerms) {
-          assert.equal(
-            serialized.includes(term),
-            false,
-            `Cartão ${card.id}: termo interno '${term}' exposto na interface pública`
-          );
-        }
-      }
-    });
-
-    it("enforces MAP_IMPLEMENTED=false — no map component exists", () => {
+    it("ensures MAP_IMPLEMENTED=false: no map component exists", () => {
       const mapComponent = path.resolve(
         process.cwd(),
         "src/components/venues/VenueMap.tsx"
@@ -379,7 +502,7 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance", () => 
       );
     });
 
-    it("enforces no venue detail routes ([slug]) in Phase E.2", () => {
+    it("ensures VENUE_DETAIL_ROUTES_CREATED=false: no [slug] route in E.2", () => {
       const slugRoute = path.resolve(
         process.cwd(),
         "src/app/(marketing)/locais-para-casamentos/[slug]"

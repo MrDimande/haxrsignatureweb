@@ -1,20 +1,22 @@
 /**
- * HAXR Signature — Public Venue Card Mapper & Trust Language (Phase E.2)
+ * HAXR Signature — Public Venue Card Mapper & Trust Language (Phase E.2 Corrective)
  *
  * Mapeamento estrito e tradução de dados de domínio para visualização pública editorial.
  *
  * Directrizes de Alta-Costura e Integridade Factual:
  * 1. ZERO terminologia "homologado/homologada" sem acto regulamentar público evidenciado.
- *    Substituído por: "informação verificada", "capacidade declarada em fonte oficial".
- * 2. ZERO reutilização de fotografias não autorizadas ou enganosas.
+ * 2. ZERO inferência de tipos de celebração sem evidência explícita (Blocker 1).
+ *    (PUBLIC_CELEBRATION_ATTRIBUTE_REQUIRES_EXPLICIT_EVIDENCE=true).
+ * 3. ZERO inferência de ambientes a partir de configurações de capacidade (Blocker 2).
+ * 4. Desacoplamento estrutural absoluto entre notas de auditoria interna (Venue.notes)
+ *    e a cópia editorial pública (PublicVenueCard.editorialSummary) (Blocker 3).
+ * 5. ZERO reutilização de fotografias não autorizadas ou enganosas.
  *    (MISREPRESENTATIVE_VENUE_IMAGES=0, UNAUTHORISED_EXTERNAL_IMAGES=0).
- *    Sem consentimento formal de direitos para imagens próprias de cada hotel/salão,
- *    utiliza-se o Placeholder Editorial Neutro HAXR.
- * 3. ZERO badges de HAXR Verified, Visitado ou Parceiro.
- * 4. Eliminação total de enums técnicos internos na interface humana.
+ * 6. ZERO badges de HAXR Verified, Visitado ou Parceiro.
+ * 7. Eliminação total de enums técnicos internos na interface humana.
  */
 
-import type { Venue, PublicVenueCard } from "./types";
+import type { Venue, VenueId, PublicVenueCard } from "./types";
 
 /**
  * Traduz o tipo de espaço para designação editorial sofisticada.
@@ -39,46 +41,27 @@ function formatVenueTypeLabel(type: Venue["venueType"]): string {
 }
 
 /**
- * Mapeia ambientes e formatos suportados com base nos espaços reais documentados.
+ * Registo canónico de cópia editorial pública para espaços revistos em Preview.
+ * Desacoplado categoricamente de Venue.notes (notas internas de auditoria técnica).
  */
-function deriveEnvironments(
-  venue: Venue
-): ("Interior" | "Exterior" | "Interior + Exterior")[] {
-  const spaces = venue.evidence.capacity.value;
-  const configs = new Set(spaces.map((s) => s.configuration));
-
-  const hasInterior =
-    configs.has("banquete") || configs.has("coquetel") || configs.has("misto");
-  const hasExterior = configs.has("ar_livre");
-
-  if (hasInterior && hasExterior) {
-    return ["Interior + Exterior", "Interior", "Exterior"];
-  }
-  if (hasExterior) {
-    return ["Exterior"];
-  }
-  return ["Interior"];
-}
+export const VENUE_PUBLIC_EDITORIAL_REGISTRY: Partial<Record<VenueId, string>> = {
+  POLANA_SERENA_HOTEL:
+    "Hotel de património histórico na Avenida Julius Nyerere, dispondo do Salão Nobre para banquetes e recepções de escala formal.",
+  SOUTHERN_SUN_MAPUTO:
+    "Hotel de referência na Avenida Marginal debruçado sobre a baía de Maputo, dispondo de salão de eventos e terraço para celebrações.",
+  HOTEL_GLORIA_CCJC:
+    "Complexo hoteleiro e de conferências em Sommerschield II, vocacionado para celebrações de grande escala com múltiplos salões de banquetes.",
+  RADISSON_BLU_MAPUTO:
+    "Hotel contemporâneo na Avenida Marginal, dispondo do Grande Salão Ballroom para recepções sociais e banquetes formais.",
+};
 
 /**
- * Mapeia tipos de celebração suportados com base em capacidade e tipologia do espaço.
+ * Composição factual de reserva baseada exclusivamente em dados públicos verificados.
+ * NUNCA acede nem injecta Venue.notes.
  */
-function deriveCelebrations(venue: Venue): string[] {
-  const spaces = venue.evidence.capacity.value;
-  const maxCapacity = Math.max(
-    ...spaces.map((s) => Math.max(s.seatedCapacity ?? 0, s.cocktailCapacity ?? 0)),
-    0
-  );
-
-  const list: string[] = ["Casamentos"];
-  if (maxCapacity >= 80) {
-    list.push("Recepções");
-    list.push("Lobolos");
-  }
-  if (spaces.some((s) => s.configuration === "ar_livre" || s.configuration === "misto")) {
-    list.push("Cerimónias");
-  }
-  return list;
+function composeFactualPublicSummary(venue: Venue): string {
+  const typeLabel = formatVenueTypeLabel(venue.venueType);
+  return `${typeLabel} localizado em ${venue.area}, ${venue.city}, seleccionado na curadoria editorial da HAXR Signature.`;
 }
 
 /**
@@ -143,12 +126,18 @@ function formatSpacesSummary(venue: Venue): string {
 
 /**
  * Mapeia uma entidade de domínio Venue para o cartão público PublicVenueCard.
+ *
+ * Invariantes Estritos:
+ * - Venue.notes NUNCA é atribuído a editorialSummary (Blocker 3).
+ * - Sem inferência de celebrações nem ambientes (Blockers 1 e 2).
  */
 export function mapVenueToPublicCard(venue: Venue): PublicVenueCard {
   const capacityDisplay = formatPublicCapacityDisplay(venue);
-  const environments = deriveEnvironments(venue);
-  const celebrationsSupported = deriveCelebrations(venue);
   const spacesSummary = formatSpacesSummary(venue);
+
+  // Blocker 3: Fronteira explícita. Nunca atribuir venue.notes directamente!
+  const editorialSummary =
+    VENUE_PUBLIC_EDITORIAL_REGISTRY[venue.id] ?? composeFactualPublicSummary(venue);
 
   return {
     id: venue.id,
@@ -159,9 +148,7 @@ export function mapVenueToPublicCard(venue: Venue): PublicVenueCard {
     locationLabel: `${venue.area}, ${venue.city}`,
     venueType: venue.venueType,
     venueTypeLabel: formatVenueTypeLabel(venue.venueType),
-    editorialSummary: venue.notes,
-    celebrationsSupported,
-    environments,
+    editorialSummary,
     spacesSummary,
     capacityDisplay,
     // Política estrita de direitos de imagem: sem cessão expressa, utiliza placeholder editorial neutro

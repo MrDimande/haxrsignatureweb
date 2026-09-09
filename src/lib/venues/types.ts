@@ -214,8 +214,6 @@ export type PublicVenueCard = {
   venueType: VenueType;
   venueTypeLabel: string;
   editorialSummary: string;
-  celebrationsSupported: string[];
-  environments: ("Interior" | "Exterior" | "Interior + Exterior")[];
   spacesSummary: string;
   capacityDisplay: {
     label: string;

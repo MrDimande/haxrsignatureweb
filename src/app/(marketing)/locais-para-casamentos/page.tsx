@@ -24,11 +24,10 @@ import {
 } from "lucide-react";
 import { siteUrl } from "@/lib/seo";
 import {
-  getCanonicalEnvironment,
-  getPublicVenues,
+  getPublicVenuesForCanonicalEnvironment,
   mapVenueToPublicCard,
 } from "@/lib/venues";
-import VenueGuideClient from "@/components/venues/VenueGuideClient";
+import VenueCard from "@/components/venues/VenueCard";
 
 export const metadata: Metadata = {
   title: "Locais para Casamentos em Maputo e Matola",
@@ -45,8 +44,7 @@ export const metadata: Metadata = {
 };
 
 export default function LocaisParaCasamentosPage() {
-  const env = getCanonicalEnvironment();
-  const rawVenues = getPublicVenues(env);
+  const rawVenues = getPublicVenuesForCanonicalEnvironment();
   const publicCards = rawVenues.map(mapVenueToPublicCard);
 
   // JSON-LD Restrito de Página (WebPage + BreadcrumbList) — Zero schema de Local individual em E.2
@@ -181,7 +179,7 @@ export default function LocaisParaCasamentosPage() {
         </div>
       </section>
 
-      {/* ── 03. CATÁLOGO EDITORIAL INTERACTIVO (DISCOVERY & FILTERS) ───────── */}
+      {/* ── 03. CATÁLOGO EDITORIAL DE ESPAÇOS ───────────────────────────────── */}
       <section
         id="explorar-locais"
         className="py-20 md:py-28 bg-[#FCFBF9] border-b border-brand-champagne/20"
@@ -195,16 +193,31 @@ export default function LocaisParaCasamentosPage() {
               </span>
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl font-light text-brand-text-dark">
-              Espaços em Maputo e Matola
+              Espaços em Maputo
             </h2>
             <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light max-w-2xl">
-              Consulte a selecção editorial revista. Explore os salões e ambientes
-              segundo o formato e escala da vossa celebração.
+              Consulte a selecção editorial preliminar. Quatro espaços de referência
+              com capacidade declarada em fontes oficiais e infra-estrutura apta para grandes celebrações.
             </p>
           </div>
 
-          {/* Componente React com Filtros e Grelha */}
-          <VenueGuideClient initialVenues={publicCards} />
+          {/* Grelha Editorial de Locais */}
+          {publicCards.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+              {publicCards.map((venue) => (
+                <VenueCard key={venue.id} venue={venue} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 px-6 text-center bg-[#FAF8F5] border border-brand-champagne/20 rounded-3xl space-y-4 max-w-lg mx-auto">
+              <h3 className="font-serif text-2xl font-light text-brand-text-dark">
+                Guia em Actualização Editorial
+              </h3>
+              <p className="font-sans text-sm text-brand-text-dark/70 font-light leading-relaxed">
+                A curadoria de espaços para celebrações está em processo de verificação documental e vistoria técnica pela equipa da HAXR Signature.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
