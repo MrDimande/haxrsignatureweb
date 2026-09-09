@@ -45,3 +45,4 @@ backups/
 pr4-*.local
 .neon
 scratch/
+mcp_config.json

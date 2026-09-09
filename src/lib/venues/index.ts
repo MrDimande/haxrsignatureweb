@@ -7,3 +7,5 @@
 export * from "./types";
 export * from "./venue-data";
 export * from "./venue-validation";
+export * from "./publication";
+export * from "./public-mapper";

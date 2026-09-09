@@ -68,6 +68,7 @@ export type VenueFieldEvidence<T = unknown> = {
 /**
  * Tipificação estrita de capacidade discriminada por ambiente e formato.
  * Banida qualquer referência a "capacidade homologada" sem acto regulamentar público.
+ * Utilizar: "capacidade declarada em fonte oficial" ou "capacidade a verificar".
  */
 export type CapacityConfigurationType =
   | "OFFICIAL_DECLARED_CAPACITY"
@@ -187,4 +188,45 @@ export type Venue = {
   // Notas Editoriais e de Auditoria Interna
   notes: string;
   lastChecked: string;
+};
+
+/**
+ * Estado editorial de publicação na experiência pública (Fase E.2).
+ * Exige dupla aprovação: aptidão técnica do domínio + decisão editorial explícita.
+ */
+export type VenueEditorialPublicationStatus =
+  | "DRAFT"
+  | "APPROVED_FOR_PREVIEW"
+  | "APPROVED_FOR_PUBLICATION"
+  | "SUSPENDED";
+
+/**
+ * Representação pública editorial de um espaço para exibição no Guia HAXR.
+ * Não expõe enums de governação interna nem códigos de auditoria.
+ */
+export type PublicVenueCard = {
+  id: VenueId;
+  slug: string;
+  name: string;
+  city: "Maputo" | "Matola";
+  area: string;
+  locationLabel: string;
+  venueType: VenueType;
+  venueTypeLabel: string;
+  editorialSummary: string;
+  celebrationsSupported: string[];
+  environments: ("Interior" | "Exterior" | "Interior + Exterior")[];
+  spacesSummary: string;
+  capacityDisplay: {
+    label: string;
+    isDeclared: boolean;
+    detail?: string;
+  };
+  hasDedicatedImage: boolean;
+  imageUrl?: string;
+  imageAlt?: string;
+  contactAvailability: {
+    hasPhone: boolean;
+    hasWebsite: boolean;
+  };
 };

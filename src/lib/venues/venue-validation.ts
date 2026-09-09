@@ -69,7 +69,7 @@ export function isVenueEligibleForPublication(venue: Venue): boolean {
 }
 
 /**
- * Avalia se um local cumpre os requisitos de homologação HAXR_VERIFIED.
+ * Avalia se um local cumpre os requisitos de verificação HAXR_VERIFIED.
  * Requer vistoria presencial física, caderno de encargos e evidência documental.
  * Na Fase E.1, o resultado para todos os 16 locais é obrigatoriamente FALSE.
  */
@@ -195,7 +195,7 @@ export function validateVenueDataset(venues: Venue[]): VenueValidationResult {
     // 5. Guardrail: Bloqueio de HAXR_VERIFIED na Fase E.1
     if (isVenueHaxrVerified(venue)) {
       errors.push(
-        `VIOLAÇÃO DE GUARDRAIL E.1: Local ${venue.id} avaliado como HAXR_VERIFIED=true sem homologação da checklist presencial.`
+        `VIOLAÇÃO DE GUARDRAIL E.1: Local ${venue.id} avaliado como HAXR_VERIFIED=true sem verificação presencial da checklist.`
       );
     }
 
