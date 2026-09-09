@@ -21,14 +21,13 @@ import {
   getPublicVenuesForCanonicalEnvironment,
   isVenueEligibleForEnvironment,
   assertServerContext,
-} from "./server";
+} from "./publication";
 import {
   mapVenueToPublicCard,
   VENUE_PUBLIC_EDITORIAL_REGISTRY,
-} from "./index";
+} from "./public-mapper";
 import * as clientVenuesBarrel from "./index";
 import { navGroups, navDirectLinks } from "@/lib/marketing/navigation";
-import { metadata } from "@/app/(marketing)/locais-para-casamentos/page";
 
 describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Corrective Suite)", () => {
   const previewVenues = getPublicVenues("preview");
@@ -211,8 +210,17 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
       }
     });
 
-    it("enforces SERVER_ONLY_PUBLICATION_BOUNDARY=ENFORCED: proves client barrel (@/lib/venues) exposes zero server internals", () => {
-      const serverInternals = [
+    it("enforces SERVER_ONLY_PUBLICATION_BOUNDARY=ENFORCED: proves client barrel (@/lib/venues) exposes zero runtime code and server.ts has server-only guard", () => {
+      // 1. O barrel de cliente (@/lib/venues) não deve exportar NENHUMA função, variável ou registo de runtime
+      const clientRuntimeExports = Object.keys(clientVenuesBarrel);
+      assert.equal(
+        clientRuntimeExports.length,
+        0,
+        `VIOLAÇÃO DE DTO/FRONTEIRA: O barrel de cliente expõe símbolos de runtime: ${clientRuntimeExports.join(", ")}`
+      );
+
+      // 2. Garante que nem os dados internos nem os mappers estão acessíveis no barrel de cliente
+      const forbiddenInClient = [
         "HAXR_INTERNAL_VENUES",
         "getPublicVenues",
         "getPublicVenuesForCanonicalEnvironment",
@@ -221,30 +229,32 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
         "validateVenueDataset",
         "assertServerContext",
         "VENUE_EDITORIAL_PUBLICATION_REGISTRY",
-      ];
-
-      for (const internalSymbol of serverInternals) {
-        assert.equal(
-          internalSymbol in clientVenuesBarrel,
-          false,
-          `VIOLAÇÃO DE FRONTEIRA ARQUITECTURAL: Símbolo de servidor '${internalSymbol}' exposto no barrel client-safe @/lib/venues`
-        );
-      }
-
-      // Confirma que apenas símbolos estritamente seguros para cliente são exportados
-      const exportedKeys = Object.keys(clientVenuesBarrel);
-      const allowedClientExports = [
         "mapVenueToPublicCard",
         "formatVenueTypeLabel",
         "VENUE_PUBLIC_EDITORIAL_REGISTRY",
       ];
-      for (const key of exportedKeys) {
+
+      for (const internalSymbol of forbiddenInClient) {
         assert.equal(
-          allowedClientExports.includes(key),
-          true,
-          `Exportação inesperada no barrel de cliente: ${key}`
+          internalSymbol in clientVenuesBarrel,
+          false,
+          `VIOLAÇÃO DE FRONTEIRA: Símbolo '${internalSymbol}' acessível no barrel de cliente @/lib/venues`
         );
       }
+
+      // 3. Verifica que src/lib/venues/server.ts possui a directiva oficial Next.js import 'server-only'
+      const serverSourcePath = path.resolve(process.cwd(), "src/lib/venues/server.ts");
+      const serverSource = fs.readFileSync(serverSourcePath, "utf-8");
+      assert.equal(
+        serverSource.includes('import "server-only";') || serverSource.includes("import 'server-only';"),
+        true,
+        "VIOLAÇÃO DE COMPILAÇÃO: src/lib/venues/server.ts DEVE importar 'server-only' para rejeitar compilação no cliente"
+      );
+      assert.equal(
+        serverSource.includes("getPublicVenueCardsForCanonicalEnvironment"),
+        true,
+        "src/lib/venues/server.ts deve exportar o ponto de entrada canónico de DTOs já sanitizados"
+      );
     });
   });
 
@@ -489,21 +499,38 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
   });
 
   describe("SEO & Indexing Guardrails", () => {
+    // Leitura estática do ficheiro fonte para evitar chain de import server-only
+    const pageSource = fs.readFileSync(
+      path.resolve(
+        process.cwd(),
+        "src/app/(marketing)/locais-para-casamentos/page.tsx"
+      ),
+      "utf8"
+    );
+
     it("enforces noindex and nofollow during preview review phase", () => {
-      assert.deepEqual(metadata.robots, {
-        index: false,
-        follow: false,
-      });
+      assert.equal(
+        pageSource.includes("index: false"),
+        true,
+        "Metadata robots deve conter index: false"
+      );
+      assert.equal(
+        pageSource.includes("follow: false"),
+        true,
+        "Metadata robots deve conter follow: false"
+      );
     });
 
     it("enforces canonical SEO title and factual description", () => {
       assert.equal(
-        metadata.title,
-        "Locais para Casamentos em Maputo e Matola"
+        pageSource.includes('"Locais para Casamentos em Maputo e Matola"'),
+        true,
+        "Título SEO canónico ausente"
       );
       assert.equal(
-        metadata.description,
-        "Guia editorial e prático de espaços para casamentos e celebrações em Maputo e Matola, com informação sobre capacidade, ambientes e critérios de escolha."
+        pageSource.includes("Guia editorial e prático de espaços para casamentos e celebrações em Maputo e Matola"),
+        true,
+        "Descrição SEO factual ausente"
       );
     });
 

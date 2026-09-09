@@ -68,6 +68,7 @@
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.56.3",
     "resend": "^6.12.4",
+    "server-only": "^0.0.1",
     "split-type": "^0.3.4",
     "xlsx": "^0.18.5",
     "zod": "^3.25.28"

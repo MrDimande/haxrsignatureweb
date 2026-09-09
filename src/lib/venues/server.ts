@@ -9,7 +9,10 @@
  * - O barrel genérico `@/lib/venues` (index.ts) permanece estritamente client-safe.
  */
 
-import { assertServerContext } from "./publication";
+import "server-only";
+import { assertServerContext, getPublicVenuesForCanonicalEnvironment } from "./publication";
+import { mapVenueToPublicCard } from "./public-mapper";
+import type { PublicVenueCard } from "./types";
 
 // Assegura contexto estritamente de servidor aquando da inicialização do módulo
 assertServerContext();
@@ -19,3 +22,15 @@ export * from "./venue-data";
 export * from "./venue-validation";
 export * from "./publication";
 export * from "./public-mapper";
+
+/**
+ * Ponto de entrada canónico de servidor que devolve directamente os DTOs públicos
+ * já sanitizados (PublicVenueCard[]), assegurando que o modelo interno Venue
+ * nunca é exposto aos componentes de interface.
+ */
+export function getPublicVenueCardsForCanonicalEnvironment(): PublicVenueCard[] {
+  assertServerContext();
+  const venues = getPublicVenuesForCanonicalEnvironment();
+  return venues.map(mapVenueToPublicCard);
+}
+

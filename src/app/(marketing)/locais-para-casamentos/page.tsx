@@ -23,8 +23,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { siteUrl } from "@/lib/seo";
-import { getPublicVenuesForCanonicalEnvironment } from "@/lib/venues/server";
-import { mapVenueToPublicCard } from "@/lib/venues";
+import { getPublicVenueCardsForCanonicalEnvironment } from "@/lib/venues/server";
 import VenueCard from "@/components/venues/VenueCard";
 
 export const metadata: Metadata = {
@@ -42,12 +41,10 @@ export const metadata: Metadata = {
 };
 
 export default function LocaisParaCasamentosPage() {
-  const rawVenues = getPublicVenuesForCanonicalEnvironment();
-  const publicCards = rawVenues.map(mapVenueToPublicCard);
+  const publicCards = getPublicVenueCardsForCanonicalEnvironment();
 
   // JSON-LD Restrito de Página (WebPage + BreadcrumbList) — Zero schema de Local individual em E.2
   const jsonLd = {
-    "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebPage",

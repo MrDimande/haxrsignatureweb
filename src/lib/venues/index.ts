@@ -1,14 +1,14 @@
 /**
- * HAXR Signature — Public Venue Guide Types & Mappers (Client-Safe Entry Point)
+ * HAXR Signature — Public Venue Guide Presentation Types (Client-Safe Entry Point)
  *
- * Exportações públicas seguras para consumo no cliente e em componentes de interface.
- * Não exporta o dataset interno (HAXR_INTERNAL_VENUES) nem a lógica de publicação do servidor (Blocker B).
- * Para acesso restrito do lado servidor, importar exclusivamente de `@/lib/venues/server`.
+ * Exportações estritamente de tipos para consumo de apresentação na interface.
+ * Zero código executável, zero datasets internos, zero registries expostos ao cliente.
+ * Para operações do lado servidor, importar exclusivamente de `@/lib/venues/server`.
  */
 
-export type * from "./types";
-export {
-  mapVenueToPublicCard,
-  formatVenueTypeLabel,
-  VENUE_PUBLIC_EDITORIAL_REGISTRY,
-} from "./public-mapper";
+export type {
+  PublicVenueCard,
+  VenueId,
+  VenueType,
+  VenueEditorialPublicationStatus,
+} from "./types";

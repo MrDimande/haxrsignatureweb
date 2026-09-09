@@ -18,6 +18,14 @@ import type { Venue, VenueId, VenueEditorialPublicationStatus } from "./types";
 import { HAXR_INTERNAL_VENUES } from "./venue-data";
 import { isVenueEligibleForPublication } from "./venue-validation";
 
+export { HAXR_INTERNAL_VENUES } from "./venue-data";
+export {
+  isVenueEligibleForPublication,
+  isVenueHaxrVerified,
+  validateVenueDataset,
+  validateCapacityDistinction,
+} from "./venue-validation";
+
 export type PublicationEnvironment = "production" | "preview" | "development";
 
 /**
