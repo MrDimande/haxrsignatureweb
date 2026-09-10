@@ -648,5 +648,27 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
       );
     });
   });
+
+  describe("Durable Server-Only Module Boundary Regression Suite", () => {
+    const serverSensitiveFiles = [
+      "src/lib/venues/server.ts",
+      "src/lib/venues/venue-data.ts",
+      "src/lib/venues/publication.ts",
+      "src/lib/venues/public-mapper.ts",
+    ];
+
+    it("statically proves that all server modules retain the literal 'import \"server-only\";' marker", () => {
+      for (const relPath of serverSensitiveFiles) {
+        const fullPath = path.resolve(process.cwd(), relPath);
+        assert.ok(fs.existsSync(fullPath), `Ficheiro em falta: ${relPath}`);
+        const content = fs.readFileSync(fullPath, "utf-8");
+        assert.match(
+          content,
+          /import\s+["']server-only["'];?/,
+          `VIOLAÇÃO DE SEGURANÇA: O módulo sensível ${relPath} não possui o marcador 'server-only'`
+        );
+      }
+    });
+  });
 });
 
