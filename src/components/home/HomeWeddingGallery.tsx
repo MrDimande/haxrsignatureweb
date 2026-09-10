@@ -45,9 +45,10 @@ const weddingProjects: WeddingProject[] = [
     couple: "Casamento na Vila Verde",
     location: "Maputo · Moçambique",
     tagline: "mais de 300 convidados · Web-Convite e Memórias",
-    mainImage: "/images/portfolio/mosaic-salao-branco-preparado.webp",
+    // CORRECÇÃO (E.2): mosaic-salao-branco-preparado.webp é do Evelyn (monograma VF), não da Vila Verde.
+    mainImage: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
     galleryImages: [
-      "/images/portfolio/mosaic-salao-branco-preparado.webp",
+      "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
       "/images/categories/venue.png",
       "/images/categories/caterer.png",
     ],

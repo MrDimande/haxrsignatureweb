@@ -235,7 +235,10 @@ export const HAXR_REAL_WEDDINGS: RealWedding[] = [
       "Gestão de Convidados",
       "Plus Memories",
     ],
-    coverImage: "/images/portfolio/mosaic-salao-branco-preparado.webp",
+    // CORRECÇÃO DE INTEGRIDADE (E.2): A imagem mosaic-salao-branco-preparado.webp
+    // pertence ao Salão Evelyn (monograma VF, data 09.05.2026), NÃO à Vila Verde.
+    // Placeholder neutro até obtenção de fotografia real da Vila Verde com direitos confirmados.
+    coverImage: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
     slug: "/portfolio",
     vendorCategories: [
       "venues",
