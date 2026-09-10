@@ -272,8 +272,8 @@ const styleResults: Record<string, StyleResult> = {
     featuredWedding: {
       couple: "Casamento na Vila Verde",
       venue: "Vila Verde · mais de 300 convidados",
-      // CORRECÇÃO (E.2): mosaic-salao-branco-preparado.webp pertence ao Evelyn, não à Vila Verde.
-      image: "/images/portfolio/mosaic-mesa-detalhe-dourado.webp",
+      // CORRECÇÃO DE INTEGRIDADE (E.2): Marcador gráfico editorial neutro (VILA_VERDE_DECEPTIVE_IMAGE_ASSOCIATIONS=0).
+      image: "/images/portfolio/casamento-signature.svg",
       quote: "Celebração imponente com acolhimento estruturado para mais de 300 convidados.",
       href: "/portfolio",
     },
