@@ -44,14 +44,18 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
       );
     });
 
-    it("enforces that exactly 4 review candidate venues are renderable in preview", () => {
+    it("enforces that exactly 8 first-wave venues are renderable in preview (4 independent + 4 hotels)", () => {
       assert.equal(
         previewVenues.length,
-        4,
-        `Esperados 4 locais aprovados para preview, obtidos ${previewVenues.length}`
+        8,
+        `Esperados 8 locais aprovados para preview, obtidos ${previewVenues.length}`
       );
 
       const expectedIds = [
+        "EVELYN_EVENTOS",
+        "VILA_VERDE_MOZAL",
+        "THE_VENUE_MZ",
+        "ALIANCA_EVENTOS",
         "POLANA_SERENA_HOTEL",
         "SOUTHERN_SUN_MAPUTO",
         "HOTEL_GLORIA_CCJC",
@@ -59,6 +63,49 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
       ];
       const actualIds = previewVenues.map((v) => v.id);
       assert.deepEqual(actualIds.sort(), expectedIds.sort());
+
+      const expectedNames = [
+        "Salão de Eventos Evelyn",
+        "Vila Verde Banquetes",
+        "The Venue MZ",
+        "Complexo Aliança",
+        "Polana Serena Hotel",
+        "Southern Sun Maputo",
+        "Hotel Glória & CCJC",
+        "Radisson Blu Hotel & Residence Maputo",
+      ];
+      const actualNames = previewCards.map((c) => c.name);
+      assert.deepEqual(actualNames.sort(), expectedNames.sort());
+    });
+
+    it("verifies independent venues visually precede the hotel section in presentation order", () => {
+      const firstFour = previewCards.slice(0, 4);
+      assert.equal(
+        firstFour.every((c) => c.isIndependent),
+        true,
+        "Os primeiros 4 locais devem ser independentes"
+      );
+
+      const lastFour = previewCards.slice(4, 8);
+      assert.equal(
+        lastFour.every((c) => !c.isIndependent),
+        true,
+        "Os últimos 4 locais devem ser unidades hoteleiras"
+      );
+    });
+
+    it("strictly forbids Cajada Eventos and Montebelo Indy Hotel from rendering in preview", () => {
+      const actualIds = previewVenues.map((v) => v.id);
+      assert.equal(
+        actualIds.includes("CASA_D_ARTISTA_KUTENGA"),
+        false,
+        "Cajada Eventos (Kutenga) deve permanecer não-renderizável por conflito de localização"
+      );
+      assert.equal(
+        actualIds.includes("MONTEBELO_INDY_HOTEL"),
+        false,
+        "Montebelo Indy Hotel deve permanecer em DRAFT e não-renderizável"
+      );
     });
 
     it("strictly forbids RESEARCH_ONLY venues from rendering in any environment", () => {
@@ -116,8 +163,8 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
         const prevVenues = getPublicVenuesForCanonicalEnvironment();
         assert.equal(
           prevVenues.length,
-          4,
-          "getPublicVenuesForCanonicalEnvironment deve retornar 4 locais em preview"
+          8,
+          "getPublicVenuesForCanonicalEnvironment deve retornar 8 locais em preview"
         );
       } finally {
         process.env.VERCEL_ENV = originalVercelEnv;
@@ -508,6 +555,44 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
           `Local ${card.id} não pode referenciar imageUrl sem direitos confirmados`
         );
       }
+    });
+
+    it("ensures unverified capacity uses polished public copy 'Capacidade sob consulta'", () => {
+      const unverifiedCards = previewCards.filter((c) => !c.capacityDisplay.isDeclared);
+      // Os 4 espaços independentes têm capacidade declarada não confirmada
+      assert.equal(unverifiedCards.length, 4);
+
+      for (const card of unverifiedCards) {
+        assert.equal(
+          card.capacityDisplay.label,
+          "Capacidade sob consulta",
+          `Cartão ${card.id} deve ter label 'Capacidade sob consulta'`
+        );
+        assert.equal(
+          card.capacityDisplay.label.toLowerCase().includes("a confirmar"),
+          false,
+          `Cartão ${card.id} não pode expor 'a confirmar' ao público`
+        );
+      }
+    });
+
+    it("ensures VenuePlaceholderImage uses honest editorial identity accessibility labels", () => {
+      const placeholderPath = path.resolve(
+        process.cwd(),
+        "src/components/venues/VenuePlaceholderImage.tsx"
+      );
+      const placeholderSource = fs.readFileSync(placeholderPath, "utf-8");
+
+      assert.equal(
+        placeholderSource.includes("Identidade editorial do ${venueName}"),
+        true,
+        "Placeholder DEVE usar label honesto 'Identidade editorial do ${venueName}'"
+      );
+      assert.equal(
+        placeholderSource.includes("Fotografia do") || placeholderSource.includes("Fotografia de"),
+        false,
+        "Placeholder NÃO pode alegar ser fotografia"
+      );
     });
   });
 

@@ -60,23 +60,52 @@ export function getCanonicalEnvironment(): PublicationEnvironment {
 }
 
 /**
+ * Ordem canónica de apresentação editorial (Hierarquia: Espaços Independentes precedem Hotéis).
+ */
+export const VENUE_DISPLAY_ORDER: Record<VenueId, number> = {
+  // ── 1. Espaços Independentes (Prioridade de Produto) ────────────────────────
+  EVELYN_EVENTOS: 1,
+  VILA_VERDE_MOZAL: 2,
+  THE_VENUE_MZ: 3,
+  ALIANCA_EVENTOS: 4,
+
+  // ── 2. Hotéis com Instalações para Eventos ──────────────────────────────────
+  POLANA_SERENA_HOTEL: 10,
+  SOUTHERN_SUN_MAPUTO: 11,
+  HOTEL_GLORIA_CCJC: 12,
+  RADISSON_BLU_MAPUTO: 13,
+
+  // ── 3. Restantes Locais em Rascunho / Auditoria ─────────────────────────────
+  CASA_D_ARTISTA_KUTENGA: 20,
+  MONTEBELO_INDY_HOTEL: 21,
+  CATEMBE_GALLERY_HOTEL: 22,
+  QUINTA_NARO_EVENTOS: 23,
+  QUINTA_DA_STELA: 30,
+  CASTELO_EVENTOS: 31,
+  NAMYLALA_EVENTOS: 32,
+  COMPLEXO_LOUANINE: 33,
+};
+
+/**
  * Registo canónico de aprovação editorial de publicação para os 16 locais.
  */
 export const VENUE_EDITORIAL_PUBLICATION_REGISTRY: Record<
   VenueId,
   VenueEditorialPublicationStatus
 > = {
-  // Os 4 candidatos de revisão (aprovados EXCLUSIVAMENTE para Preview)
+  // Os 4 candidatos de revisão em hotelaria (aprovados para Preview)
   POLANA_SERENA_HOTEL: "APPROVED_FOR_PREVIEW",
   SOUTHERN_SUN_MAPUTO: "APPROVED_FOR_PREVIEW",
   HOTEL_GLORIA_CCJC: "APPROVED_FOR_PREVIEW",
   RADISSON_BLU_MAPUTO: "APPROVED_FOR_PREVIEW",
 
-  // Os 5 de proprietário nomeado (aguardam confirmação do proprietário)
-  THE_VENUE_MZ: "DRAFT",
-  VILA_VERDE_MOZAL: "DRAFT",
-  ALIANCA_EVENTOS: "DRAFT",
-  EVELYN_EVENTOS: "DRAFT",
+  // Os 4 espaços independentes aprovados para a Primeira Vaga de Preview (E.2)
+  THE_VENUE_MZ: "APPROVED_FOR_PREVIEW",
+  VILA_VERDE_MOZAL: "APPROVED_FOR_PREVIEW",
+  ALIANCA_EVENTOS: "APPROVED_FOR_PREVIEW",
+  EVELYN_EVENTOS: "APPROVED_FOR_PREVIEW",
+
+  // Cajada / Kutenga permanece diferido por conflito de localização pública
   CASA_D_ARTISTA_KUTENGA: "DRAFT",
 
   // Os 3 que requerem verificação externa independente
@@ -146,6 +175,8 @@ export function getPublicVenuesForCanonicalEnvironment(): Venue[] {
   const env = getCanonicalEnvironment();
   return HAXR_INTERNAL_VENUES.filter((venue) =>
     isVenueEligibleForEnvironment(venue, env)
+  ).sort(
+    (a, b) => (VENUE_DISPLAY_ORDER[a.id] ?? 99) - (VENUE_DISPLAY_ORDER[b.id] ?? 99)
   );
 }
 
@@ -158,6 +189,8 @@ export function getPublicVenues(
   assertServerContext();
   return HAXR_INTERNAL_VENUES.filter((venue) =>
     isVenueEligibleForEnvironment(venue, env)
+  ).sort(
+    (a, b) => (VENUE_DISPLAY_ORDER[a.id] ?? 99) - (VENUE_DISPLAY_ORDER[b.id] ?? 99)
   );
 }
 

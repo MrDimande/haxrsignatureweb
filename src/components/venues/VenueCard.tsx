@@ -24,10 +24,22 @@ interface VenueCardProps {
 }
 
 export default function VenueCard({ venue }: VenueCardProps) {
+  const isIndependent = venue.isIndependent;
+
   return (
-    <article className="group relative bg-[#FAF8F5] border border-brand-champagne/30 rounded-2xl overflow-hidden hover:border-brand-gold/40 transition-all duration-300 shadow-xs flex flex-col">
+    <article
+      className={`group relative overflow-hidden transition-all duration-300 flex flex-col ${
+        isIndependent
+          ? "bg-[#FAF8F5] border border-brand-champagne/45 rounded-3xl hover:border-brand-gold/60 shadow-sm"
+          : "bg-[#FAF8F5] border border-brand-champagne/25 rounded-2xl hover:border-brand-gold/40 shadow-xs"
+      }`}
+    >
       {/* Visual Header: Imagem Autorizada ou Placeholder Editorial Neutro */}
-      <div className="relative w-full aspect-[16/10] overflow-hidden bg-brand-black/5">
+      <div
+        className={`relative w-full overflow-hidden bg-brand-black/5 ${
+          isIndependent ? "aspect-[16/10] sm:aspect-[16/9]" : "aspect-[16/10]"
+        }`}
+      >
         {venue.hasDedicatedImage && venue.imageUrl ? (
           <Image
             src={venue.imageUrl}
@@ -40,21 +52,33 @@ export default function VenueCard({ venue }: VenueCardProps) {
           <VenuePlaceholderImage
             venueName={venue.name}
             venueTypeLabel={venue.venueTypeLabel}
+            isIndependent={isIndependent}
+            categoryTier={venue.categoryTier}
           />
         )}
 
-        {/* Tag de Tipologia Discreta */}
+        {/* Tag de Tipologia com Distinção de Categoria */}
         <div className="absolute top-4 left-4 z-10">
-          <span className="px-3 py-1 rounded-full bg-brand-black/70 backdrop-blur-xs border border-white/10 font-mono text-[9px] uppercase tracking-widest text-brand-ivory font-medium">
+          <span
+            className={`px-3 py-1 rounded-full font-mono text-[9px] uppercase tracking-widest ${
+              isIndependent
+                ? "bg-brand-black/85 backdrop-blur-xs border border-brand-gold/30 text-brand-gold font-semibold shadow-xs"
+                : "bg-brand-black/70 backdrop-blur-xs border border-white/10 text-brand-ivory font-medium"
+            }`}
+          >
             {venue.venueTypeLabel}
           </span>
         </div>
       </div>
 
       {/* Card Content Body */}
-      <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-6">
+      <div
+        className={`flex-1 flex flex-col justify-between ${
+          isIndependent ? "p-7 sm:p-9 space-y-6" : "p-6 sm:p-7 space-y-5"
+        }`}
+      >
         <div className="space-y-4">
-          {/* Localização e Nome */}
+          {/* Localização e Nome com Hierarquia Tipográfica Nobre */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-brand-gold">
               <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
@@ -62,13 +86,25 @@ export default function VenueCard({ venue }: VenueCardProps) {
                 {venue.locationLabel}
               </span>
             </div>
-            <h3 className="font-serif text-2xl sm:text-3xl font-light text-brand-text-dark leading-snug">
+            <h3
+              className={`font-serif font-light text-brand-text-dark leading-snug ${
+                isIndependent
+                  ? "text-2xl sm:text-3xl lg:text-[1.85rem]"
+                  : "text-xl sm:text-2xl"
+              }`}
+            >
               {venue.name}
             </h3>
           </div>
 
           {/* Resumo Editorial HAXR */}
-          <p className="font-sans text-sm text-brand-text-dark/75 leading-relaxed font-light line-clamp-3">
+          <p
+            className={`font-sans text-brand-text-dark/80 leading-relaxed font-light ${
+              isIndependent
+                ? "text-sm sm:text-[14.5px] line-clamp-4"
+                : "text-sm text-brand-text-dark/75 line-clamp-3"
+            }`}
+          >
             {venue.editorialSummary}
           </p>
 
@@ -121,7 +157,11 @@ export default function VenueCard({ venue }: VenueCardProps) {
 
           <Link
             href={`/contacto?assunto=seleccao-local&espaco=${encodeURIComponent(venue.slug)}`}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-brand-black text-brand-ivory font-sans text-xs font-medium hover:bg-brand-gold transition-colors duration-200"
+            className={`inline-flex items-center justify-center gap-2 rounded-full font-sans text-xs font-medium transition-colors duration-200 ${
+              isIndependent
+                ? "px-5 py-2.5 bg-brand-black text-brand-ivory hover:bg-brand-gold hover:text-brand-black shadow-xs"
+                : "px-4 py-2.5 bg-brand-black text-brand-ivory hover:bg-brand-gold transition-colors duration-200"
+            }`}
           >
             <span>Consultar Assessoria</span>
             <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />

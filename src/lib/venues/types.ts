@@ -213,6 +213,8 @@ export type PublicVenueCard = {
   locationLabel: string;
   venueType: VenueType;
   venueTypeLabel: string;
+  categoryTier: "primary" | "secondary" | "tertiary";
+  isIndependent: boolean;
   editorialSummary: string;
   spacesSummary: string;
   capacityDisplay: {

@@ -20,6 +20,20 @@ import "server-only";
 import type { Venue, VenueId, PublicVenueCard } from "./types";
 
 /**
+ * Nomes públicos canónicos para exibição editorial no Guia HAXR.
+ */
+export const CANONICAL_PUBLIC_VENUE_NAMES: Partial<Record<VenueId, string>> = {
+  EVELYN_EVENTOS: "Salão de Eventos Evelyn",
+  VILA_VERDE_MOZAL: "Vila Verde Banquetes",
+  THE_VENUE_MZ: "The Venue MZ",
+  ALIANCA_EVENTOS: "Complexo Aliança",
+  POLANA_SERENA_HOTEL: "Polana Serena Hotel",
+  SOUTHERN_SUN_MAPUTO: "Southern Sun Maputo",
+  HOTEL_GLORIA_CCJC: "Hotel Glória & CCJC",
+  RADISSON_BLU_MAPUTO: "Radisson Blu Hotel & Residence Maputo",
+};
+
+/**
  * Traduz o tipo de espaço para designação factual contida.
  */
 export function formatVenueTypeLabel(type: Venue["venueType"]): string {
@@ -42,12 +56,46 @@ export function formatVenueTypeLabel(type: Venue["venueType"]): string {
 }
 
 /**
+ * Classifica a camada hierárquica aprovada de produto.
+ * - PRIMARY: Salões e espaços fechados independentes
+ * - SECONDARY: Quintas, jardins e espaços ao ar livre
+ * - TERTIARY: Hotéis com instalações para eventos
+ */
+export function getCategoryTier(
+  type: Venue["venueType"]
+): "primary" | "secondary" | "tertiary" {
+  switch (type) {
+    case "salao_eventos":
+      return "primary";
+    case "quinta_eventos":
+    case "jardim_privado":
+    case "espaco_cultural":
+      return "secondary";
+    case "hotel_urbano":
+    case "centro_conferencias":
+    case "resort_praia":
+      return "tertiary";
+  }
+}
+
+/**
  * Registo canónico de cópia editorial pública para espaços revistos em Preview.
  * Desacoplado categoricamente de Venue.notes (notas internas de auditoria técnica)
  * e estritamente restrito a atributos factuais verificados no modelo de evidência E.1.
  * ZERO adjectivação não comprovada, ZERO inferência de celebrações.
  */
 export const VENUE_PUBLIC_EDITORIAL_REGISTRY: Partial<Record<VenueId, string>> = {
+  // ── Os 4 Espaços Independentes (Prioridade Editorial HAXR) ──────────────────
+  EVELYN_EVENTOS:
+    "Salão para eventos situado na Avenida Cardeal Alexandre dos Santos, em Albazine, Maputo, dispondo de espaço fechado para celebrações e banquetes.",
+  VILA_VERDE_MOZAL:
+    "Espaço para eventos situado na Estrada da Mozal, em Matola-Rio, integrando salão de festas e áreas ajardinadas exteriores.",
+  THE_VENUE_MZ:
+    "Espaço para eventos situado no Bairro de Albazine, KaMavota, em Maputo, dispondo de salão coberto e área exterior de acolhimento.",
+  ALIANCA_EVENTOS:
+    "Espaço para eventos situado na Rua da Mozal, em Matola-Rio, dispondo de salão polivalente e pátio exterior.",
+
+  // ── Os 4 Hotéis de Prestígio ────────────────────────────────────────────────
   POLANA_SERENA_HOTEL:
     "Hotel urbano na Avenida Julius Nyerere, Polana Cimento, dispondo do Salão Nobre com capacidade declarada para até 300 convidados em banquete e jardins exteriores.",
   SOUTHERN_SUN_MAPUTO:
@@ -106,9 +154,9 @@ function formatPublicCapacityDisplay(venue: Venue): {
   }
 
   return {
-    label: "Capacidade a confirmar directamente com o espaço",
+    label: "Capacidade sob consulta",
     isDeclared: false,
-    detail: "Sob consulta com a gerência do espaço segundo a configuração pretendida.",
+    detail: "Informação de lotação disponível sob consulta com a gerência segundo a disposição pretendida.",
   };
 }
 
@@ -118,7 +166,7 @@ function formatPublicCapacityDisplay(venue: Venue): {
 function formatSpacesSummary(venue: Venue): string {
   const spaces = venue.evidence.capacity.value;
   if (spaces.length === 0) {
-    return "Configuração e salões a confirmar com o espaço.";
+    return "Configuração e salões sob consulta.";
   }
   const spaceNames = spaces.map((s) => s.spaceName).filter(Boolean);
   if (spaceNames.length <= 2) {
@@ -137,20 +185,26 @@ function formatSpacesSummary(venue: Venue): string {
 export function mapVenueToPublicCard(venue: Venue): PublicVenueCard {
   const capacityDisplay = formatPublicCapacityDisplay(venue);
   const spacesSummary = formatSpacesSummary(venue);
+  const categoryTier = getCategoryTier(venue.venueType);
+  const isIndependent = categoryTier !== "tertiary";
 
   // Blocker 3: Fronteira explícita. Nunca atribuir venue.notes directamente!
   const editorialSummary =
     VENUE_PUBLIC_EDITORIAL_REGISTRY[venue.id] ?? composeFactualPublicSummary(venue);
 
+  const publicName = CANONICAL_PUBLIC_VENUE_NAMES[venue.id] ?? venue.name;
+
   return {
     id: venue.id,
     slug: venue.slug,
-    name: venue.name,
+    name: publicName,
     city: venue.city,
     area: venue.area,
     locationLabel: `${venue.area}, ${venue.city}`,
     venueType: venue.venueType,
     venueTypeLabel: formatVenueTypeLabel(venue.venueType),
+    categoryTier,
+    isIndependent,
     editorialSummary,
     spacesSummary,
     capacityDisplay,

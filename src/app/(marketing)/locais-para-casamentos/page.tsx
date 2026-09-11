@@ -180,29 +180,71 @@ export default function LocaisParaCasamentosPage() {
         className="py-20 md:py-28 bg-[#FCFBF9] border-b border-brand-champagne/20"
       >
         <div className="site-container-wide mx-auto px-4 sm:px-6 space-y-12">
-          <div className="space-y-3 text-left">
-            <div className="inline-flex items-center gap-2 text-brand-gold">
-              <Building className="w-4 h-4" strokeWidth={1.5} />
-              <span className="font-mono text-[9px] uppercase tracking-widest font-bold">
-                Espaços Curados
-              </span>
-            </div>
-            <h2 className="font-serif text-3xl sm:text-4xl font-light text-brand-text-dark">
-              Espaços em Maputo
-            </h2>
-            <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light max-w-2xl">
-              Consulte a selecção editorial preliminar. Quatro espaços
-              com capacidade declarada em fontes oficiais e infra-estrutura apta para celebrações.
-            </p>
-          </div>
-
-          {/* Grelha Editorial de Locais */}
+          {/* Grelha Editorial de Locais com Hierarquia de Produto */}
           {publicCards.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
-              {publicCards.map((venue) => (
-                <VenueCard key={venue.id} venue={venue} />
-              ))}
-            </div>
+            <>
+              {/* 03.A — Espaços Independentes (Prioridade Editorial HAXR) */}
+              {publicCards.some((v) => v.isIndependent) && (
+                <div className="space-y-10">
+                  <div className="space-y-3 text-left max-w-3xl">
+                    <div className="inline-flex items-center gap-2 text-brand-gold">
+                      <Building className="w-4 h-4" strokeWidth={1.5} />
+                      <span className="font-mono text-[9px] uppercase tracking-widest font-bold">
+                        Primeira Vaga · Salões & Quintas Independentes
+                      </span>
+                    </div>
+                    <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light text-brand-text-dark">
+                      Espaços Independentes para Celebrações
+                    </h2>
+                    <p className="font-sans text-sm md:text-base text-brand-text-dark/75 font-light leading-relaxed">
+                      Salões dedicados e quintas de eventos em Maputo e Matola, integrados na primeira vaga de acolhimento editorial com informação prática preliminar.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+                    {publicCards
+                      .filter((v) => v.isIndependent)
+                      .map((venue) => (
+                        <VenueCard key={venue.id} venue={venue} />
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Separador Editorial Suave */}
+              {publicCards.some((v) => v.isIndependent) &&
+                publicCards.some((v) => !v.isIndependent) && (
+                  <div className="pt-6 pb-2 border-t border-brand-champagne/25" />
+                )}
+
+              {/* 03.B — Hotéis com Instalações para Eventos (Tertiary) */}
+              {publicCards.some((v) => !v.isIndependent) && (
+                <div className="space-y-10">
+                  <div className="space-y-3 text-left max-w-3xl">
+                    <div className="inline-flex items-center gap-2 text-brand-gold">
+                      <Building className="w-4 h-4" strokeWidth={1.5} />
+                      <span className="font-mono text-[9px] uppercase tracking-widest font-bold">
+                        Hotelaria · Salões de Prestígio
+                      </span>
+                    </div>
+                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-light text-brand-text-dark">
+                      Hotéis com Instalações para Eventos
+                    </h2>
+                    <p className="font-sans text-sm md:text-base text-brand-text-dark/70 font-light leading-relaxed">
+                      Unidades hoteleiras de referência com salões de banquetes, apoio integral de alojamento e infra-estrutura técnica consolidada.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+                    {publicCards
+                      .filter((v) => !v.isIndependent)
+                      .map((venue) => (
+                        <VenueCard key={venue.id} venue={venue} />
+                      ))}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="py-20 px-6 text-center bg-[#FAF8F5] border border-brand-champagne/20 rounded-3xl space-y-4 max-w-lg mx-auto">
               <h3 className="font-serif text-2xl font-light text-brand-text-dark">
