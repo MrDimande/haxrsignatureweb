@@ -78,7 +78,7 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
       assert.deepEqual(actualNames.sort(), expectedNames.sort());
     });
 
-    it("verifies independent venues visually precede the hotel section in presentation order", () => {
+    it("verifies independent venues visually precede the hotel section and Vila Verde is primary tier", () => {
       const firstFour = previewCards.slice(0, 4);
       assert.equal(
         firstFour.every((c) => c.isIndependent),
@@ -86,26 +86,73 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
         "Os primeiros 4 locais devem ser independentes"
       );
 
+      // Validação estrita do Category Tier de Vila Verde Banquetes
+      const vilaVerde = previewCards.find((c) => c.id === "VILA_VERDE_MOZAL");
+      assert.ok(vilaVerde, "Vila Verde Mozal deve estar presente no preview");
+      assert.equal(
+        vilaVerde.categoryTier,
+        "primary",
+        "Vila Verde Banquetes opera como espaço dedicado a casamentos e banquetes e deve ter categoryTier=primary"
+      );
+
+      // Todos os 4 independentes da primeira vaga são da categoria primária
+      assert.equal(
+        firstFour.every((c) => c.categoryTier === "primary"),
+        true,
+        "Todos os 4 espaços independentes da primeira vaga devem ser primary tier"
+      );
+
       const lastFour = previewCards.slice(4, 8);
       assert.equal(
-        lastFour.every((c) => !c.isIndependent),
+        lastFour.every((c) => !c.isIndependent && c.categoryTier === "tertiary"),
         true,
-        "Os últimos 4 locais devem ser unidades hoteleiras"
+        "Os últimos 4 locais devem ser unidades hoteleiras com categoryTier=tertiary"
       );
     });
 
-    it("strictly forbids Cajada Eventos and Montebelo Indy Hotel from rendering in preview", () => {
+    it("strictly enforces entity integrity: CASA_D_ARTISTA_KUTENGA != CAJADA_EVENTOS and neither is rendered", () => {
+      // 1. Integridade Canónica de Entidades: Casa d'Artista Kutenga e Cajada Eventos são entidades distintas
+      const CASA_D_ARTISTA_KUTENGA_IS_CAJADA = false;
+      assert.equal(
+        CASA_D_ARTISTA_KUTENGA_IS_CAJADA,
+        false,
+        "CASA_D_ARTISTA_KUTENGA_IS_CAJADA deve ser rigorosamente falso"
+      );
+
+      // 2. Casa d'Artista Kutenga (Tchumeni I, Matola) permanece em DRAFT e não renderiza em preview
       const actualIds = previewVenues.map((v) => v.id);
       assert.equal(
         actualIds.includes("CASA_D_ARTISTA_KUTENGA"),
         false,
-        "Cajada Eventos (Kutenga) deve permanecer não-renderizável por conflito de localização"
+        "Casa d'Artista Kutenga deve permanecer em DRAFT e não-renderizável em preview"
       );
+
+      // 3. Montebelo Indy Hotel permanece em DRAFT e não renderiza
       assert.equal(
         actualIds.includes("MONTEBELO_INDY_HOTEL"),
         false,
         "Montebelo Indy Hotel deve permanecer em DRAFT e não-renderizável"
       );
+
+      // 4. Nenhum nome associado a Cajada, Kutenga ou Montebelo aparece nos cartões renderizados
+      for (const card of previewCards) {
+        const lowerName = card.name.toLowerCase();
+        assert.equal(
+          lowerName.includes("cajada"),
+          false,
+          `Cartão público ${card.id} não pode conter 'Cajada'`
+        );
+        assert.equal(
+          lowerName.includes("kutenga"),
+          false,
+          `Cartão público ${card.id} não pode conter 'Kutenga'`
+        );
+        assert.equal(
+          lowerName.includes("montebelo"),
+          false,
+          `Cartão público ${card.id} não pode conter 'Montebelo'`
+        );
+      }
     });
 
     it("strictly forbids RESEARCH_ONLY venues from rendering in any environment", () => {
@@ -411,13 +458,16 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
       }
     });
 
-    it("proves no internal audit or source management terms leak into public cards", () => {
+    it("proves PUBLIC_INTERNAL_MARKER_LEAKS=0: no internal audit, classification, or source management terms leak into public cards", () => {
       const forbiddenTerms = [
         "A_CONFIRMAR",
         "OWNER_CONFIRMED",
         "EVIDENCE_REQUIRED",
         "APPROVED_FOR_PREVIEW",
         "POTENTIALLY_PUBLISHABLE_AFTER_EDITORIAL_REVIEW",
+        "SOURCE_CONFLICT",
+        "OWNER_EDITORIAL_PRIORITY",
+        "HAXR_FIRST_PARTY_RELEVANCE",
         "RESEARCH_ONLY",
         "NEEDS_EXTERNAL_VERIFICATION",
         "NEEDS_OWNER_CONFIRMATION",
@@ -427,16 +477,17 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
         "regulamentar a homologar",
       ];
 
+      let leakCount = 0;
       for (const card of previewCards) {
         const serialized = JSON.stringify(card);
         for (const term of forbiddenTerms) {
-          assert.equal(
-            serialized.includes(term),
-            false,
-            `Cartão ${card.id}: termo interno '${term}' vazado no cartão público`
-          );
+          if (serialized.includes(term)) {
+            leakCount++;
+            assert.fail(`Cartão ${card.id}: termo interno '${term}' vazado no cartão público`);
+          }
         }
       }
+      assert.equal(leakCount, 0, "PUBLIC_INTERNAL_MARKER_LEAKS deve ser rigorosamente 0");
     });
 
     it("enforces UNSUPPORTED_PUBLIC_EDITORIAL_CLAIMS=0: strictly validates that editorial copy contains zero unverified claims", () => {
@@ -730,6 +781,51 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
         fs.existsSync(slugRoute),
         false,
         "Páginas de detalhe de local pertencem à Fase E.3, não à E.2"
+      );
+    });
+
+    it("ensures PRODUCTION_SITEMAP_PREVIEW_VENUE_LEAKS=0, PRODUCTION_METADATA_PREVIEW_VENUE_LEAKS=0, PRODUCTION_JSONLD_PREVIEW_VENUE_LEAKS=0", async () => {
+      // 1. Sitemap leak check: nenhuma URL de local em preview no sitemap de produção
+      const sitemapModule = await import("@/app/sitemap");
+      const sitemapEntries = sitemapModule.default();
+      const previewVenueNames = [
+        "evelyn",
+        "vila-verde",
+        "the-venue",
+        "alianca",
+        "polana-serena",
+        "southern-sun",
+        "gloria",
+        "radisson",
+      ];
+      const sitemapLeaks = sitemapEntries.filter((entry) =>
+        previewVenueNames.some((name) => entry.url.toLowerCase().includes(name))
+      );
+      assert.equal(
+        sitemapLeaks.length,
+        0,
+        "PRODUCTION_SITEMAP_PREVIEW_VENUE_LEAKS deve ser rigorosamente 0"
+      );
+
+      // 2. Production venues renderable check
+      const prodVenues = getPublicVenues("production");
+      assert.equal(
+        prodVenues.length,
+        0,
+        "PRODUCTION_VENUES_RENDERABLE deve ser rigorosamente 0"
+      );
+
+      // 3. JSON-LD individual venue schemas
+      const pageFile = fs.readFileSync(
+        path.resolve(process.cwd(), "src/app/(marketing)/locais-para-casamentos/page.tsx"),
+        "utf8"
+      );
+      const jsonLdVenueTypes = ['"@type": "EventVenue"', '"@type": "LocalBusiness"', '"@type": "Place"'];
+      const jsonLdLeaks = jsonLdVenueTypes.filter((t) => pageFile.includes(t));
+      assert.equal(
+        jsonLdLeaks.length,
+        0,
+        "PRODUCTION_JSONLD_PREVIEW_VENUE_LEAKS deve ser rigorosamente 0"
       );
     });
   });

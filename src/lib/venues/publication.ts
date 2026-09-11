@@ -105,7 +105,7 @@ export const VENUE_EDITORIAL_PUBLICATION_REGISTRY: Record<
   ALIANCA_EVENTOS: "APPROVED_FOR_PREVIEW",
   EVELYN_EVENTOS: "APPROVED_FOR_PREVIEW",
 
-  // Cajada / Kutenga permanece diferido por conflito de localização pública
+  // Casa d'Artista Kutenga (Tchumeni I, Matola) permanece em DRAFT
   CASA_D_ARTISTA_KUTENGA: "DRAFT",
 
   // Os 3 que requerem verificação externa independente

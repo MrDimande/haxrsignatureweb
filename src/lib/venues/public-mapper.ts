@@ -57,13 +57,21 @@ export function formatVenueTypeLabel(type: Venue["venueType"]): string {
 
 /**
  * Classifica a camada hierárquica aprovada de produto.
- * - PRIMARY: Salões e espaços fechados independentes
- * - SECONDARY: Quintas, jardins e espaços ao ar livre
- * - TERTIARY: Hotéis com instalações para eventos
+ * - PRIMARY: Independent Event Halls / Wedding Venues
+ * - SECONDARY: Gardens / Quintas / Outdoor Event Spaces
+ * - TERTIARY: Hotels with Event Facilities
+ *
+ * Vila Verde Banquetes opera como espaço independente dedicado a casamentos
+ * e banquetes, integrando a categoria primária de espaços dedicados.
  */
 export function getCategoryTier(
-  type: Venue["venueType"]
+  type: Venue["venueType"],
+  venueId?: VenueId
 ): "primary" | "secondary" | "tertiary" {
+  if (venueId === "VILA_VERDE_MOZAL") {
+    return "primary";
+  }
+
   switch (type) {
     case "salao_eventos":
       return "primary";
@@ -99,57 +107,61 @@ export const VENUE_PUBLIC_EDITORIAL_REGISTRY: Partial<Record<VenueId, string>> =
   POLANA_SERENA_HOTEL:
     "Hotel urbano na Avenida Julius Nyerere, Polana Cimento, dispondo do Salão Nobre com capacidade declarada para até 300 convidados em banquete e jardins exteriores.",
   SOUTHERN_SUN_MAPUTO:
-    "Hotel urbano na Avenida da Marginal, Sommerschield, dispondo de sala principal com capacidade declarada para até 100 convidados em banquete e esplanada exterior.",
+    "Hotel urbano na Avenida Marginal, Maputo, dispondo de sala principal com capacidade declarada para até 100 convidados em banquete e terraço com vista para o Oceano Índico.",
   HOTEL_GLORIA_CCJC:
-    "Complexo hoteleiro e centro de conferências na Avenida da Marginal, Sommerschield II, dispondo de salão principal modular com capacidade declarada para até 1.000 convidados em banquete.",
+    "Centro de eventos e conferências na Avenida Marginal, Maputo, dispondo de salão principal modular com capacidade declarada para até 1.000 convidados em banquete e salas de apoio.",
   RADISSON_BLU_MAPUTO:
-    "Hotel urbano na Avenida Marginal, Sommerschield, dispondo da Sala Zambeze com capacidade declarada para até 160 convidados em banquete e área de jardim privativo.",
+    "Hotel urbano na Avenida Marginal, Maputo, dispondo da Sala Zambeze com capacidade declarada para acolhimento de reuniões e eventos corporativos e sociais.",
 };
 
 /**
- * Composição factual de reserva baseada exclusivamente em dados públicos verificados.
- * NUNCA acede nem injecta Venue.notes.
+ * Compõe resumo factual seguro quando não existir entrada no registo editorial revisto.
+ * Regra E.2: Utiliza unicamente dados verificados no modelo de evidência.
  */
 function composeFactualPublicSummary(venue: Venue): string {
+  const parts: string[] = [];
+
   const typeLabel = formatVenueTypeLabel(venue.venueType);
-  return `${typeLabel} localizado em ${venue.area}, ${venue.city}, seleccionado na curadoria editorial da HAXR Signature.`;
+  parts.push(`${typeLabel} situado em ${venue.area}, ${venue.city}.`);
+
+  if (venue.evidence.capacity.status === "VERIFIED") {
+    const verifiedSpaces = venue.evidence.capacity.value.filter(
+      (s) => s.seatedCapacity !== null
+    );
+    if (verifiedSpaces.length > 0) {
+      const summaryParts = verifiedSpaces.map(
+        (s) => `${s.spaceName}: até ${s.seatedCapacity} convidados em ${s.configuration}`
+      );
+      parts.push(`Capacidade declarada em fontes oficiais — ${summaryParts.join("; ")}.`);
+    }
+  }
+
+  return parts.join(" ");
 }
 
 /**
- * Traduz a matriz de capacidade interna em linguagem pública editorial elegante.
+ * Formata a capacidade para apresentação no cartão público.
  */
 function formatPublicCapacityDisplay(venue: Venue): {
   label: string;
   isDeclared: boolean;
-  detail?: string;
+  detail: string;
 } {
-  if (venue.trust.capacity === "VERIFIED") {
+  if (venue.evidence.capacity.status === "VERIFIED") {
     const spaces = venue.evidence.capacity.value;
-    const officialSpaces = spaces.filter(
-      (s) => s.capacityType === "OFFICIAL_DECLARED_CAPACITY"
-    );
+    const seatedValues = spaces
+      .map((s) => s.seatedCapacity)
+      .filter((v): v is number => v !== null);
 
-    if (officialSpaces.length > 0) {
-      const topSpace = officialSpaces.reduce((prev, curr) => {
-        const prevCap = Math.max(prev.seatedCapacity ?? 0, prev.cocktailCapacity ?? 0);
-        const currCap = Math.max(curr.seatedCapacity ?? 0, curr.cocktailCapacity ?? 0);
-        return currCap > prevCap ? curr : prev;
-      });
-
-      const capNumber =
-        topSpace.seatedCapacity ?? topSpace.cocktailCapacity ?? null;
-
-      if (capNumber) {
-        const formatNote = topSpace.seatedCapacity
-          ? `${capNumber} convidados em banquete`
-          : `${capNumber} convidados em coquetel`;
-
-        return {
-          label: `Capacidade declarada pelo espaço: até ${formatNote}`,
-          isDeclared: true,
-          detail: `Espaço de referência: ${topSpace.spaceName} (${topSpace.source})`,
-        };
-      }
+    if (seatedValues.length > 0) {
+      const maxSeated = Math.max(...seatedValues);
+      const primarySpace = spaces.find((s) => s.seatedCapacity === maxSeated);
+      const spaceNote = primarySpace?.notes ? ` (${primarySpace.notes})` : "";
+      return {
+        label: `Capacidade declarada pelo espaço: até ${maxSeated} convidados em banquete`,
+        isDeclared: true,
+        detail: `Espaço de referência: ${primarySpace?.spaceName || "Salão Principal"}${spaceNote}`,
+      };
     }
   }
 
@@ -161,7 +173,7 @@ function formatPublicCapacityDisplay(venue: Venue): {
 }
 
 /**
- * Resumo dos espaços e ambientes do local.
+ * Formata a informação de espaços disponíveis sem inventar nomes de salões.
  */
 function formatSpacesSummary(venue: Venue): string {
   const spaces = venue.evidence.capacity.value;
@@ -172,11 +184,11 @@ function formatSpacesSummary(venue: Venue): string {
   if (spaceNames.length <= 2) {
     return spaceNames.join(" e ");
   }
-  return `${spaceNames.slice(0, 2).join(", ")} e outros ambientes`;
+  return `${spaceNames.slice(0, 2).join(", ")} e outros espaços`;
 }
 
 /**
- * Mapeia uma entidade de domínio Venue para o cartão público PublicVenueCard.
+ * Mapper seguro de entidade interna Venue para o DTO público PublicVenueCard.
  *
  * Invariantes Estritos:
  * - Venue.notes NUNCA é atribuído a editorialSummary (Blocker 3).
@@ -185,7 +197,7 @@ function formatSpacesSummary(venue: Venue): string {
 export function mapVenueToPublicCard(venue: Venue): PublicVenueCard {
   const capacityDisplay = formatPublicCapacityDisplay(venue);
   const spacesSummary = formatSpacesSummary(venue);
-  const categoryTier = getCategoryTier(venue.venueType);
+  const categoryTier = getCategoryTier(venue.venueType, venue.id);
   const isIndependent = categoryTier !== "tertiary";
 
   // Blocker 3: Fronteira explícita. Nunca atribuir venue.notes directamente!
