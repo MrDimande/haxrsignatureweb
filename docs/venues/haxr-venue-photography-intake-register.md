@@ -1,10 +1,11 @@
 # HAXR SIGNATURE — REGISTO DE INTAKE FOTOGRÁFICO & PRONTIDÃO DE PREVIEW (2026)
+
 ## Transição: Intake 002 (PASS_WITH_AMENDMENTS) → Aquisição de Masters de Alta Resolução
 
 **Documento:** `docs/venues/haxr-venue-photography-intake-register.md`  
 **Fase:** E.2 — Curadoria Fotográfica, Governação de Direitos & Prontidão de Preview  
 **Data:** 11 de Setembro de 2026  
-**Autor:** Antigravity — Principal Full-Stack Engineer / Alta-Costura Digital  
+**Autor:** Principal Full-Stack Engineer / Alta-Costura Digital  
 **Classificação:** Registo Canónico de Evidência Visual & Auditoria de Direitos  
 **Norma Linguística:** Português de Moçambique  
 
@@ -16,7 +17,8 @@ O processo de intake fotográfico `HAXR-E2-PHOTOGRAPHY-INTAKE-002` encontra-se f
 
 $$\text{PHOTOGRAPHY\_INTAKE\_STATUS} = \mathbf{PASS\_WITH\_AMENDMENTS}$$
 
-### Invariantes de Estado Canónicas:
+### Invariantes de Estado Canónicas
+
 ```text
 REAL_VENUE_IMAGES_RECEIVED = 5
 REAL_IMAGE_RIGHTS_CONFIRMED = 0
@@ -25,8 +27,10 @@ PRODUCTION_VENUES_RENDERABLE = 0
 PREVIEW_VENUES_RENDERABLE = 4  // Polana Serena, Southern Sun, Hotel Glória, Radisson Blu
 ```
 
-### Âmbito Focado da Fase de Intake Fotográfico:
+### Âmbito Focado da Fase de Intake Fotográfico
+
 A presente fase de aquisição e auditoria fotográfica concentra-se **estrita e exclusivamente** nos cinco espaços prioritários de primeira vaga:
+
 1. `VILA_VERDE` (Vila Verde Banquetes)
 2. `THE_VENUE_MZ` (The Venue MZ)
 3. `COMPLEXO_ALIANCA` (Complexo Aliança / Aliança Eventos)
@@ -72,7 +76,8 @@ O portão canónico de publicação de qualquer fotografia real assenta exclusiv
 
 $$\mathbf{VENUE\_IMAGE\_IDENTITY\_MATCH} = \mathbf{true} \quad \wedge \quad \mathbf{IMAGE\_USAGE\_RIGHTS\_CONFIRMED} = \mathbf{true}$$
 
-### Flexibilidade Factual na Prova de Direitos:
+### Flexibilidade Factual na Prova de Direitos
+
 * Não se exige "cessão formal por contrato escrito" como mecanismo universal obrigatório.
 * O registo é avaliado e documentado caso a caso com base na situação real:
   $$\text{RIGHTS\_CONFIRMATION\_BASIS} = \mathbf{<\text{actual basis}>}$$
@@ -83,20 +88,24 @@ $$\mathbf{VENUE\_IMAGE\_IDENTITY\_MATCH} = \mathbf{true} \quad \wedge \quad \mat
 ## 5. Alvos de Qualidade Técnica & Protocolo de Ingestão de Masters
 
 A recepção de futuros ficheiros master fornecidos pelo proprietário obedece à ordem de prioridade dos cinco espaços em foco:
+
 1. `VILA_VERDE`
 2. `THE_VENUE_MZ`
 3. `COMPLEXO_ALIANCA`
 4. `CAJADA_EVENTOS`
 5. `SALAO_EVELYN`
 
-### Alvos de Engenharia (Metas de Qualidade, Não Bloqueios Rígidos do Proprietário):
+### Alvos de Engenharia (Metas de Qualidade, Não Bloqueios Rígidos do Proprietário)
+
 ```text
 HERO_TARGET_WIDTH_PX = 1920
 GALLERY_TARGET_WIDTH_PX = 1200
 ```
+
 *Directriz de Calibração:* As dimensões acima constituem metas de qualidade técnica de engenharia (*engineering quality targets*), e não bloqueios rígidos do proprietário. Uma imagem com resolução inferior a estas referências **não é automaticamente inutilizável**; a adequação final dependerá do enquadramento, proporção de recorte (*crop*), dimensões efectivas de renderização no ecrã e nitidez intrínseca do activo.
 
-### Matriz Canónica de Intake de Masters (15 Atributos):
+### Matriz Canónica de Intake de Masters (15 Atributos)
+
 ```text
 VENUE_ID: [Identificador canónico do espaço]
 MASTER_FILE: [Nome exacto do ficheiro com extensão]
@@ -123,6 +132,7 @@ PUBLICATION_READY: [true | false]
 ## 6. Correcções Cadastrais Preservadas no Registo
 
 Para memória futura e integridade da base documental do Guia de Locais:
+
 1. **A Kitanda Eventos**: `SOMMERSCHIELD_CONFLICT = false`, `PRIMARY_ENTITY_LOCATION = Infulene A, Matola`, `ADDRESS = Rua das Flores n.º 1541/2`, `ENTITY_MATCH_CONFIDENCE = HIGH`, `SOURCE_CONFLICT_100MAKAS = true`.
 2. **Jardins Paloma Eventos**: `LOCATION_READY = true`, `WEDDING_RELEVANCE = SUPPORTED`, `LAST_PUBLIC_ACTIVITY_EVIDENCE = 2024`, `CURRENT_OPERATIONAL_STATUS_2026 = UNVERIFIED`, `OWNER_EDITORIAL_PRIORITY = false`.
 3. **Espaço Águia**: `LEGAL_ENTITY = Eventos e Acomodação Águia – Sociedade Unipessoal, Limitada`, `DISTRICT = Marracuene`, `DISTRICT_LOCATION_STATUS = VERIFIED_LEGAL`, `EXACT_VENUE_LOCATION_STATUS = PARTIAL`, `CAPACITY_STATUS = UNKNOWN`.
