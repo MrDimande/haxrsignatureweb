@@ -8,8 +8,6 @@ import {
   buildCanonicalStoragePath,
   validateTtlSeconds,
   FakeStorageProvider,
-  SupabaseStorageProvider,
-  SupabaseStorageClientLike,
   S3CompatibleStorageProvider,
   S3ClientLike,
   S3PresignerLike,
@@ -355,60 +353,9 @@ describe("Gate 3B — StorageProvider Abstraction & Security Suite", () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 6. ADAPTERS (SUPABASE & S3/R2)
+  // 6. ADAPTERS (S3/R2)
   // ───────────────────────────────────────────────────────────────────────────
   describe("Adapters Compatibility", () => {
-    it("SupabaseStorageProvider adapta chamadas com cliente simulado", async () => {
-      const mockStorageMap = new Map<string, Blob>();
-
-      const mockSupabaseClient: SupabaseStorageClientLike = {
-        storage: {
-          from: () => ({
-            createSignedUploadUrl: async (path: string) => ({
-              data: { signedUrl: `https://supabase.co/upload/${path}`, token: "t123", path },
-              error: null,
-            }),
-            createSignedUrl: async (path: string, ttl: number) => ({
-              data: { signedUrl: `https://supabase.co/read/${path}?exp=${ttl}` },
-              error: null,
-            }),
-            download: async (path: string) => {
-              const blob = mockStorageMap.get(path);
-              return blob ? { data: blob, error: null } : { data: null, error: new Error("not_found") };
-            },
-            remove: async (paths: string[]) => {
-              paths.forEach((p) => mockStorageMap.delete(p));
-              return { data: {}, error: null };
-            },
-          }),
-        },
-      };
-
-      const provider = new SupabaseStorageProvider(mockSupabaseClient);
-      assert.strictEqual(provider.providerName, "supabase");
-
-      // Teste upload
-      const uploadRes = await provider.createSignedUploadUrl(TEST_BUCKET, VALID_PATH, {
-        contentType: "image/jpeg",
-      });
-      assert.ok(uploadRes.uploadUrl.includes("supabase.co/upload"));
-
-      // Teste download URL
-      const signedUrl = await provider.createSignedUrl(TEST_BUCKET, VALID_PATH);
-      assert.ok(signedUrl.includes("supabase.co/read"));
-
-      // Teste download de binário
-      mockStorageMap.set(VALID_PATH, new Blob([new Uint8Array([1, 2, 3])], { type: "image/jpeg" }));
-      const downloaded = await provider.download(TEST_BUCKET, VALID_PATH);
-      assert.ok(downloaded !== null);
-      assert.strictEqual(downloaded.sizeBytes, 3);
-      assert.strictEqual(downloaded.contentType, "image/jpeg");
-
-      // Teste remove
-      await provider.remove(TEST_BUCKET, [VALID_PATH]);
-      assert.strictEqual(await provider.download(TEST_BUCKET, VALID_PATH), null);
-    });
-
     it("S3CompatibleStorageProvider adapta comandos estruturais sem SDK concreto", async () => {
       const commandsExecuted: S3CommandStructural[] = [];
 

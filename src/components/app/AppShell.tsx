@@ -17,11 +17,9 @@ import {
 import { resolveAppNavIcon } from "@/components/app/AppNavIcons";
 import HaxrLogo from "@/components/brand/HaxrLogo";
 import OnboardingSyncController from "@/components/app/OnboardingSyncController";
-import { signOutFromSupabase } from "@/lib/auth/sign-in-auth";
 import type { AppUserDisplay } from "@/lib/auth/app-user-display";
 import { useAppEvent } from "@/hooks/use-app-event";
 import { buildAppNavigation } from "@/lib/event-modules/module-config";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AppShellProps = {
   children: ReactNode;
@@ -63,8 +61,10 @@ export default function AppShell({ children, userDisplay, initialEventId }: AppS
     if (signingOut) return;
 
     setSigningOut(true);
-    const supabase = createSupabaseBrowserClient();
-    await signOutFromSupabase(supabase);
+    await fetch("/api/portal-auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
     router.replace("/sign-in");
     router.refresh();
   };

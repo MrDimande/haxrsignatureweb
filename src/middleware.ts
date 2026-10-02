@@ -4,7 +4,7 @@ import {
     isValidSession,
 } from "@/lib/admin/auth";
 import {
-    evaluateClientAppAuthMiddleware,
+    evaluateClientAppRequest,
     shouldHandleClientAppAuth,
 } from "@/lib/auth/client-app-middleware";
 import {
@@ -13,7 +13,6 @@ import {
     shouldRedirectToCanonical,
     CANONICAL_SITE_URL,
 } from "@/lib/seo/canonical-host";
-import { updateSupabaseAuthSession } from "@/lib/supabase/middleware-auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -74,16 +73,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (shouldHandleClientAppAuth(pathname)) {
-    const { response: sessionResponse, user } = await updateSupabaseAuthSession(request);
-    const decision = evaluateClientAppAuthMiddleware({
-      pathname,
-      requestUrl: request.url,
-      user,
-      sessionResponse,
-      fromParam: request.nextUrl.searchParams.get("from"),
-    });
-
-    return applySeoHeaders(decision.response);
+    const decision = evaluateClientAppRequest(request);
+    if (decision) return applySeoHeaders(decision);
+    const response = NextResponse.next();
+    if (pathname.startsWith("/app")) {
+      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      response.headers.set("X-Frame-Options", "DENY");
+      response.headers.set("X-Content-Type-Options", "nosniff");
+    }
+    return applySeoHeaders(response);
   }
 
   if (!pathname.startsWith("/admin")) {

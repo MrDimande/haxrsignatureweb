@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createInquiry } from "@/lib/contact/inquiries.repository";
 import { captureMarketingContact } from "@/lib/email/marketing/contact-capture";
 import { resolveSegmentFromEventType } from "@/lib/email/marketing/marketing-contact";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 
 const submitWeddingSchema = z.object({
   name: z.string().min(2).max(120),
@@ -18,7 +18,7 @@ const submitWeddingSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
+  if (!shouldUseNeonServerDatabase()) {
     return NextResponse.json(
       { error: "Serviço temporariamente indisponível." },
       { status: 503 }

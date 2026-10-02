@@ -19,6 +19,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import BrandLogo from "@/components/ui/BrandLogo";
+import { useAdminIdentity } from "@/components/admin/AdminIdentityProvider";
+import { canManageAdminUsers } from "@/lib/admin/admin-user";
 
 type NavItem = {
   href: string;
@@ -60,6 +62,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/settings", label: "Definições", icon: Settings },
       { href: "/admin/profile", label: "Perfil", icon: User },
+      { href: "/admin/users", label: "Utilizadores", icon: Users },
     ],
   },
 ];
@@ -99,6 +102,7 @@ type SidebarProps = {
 
 export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const identity = useAdminIdentity();
   const [badges, setBadges] = useState({
     newLeads: 0,
     overdueDocuments: 0,
@@ -137,6 +141,15 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
     return null;
   }
 
+  const visibleNavSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) => item.href !== "/admin/users" || canManageAdminUsers(identity),
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+
   return (
     <>
       {open ? (
@@ -171,7 +184,7 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
 
         {/* Sidebar Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto scrollbar-none" aria-label="Administração">
-          {navSections.map((section) => (
+          {visibleNavSections.map((section) => (
             <div key={section.title} className="space-y-1.5">
               {/* Category Group Label */}
               <p className="px-4.5 font-mono text-[8px] font-semibold tracking-[0.3em] uppercase text-grey-medium opacity-40">

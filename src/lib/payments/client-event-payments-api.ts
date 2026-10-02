@@ -2,6 +2,7 @@ import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
   createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
+  type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
   validateClientEventOperationalEnvironment,
 } from "@/lib/auth/client-event-server-clients";
@@ -13,7 +14,6 @@ import {
   type ClientEventPaymentsAuthClient,
 } from "@/lib/payments/client-event-payments-service";
 import type { ClientEventPaymentsRpcClient } from "@/lib/payments/client-event-payments-rpc";
-import type { ClientAppAuthEnvCheck } from "@/lib/supabase/config";
 import { generateWeddingFinancialReportBuffer } from "@/lib/export/wedding-financial-report/pdf-generator";
 import { generateWeddingFinancialReportFilename } from "@/lib/export/wedding-financial-report/report-formatters";
 

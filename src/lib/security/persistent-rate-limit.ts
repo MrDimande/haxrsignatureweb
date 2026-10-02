@@ -1,6 +1,4 @@
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { invokePersistentRateLimit as invokePersistentRateLimitNeon } from "@/lib/security/persistent-rate-limit.neon";
-import { invokePersistentRateLimit as invokePersistentRateLimitSupabase } from "@/lib/security/persistent-rate-limit.supabase";
 import {
   rateLimit,
   type RateLimitConfig,
@@ -32,11 +30,7 @@ export async function persistentRateLimit(
 ): Promise<RateLimitResult> {
   try {
     const windowSeconds = Math.max(1, Math.ceil(config.windowMs / 1000));
-    const invokePersistentRateLimit = shouldUseNeonServerDatabase()
-      ? invokePersistentRateLimitNeon
-      : invokePersistentRateLimitSupabase;
-
-    const data = await invokePersistentRateLimit(
+    const data = await invokePersistentRateLimitNeon(
       key,
       config.max,
       windowSeconds,

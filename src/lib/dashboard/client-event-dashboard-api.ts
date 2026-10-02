@@ -1,12 +1,12 @@
 import type { ClientAppProfile } from "@/lib/auth/app-user-display";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
+import type { ClientAppAuthEnvCheck } from "@/lib/auth/client-event-server-clients";
 import { adaptDashboardData } from "@/lib/dashboard/dashboard-adapter";
 import {
   getClientEventDashboardData,
   type ClientEventDashboardAuthClient,
 } from "@/lib/dashboard/client-event-dashboard-service";
 import type { DashboardDataResult } from "@/lib/dashboard/types";
-import type { ClientAppAuthEnvCheck } from "@/lib/supabase/config";
 
 export type HandleClientEventDashboardRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;
@@ -63,7 +63,7 @@ export async function handleClientEventDashboardRequest(
       body: {
         ok: false,
         error: "unavailable",
-        message: "Cliente Supabase indisponível.",
+        message: "Cliente de dados indisponível.",
       },
     };
   }

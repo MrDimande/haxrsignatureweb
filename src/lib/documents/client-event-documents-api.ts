@@ -2,6 +2,7 @@ import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
   createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
+  type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
   validateClientEventOperationalEnvironment,
 } from "@/lib/auth/client-event-server-clients";
@@ -12,7 +13,6 @@ import {
   type ClientEventDocumentsAuthClient,
 } from "@/lib/documents/client-event-documents-service";
 import type { ClientEventDocumentsRpcClient } from "@/lib/documents/client-event-documents-rpc";
-import type { ClientAppAuthEnvCheck } from "@/lib/supabase/config";
 
 export type HandleClientEventDocumentsRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;

@@ -15,13 +15,14 @@
 
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import {
   validateAndParseStoragePath,
 } from "./canonical-path";
 import { StorageSecurityError } from "./storage-provider.types";
 import { FakeStorageProvider } from "./fake-storage-provider";
-import { loadApprovedSourceInventory } from "../../../../scripts/dry-run-r2-migration.mjs";
 
 import {
   MemoriesUploadService,
@@ -100,8 +101,21 @@ export const MINIMAL_PRODUCTION_R2_CORS_POLICY: readonly R2CorsRule[] = Object.f
   },
 ]);
 
+function loadApprovedR2Inventory(): Array<{ storage_path: string }> {
+  const manifestPath = resolve(
+    process.cwd(),
+    "docs/migrations/gate-3h-c-final-cutover-manifest.json",
+  );
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+    objects?: Array<{ storage_path?: unknown }>;
+  };
+  return (manifest.objects ?? []).flatMap((object) =>
+    typeof object.storage_path === "string" ? [{ storage_path: object.storage_path }] : [],
+  );
+}
+
 describe("Gate 3F-E1 — Operational Pre-Cutover Validation Suite", () => {
-  const approvedInventory = loadApprovedSourceInventory() as Array<{ storage_path: string }>;
+  const approvedInventory = loadApprovedR2Inventory();
   const historicalPathSet = new Set<string>(approvedInventory.map((i) => i.storage_path));
 
   let repo: InMemoryMemoriesTestRepo;

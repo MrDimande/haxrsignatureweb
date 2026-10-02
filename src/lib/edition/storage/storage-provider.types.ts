@@ -70,7 +70,7 @@ export interface StorageObjectMetadata {
 }
 
 export interface StorageProvider {
-  /** Identificador legível do provider concreto ('supabase' | 'r2' | 's3' | 'fake') */
+  /** Identificador legível do provider concreto ('r2-s3' | 's3' | 'fake') */
   readonly providerName: string;
 
   /**

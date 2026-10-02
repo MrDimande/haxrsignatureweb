@@ -3,8 +3,6 @@ import assert from "node:assert/strict";
 
 import {
   FakeStorageProvider,
-  SupabaseStorageProvider,
-  SupabaseStorageClientLike,
   S3CompatibleStorageProvider,
   S3ClientLike,
   S3PresignerLike,
@@ -398,63 +396,6 @@ describe("Gate 3C — Memories Integration & Dual-Provider Binding Suite", () =>
   // 4. PROVIDER SUBSTITUTION & AGNOSTICISM
   // ───────────────────────────────────────────────────────────────────────────
   describe("Provider Substitution (Contracts over Implementations)", () => {
-    it("executa o mesmo fluxo de upload sobre SupabaseStorageProvider", async () => {
-      const mockStorageMap = new Map<string, Blob>();
-
-      const mockSupabaseClient: SupabaseStorageClientLike = {
-        storage: {
-          from: () => ({
-            createSignedUploadUrl: async (path: string) => ({
-              data: { signedUrl: `https://supabase.co/upload/${path}`, token: "t123", path },
-              error: null,
-            }),
-            createSignedUrl: async (path: string, ttl: number) => ({
-              data: { signedUrl: `https://supabase.co/read/${path}?exp=${ttl}` },
-              error: null,
-            }),
-            download: async (path: string) => {
-              const blob = mockStorageMap.get(path);
-              return blob ? { data: blob, error: null } : { data: null, error: new Error("not_found") };
-            },
-            remove: async (paths: string[]) => {
-              paths.forEach((p) => mockStorageMap.delete(p));
-              return { data: {}, error: null };
-            },
-          }),
-        },
-      };
-
-      const supabaseProvider = new SupabaseStorageProvider(mockSupabaseClient);
-      const uploadService = new MemoriesUploadService(repo, supabaseProvider, BUCKET);
-
-      const intent = await uploadService.createUploadIntent({
-        slug: SLUG,
-        photoId: PHOTO_ID,
-        contentType: "image/jpeg",
-        declaredFileSizeBytes: 1024,
-      });
-
-      assert.ok(intent.uploadUrl.includes("supabase.co/upload"));
-
-      // Seed no mock do Supabase
-      mockStorageMap.set(
-        intent.storagePath,
-        new Blob([VALID_JPEG_BYTES], { type: "image/jpeg" })
-      );
-
-      const completeRes = await uploadService.completeUpload({
-        slug: SLUG,
-        photoId: PHOTO_ID,
-        metadata: { guestName: "Teste Supabase Adapter" },
-      });
-
-      assert.strictEqual(completeRes.success, true);
-      assert.strictEqual(
-        (await repo.findById(PHOTO_ID, SLUG))?.guestName,
-        "Teste Supabase Adapter"
-      );
-    });
-
     it("executa o mesmo fluxo sobre S3CompatibleStorageProvider sem rede", async () => {
       const mockS3Store = new Map<string, Uint8Array>();
 
@@ -528,18 +469,19 @@ describe("Gate 3C — Memories Integration & Dual-Provider Binding Suite", () =>
       assert.strictEqual(provider.providerName, "fake");
     });
 
-    it("falha fechado se STORAGE_PROVIDER=supabase for invocado sem cliente configurado", () => {
+    it("rejeita o provider legado removido", () => {
       __resetStorageComposition();
       assert.throws(
-        () => resolveStorageProvider({ providerType: "supabase" }),
-        /supabase_client_not_configured_in_composition_root/
+        () => resolveStorageProvider({ providerType: "supabase" as unknown as StorageProviderType }),
+        /unsupported_storage_provider_type/
       );
     });
 
-    it("falha fechado se STORAGE_PROVIDER=r2-s3 for invocado sem s3Client ou presigner", () => {
+    it("usa o adaptador R2 em produção sem permitir um cliente híbrido incompleto", () => {
       __resetStorageComposition();
+      assert.strictEqual(resolveStorageProvider({ providerType: "r2-s3" }).providerName, "r2-s3");
       assert.throws(
-        () => resolveStorageProvider({ providerType: "r2-s3" }),
+        () => resolveStorageProvider({ providerType: "r2-s3", s3Client: { send: async <T>() => ({} as T) } }),
         /r2_s3_storage_provider_requires_s3_client_and_presigner/
       );
     });

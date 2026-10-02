@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, isValidSession } from "@/lib/admin/auth";
+import { requireActiveAdminIdentity } from "@/lib/admin/admin-identity.server";
 
 export async function requireAdmin(): Promise<void> {
   const cookieStore = await cookies();
@@ -9,6 +10,8 @@ export async function requireAdmin(): Promise<void> {
   if (!(await isValidSession(token))) {
     throw new Error("Não autorizado.");
   }
+
+  await requireActiveAdminIdentity();
 }
 
 export type ActionResult<T> =

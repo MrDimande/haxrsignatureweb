@@ -7,7 +7,6 @@ import {
   StorageSecurityError,
   StorageConfigurationError,
   R2PrivateStorageProvider,
-  isPrivateStorageConfigured,
 } from "./private-storage";
 import { UniversalConciergeStorageProvider } from "@/lib/concierge/portal/universal-concierge-storage-provider";
 
@@ -55,10 +54,12 @@ describe("Private Storage Provider Abstraction", () => {
       );
     });
 
-    it("returns SupabasePrivateStorageProvider when configured for supabase", () => {
+    it("rejects the removed Supabase provider", () => {
       process.env.HAXR_PRIVATE_STORAGE_PROVIDER = "supabase";
-      const provider = getPrivateStorageProvider();
-      assert.strictEqual(provider.providerName, "supabase");
+      assert.throws(
+        () => getPrivateStorageProvider(),
+        StorageConfigurationError,
+      );
     });
 
     it("returns R2PrivateStorageProvider when configured for r2-s3", () => {

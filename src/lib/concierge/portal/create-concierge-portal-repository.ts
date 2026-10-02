@@ -1,8 +1,5 @@
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { InMemoryConciergePortalRepository } from "./in-memory-concierge-portal-repository";
 import { NeonConciergePortalRepository } from "./neon-concierge-portal-repository";
-import { SupabaseConciergePortalRepository } from "./supabase-concierge-portal-repository";
 import type {
   ConciergePortalPersistenceMode,
   ConciergePortalRepository,
@@ -12,14 +9,8 @@ import { isConciergePortalSchemaMissingError } from "./concierge-portal-reposito
 let schemaProbeMode: ConciergePortalPersistenceMode | null = null;
 let schemaReady = false;
 
-function createPersistentRepository(): ConciergePortalRepository | null {
-  if (shouldUseNeonServerDatabase()) {
-    return new NeonConciergePortalRepository();
-  }
-  if (isSupabaseConfigured()) {
-    return new SupabaseConciergePortalRepository();
-  }
-  return null;
+function createPersistentRepository(): ConciergePortalRepository {
+  return new NeonConciergePortalRepository();
 }
 
 async function probePortalSchema(repo: ConciergePortalRepository): Promise<boolean> {
@@ -33,16 +24,12 @@ async function probePortalSchema(repo: ConciergePortalRepository): Promise<boole
 }
 
 export function createConciergePortalRepository(): ConciergePortalRepository {
-  return createPersistentRepository() ?? new InMemoryConciergePortalRepository();
+  return createPersistentRepository();
 }
 
 /** Verifica se as tabelas portal existem; em falha usa memória. */
 export async function createConciergePortalRepositorySafe(): Promise<ConciergePortalRepository> {
   const repo = createPersistentRepository();
-  if (!repo) {
-    return new InMemoryConciergePortalRepository();
-  }
-
   if (schemaProbeMode !== repo.mode) {
     schemaReady = await probePortalSchema(repo);
     schemaProbeMode = repo.mode;

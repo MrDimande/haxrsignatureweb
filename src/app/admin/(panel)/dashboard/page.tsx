@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
+import AdminGreeting from "@/components/admin/dashboard/AdminGreeting";
 import AttentionRequiredPanel from "@/components/admin/dashboard/AttentionRequiredPanel";
 import PortfolioHealthPanel from "@/components/admin/dashboard/PortfolioHealthPanel";
 import UpcomingOperationalAgendaPanel from "@/components/admin/dashboard/UpcomingOperationalAgendaPanel";
@@ -60,17 +61,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="space-y-4 relative z-10">
-            <div>
-              <span className="font-mono text-[8px] tracking-[0.4em] uppercase text-admin-gold">
-                Executive Spotlight
-              </span>
-              <h2 className="font-serif text-2xl font-light text-white mt-1">
-                Direcção HAXR
-              </h2>
-              <p className="text-xs text-grey-medium mt-1 leading-relaxed">
-                Visão consolidada da operação, eventos e facturação da HAXR.
-              </p>
-            </div>
+            <AdminGreeting />
 
             <div className="pt-2">
               <p className="font-mono text-[8px] tracking-[0.2em] uppercase text-grey/60">

@@ -1,20 +1,12 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
-  shouldUseNeonAuthForAppSession,
-  shouldUseNeonServerDatabase,
   validateNeonServerEnvironment,
 } from "@/lib/neon/config";
 import { neonQuery } from "@/lib/neon/server-db";
-import {
-  validateClientAppAuthEnvironment as validateSupabaseAuthEnvironment,
-  validateClientAppServiceRoleEnvironment as validateSupabaseServiceRoleEnvironment,
-  type ClientAppAuthEnvCheck,
-} from "@/lib/supabase/config";
-import { createAdminClient } from "@/lib/supabase/server";
-import {
-  createSupabaseServerAuthClient,
-  resolveAuthenticatedSupabaseClient,
-} from "@/lib/supabase/server-auth";
+
+export type ClientAppAuthEnvCheck =
+  | { ok: true; projectRef: string }
+  | { ok: false; message: string };
 
 type QueryError = { message: string; code?: string } | null;
 type QueryResult<T> = { data: T | null; error: QueryError };
@@ -144,12 +136,10 @@ function validateNeonAsClientAppEnvironment(): ClientAppAuthEnvCheck {
 
 /**
  * Auth/session boundary for the client-event application.
- * Production remains Supabase until HAXR_AUTH_PROVIDER=neon is explicitly enabled.
+ * Identity comes only from the HAXR-owned portal session.
  */
 export function validateClientEventAuthEnvironment(): ClientAppAuthEnvCheck {
-  return shouldUseNeonAuthForAppSession()
-    ? validateNeonAsClientAppEnvironment()
-    : validateSupabaseAuthEnvironment();
+  return validateNeonAsClientAppEnvironment();
 }
 
 /**
@@ -157,28 +147,18 @@ export function validateClientEventAuthEnvironment(): ClientAppAuthEnvCheck {
  * In migration Preview this follows the existing Neon database provider switch.
  */
 export function validateClientEventOperationalEnvironment(): ClientAppAuthEnvCheck {
-  return shouldUseNeonServerDatabase()
-    ? validateNeonAsClientAppEnvironment()
-    : validateSupabaseServiceRoleEnvironment();
+  return validateNeonAsClientAppEnvironment();
 }
 
 export async function createClientEventReadAuthClient<T>(): Promise<T | null> {
   const envCheck = validateClientEventAuthEnvironment();
   if (!envCheck.ok) return null;
 
-  if (shouldUseNeonAuthForAppSession()) {
-    return new NeonClientEventReadClient() as unknown as T;
-  }
-
-  return (await createSupabaseServerAuthClient()) as unknown as T;
+  return new NeonClientEventReadClient() as unknown as T;
 }
 
 export function createClientEventOperationalRpcClient<T>(): T {
-  if (shouldUseNeonServerDatabase()) {
-    return new NeonClientEventOperationalRpcClient() as unknown as T;
-  }
-
-  return createAdminClient() as unknown as T;
+  return new NeonClientEventOperationalRpcClient() as unknown as T;
 }
 
 export async function resolveClientEventReadRequestAuth<T>(request: Request): Promise<{
@@ -192,18 +172,9 @@ export async function resolveClientEventReadRequestAuth<T>(request: Request): Pr
     return { user: null, profile: session.profile, authClient: null };
   }
 
-  if (shouldUseNeonAuthForAppSession()) {
-    return {
-      user: session.user,
-      profile: session.profile,
-      authClient: new NeonClientEventReadClient() as unknown as T,
-    };
-  }
-
-  const resolved = await resolveAuthenticatedSupabaseClient(request);
   return {
-    user: resolved.user ?? session.user,
+    user: session.user,
     profile: session.profile,
-    authClient: resolved.supabase as unknown as T,
+    authClient: new NeonClientEventReadClient() as unknown as T,
   };
 }

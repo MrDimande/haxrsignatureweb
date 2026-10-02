@@ -11,11 +11,7 @@ import {
 } from "@/lib/email/marketing/marketing-contact";
 import { captureMarketingContact } from "@/lib/email/marketing/contact-capture";
 import { getCurrentAppSession } from "@/lib/auth/app-session";
-import {
-  shouldUseNeonServerDatabase,
-  validateNeonServerEnvironment,
-} from "@/lib/neon/config";
-import { validateClientAppServiceRoleEnvironment } from "@/lib/supabase/config";
+import { validateNeonServerEnvironment } from "@/lib/neon/config";
 import { createSupplierApplicationForActiveDatabase } from "@/lib/vendors/supplier-application";
 
 export const runtime = "nodejs";
@@ -50,9 +46,7 @@ export async function POST(request: Request) {
 
     const { firstName, lastName } = splitFullName(parsed.data.responsibleName);
     const now = new Date().toISOString();
-    const databaseCheck = shouldUseNeonServerDatabase()
-      ? validateNeonServerEnvironment()
-      : validateClientAppServiceRoleEnvironment();
+    const databaseCheck = validateNeonServerEnvironment();
 
     if (!databaseCheck.ok) {
       return NextResponse.json(

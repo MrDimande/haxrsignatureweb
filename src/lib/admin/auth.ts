@@ -1,4 +1,5 @@
 import { ADMIN_SESSION_COOKIE } from "@/lib/admin/constants";
+import { normalizeAdminEmail } from "@/lib/admin/admin-user";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
@@ -53,7 +54,8 @@ async function signPayload(payload: string, secret: string): Promise<string> {
 }
 
 export async function createSessionToken(): Promise<string> {
-  const email = process.env.ADMIN_EMAIL?.trim() ?? "";
+  const configuredEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
+  const email = configuredEmail ? normalizeAdminEmail(configuredEmail) : "";
   const secret = getSessionSecret();
 
   if (!email || !secret) return "";
@@ -68,7 +70,8 @@ export async function isValidSession(token: string | undefined): Promise<boolean
   if (!token || !isAdminConfigured()) return false;
 
   const secret = getSessionSecret();
-  const email = process.env.ADMIN_EMAIL?.trim() ?? "";
+  const configuredEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
+  const email = configuredEmail ? normalizeAdminEmail(configuredEmail) : "";
   if (!secret || !email) return false;
 
   const [expStr, signature] = token.split(".");
@@ -86,10 +89,14 @@ export async function isValidSession(token: string | undefined): Promise<boolean
 export function validateCredentials(email: string, password: string): boolean {
   if (!isAdminConfigured()) return false;
 
-  const adminEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
+  const configuredEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
+  const adminEmail = configuredEmail ? normalizeAdminEmail(configuredEmail) : "";
   const adminPassword = process.env.ADMIN_PASSWORD?.trim() ?? "";
 
-  return email === adminEmail && password === adminPassword;
+  return (
+    timingSafeEqual(normalizeAdminEmail(email), adminEmail) &&
+    timingSafeEqual(password, adminPassword)
+  );
 }
 
 export function getSessionMaxAge(): number {

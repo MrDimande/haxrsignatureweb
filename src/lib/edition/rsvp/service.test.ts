@@ -63,8 +63,6 @@ describe("processEditionRsvpSubmission - Notification Switch", () => {
   });
 
   it("3. unknown slug fails before persistence or notification paths", async () => {
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://invalid.supabase.local";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "invalid-service-role";
     process.env.RESEND_API_KEY = "invalid-resend-key";
     delete process.env.EDITION_RSVP_NOTIFICATIONS_ENABLED;
 

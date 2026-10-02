@@ -1,4 +1,4 @@
-export type ConciergeStorageMode = "metadata_only" | "supabase" | "r2-s3";
+export type ConciergeStorageMode = "metadata_only" | "r2-s3";
 
 export interface ConciergeStorageUploadInput {
   eventId: string;

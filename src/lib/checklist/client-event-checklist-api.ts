@@ -2,6 +2,7 @@ import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
   createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
+  type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
   validateClientEventOperationalEnvironment,
 } from "@/lib/auth/client-event-server-clients";
@@ -12,7 +13,6 @@ import {
   type ClientEventChecklistAuthClient,
 } from "@/lib/checklist/client-event-checklist-service";
 import type { ClientEventChecklistRpcClient } from "@/lib/checklist/client-event-checklist-rpc";
-import type { ClientAppAuthEnvCheck } from "@/lib/supabase/config";
 
 export type HandleClientEventChecklistRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;

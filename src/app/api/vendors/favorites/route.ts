@@ -10,7 +10,6 @@ import {
   listSavedSupplierProfileIds,
   removeSupplierProfileFavorite,
   saveSupplierProfileFavorite,
-  type SupplierFavoritesClient,
 } from "@/lib/vendors/favorites.repository";
 
 export const runtime = "nodejs";
@@ -26,7 +25,7 @@ function json(
 }
 
 async function authenticate(request: Request) {
-  return resolveClientEventReadRequestAuth<SupplierFavoritesClient>(request);
+  return resolveClientEventReadRequestAuth(request);
 }
 
 async function parseSupplierId(request: Request): Promise<
@@ -49,12 +48,12 @@ async function parseSupplierId(request: Request): Promise<
 
 export async function GET(request: Request) {
   try {
-    const { user, authClient } = await authenticate(request);
+    const { user } = await authenticate(request);
     if (!user) {
       return json({ ok: false, message: "Inicie sessão para ver os guardados." }, 401);
     }
 
-    const { data, error } = await listSavedSupplierProfileIds(user.id, authClient);
+    const { data, error } = await listSavedSupplierProfileIds(user.id);
     if (error) {
       return json({ ok: false, message: "Não foi possível carregar os guardados." }, 503);
     }
@@ -74,14 +73,13 @@ export async function POST(request: Request) {
     const parsed = await parseSupplierId(request);
     if (!parsed.ok) return parsed.response;
 
-    const { user, authClient } = await authenticate(request);
+    const { user } = await authenticate(request);
     if (!user) {
       return json({ ok: false, message: "Inicie sessão para guardar." }, 401);
     }
 
     const { data: profile, error: profileError } = await findPublishedSupplierProfile(
       parsed.supplierId,
-      authClient,
     );
     if (profileError || !profile) {
       return json({ ok: false, message: "Fornecedor publicado não encontrado." }, 404);
@@ -90,7 +88,6 @@ export async function POST(request: Request) {
     const { error } = await saveSupplierProfileFavorite(
       user.id,
       parsed.supplierId,
-      authClient,
     );
     const mapped = mapSupplierFavoriteError(error);
     if (mapped && mapped.status !== 200) {
@@ -112,7 +109,7 @@ export async function DELETE(request: Request) {
     const parsed = await parseSupplierId(request);
     if (!parsed.ok) return parsed.response;
 
-    const { user, authClient } = await authenticate(request);
+    const { user } = await authenticate(request);
     if (!user) {
       return json({ ok: false, message: "Inicie sessão para continuar." }, 401);
     }
@@ -120,7 +117,6 @@ export async function DELETE(request: Request) {
     const { error } = await removeSupplierProfileFavorite(
       user.id,
       parsed.supplierId,
-      authClient,
     );
     const mapped = mapSupplierFavoriteError(error);
     if (mapped) {

@@ -1,4 +1,3 @@
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import type { SheetImportSource } from "@/lib/events/sheets/fingerprint";
 import type { SheetGuestRow } from "@/lib/events/sheets/types";
 import {
@@ -10,41 +9,28 @@ import {
   upsertImportRow as upsertImportRowNeon,
   upsertLedgerAction as upsertLedgerActionNeon,
 } from "@/lib/events/sheets/sync-ledger.neon.repository";
-import {
-  getExistingGuestIdForFingerprint as getExistingGuestIdForFingerprintSupabase,
-  getLedgerByFingerprint as getLedgerByFingerprintSupabase,
-  getLedgerById as getLedgerByIdSupabase,
-  markLedgerSeen as markLedgerSeenSupabase,
-  updateLedgerById as updateLedgerByIdSupabase,
-  upsertImportRow as upsertImportRowSupabase,
-  upsertLedgerAction as upsertLedgerActionSupabase,
-} from "@/lib/events/sheets/sync-ledger.supabase.repository";
 import type {
   LedgerAction,
   SheetSyncLedgerRow,
   UpsertImportRowInput,
   UpsertLedgerActionInput,
-} from "@/lib/events/sheets/sync-ledger.supabase.repository";
+} from "@/lib/events/sheets/sync-ledger.neon.repository";
 
 export type {
   LedgerAction,
   SheetSyncLedgerRow,
   UpsertImportRowInput,
   UpsertLedgerActionInput,
-} from "@/lib/events/sheets/sync-ledger.supabase.repository";
+} from "@/lib/events/sheets/sync-ledger.neon.repository";
 
 export function upsertImportRow(input: UpsertImportRowInput): Promise<void> {
-  return shouldUseNeonServerDatabase()
-    ? upsertImportRowNeon(input)
-    : upsertImportRowSupabase(input);
+  return upsertImportRowNeon(input);
 }
 
 export function getLedgerById(
   ledgerId: string,
 ): Promise<SheetSyncLedgerRow | null> {
-  return shouldUseNeonServerDatabase()
-    ? getLedgerByIdNeon(ledgerId)
-    : getLedgerByIdSupabase(ledgerId);
+  return getLedgerByIdNeon(ledgerId);
 }
 
 export function updateLedgerById(
@@ -56,9 +42,7 @@ export function updateLedgerById(
     rowPayload?: SheetGuestRow | null;
   },
 ): Promise<SheetSyncLedgerRow> {
-  return shouldUseNeonServerDatabase()
-    ? updateLedgerByIdNeon(ledgerId, patch)
-    : updateLedgerByIdSupabase(ledgerId, patch);
+  return updateLedgerByIdNeon(ledgerId, patch);
 }
 
 export function getLedgerByFingerprint(
@@ -66,23 +50,17 @@ export function getLedgerByFingerprint(
   source: SheetImportSource,
   rowFingerprint: string,
 ): Promise<SheetSyncLedgerRow | null> {
-  return shouldUseNeonServerDatabase()
-    ? getLedgerByFingerprintNeon(eventId, source, rowFingerprint)
-    : getLedgerByFingerprintSupabase(eventId, source, rowFingerprint);
+  return getLedgerByFingerprintNeon(eventId, source, rowFingerprint);
 }
 
 export function upsertLedgerAction(
   input: UpsertLedgerActionInput,
 ): Promise<SheetSyncLedgerRow> {
-  return shouldUseNeonServerDatabase()
-    ? upsertLedgerActionNeon(input)
-    : upsertLedgerActionSupabase(input);
+  return upsertLedgerActionNeon(input);
 }
 
 export function markLedgerSeen(ledgerId: string): Promise<void> {
-  return shouldUseNeonServerDatabase()
-    ? markLedgerSeenNeon(ledgerId)
-    : markLedgerSeenSupabase(ledgerId);
+  return markLedgerSeenNeon(ledgerId);
 }
 
 export function getExistingGuestIdForFingerprint(
@@ -90,7 +68,5 @@ export function getExistingGuestIdForFingerprint(
   source: SheetImportSource,
   rowFingerprint: string,
 ): Promise<string | null> {
-  return shouldUseNeonServerDatabase()
-    ? getExistingGuestIdForFingerprintNeon(eventId, source, rowFingerprint)
-    : getExistingGuestIdForFingerprintSupabase(eventId, source, rowFingerprint);
+  return getExistingGuestIdForFingerprintNeon(eventId, source, rowFingerprint);
 }

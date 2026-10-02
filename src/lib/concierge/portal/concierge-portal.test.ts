@@ -7,31 +7,15 @@ import { RuleBasedConciergeProvider } from "./concierge-ai-provider";
 import { InMemoryConciergePortalRepository } from "./in-memory-concierge-portal-repository";
 
 describe("concierge portal production-core", () => {
-  it("repository factory returns memory when Supabase env is missing", () => {
-    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-
+  it("repository factory always resolves the Neon persistence adapter", () => {
     const repo = createConciergePortalRepository();
-    assert.equal(repo.mode, "memory");
-    assert.ok(repo instanceof InMemoryConciergePortalRepository);
-
-    process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
-    process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+    assert.equal(repo.mode, "neon");
+    assert.equal(repo instanceof InMemoryConciergePortalRepository, false);
   });
 
-  it("storage factory returns metadata_only when Supabase env is missing", () => {
-    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-
+  it("storage factory stays metadata_only when private R2 storage is unavailable", () => {
     const storage = createConciergeStorageProvider();
     assert.equal(storage.mode, "metadata_only");
-
-    process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
-    process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
   });
 
   it("AI provider factory always returns a provider", () => {

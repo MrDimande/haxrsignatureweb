@@ -4,7 +4,7 @@
  * REGRAS FUNDAMENTAIS (Gate 3F-D):
  * - Português de Moçambique em todos os comentários e asserções.
  * - Testes determinísticos em memória sem chamadas de rede ou escritas remotas no R2.
- * - Valida paridade de contrato entre SupabaseStorageProvider e S3CompatibleStorageProvider.
+ * - Valida o contrato do provider R2/S3 activo.
  * - Valida semântica de objectos ausentes (retorno de null).
  * - Valida rejeição estrita de caminhos canónicos inválidos.
  * - Valida preservação de MIME types reais do manifest (JPEG, HEIC, MP4, MOV).
@@ -20,10 +20,6 @@ import {
   StorageProvider,
   StorageSecurityError,
 } from "./storage-provider.types";
-import {
-  SupabaseStorageProvider,
-  SupabaseStorageClientLike,
-} from "./supabase-storage-provider";
 import {
   S3CompatibleStorageProvider,
   S3ClientLike,
@@ -91,24 +87,10 @@ describe("Gate 3F-D — Storage Abstraction & Parity Suite", () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 1. CONTRATO DE LEITURA E PARIDADE SUPABASE / R2
+  // 1. CONTRATO DE LEITURA R2/S3
   // ───────────────────────────────────────────────────────────────────────────
-  describe("Paridade de Leitura entre Providers", () => {
-    it("ambos os providers retornam payload idêntico, tamanho e MIME type", async () => {
-      const mockSupabaseClient: SupabaseStorageClientLike = {
-        storage: {
-          from: () => ({
-            createSignedUploadUrl: async () => ({ data: null, error: null }),
-            createSignedUrl: async () => ({ data: null, error: null }),
-            download: async () => ({
-              data: new Blob([DUMMY_PAYLOAD], { type: "image/jpeg" }),
-              error: null,
-            }),
-            remove: async () => ({ data: null, error: null }),
-          }),
-        },
-      };
-
+  describe("Leitura através do provider R2/S3", () => {
+    it("retorna o payload, tamanho e MIME type do objecto privado", async () => {
       const mockS3Client: S3ClientLike = {
         send: async <T>(cmd: S3CommandStructural): Promise<T> => {
           if (cmd._type === "GetObjectCommand") {
@@ -125,20 +107,16 @@ describe("Gate 3F-D — Storage Abstraction & Parity Suite", () => {
         getSignedUrl: async () => "https://r2.dummy/presigned",
       };
 
-      const supaProvider = new SupabaseStorageProvider(mockSupabaseClient);
       const s3Provider = new S3CompatibleStorageProvider(mockS3Client, mockPresigner, {
         bucketName: BUCKET,
       });
 
-      const supaRes = await supaProvider.download(BUCKET, CANONICAL_PATH);
       const s3Res = await s3Provider.download(BUCKET, CANONICAL_PATH);
 
-      assert.ok(supaRes !== null);
       assert.ok(s3Res !== null);
-
-      assert.strictEqual(supaRes.sizeBytes, s3Res.sizeBytes);
-      assert.strictEqual(supaRes.contentType, s3Res.contentType);
-      assert.strictEqual(sha256(supaRes.data), sha256(s3Res.data));
+      assert.strictEqual(s3Res.sizeBytes, DUMMY_PAYLOAD.byteLength);
+      assert.strictEqual(s3Res.contentType, "image/jpeg");
+      assert.strictEqual(sha256(s3Res.data), sha256(DUMMY_PAYLOAD));
     });
   });
 
@@ -146,21 +124,7 @@ describe("Gate 3F-D — Storage Abstraction & Parity Suite", () => {
   // 2. SEMÂNTICA DE OBJECTO AUSENTE
   // ───────────────────────────────────────────────────────────────────────────
   describe("Semântica de Objecto Ausente", () => {
-    it("ambos os providers retornam null quando o objecto não existe", async () => {
-      const mockSupabaseClient: SupabaseStorageClientLike = {
-        storage: {
-          from: () => ({
-            createSignedUploadUrl: async () => ({ data: null, error: null }),
-            createSignedUrl: async () => ({ data: null, error: null }),
-            download: async () => ({
-              data: null,
-              error: new Error("Object not found"),
-            }),
-            remove: async () => ({ data: null, error: null }),
-          }),
-        },
-      };
-
+    it("o provider R2/S3 retorna null quando o objecto não existe", async () => {
       const mockS3Client: S3ClientLike = {
         send: async () => {
           const err = new Error("The specified key does not exist.");
@@ -169,17 +133,14 @@ describe("Gate 3F-D — Storage Abstraction & Parity Suite", () => {
         },
       };
 
-      const supaProvider = new SupabaseStorageProvider(mockSupabaseClient);
       const s3Provider = new S3CompatibleStorageProvider(mockS3Client, {
         getSignedUrl: async () => "",
       });
 
       const absentKey = `${SLUG}/00000000-0000-4000-8000-000000000000/original.jpg`;
 
-      const supaRes = await supaProvider.download(BUCKET, absentKey);
       const s3Res = await s3Provider.download(BUCKET, absentKey);
 
-      assert.strictEqual(supaRes, null);
       assert.strictEqual(s3Res, null);
     });
   });
@@ -312,14 +273,9 @@ describe("Gate 3F-D — Storage Abstraction & Parity Suite", () => {
   // 6. COMPOSITION ROOT & FABRICAÇÃO DE PROVIDERS
   // ───────────────────────────────────────────────────────────────────────────
   describe("Composition Root & Injeção de Dependências", () => {
-    it("mantém supabase como padrão se não for fornecido outro tipo", () => {
+    it("resolve R2 privado como padrão se não for fornecido outro tipo", () => {
       delete process.env.STORAGE_PROVIDER;
-
-      // Sem cliente injetado, falha com erro de segurança seguro
-      assert.throws(
-        () => resolveStorageProvider(),
-        (err: unknown) => err instanceof StorageSecurityError
-      );
+      assert.strictEqual(resolveStorageProvider().providerName, "r2-s3");
     });
 
     it("respeita o provider de testes injetado via seam", () => {

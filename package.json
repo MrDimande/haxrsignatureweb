@@ -33,11 +33,8 @@
     "brevo:diagnose": "node scripts/brevo-diagnose.mjs",
     "brevo:funnel": "node scripts/process-brevo-funnel.mjs",
     "brevo:funnel:direct": "node --import tsx scripts/run-brevo-funnel-direct.mjs",
-    "admin:diagnose-env": "node scripts/diagnose-supabase-admin-env.mjs",
     "admin:smoke-db": "node scripts/smoke-admin-db-access.mjs",
-    "supabase:cli": "node scripts/run-supabase.mjs",
-    "supabase:migrations": "node scripts/run-supabase.mjs migration list --linked",
-    "supabase:repair-applied": "node scripts/run-supabase.mjs migration repair --status applied --linked"
+    "admin:smoke-db": "node scripts/smoke-admin-db-access.mjs"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.22.0",
@@ -49,8 +46,6 @@
     "@neon/config": "^1.3.0",
     "@neon/env": "^1.2.1",
     "@react-pdf/renderer": "^4.5.1",
-    "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.108.1",
     "@tsparticles/react": "^3.0.0",
     "@tsparticles/slim": "^3.8.1",
     "exceljs": "^4.4.0",
@@ -84,7 +79,6 @@
     "@types/react-dom": "^19.1.5",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.19",
-    "supabase": "^2.109.1",
     "tailwindcss": "^4.1.7",
     "tsx": "^4.22.4",
     "typescript": "^5.8.3"

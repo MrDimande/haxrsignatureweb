@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { neonQuery } from "@/lib/neon/server-db";
+import { DEFAULT_FLOOR_PLAN } from "@/lib/events/floor-plan/model";
 import { PUBLIC_ELEMENT_LABELS } from "@/lib/events/floor-plan/presentation";
-import {
-  isFloorPlanSchemaMissingError,
-  validateFloorPlanLayout,
-} from "@/lib/events/floor-plan/repository.supabase";
 import type {
   EventFloorPlan,
   FloorPlanItem,
@@ -13,6 +10,65 @@ import type {
 } from "@/lib/events/floor-plan/types";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { PublicFloorPlan } from "@/lib/events/types";
+
+export function validateFloorPlanLayout(
+  room: FloorPlanRoom,
+  items: FloorPlanItem[],
+): void {
+  const ids = new Set<string>();
+  const tableKeys = new Set<string>();
+
+  for (const item of items) {
+    if (ids.has(item.id)) {
+      throw new Error(`O Croqui contém o identificador duplicado «${item.id}».`);
+    }
+    ids.add(item.id);
+
+    if (
+      item.x < 0 ||
+      item.y < 0 ||
+      item.x + item.width > room.width ||
+      item.y + item.height > room.length
+    ) {
+      throw new Error(
+        `O elemento «${item.kind === "table" ? item.sourceTableName : item.label}» está fora dos limites do espaço.`,
+      );
+    }
+
+    if (item.rotation < 0 || item.rotation >= 360) {
+      throw new Error("A rotação dos elementos deve estar entre 0° e 359°.");
+    }
+
+    if (item.kind === "table") {
+      if (tableKeys.has(item.tableKey)) {
+        throw new Error(
+          `A mesa «${item.sourceTableName}» está posicionada mais de uma vez.`,
+        );
+      }
+      tableKeys.add(item.tableKey);
+    }
+  }
+}
+
+export function isFloorPlanSchemaMissingError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("event_floor_plans") &&
+    (message.includes("does not exist") ||
+      message.includes("schema cache") ||
+      message.includes("Could not find"))
+  );
+}
+
+export function createEmptyFloorPlan(eventId: string): EventFloorPlan {
+  return {
+    eventId,
+    ...DEFAULT_FLOOR_PLAN,
+    room: { ...DEFAULT_FLOOR_PLAN.room },
+    items: [],
+    printPreferences: { ...DEFAULT_FLOOR_PLAN.printPreferences },
+  };
+}
 
 const geometrySchema = z.object({
   id: z.string().min(1).max(160),
