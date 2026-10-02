@@ -4,7 +4,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 import type {
   BrevoFunnelTimestampField,
   CreateInquiryInput,
-} from "@/lib/contact/inquiries.supabase.repository";
+} from "@/lib/contact/inquiries.types";
 
 type InquiryRow = Tables<"contact_inquiries">;
 type NeonInquiryRow = { row: InquiryRow };

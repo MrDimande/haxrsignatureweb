@@ -11,14 +11,14 @@ import {
   resolveSegmentFromEventType,
   splitFullName,
 } from "@/lib/email/marketing/marketing-contact";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   try {
-    if (!isSupabaseConfigured()) {
+    if (!shouldUseNeonServerDatabase()) {
       return NextResponse.json(
         { error: "Serviço de contacto temporariamente indisponível." },
         { status: 503 }

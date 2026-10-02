@@ -1,6 +1,4 @@
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { neonQuery } from "@/lib/neon/server-db";
-import { createAdminClient } from "@/lib/supabase/server";
 
 export type SupplierApplicationInput = {
   applicantUserId: string | null;
@@ -87,7 +85,7 @@ function failureResult(): CreateSupplierApplicationResult {
   };
 }
 
-/** Supabase implementation kept intact for Production and unit-test compatibility. */
+/** Injectable repository seam retained for deterministic unit tests. */
 export async function createSupplierApplication(
   client: SupplierApplicationClient,
   input: SupplierApplicationInput,
@@ -161,18 +159,10 @@ async function createSupplierApplicationNeon(
 }
 
 /**
- * Provider-aware entry point used by the public supplier application route.
- * Preview migration writes to Neon; Production remains on Supabase.
+ * Neon-only entry point used by the public supplier application route.
  */
 export async function createSupplierApplicationForActiveDatabase(
   input: SupplierApplicationInput,
 ): Promise<CreateSupplierApplicationResult> {
-  if (shouldUseNeonServerDatabase()) {
-    return createSupplierApplicationNeon(input);
-  }
-
-  return createSupplierApplication(
-    createAdminClient() as unknown as SupplierApplicationClient,
-    input,
-  );
+  return createSupplierApplicationNeon(input);
 }

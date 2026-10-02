@@ -7,6 +7,11 @@ import {
   validateCredentials,
 } from "@/lib/admin/auth";
 import {
+  AdminIdentityAccessError,
+  requireActiveAdminIdentity,
+} from "@/lib/admin/admin-identity.server";
+import { recordAdminLogin } from "@/lib/admin/admin-users.repository";
+import {
   getRequestIp,
   rateLimit,
   rateLimitResponse,
@@ -35,10 +40,15 @@ export async function POST(request: Request) {
       });
     }
 
-    const body = (await request.json()) as {
-      email?: string;
-      password?: string;
-    };
+    let body: { email?: string; password?: string };
+    try {
+      body = (await request.json()) as {
+        email?: string;
+        password?: string;
+      };
+    } catch {
+      return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+    }
 
     const email = body.email?.trim() ?? "";
     const password = body.password ?? "";
@@ -49,6 +59,11 @@ export async function POST(request: Request) {
         { error: "Credenciais inválidas." },
         { status: 401 }
       );
+    }
+
+    const identity = await requireActiveAdminIdentity();
+    if (identity.isPersisted) {
+      await recordAdminLogin(identity.id);
     }
 
     const sessionToken = await createSessionToken();
@@ -69,10 +84,17 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch {
+  } catch (error) {
+    if (error instanceof AdminIdentityAccessError) {
+      return NextResponse.json(
+        { error: "Credenciais inválidas." },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Pedido inválido." },
-      { status: 400 }
+      { error: "A autenticação está temporariamente indisponível." },
+      { status: 503 }
     );
   }
 }

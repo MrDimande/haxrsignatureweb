@@ -564,7 +564,7 @@ describe("Guest Batch Removal & Undo UI Contracts (Stage 4B2B2)", () => {
       const source = readFileSync(
         resolve(
           process.cwd(),
-          "src/lib/events/repositories/guest-import-batches.supabase.repository.ts"
+          "src/lib/events/repositories/guest-import-batches.neon.repository.ts"
         ),
         "utf8"
       );
@@ -572,10 +572,10 @@ describe("Guest Batch Removal & Undo UI Contracts (Stage 4B2B2)", () => {
         source.indexOf("export async function listImportBatchesByEvent"),
         source.indexOf("export async function getImportBatchById")
       );
-      assert.match(listFn, /\.eq\("event_id", eventId\)/);
-      assert.match(listFn, /\.eq\("action", "remove_import_batch"\)/);
-      assert.match(listFn, /\.is\("undone_at", null\)/);
-      assert.match(listFn, /order\("created_at", \{ ascending: false \}\)/);
+      assert.match(listFn, /WHERE event_id = \$1::uuid/);
+      assert.match(listFn, /action = 'remove_import_batch'/);
+      assert.match(listFn, /undone_at IS NULL/);
+      assert.match(listFn, /ORDER BY created_at DESC/);
       assert.match(listFn, /latestReversibleRemoval/);
       assert.match(listFn, /auditId: audit\.id/);
       assert.equal(/undo_payload/.test(listFn), false);
@@ -585,14 +585,17 @@ describe("Guest Batch Removal & Undo UI Contracts (Stage 4B2B2)", () => {
       const repoSource = readFileSync(
         resolve(
           process.cwd(),
-          "src/lib/events/repositories/guest-import-batches.supabase.repository.ts"
+          "src/lib/events/repositories/guest-import-batches.neon.repository.ts"
         ),
         "utf8"
       );
       assert.match(repoSource, /remove_guest_import_batch_atomic/);
       assert.match(repoSource, /undo_guest_import_batch_removal_atomic/);
-      assert.equal(/Promise\.all\s*\(/.test(repoSource), false);
-      assert.equal(/for\s*\(.*guest.*\)\s*\{[\s\S]*deleted_at/.test(repoSource), false);
+      const atomicFns = repoSource.slice(
+        repoSource.indexOf("export async function removeImportBatchAtomic"),
+      );
+      assert.equal(/Promise\.all\s*\(/.test(atomicFns), false);
+      assert.equal(/for\s*\(.*guest.*\)\s*\{[\s\S]*deleted_at/.test(atomicFns), false);
 
       const actionSource = readFileSync(
         resolve(process.cwd(), "src/lib/events/actions/guest-bulk.actions.ts"),

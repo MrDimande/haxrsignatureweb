@@ -1,17 +1,11 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
+import { describe, it } from "node:test";
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
 import type { CreateClientEventInput } from "@/lib/events/create-event-validation";
 import {
   createClientEventFromPayload,
   type CreateClientEventDeps,
 } from "@/lib/events/client-event-service";
-import {
-  SUPABASE_PREVIEW_URL,
-  SUPABASE_PRODUCTION_PROJECT_REF,
-  validateClientAppAuthEnvironment,
-  validateClientAppServiceRoleEnvironment,
-} from "@/lib/supabase/config";
 
 const basePayload: CreateClientEventInput = {
   eventType: "wedding",
@@ -232,45 +226,7 @@ function createMockDeps(state: MockState): CreateClientEventDeps {
   };
 }
 
-function setProcessEnv(key: string, value: string | undefined): void {
-  const env = process.env as Record<string, string | undefined>;
-  if (value === undefined) {
-    delete env[key];
-  } else {
-    env[key] = value;
-  }
-}
-
-const originalNodeEnv = process.env.NODE_ENV;
-const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const originalSupabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const originalServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-function restoreEnv(): void {
-  setProcessEnv("NODE_ENV", originalNodeEnv);
-
-  if (originalSupabaseUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-  else process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
-
-  if (originalSupabaseAnon === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalSupabaseAnon;
-
-  if (originalServiceRole === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-  else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRole;
-}
-
-function createFakeSupabaseJwt(payload: Record<string, unknown>): string {
-  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString(
-    "base64url",
-  );
-  return `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${encodedPayload}.x`;
-}
-
 describe("client-event-service", () => {
-  afterEach(() => {
-    restoreEnv();
-  });
-
   it("creates event successfully with owner, snapshot and profile update", async () => {
     const state: MockState = {
       activeByFingerprint: null,
@@ -589,71 +545,6 @@ describe("client-event-service", () => {
     if (!result.ok) {
       assert.equal(result.status, 503);
       assert.equal(result.error, "service_role_unavailable");
-    }
-  });
-});
-
-describe("client-app env guards for POST /api/events", () => {
-  afterEach(() => {
-    restoreEnv();
-  });
-
-  it("blocks production Supabase URL in development", () => {
-    setProcessEnv("NODE_ENV", "development");
-    process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${SUPABASE_PRODUCTION_PROJECT_REF}.supabase.co`;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
-
-    const result = validateClientAppAuthEnvironment();
-    assert.equal(result.ok, false);
-  });
-
-  it("allows preview Supabase URL in development", () => {
-    setProcessEnv("NODE_ENV", "development");
-    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
-
-    const result = validateClientAppAuthEnvironment();
-    assert.equal(result.ok, true);
-  });
-
-  it("requires service role key for snapshot writes", () => {
-    setProcessEnv("NODE_ENV", "development");
-    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    const result = validateClientAppServiceRoleEnvironment();
-    assert.equal(result.ok, false);
-  });
-
-  it("rejects production service role when URL points to preview", () => {
-    setProcessEnv("NODE_ENV", "development");
-    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
-    process.env.SUPABASE_SERVICE_ROLE_KEY =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3JkbXlkbHF5dm51ZWVkZ3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY3MDAwMDAwMCwiZXhwIjoxOTg1NTc2MDAwfQ.x";
-
-    const result = validateClientAppServiceRoleEnvironment();
-    assert.equal(result.ok, false);
-    if (!result.ok) {
-      assert.match(result.message, /não corresponde|produção/i);
-    }
-  });
-
-  it("rejects preview anon key in the service role slot", () => {
-    setProcessEnv("NODE_ENV", "development");
-    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_PREVIEW_URL;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = createFakeSupabaseJwt({
-      iss: "supabase",
-      ref: SUPABASE_PREVIEW_URL.split("//")[1]?.split(".")[0],
-      role: "anon",
-    });
-
-    const result = validateClientAppServiceRoleEnvironment();
-    assert.equal(result.ok, false);
-    if (!result.ok) {
-      assert.match(result.message, /service_role/i);
     }
   });
 });

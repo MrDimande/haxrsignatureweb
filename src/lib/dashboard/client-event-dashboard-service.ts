@@ -3,8 +3,6 @@ import type { ClientAppProfile } from "@/lib/auth/app-user-display";
 import { createClientEventOperationalRpcClient } from "@/lib/auth/client-event-server-clients";
 import {
   EMPTY_OPERATIONAL_KPIS,
-  fetchOperationalKpis,
-  listOperationalVendors,
   mapVendorStatusLabel,
   type ClientEventOperationalKpis,
 } from "@/lib/dashboard/client-event-operational-kpis";
@@ -43,8 +41,6 @@ import {
   type ClientEventDashboardVendorMetrics,
 } from "@/lib/vendors/client-event-vendors-dashboard";
 import { fetchClientEventVendorsViaRpc } from "@/lib/vendors/client-event-vendors-rpc";
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
-import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export type ClientEventDashboardAccessResult =
   | { kind: "ok"; event: ClientEventRow }
@@ -460,22 +456,17 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
   let checklistSnapshot: DashboardData["checklistSnapshot"] = [];
   let documentSnapshot: DashboardData["documentSnapshot"] = [];
 
-  const useNeon = shouldUseNeonServerDatabase();
-  const hasOperationalBackend = useNeon || isSupabaseConfigured();
+  const hasOperationalBackend = true;
 
   if (event.operational_event_id && hasOperationalBackend) {
     try {
-      const adminClient = useNeon ? null : createAdminClient();
       const rpcClient = createClientEventOperationalRpcClient<unknown>();
       const portalScope = { clientEventId: event.id, slug: event.slug };
 
-      operationalKpis = useNeon
-        ? await fetchOperationalKpisNeon(event.operational_event_id, portalScope)
-        : await fetchOperationalKpis(
-            event.operational_event_id,
-            portalScope,
-            adminClient as never,
-          );
+      operationalKpis = await fetchOperationalKpisNeon(
+        event.operational_event_id,
+        portalScope,
+      );
 
       try {
         const guestsPayload = await fetchClientEventGuestsViaRpc(
@@ -506,12 +497,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
         vendorSnapshot = vendorMetrics.vendorSnapshot;
       } catch {
         vendorMetrics = null;
-        const vendors = useNeon
-          ? await listOperationalVendorsNeon(event.operational_event_id)
-          : await listOperationalVendors(
-              event.operational_event_id,
-              adminClient as never,
-            );
+        const vendors = await listOperationalVendorsNeon(event.operational_event_id);
         vendorSnapshot = vendors.map((vendor) => ({
           id: vendor.id,
           name: vendor.name,

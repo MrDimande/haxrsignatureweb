@@ -1,4 +1,3 @@
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import type {
   CampaignRecipient,
   CampaignStatus,
@@ -8,10 +7,9 @@ import type {
   SenderProfile,
 } from "@/lib/campaigns/types";
 import * as neon from "@/lib/campaigns/repositories/campaigns.neon.repository";
-import * as supabase from "@/lib/campaigns/repositories/campaigns.supabase.repository";
 
 function repository() {
-  return shouldUseNeonServerDatabase() ? neon : supabase;
+  return neon;
 }
 
 export function listSenderProfiles(eventId: string): Promise<SenderProfile[]> {

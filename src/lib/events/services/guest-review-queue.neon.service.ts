@@ -14,7 +14,7 @@ import {
   buildLedgerReviewItem,
   buildResolutionReviewItem,
   buildReviewQueueSummary,
-} from "@/lib/events/services/guest-review-queue.supabase.service";
+} from "@/lib/events/services/guest-review-queue.shared";
 
 type LedgerRow = Tables<"event_sheet_sync_ledger">;
 type NeonLedgerJsonRow = { row: LedgerRow };

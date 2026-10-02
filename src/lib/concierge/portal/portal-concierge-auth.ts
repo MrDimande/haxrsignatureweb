@@ -1,7 +1,5 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import { neonQuery } from "@/lib/neon/server-db";
-import { createAdminClient } from "@/lib/supabase/server";
 
 /**
  * Autenticação e autorização do portal Concierge.
@@ -38,10 +36,6 @@ type AccessibleEventRow = {
   id: string;
   slug: string | null;
   operational_event_id: string | null;
-};
-
-type EventMembershipRow = {
-  client_event_id: string;
 };
 
 const TEAM_ACTIONS: PortalConciergeAction[] = [
@@ -106,45 +100,8 @@ async function listAccessibleEventKeysNeon(userId: string): Promise<string[]> {
   return collectEventKeys(result.rows);
 }
 
-async function listAccessibleEventKeysSupabase(userId: string): Promise<string[]> {
-  const supabase = createAdminClient();
-  const { data: owned, error: ownedError } = await supabase
-    .from("client_events")
-    .select("id, slug, operational_event_id")
-    .eq("owner_user_id", userId);
-  if (ownedError) throw new Error(ownedError.message);
-
-  const { data: memberships, error: membershipsError } = await supabase
-    .from("event_members")
-    .select("client_event_id")
-    .eq("user_id", userId);
-  if (membershipsError) throw new Error(membershipsError.message);
-
-  const membershipRows = (memberships ?? []) as EventMembershipRow[];
-  const memberIds = Array.from(
-    new Set(membershipRows.map((row) => row.client_event_id).filter(Boolean)),
-  );
-
-  let memberEvents: AccessibleEventRow[] = [];
-  if (memberIds.length > 0) {
-    const { data, error } = await supabase
-      .from("client_events")
-      .select("id, slug, operational_event_id")
-      .in("id", memberIds);
-    if (error) throw new Error(error.message);
-    memberEvents = (data ?? []) as AccessibleEventRow[];
-  }
-
-  return collectEventKeys([
-    ...((owned ?? []) as AccessibleEventRow[]),
-    ...memberEvents,
-  ]);
-}
-
 async function listAccessibleEventKeys(userId: string): Promise<string[]> {
-  return shouldUseNeonServerDatabase()
-    ? listAccessibleEventKeysNeon(userId)
-    : listAccessibleEventKeysSupabase(userId);
+  return listAccessibleEventKeysNeon(userId);
 }
 
 /** Resolve a sessão real do client app e os eventos que o actor pode aceder. */

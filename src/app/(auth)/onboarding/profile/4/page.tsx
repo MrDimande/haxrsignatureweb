@@ -6,7 +6,6 @@ import { ArrowRight, ArrowLeft, Loader2, Phone } from "lucide-react";
 import OnboardingBrandHeader from "@/components/brand/OnboardingBrandHeader";
 import { markOnboardingComplete } from "@/lib/auth/onboarding-status";
 import { resolvePostOnboardingCompletionRedirect } from "@/lib/auth/onboarding-sync";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function OnboardingStep4Page() {
   const router = useRouter();
@@ -52,12 +51,8 @@ export default function OnboardingStep4Page() {
     setShowPhoneModal(false);
     setLoading(true);
 
-    const supabase = createSupabaseBrowserClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    router.push(resolvePostOnboardingCompletionRedirect(Boolean(session)));
+    const sessionResponse = await fetch("/api/portal-auth/session", { credentials: "same-origin" });
+    router.push(resolvePostOnboardingCompletionRedirect(sessionResponse.ok));
     setLoading(false);
   };
 

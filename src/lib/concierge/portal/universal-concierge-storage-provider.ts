@@ -17,7 +17,6 @@ export class UniversalConciergeStorageProvider implements ConciergeStorageProvid
   get mode(): ConciergeStorageMode {
     const provider = (process.env.HAXR_PRIVATE_STORAGE_PROVIDER || "").trim().toLowerCase();
     if (provider === "r2-s3" || provider === "r2") return "r2-s3";
-    if (provider === "supabase") return "supabase";
     return "metadata_only";
   }
 

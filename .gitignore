@@ -45,3 +45,5 @@ backups/
 pr4-*.local
 .neon
 scratch/
+.codex-worktrees/
+

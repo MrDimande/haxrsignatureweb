@@ -1,10 +1,16 @@
 "use client";
 
-import { Bell, LogOut, Menu, ShieldCheck, X } from "lucide-react";
+import { Bell, LogOut, Menu, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useAdminIdentity } from "@/components/admin/AdminIdentityProvider";
 import { getAdminAlertsAction } from "@/lib/admin/actions/admin-alerts.actions";
+import {
+  canManageAdminUsers,
+  getAdminInitials,
+  getAdminRoleLabel,
+} from "@/lib/admin/admin-user";
 
 type HeaderProps = {
   onMenuClick?: () => void;
@@ -20,24 +26,13 @@ type NotificationItem = {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
+  const identity = useAdminIdentity();
 
   // Dialog and panel states
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Data states
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
-
-  // Load profile avatar from localStorage and listen for updates
-  useEffect(() => {
-    function loadAvatar() {
-      setProfileAvatar(localStorage.getItem("haxr_admin_avatar"));
-    }
-    loadAvatar();
-    window.addEventListener("haxr_profile_updated", loadAvatar);
-    return () => window.removeEventListener("haxr_profile_updated", loadAvatar);
-  }, []);
-
   // Load operational notifications from server
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +90,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   // Active badge counts
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
+  const initials = getAdminInitials(identity);
+  const displayName = identity?.name || "Administração HAXR";
+  const roleLabel = getAdminRoleLabel(identity?.role ?? null);
+  const mayManageUsers = canManageAdminUsers(identity);
 
   return (
     <>
@@ -136,36 +135,62 @@ export default function Header({ onMenuClick }: HeaderProps) {
           {/* Divider */}
           <span className="h-6 w-px bg-white/[0.06] hidden sm:block" />
 
-          {/* User Profile Avatar - Real photo from localStorage */}
-          <div className="flex items-center gap-3">
-            <Link href="/admin/profile" className="relative group cursor-pointer" title="Ver Perfil">
+          <details className="relative">
+            <summary
+              className="list-none relative group cursor-pointer [&::-webkit-details-marker]:hidden"
+              aria-label="Abrir menu do perfil"
+            >
               <div className="w-8 h-8 rounded-full overflow-hidden border border-admin-gold/30 group-hover:border-admin-gold transition-colors duration-300 shadow-[0_0_10px_rgba(184,138,42,0.1)]">
-                {profileAvatar ? (
-                  <img
-                    src={profileAvatar}
-                    alt="Avatar Administrador"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#12100e] to-[#0c0a09] flex items-center justify-center">
-                    <span className="text-[10px] font-mono text-admin-gold/60 font-bold">HS</span>
-                  </div>
-                )}
+                <div className="w-full h-full bg-gradient-to-br from-[#12100e] to-[#0c0a09] flex items-center justify-center">
+                  <span className="text-[10px] font-mono text-admin-gold/80 font-bold">{initials}</span>
+                </div>
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#25d366] border-2 border-black" />
-            </Link>
+            </summary>
 
-            {/* Logout Trigger button */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.2em] uppercase text-grey-medium hover:text-admin-gold transition-colors px-2 py-1.5"
-              aria-label="Terminar sessão"
-              title="Sair"
+            <div
+              className="absolute right-0 mt-3 w-64 rounded-xl border border-white/[0.08] bg-[#100e0c] p-2 shadow-[0_18px_50px_rgba(0,0,0,0.65)]"
+              role="menu"
             >
-              <LogOut className="w-3.5 h-3.5" strokeWidth={1.25} />
-            </button>
-          </div>
+              <div className="px-3 py-2.5 border-b border-white/[0.05]">
+                <p className="truncate text-sm text-white">{displayName}</p>
+                <p className="mt-1 text-[8px] font-mono uppercase tracking-[0.2em] text-admin-gold">
+                  {roleLabel}
+                </p>
+              </div>
+              <div className="py-1">
+                <Link
+                  href="/admin/profile"
+                  role="menuitem"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs text-grey-medium hover:bg-white/[0.05] hover:text-white"
+                >
+                  <UserRound className="h-4 w-4" strokeWidth={1.25} />
+                  Meu perfil
+                </Link>
+                {mayManageUsers ? (
+                  <Link
+                    href="/admin/users"
+                    role="menuitem"
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs text-grey-medium hover:bg-white/[0.05] hover:text-white"
+                  >
+                    <Users className="h-4 w-4" strokeWidth={1.25} />
+                    Gestão de utilizadores
+                  </Link>
+                ) : null}
+              </div>
+              <div className="border-t border-white/[0.05] pt-1">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  role="menuitem"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs text-grey-medium hover:bg-white/[0.05] hover:text-admin-gold"
+                >
+                  <LogOut className="h-4 w-4" strokeWidth={1.25} />
+                  Terminar sessão
+                </button>
+              </div>
+            </div>
+          </details>
         </div>
       </header>
 

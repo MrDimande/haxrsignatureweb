@@ -7,7 +7,6 @@ import type {
   InvoiceDocument,
   InvoiceFormData,
 } from "@/lib/admin/types";
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import {
   countPortalApprovalsPendingNeon,
   countPortalClientResponsesNeon,
@@ -30,28 +29,6 @@ import {
   updateDocumentStatusNeon,
 } from "@/lib/admin/repositories/documents.neon.repository";
 import { saveDocumentNeon } from "@/lib/admin/repositories/documents.neon.save.repository";
-import {
-  countPortalApprovalsPendingSupabase,
-  countPortalClientResponsesSupabase,
-  deleteDocumentSupabase,
-  findInvoiceBySourceProformaSupabase,
-  getDashboardStatsSupabase,
-  getDocumentByIdSupabase,
-  listDocumentsByEventIdsSupabase,
-  listDocumentsForClientSupabase,
-  listDocumentsSupabase,
-  listOperationalDocumentsSupabase,
-  listPortalDocumentsForClientSupabase,
-  markClientApprovalPendingSupabase,
-  markEmailSentSupabase,
-  markPdfGeneratedSupabase,
-  markWhatsAppSharedSupabase,
-  peekDocumentNumberSupabase,
-  recordClientApprovalSupabase,
-  reserveDocumentNumberSupabase,
-  saveDocumentSupabase,
-  updateDocumentStatusSupabase,
-} from "@/lib/admin/repositories/documents.supabase.repository";
 
 export type SaveDocumentOptions = {
   convertedFromDocumentId?: string;
@@ -68,61 +45,45 @@ export type DocumentListFilters = {
 };
 
 export function listOperationalDocuments(): Promise<AdminOperationalDocument[]> {
-  return shouldUseNeonServerDatabase()
-    ? listOperationalDocumentsNeon()
-    : listOperationalDocumentsSupabase();
+  return listOperationalDocumentsNeon();
 }
 
 export function listDocuments(filters?: DocumentListFilters): Promise<InvoiceDocument[]> {
-  return shouldUseNeonServerDatabase()
-    ? listDocumentsNeon(filters)
-    : listDocumentsSupabase(filters);
+  return listDocumentsNeon(filters);
 }
 
 export function listDocumentsByEventIds(eventIds: string[]): Promise<InvoiceDocument[]> {
-  return shouldUseNeonServerDatabase()
-    ? listDocumentsByEventIdsNeon(eventIds)
-    : listDocumentsByEventIdsSupabase(eventIds);
+  return listDocumentsByEventIdsNeon(eventIds);
 }
 
 export function listPortalDocumentsForClient(
   client: Pick<Client, "id" | "fullName">,
 ): Promise<InvoiceDocument[]> {
-  return shouldUseNeonServerDatabase()
-    ? listPortalDocumentsForClientNeon(client)
-    : listPortalDocumentsForClientSupabase(client);
+  return listPortalDocumentsForClientNeon(client);
 }
 
 export function listDocumentsForClient(
   client: Pick<Client, "id" | "fullName">,
 ): Promise<InvoiceDocument[]> {
-  return shouldUseNeonServerDatabase()
-    ? listDocumentsForClientNeon(client)
-    : listDocumentsForClientSupabase(client);
+  return listDocumentsForClientNeon(client);
 }
 
 export function getDocumentById(id: string): Promise<InvoiceDocument | null> {
-  return shouldUseNeonServerDatabase()
-    ? getDocumentByIdNeon(id)
-    : getDocumentByIdSupabase(id);
+  return getDocumentByIdNeon(id);
 }
 
 export function peekDocumentNumber(
   businessId: BusinessId,
   documentType: DocumentType,
 ): Promise<string> {
-  return shouldUseNeonServerDatabase()
-    ? peekDocumentNumberNeon(businessId, documentType)
-    : peekDocumentNumberSupabase(businessId, documentType);
+  return peekDocumentNumberNeon(businessId, documentType);
 }
 
 export function reserveDocumentNumber(
   businessId: BusinessId,
   documentType: DocumentType,
 ): Promise<string> {
-  return shouldUseNeonServerDatabase()
-    ? reserveDocumentNumberNeon(businessId, documentType)
-    : reserveDocumentNumberSupabase(businessId, documentType);
+  return reserveDocumentNumberNeon(businessId, documentType);
 }
 
 export function saveDocument(
@@ -130,35 +91,25 @@ export function saveDocument(
   existingId?: string,
   options?: SaveDocumentOptions,
 ): Promise<InvoiceDocument> {
-  return shouldUseNeonServerDatabase()
-    ? saveDocumentNeon(form, existingId, options)
-    : saveDocumentSupabase(form, existingId, options);
+  return saveDocumentNeon(form, existingId, options);
 }
 
 export function findInvoiceBySourceProforma(
   proformaId: string,
 ): Promise<InvoiceDocument | null> {
-  return shouldUseNeonServerDatabase()
-    ? findInvoiceBySourceProformaNeon(proformaId)
-    : findInvoiceBySourceProformaSupabase(proformaId);
+  return findInvoiceBySourceProformaNeon(proformaId);
 }
 
 export function markEmailSent(id: string): Promise<InvoiceDocument> {
-  return shouldUseNeonServerDatabase()
-    ? markEmailSentNeon(id)
-    : markEmailSentSupabase(id);
+  return markEmailSentNeon(id);
 }
 
 export function markWhatsAppShared(id: string): Promise<InvoiceDocument> {
-  return shouldUseNeonServerDatabase()
-    ? markWhatsAppSharedNeon(id)
-    : markWhatsAppSharedSupabase(id);
+  return markWhatsAppSharedNeon(id);
 }
 
 export function markClientApprovalPending(id: string): Promise<InvoiceDocument> {
-  return shouldUseNeonServerDatabase()
-    ? markClientApprovalPendingNeon(id)
-    : markClientApprovalPendingSupabase(id);
+  return markClientApprovalPendingNeon(id);
 }
 
 export function recordClientApproval(
@@ -166,46 +117,32 @@ export function recordClientApproval(
   status: "approved" | "changes_requested",
   note?: string,
 ): Promise<InvoiceDocument> {
-  return shouldUseNeonServerDatabase()
-    ? recordClientApprovalNeon(id, status, note)
-    : recordClientApprovalSupabase(id, status, note);
+  return recordClientApprovalNeon(id, status, note);
 }
 
 export function countPortalApprovalsPending(): Promise<number> {
-  return shouldUseNeonServerDatabase()
-    ? countPortalApprovalsPendingNeon()
-    : countPortalApprovalsPendingSupabase();
+  return countPortalApprovalsPendingNeon();
 }
 
 export function countPortalClientResponses(): Promise<number> {
-  return shouldUseNeonServerDatabase()
-    ? countPortalClientResponsesNeon()
-    : countPortalClientResponsesSupabase();
+  return countPortalClientResponsesNeon();
 }
 
 export function updateDocumentStatus(
   id: string,
   status: InvoiceDocument["status"],
 ): Promise<InvoiceDocument> {
-  return shouldUseNeonServerDatabase()
-    ? updateDocumentStatusNeon(id, status)
-    : updateDocumentStatusSupabase(id, status);
+  return updateDocumentStatusNeon(id, status);
 }
 
 export function markPdfGenerated(id: string): Promise<InvoiceDocument> {
-  return shouldUseNeonServerDatabase()
-    ? markPdfGeneratedNeon(id)
-    : markPdfGeneratedSupabase(id);
+  return markPdfGeneratedNeon(id);
 }
 
 export function deleteDocument(id: string): Promise<void> {
-  return shouldUseNeonServerDatabase()
-    ? deleteDocumentNeon(id)
-    : deleteDocumentSupabase(id);
+  return deleteDocumentNeon(id);
 }
 
 export function getDashboardStats(): Promise<DashboardStats> {
-  return shouldUseNeonServerDatabase()
-    ? getDashboardStatsNeon()
-    : getDashboardStatsSupabase();
+  return getDashboardStatsNeon();
 }

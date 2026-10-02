@@ -45,9 +45,11 @@ const weddingProjects: WeddingProject[] = [
     couple: "Casamento na Vila Verde",
     location: "Maputo · Moçambique",
     tagline: "mais de 300 convidados · Web-Convite e Memórias",
-    mainImage: "/images/portfolio/mosaic-salao-branco-preparado.webp",
+    // CORRECÇÃO DE INTEGRIDADE (E.2): A imagem mosaic-mesa-detalhe-dourado.webp pertence ao Lobolo da Casa d'Artista Kutenga.
+    // Marcador gráfico editorial neutro (VILA_VERDE_DECEPTIVE_IMAGE_ASSOCIATIONS=0) até obtenção de imagem real autorizada da Vila Verde.
+    mainImage: "/images/portfolio/casamento-signature.svg",
     galleryImages: [
-      "/images/portfolio/mosaic-salao-branco-preparado.webp",
+      "/images/portfolio/casamento-signature.svg",
       "/images/categories/venue.png",
       "/images/categories/caterer.png",
     ],

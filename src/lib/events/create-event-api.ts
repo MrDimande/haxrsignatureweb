@@ -5,7 +5,7 @@ import type {
 } from "@/lib/events/client-event-service";
 import { createClientEventFromPayload } from "@/lib/events/client-event-service";
 import { parseCreateClientEventPayload } from "@/lib/events/create-event-validation";
-import type { ClientAppAuthEnvCheck } from "@/lib/supabase/config";
+import type { ClientAppAuthEnvCheck } from "@/lib/auth/client-event-server-clients";
 
 export type CreateEventApiResponseBody =
   | {

@@ -1,9 +1,14 @@
 /**
- * HAXR Signature — Venue Intelligence & Domain Foundation (Phase E.1)
+ * HAXR Signature — Public Venue Guide Presentation Types (Client-Safe Entry Point)
  *
- * Ponto de entrada canónico para o módulo de locais do atelier.
+ * Exportações estritamente de tipos para consumo de apresentação na interface.
+ * Zero código executável, zero datasets internos, zero registries expostos ao cliente.
+ * Para operações do lado servidor, importar exclusivamente de `@/lib/venues/server`.
  */
 
-export * from "./types";
-export * from "./venue-data";
-export * from "./venue-validation";
+export type {
+  PublicVenueCard,
+  VenueId,
+  VenueType,
+  VenueEditorialPublicationStatus,
+} from "./types";

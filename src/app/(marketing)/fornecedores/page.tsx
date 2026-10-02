@@ -2,12 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import VendorDirectory from "@/components/vendors/VendorDirectory";
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
-import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
-import {
-  listPublishedSupplierProfiles,
-  type SupplierMarketplaceQueryClient,
-} from "@/lib/vendors/marketplace-repository";
+import { listPublishedSupplierProfiles } from "@/lib/vendors/marketplace-repository";
 import type { PublicSupplierProfile } from "@/lib/vendors/marketplace";
 
 export const metadata: Metadata = {
@@ -23,11 +18,8 @@ async function loadDirectory(): Promise<{
   unavailable: boolean;
 }> {
   try {
-    const client = shouldUseNeonServerDatabase()
-      ? null
-      : ((await createSupabaseServerAuthClient()) as unknown as SupplierMarketplaceQueryClient);
     return {
-      suppliers: await listPublishedSupplierProfiles(client),
+      suppliers: await listPublishedSupplierProfiles(),
       unavailable: false,
     };
   } catch (error) {

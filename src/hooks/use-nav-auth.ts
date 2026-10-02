@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { buildAppUserDisplay, type AppUserDisplay } from "@/lib/auth/app-user-display";
-import { signOutFromSupabase } from "@/lib/auth/sign-in-auth";
+import type { AppUserDisplay } from "@/lib/auth/app-user-display";
 
 export type NavAuthState = {
   isAuthenticated: boolean;
@@ -21,26 +19,21 @@ export function useNavAuth(): NavAuthState {
 
   const checkUser = useCallback(async () => {
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data } = await supabase.auth.getSession();
-      const session = data?.session as {
-        user?: { email?: string; id?: string; user_metadata?: Record<string, unknown> };
-      } | null;
+      const response = await fetch("/api/portal-auth/session", { credentials: "same-origin" });
+      const payload = (await response.json().catch(() => ({}))) as {
+        authenticated?: boolean;
+        user?: AppUserDisplay;
+      };
 
-      if (!session?.user) {
+      if (!response.ok || !payload.authenticated || !payload.user) {
         setIsAuthenticated(false);
         setUserDisplay(null);
         setIsLoading(false);
         return;
       }
 
-      const display = buildAppUserDisplay({
-        user: session.user,
-        profile: null,
-      });
-
       setIsAuthenticated(true);
-      setUserDisplay(display);
+      setUserDisplay(payload.user);
     } catch {
       setIsAuthenticated(false);
       setUserDisplay(null);
@@ -55,8 +48,7 @@ export function useNavAuth(): NavAuthState {
 
   const signOut = useCallback(async () => {
     try {
-      const supabase = createSupabaseBrowserClient();
-      await signOutFromSupabase(supabase);
+      await fetch("/api/portal-auth/logout", { method: "POST", credentials: "same-origin" });
       setIsAuthenticated(false);
       setUserDisplay(null);
       router.push("/sign-in");

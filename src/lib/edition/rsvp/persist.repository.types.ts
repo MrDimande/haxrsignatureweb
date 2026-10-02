@@ -58,7 +58,7 @@ export type EditionRsvpRpcPayload = {
   plusOnes?: number;
 };
 
-export type EditionRsvpPersistenceBackend = "supabase" | "neon";
+export type EditionRsvpPersistenceBackend = "neon";
 
 export type EditionRsvpPersistenceRepository = {
   backendName: EditionRsvpPersistenceBackend;

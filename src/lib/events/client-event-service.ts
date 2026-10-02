@@ -207,8 +207,7 @@ export async function createClientEventFromPayload(
       ok: false,
       status: 503,
       error: "service_role_unavailable",
-      message:
-        "Serviço de auditoria indisponível. Configure SUPABASE_SERVICE_ROLE_KEY do preview em .env.development.local.",
+      message: "Serviço de auditoria indisponível.",
     };
   }
 

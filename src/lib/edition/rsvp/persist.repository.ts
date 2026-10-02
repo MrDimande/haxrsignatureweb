@@ -1,6 +1,4 @@
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
 import neonRepository from "@/lib/edition/rsvp/persist.neon.repository";
-import supabaseRepository from "@/lib/edition/rsvp/persist.supabase.repository";
 import type {
   EditionRsvpAuditInput,
   EditionRsvpInsertInput,
@@ -13,7 +11,7 @@ import type {
 import type { EditionGuestMatchCandidate } from "@/lib/edition/rsvp/guest-match";
 
 function getRepository(): EditionRsvpPersistenceRepository {
-  return shouldUseNeonServerDatabase() ? neonRepository : supabaseRepository;
+  return neonRepository;
 }
 
 export function getEditionRsvpPersistenceBackend(): EditionRsvpPersistenceBackend {

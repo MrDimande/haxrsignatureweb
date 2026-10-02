@@ -156,6 +156,31 @@ export async function updateUpload(
   );
 }
 
+export async function getUploadById(id: string): Promise<ConciergeUpload | null> {
+  const result = await neonQuery<NeonJsonRow>(
+    `SELECT to_jsonb(u) AS row
+     FROM public.concierge_uploads u
+     WHERE u.id = $1::uuid
+     LIMIT 1`,
+    [id],
+  );
+
+  const row = result.rows[0]?.row as UploadRow | undefined;
+  return row ? mapUpload(row) : null;
+}
+
+export async function updateUploadStoragePath(
+  id: string,
+  storagePath: string,
+): Promise<void> {
+  await neonQuery(
+    `UPDATE public.concierge_uploads
+     SET storage_path = $2
+     WHERE id = $1::uuid`,
+    [id, storagePath],
+  );
+}
+
 export async function createReviewItem(input: {
   uploadId: string;
   eventId: string;

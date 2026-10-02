@@ -5,6 +5,7 @@
  * contagens canónicas e guardrails estritos de publicação da Fase E.1.
  */
 
+import "../../../scripts/register-server-only.mjs";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -16,7 +17,7 @@ import {
   isVenueEligibleForPublication,
   isVenueHaxrVerified,
   validateCapacityDistinction,
-} from "./index";
+} from "./publication";
 import type { Venue } from "./types";
 import { navGroups, navDirectLinks } from "@/lib/marketing/navigation";
 
@@ -138,7 +139,7 @@ describe("HAXR Venue Intelligence — Phase E.1 Domain Foundation", () => {
         assert.notEqual(
           venue.trust.visitedByHaxr,
           true,
-          `Local ${venue.id} não pode ter VISITED_BY_HAXR=true sem vistoria presencial homologada`
+          `Local ${venue.id} não pode ter VISITED_BY_HAXR=true sem vistoria presencial documentada`
         );
       }
     });
@@ -347,13 +348,13 @@ describe("HAXR Venue Intelligence — Phase E.1 Domain Foundation", () => {
   });
 
   describe("Phase E.1 Boundary Guardrails — No Public Routes, Navigation or DB Leakage", () => {
-    it("proves that public route /locais-para-casamentos does NOT exist in src/app", () => {
+    it("proves that venue route exists in marketing group as part of Phase E.2", () => {
       const appDir = path.resolve(process.cwd(), "src/app");
-      const forbiddenVenueRoute = path.join(appDir, "locais-para-casamentos");
+      const marketingVenueRoute = path.join(appDir, "(marketing)", "locais-para-casamentos");
       assert.equal(
-        fs.existsSync(forbiddenVenueRoute),
-        false,
-        "A rota pública /locais-para-casamentos NÃO pode existir na Fase E.1"
+        fs.existsSync(marketingVenueRoute),
+        true,
+        "A rota /locais-para-casamentos deve existir no grupo (marketing) para a Fase E.2"
       );
     });
 

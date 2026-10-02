@@ -1,21 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { shouldUseNeonServerDatabase } from "@/lib/neon/config";
-import { createSupabaseServerAuthClient } from "@/lib/supabase/server-auth";
-import {
-  getPublishedSupplierProfileBySlug,
-  type SupplierMarketplaceQueryClient,
-} from "@/lib/vendors/marketplace-repository";
+import { getPublishedSupplierProfileBySlug } from "@/lib/vendors/marketplace-repository";
 import { getRealWeddingsForCategory } from "@/lib/vendors/vendor-real-weddings";
 import SupplierProfileClient from "@/components/vendors/SupplierProfileClient";
 
 export const dynamic = "force-dynamic";
 
 async function loadSupplier(slug: string) {
-  const client = shouldUseNeonServerDatabase()
-    ? null
-    : ((await createSupabaseServerAuthClient()) as unknown as SupplierMarketplaceQueryClient);
-  return getPublishedSupplierProfileBySlug(client, slug);
+  return getPublishedSupplierProfileBySlug(slug);
 }
 
 export async function generateMetadata({
