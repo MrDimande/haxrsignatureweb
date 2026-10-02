@@ -11,7 +11,7 @@
  * - Nunca permitir que cookies, query strings, searchParams, headers ou estado
  *   de cliente alterem a visibilidade (CLIENT_SIDE_PRODUCTION_UNLOCK = false);
  * - Em Produção: PRODUCTION_VENUES_RENDERABLE = 0;
- * - Em Preview: PREVIEW_VENUES_RENDERABLE = 4 (apenas os 4 candidatos de revisão).
+ * - Em Preview: PREVIEW_VENUES_RENDERABLE = 8 (4 espaços independentes e 4 hotéis).
  */
 
 import "server-only";

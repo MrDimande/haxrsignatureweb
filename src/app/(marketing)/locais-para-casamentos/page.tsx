@@ -6,7 +6,7 @@
  * - Alta-Costura Digital: curadoria serena, tipografia nobre, sem superlativos vazios;
  * - Prevenção de Publicação Indevida:
  *   Em produção, renderiza 0 locais (PRODUCTION_VENUES_RENDERABLE=0)
- *   Em preview, renderiza 4 candidatos de revisão (PREVIEW_VENUES_RENDERABLE=4)
+ *   Em preview, renderiza 8 locais aprovados (PREVIEW_VENUES_RENDERABLE=8)
  * - Indexação restrita durante a fase de revisão (robots: noindex, nofollow)
  * - Zero esquemas JSON-LD de nível de local individual nesta fase.
  */

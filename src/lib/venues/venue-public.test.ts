@@ -635,9 +635,9 @@ describe("HAXR Venue Guide — Phase E.2 Public Experience & Governance (Correct
       const placeholderSource = fs.readFileSync(placeholderPath, "utf-8");
 
       assert.equal(
-        placeholderSource.includes("Identidade editorial do ${venueName}"),
+        placeholderSource.includes("Identidade editorial temporária do ${venueName}"),
         true,
-        "Placeholder DEVE usar label honesto 'Identidade editorial do ${venueName}'"
+        "Placeholder DEVE usar label honesto 'Identidade editorial temporária do ${venueName}'"
       );
       assert.equal(
         placeholderSource.includes("Fotografia do") || placeholderSource.includes("Fotografia de"),

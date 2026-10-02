@@ -62,7 +62,7 @@ export default function VenuePlaceholderImage({
     <div
       className={`relative w-full h-full min-h-[260px] sm:min-h-[300px] bg-gradient-to-br from-[#181413] via-[#0f0d0c] to-[#080706] text-white flex flex-col items-center justify-center p-8 overflow-hidden select-none border border-brand-champagne/15 ${className}`}
       role="img"
-      aria-label={`Identidade editorial do ${venueName}`}
+      aria-label={`Identidade editorial temporária do ${venueName}`}
     >
       {/* Moldura Geométrica Fina de Alta-Costura */}
       <div
