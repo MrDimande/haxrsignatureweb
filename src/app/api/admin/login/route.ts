@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   ADMIN_SESSION_COOKIE,
-  createSessionToken,
+  authenticateAdminUser,
   getSessionMaxAge,
   isAdminConfigured,
-  validateCredentials,
 } from "@/lib/admin/auth";
-import {
-  AdminIdentityAccessError,
-  requireActiveAdminIdentity,
-} from "@/lib/admin/admin-identity.server";
-import { recordAdminLogin } from "@/lib/admin/admin-users.repository";
 import {
   getRequestIp,
   rateLimit,
@@ -23,7 +17,7 @@ export async function POST(request: Request) {
     if (!isAdminConfigured()) {
       return NextResponse.json(
         { error: "Área de administração não configurada." },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -52,30 +46,23 @@ export async function POST(request: Request) {
 
     const email = body.email?.trim() ?? "";
     const password = body.password ?? "";
+    const userAgent = request.headers.get("user-agent");
 
-    if (!validateCredentials(email, password)) {
+    const authResult = await authenticateAdminUser(email, password, {
+      userAgent,
+      ipAddress: ip,
+    });
+
+    if (!authResult.success) {
       rateLimit(limitKey, RATE_LIMITS.adminLogin);
       return NextResponse.json(
-        { error: "Credenciais inválidas." },
-        { status: 401 }
-      );
-    }
-
-    const identity = await requireActiveAdminIdentity();
-    if (identity.isPersisted) {
-      await recordAdminLogin(identity.id);
-    }
-
-    const sessionToken = await createSessionToken();
-    if (!sessionToken) {
-      return NextResponse.json(
-        { error: "Não foi possível iniciar sessão." },
-        { status: 500 }
+        { error: authResult.error },
+        { status: authResult.status },
       );
     }
 
     const response = NextResponse.json({ success: true });
-    response.cookies.set(ADMIN_SESSION_COOKIE, sessionToken, {
+    response.cookies.set(ADMIN_SESSION_COOKIE, authResult.sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
@@ -84,17 +71,10 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error) {
-    if (error instanceof AdminIdentityAccessError) {
-      return NextResponse.json(
-        { error: "Credenciais inválidas." },
-        { status: 401 }
-      );
-    }
-
+  } catch {
     return NextResponse.json(
       { error: "A autenticação está temporariamente indisponível." },
-      { status: 503 }
+      { status: 503 },
     );
   }
 }

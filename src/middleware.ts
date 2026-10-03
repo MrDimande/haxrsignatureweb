@@ -1,8 +1,8 @@
 import {
     ADMIN_SESSION_COOKIE,
     isAdminConfigured,
-    isValidSession,
-} from "@/lib/admin/auth";
+    isValidEdgeSession as isValidSession,
+} from "@/lib/admin/auth-edge";
 import {
     evaluateClientAppRequest,
     shouldHandleClientAppAuth,
@@ -16,7 +16,11 @@ import {
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PUBLIC_ADMIN_PATHS = new Set(["/admin"]);
+const PUBLIC_ADMIN_PATHS = new Set([
+  "/admin",
+  "/admin/accept-invite",
+  "/admin/reset-password",
+]);
 
 function isPublicAdminApi(pathname: string): boolean {
   return pathname === "/api/admin/login";

@@ -1,11 +1,12 @@
-import { randomBytes, scrypt, timingSafeEqual, createHash } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
+import {
+  PASSWORD_MIN_LENGTH,
+  hashPassword,
+  validatePassword,
+  verifyPassword,
+} from "@/lib/security/password";
 
-export const PORTAL_PASSWORD_MIN_LENGTH = 12;
-const SCRYPT_N = 32_768;
-const SCRYPT_R = 8;
-const SCRYPT_P = 1;
-const SCRYPT_KEY_LENGTH = 64;
-const SCRYPT_MAX_MEMORY = 64 * 1024 * 1024;
+export const PORTAL_PASSWORD_MIN_LENGTH = PASSWORD_MIN_LENGTH;
 
 export type PortalAccountStatus =
   | "PENDING_ACTIVATION"
@@ -20,66 +21,19 @@ export function normalizePortalEmail(value: string): string | null {
 }
 
 export function validatePortalPassword(value: string): string | null {
-  if (value.length < PORTAL_PASSWORD_MIN_LENGTH) {
-    return `Use pelo menos ${PORTAL_PASSWORD_MIN_LENGTH} caracteres.`;
-  }
-  if (value.length > 1024) return "A palavra-passe excede o limite permitido.";
-  return null;
-}
-
-function deriveScrypt(password: string, salt: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    scrypt(
-      password,
-      salt,
-      SCRYPT_KEY_LENGTH,
-      { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAX_MEMORY },
-      (error, derivedKey) => {
-        if (error) reject(error);
-        else resolve(Buffer.from(derivedKey));
-      },
-    );
-  });
+  return validatePassword(value);
 }
 
 /** Node's reviewed, memory-hard scrypt KDF; the encoded result holds no plaintext. */
 export async function hashPortalPassword(password: string): Promise<string> {
-  const validationError = validatePortalPassword(password);
-  if (validationError) throw new Error(validationError);
-
-  const salt = randomBytes(16);
-  const digest = await deriveScrypt(password, salt);
-  return [
-    "scrypt",
-    `N=${SCRYPT_N},r=${SCRYPT_R},p=${SCRYPT_P}`,
-    salt.toString("base64url"),
-    digest.toString("base64url"),
-  ].join("$");
+  return hashPassword(password);
 }
 
 export async function verifyPortalPassword(
   password: string,
   encodedHash: string | null | undefined,
 ): Promise<boolean> {
-  if (!encodedHash) return false;
-  const [algorithm, parameters, encodedSalt, encodedDigest] = encodedHash.split("$");
-  if (
-    algorithm !== "scrypt" ||
-    parameters !== `N=${SCRYPT_N},r=${SCRYPT_R},p=${SCRYPT_P}` ||
-    !encodedSalt ||
-    !encodedDigest
-  ) {
-    return false;
-  }
-
-  try {
-    const expected = Buffer.from(encodedDigest, "base64url");
-    if (expected.length !== SCRYPT_KEY_LENGTH) return false;
-    const actual = await deriveScrypt(password, Buffer.from(encodedSalt, "base64url"));
-    return timingSafeEqual(actual, expected);
-  } catch {
-    return false;
-  }
+  return verifyPassword(password, encodedHash);
 }
 
 export function createPortalSecret(): string {

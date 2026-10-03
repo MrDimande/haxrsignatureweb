@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cookies } from "next/headers";
 import {
   canManageAdminUsers,
   isAdminUserActive,
@@ -9,6 +10,15 @@ import {
 import {
   findAdminUserByEmail,
 } from "@/lib/admin/admin-users.repository";
+import {
+  ADMIN_SESSION_COOKIE,
+  getAdminAuthMode,
+  isValidSession,
+} from "@/lib/admin/auth";
+import {
+  isV2DatabaseSession,
+  validateDatabaseSession,
+} from "@/lib/admin/admin-sessions.repository";
 
 export type AdminIdentityMode = "legacy" | "database";
 
@@ -37,7 +47,7 @@ export function isDatabaseAdminIdentityEnforced(): boolean {
 function getLegacyIdentity(email: string): AdminIdentity {
   return {
     id: "",
-    name: "",
+    name: "Alberto Dimande",
     email,
     role: "ADMIN",
     permissions: [],
@@ -50,10 +60,42 @@ function getLegacyIdentity(email: string): AdminIdentity {
 }
 
 export async function getCurrentAdminIdentity(): Promise<AdminIdentity | null> {
+  let sessionToken: string | undefined;
+
+  try {
+    const cookieStore = await cookies();
+    sessionToken = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
+  } catch {
+    // Outside Next.js request context (e.g. isolated unit tests)
+  }
+
+  // 1. Check versioned per-user database session (v2.*)
+  if (isV2DatabaseSession(sessionToken)) {
+    const result = await validateDatabaseSession(sessionToken);
+    if (result.valid && result.user) {
+      return { ...result.user, isPersisted: true };
+    }
+    return null;
+  }
+
+  // 2. Legacy HMAC fallback handling
+  const authMode = getAdminAuthMode();
+  if (authMode === "database_credentials") {
+    // Legacy sessions strictly rejected in database_credentials mode
+    return null;
+  }
+
+  if (sessionToken) {
+    const legacyValid = await isValidSession(sessionToken);
+    if (!legacyValid) return null;
+  }
+
   const email = getConfiguredAdminEmail();
   if (!email) return null;
 
-  if (!isDatabaseAdminIdentityEnforced()) return getLegacyIdentity(email);
+  if (!isDatabaseAdminIdentityEnforced()) {
+    return getLegacyIdentity(email);
+  }
 
   const user = await findAdminUserByEmail(email);
   return user ? { ...user, isPersisted: true } : null;
