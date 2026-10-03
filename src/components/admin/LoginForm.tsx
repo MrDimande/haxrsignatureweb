@@ -25,7 +25,8 @@ export default function LoginForm() {
     });
 
     if (!res.ok) {
-      setError("Credenciais inválidas. Tente novamente.");
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Credenciais inválidas. Tente novamente.");
       setLoading(false);
       return;
     }

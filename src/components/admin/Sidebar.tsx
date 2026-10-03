@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Mail,
   Settings,
+  Shield,
   Store,
   User,
   Users,
@@ -62,6 +63,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/settings", label: "Definições", icon: Settings },
       { href: "/admin/profile", label: "Perfil", icon: User },
+      { href: "/admin/security", label: "Segurança", icon: Shield },
       { href: "/admin/users", label: "Utilizadores", icon: Users },
     ],
   },

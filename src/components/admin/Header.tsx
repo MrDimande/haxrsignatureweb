@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, LogOut, Menu, ShieldCheck, UserRound, Users, X } from "lucide-react";
+import { Bell, KeyRound, LogOut, Menu, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -166,6 +166,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 >
                   <UserRound className="h-4 w-4" strokeWidth={1.25} />
                   Meu perfil
+                </Link>
+                <Link
+                  href="/admin/security"
+                  role="menuitem"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs text-grey-medium hover:bg-white/[0.05] hover:text-white"
+                >
+                  <KeyRound className="h-4 w-4" strokeWidth={1.25} />
+                  Segurança da conta
                 </Link>
                 {mayManageUsers ? (
                   <Link
