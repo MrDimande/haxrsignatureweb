@@ -7,6 +7,7 @@ import {
   hashPortalPassword,
   hashPortalSecret,
   parsePortalCookieValue,
+  validatePortalPassword,
   verifyPortalPassword,
 } from "./credentials";
 import { isPortalEventMembership } from "./portal-auth.server";
@@ -31,6 +32,11 @@ test("pending and suspended accounts are never authenticated", () => {
   assert.equal(decidePortalLogin({ account: { status: "PENDING_ACTIVATION", password_hash: "hash" }, passwordMatches: true }).kind, "activation_required");
   assert.equal(decidePortalLogin({ account: { status: "SUSPENDED", password_hash: "hash" }, passwordMatches: true }).kind, "denied");
   assert.equal(decidePortalLogin({ account: { status: "ACTIVE", password_hash: "hash" }, passwordMatches: false }).kind, "denied");
+});
+
+test("activation requires a valid password before any account transition", () => {
+  assert.equal(validatePortalPassword("short"), "Use pelo menos 12 caracteres.");
+  assert.equal(validatePortalPassword("UmaPalavraPasseSegura2026!"), null);
 });
 
 test("event authorization derives from the bound profile, never a browser role", () => {

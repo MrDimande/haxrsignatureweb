@@ -24,6 +24,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   "user_reactivated",
   "session_revoked",
   "all_sessions_revoked",
+  "portal_activation_sent",
 ] as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];

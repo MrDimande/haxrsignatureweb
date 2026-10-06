@@ -203,6 +203,7 @@ export async function logoutPortalSession(): Promise<NextResponse> {
 export async function issuePortalAccountToken(input: {
   accountId: string;
   purpose: "activation" | "password_reset";
+  expectedAccountStatus?: PortalAccountStatus;
 }): Promise<{ token: string; expiresAt: Date }> {
   const token = createPortalSecret();
   const expiresAt = new Date(Date.now() + ACTIVATION_TTL_SECONDS * 1000);
@@ -217,6 +218,19 @@ export async function issuePortalAccountToken(input: {
           AND invalidated_at IS NULL`,
       [input.accountId, input.purpose],
     );
+    if (input.expectedAccountStatus) {
+      const accountResult = await client.query<{ status: PortalAccountStatus }>(
+        `SELECT status::text AS status
+           FROM public.portal_accounts
+          WHERE id = $1::uuid
+          FOR UPDATE`,
+        [input.accountId],
+      );
+      const account = accountResult.rows[0];
+      if (!account || account.status !== input.expectedAccountStatus) {
+        throw new Error("portal_account_status_not_allowed");
+      }
+    }
     await client.query(
       `INSERT INTO public.portal_account_tokens (account_id, purpose, token_hash, expires_at)
        VALUES ($1::uuid, $2::public.portal_token_purpose, $3, $4::timestamptz)`,
@@ -225,6 +239,26 @@ export async function issuePortalAccountToken(input: {
   });
 
   return { token, expiresAt };
+}
+
+/** Invalidates the exact opaque token after a delivery failure; never logs or returns it. */
+export async function invalidatePortalAccountToken(input: {
+  accountId: string;
+  purpose: "activation" | "password_reset";
+  token: string;
+}): Promise<boolean> {
+  const result = await neonQuery(
+    `UPDATE public.portal_account_tokens
+        SET invalidated_at = now()
+      WHERE account_id = $1::uuid
+        AND purpose = $2::public.portal_token_purpose
+        AND token_hash = $3
+        AND consumed_at IS NULL
+        AND invalidated_at IS NULL`,
+    [input.accountId, input.purpose, hashPortalSecret(input.token)],
+  );
+
+  return result.rowCount === 1;
 }
 
 export async function activatePortalAccount(input: {

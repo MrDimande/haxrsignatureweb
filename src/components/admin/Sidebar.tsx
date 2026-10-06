@@ -8,6 +8,7 @@ import {
   Calendar,
   FileText,
   Inbox,
+  KeyRound,
   LayoutDashboard,
   Mail,
   Settings,
@@ -64,6 +65,7 @@ const navSections: NavSection[] = [
       { href: "/admin/settings", label: "Definições", icon: Settings },
       { href: "/admin/profile", label: "Perfil", icon: User },
       { href: "/admin/security", label: "Segurança", icon: Shield },
+      { href: "/admin/portal-accounts", label: "Contas Portal", icon: KeyRound },
       { href: "/admin/users", label: "Utilizadores", icon: Users },
     ],
   },
@@ -147,7 +149,9 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
     .map((section) => ({
       ...section,
       items: section.items.filter(
-        (item) => item.href !== "/admin/users" || canManageAdminUsers(identity),
+        (item) =>
+          !["/admin/users", "/admin/portal-accounts"].includes(item.href) ||
+          canManageAdminUsers(identity),
       ),
     }))
     .filter((section) => section.items.length > 0);
