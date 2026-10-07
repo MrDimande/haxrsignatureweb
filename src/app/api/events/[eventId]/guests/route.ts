@@ -10,7 +10,6 @@ import { getGuestModuleData } from "@/lib/event-modules/get-event-module-data";
 import type { GuestModuleData, ModuleDataResult } from "@/lib/event-modules/types";
 import { handleClientEventGuestsRequest } from "@/lib/guests/client-event-guests-api";
 import type { ClientEventGuestsRpcClient } from "@/lib/guests/client-event-guests-rpc";
-import type { ClientEventGuestsAuthClient } from "@/lib/guests/client-event-guests-service";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -33,7 +32,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const envCheck = validateClientEventAuthEnvironment();
     const serviceRoleCheck = validateClientEventOperationalEnvironment();
-    const auth = await resolveClientEventReadRequestAuth<ClientEventGuestsAuthClient>(request);
+    const auth = await resolveClientEventReadRequestAuth(request);
     const rpcClient = serviceRoleCheck.ok
       ? createClientEventOperationalRpcClient<ClientEventGuestsRpcClient>()
       : null;

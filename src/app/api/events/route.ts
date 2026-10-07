@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   let user: { id: string } | null = null;
 
   if (envCheck.ok) {
-    const resolved = await resolveClientEventReadRequestAuth<unknown>(request);
+    const resolved = await resolveClientEventReadRequestAuth(request);
     user = resolved.user;
   }
 

@@ -178,7 +178,7 @@ export async function loadClientEventGuestsModuleData(
   const serviceRoleCheck = validateClientEventOperationalEnvironment();
   const session = await getCurrentAppSession();
   const authClient = envCheck.ok
-    ? await createClientEventReadAuthClient<ClientEventGuestsAuthClient>()
+    ? await createClientEventReadAuthClient()
     : null;
   const rpcClient = serviceRoleCheck.ok
     ? createClientEventOperationalRpcClient<ClientEventGuestsRpcClient>()

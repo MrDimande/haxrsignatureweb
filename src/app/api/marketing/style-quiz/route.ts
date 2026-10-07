@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { user } = await resolveClientEventReadRequestAuth<unknown>(request);
+  const { user } = await resolveClientEventReadRequestAuth(request);
   if (!user) {
     return NextResponse.json(
       { error: "Inicie sessão para aceder ao Style Quiz." },

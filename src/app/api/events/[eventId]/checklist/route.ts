@@ -10,7 +10,6 @@ import { getChecklistModuleData } from "@/lib/event-modules/get-event-module-dat
 import type { ChecklistModuleData, ModuleDataResult } from "@/lib/event-modules/types";
 import { handleClientEventChecklistRequest } from "@/lib/checklist/client-event-checklist-api";
 import type { ClientEventChecklistRpcClient } from "@/lib/checklist/client-event-checklist-rpc";
-import type { ClientEventChecklistAuthClient } from "@/lib/checklist/client-event-checklist-service";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -33,7 +32,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const envCheck = validateClientEventAuthEnvironment();
     const serviceRoleCheck = validateClientEventOperationalEnvironment();
-    const auth = await resolveClientEventReadRequestAuth<ClientEventChecklistAuthClient>(request);
+    const auth = await resolveClientEventReadRequestAuth(request);
     const rpcClient = serviceRoleCheck.ok
       ? createClientEventOperationalRpcClient<ClientEventChecklistRpcClient>()
       : null;

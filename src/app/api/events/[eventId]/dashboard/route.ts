@@ -4,7 +4,6 @@ import {
   validateClientEventAuthEnvironment,
 } from "@/lib/auth/client-event-server-clients";
 import { handleClientEventDashboardRequest } from "@/lib/dashboard/client-event-dashboard-api";
-import type { ClientEventDashboardAuthClient } from "@/lib/dashboard/client-event-dashboard-service";
 import { getDashboardData } from "@/lib/dashboard/get-dashboard-data";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import type { DashboardDataResult } from "@/lib/dashboard/types";
@@ -28,7 +27,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const envCheck = validateClientEventAuthEnvironment();
-    const auth = await resolveClientEventReadRequestAuth<ClientEventDashboardAuthClient>(request);
+    const auth = await resolveClientEventReadRequestAuth(request);
 
     const result = await handleClientEventDashboardRequest({
       envCheck,

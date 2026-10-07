@@ -9,6 +9,7 @@ import {
 } from "@/lib/dashboard/client-event-dashboard-service";
 import { resolveDashboardLoadPlan } from "@/lib/dashboard/dashboard-load-plan";
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
+import { normalizeClientEventRow } from "@/lib/events/client-event-row-normalizer";
 
 const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
 const OWNER_ID = "acd1d7b7-b679-4c8b-94e1-4d4552f1d8ee";
@@ -218,6 +219,34 @@ describe("client-event-dashboard-api", () => {
     if (result.body.ok) {
       assert.equal(result.body.data.eventOverview.eventId, EVENT_ID);
       assert.equal(result.body.data.eventOverview.name, "Staging A Event");
+    }
+  });
+
+  it("returns DashboardData for an event with node-postgres runtime shapes", async () => {
+    const neonEvent = normalizeClientEventRow({
+      ...baseEvent,
+      event_date: new Date("2026-12-20T00:00:00.000Z"),
+      budget_min: "120000",
+      budget_max: "150000",
+      created_at: new Date("2026-07-09T12:00:00.000Z"),
+      updated_at: new Date("2026-07-09T12:00:00.000Z"),
+    });
+
+    const result = await handleClientEventDashboardRequest({
+      envCheck: { ok: true, projectRef: "neon" },
+      user: { id: OWNER_ID },
+      eventId: EVENT_ID,
+      authClient: createAuthClient({ event: neonEvent }),
+      profile: { full_name: "Staging A", app_role: "client" },
+    });
+
+    assert.equal(result.status, 200);
+    assert.equal(result.body.ok, true);
+    if (result.body.ok) {
+      assert.equal(result.body.data.eventOverview.dateIso, "2026-12-20");
+      assert.equal(result.body.data.meta.lastSyncedAt, "2026-07-09T12:00:00.000Z");
+      assert.equal(result.body.data.recentActivity[0]?.timestamp, "2026-07-09T12:00:00.000Z");
+      assert.equal(result.body.data.financeSnapshot.budgetEstimated, 150000);
     }
   });
 });

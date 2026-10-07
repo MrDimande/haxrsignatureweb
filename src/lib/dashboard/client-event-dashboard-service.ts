@@ -1,6 +1,9 @@
 import { formatOnboardingEventDate } from "@/lib/auth/onboarding-storage";
 import type { ClientAppProfile } from "@/lib/auth/app-user-display";
-import { createClientEventOperationalRpcClient } from "@/lib/auth/client-event-server-clients";
+import {
+  createClientEventOperationalRpcClient,
+  type ClientEventReadAuthClient,
+} from "@/lib/auth/client-event-server-clients";
 import {
   EMPTY_OPERATIONAL_KPIS,
   mapVendorStatusLabel,
@@ -47,26 +50,7 @@ export type ClientEventDashboardAccessResult =
   | { kind: "not_found" }
   | { kind: "forbidden" };
 
-type QueryResult<T> = {
-  data: T | null;
-  error: { message: string; code?: string } | null;
-};
-
-type EqChain<T> = {
-  eq(column: string, value: string | boolean): EqChain<T>;
-  maybeSingle(): Promise<QueryResult<T>>;
-};
-
-type MemberRow = { id: string };
-
-export type ClientEventDashboardAuthClient = {
-  from(table: "client_events"): {
-    select(columns: string): EqChain<ClientEventRow>;
-  };
-  from(table: "event_members"): {
-    select(columns: string): EqChain<MemberRow>;
-  };
-};
+export type ClientEventDashboardAuthClient = ClientEventReadAuthClient;
 
 function mapEventTypeLabel(eventType: ClientEventType): string {
   switch (eventType) {
