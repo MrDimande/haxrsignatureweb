@@ -99,7 +99,7 @@ export async function loadClientEventPaymentsModuleData(
   const serviceRoleCheck = validateClientEventOperationalEnvironment();
   const session = await getCurrentAppSession();
   const authClient = envCheck.ok
-    ? await createClientEventReadAuthClient<ClientEventPaymentsAuthClient>()
+    ? await createClientEventReadAuthClient()
     : null;
   const rpcClient = serviceRoleCheck.ok
     ? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>()

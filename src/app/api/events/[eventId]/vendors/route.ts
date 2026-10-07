@@ -10,7 +10,6 @@ import { getVendorModuleData } from "@/lib/event-modules/get-event-module-data";
 import type { ModuleDataResult, VendorModuleData } from "@/lib/event-modules/types";
 import { handleClientEventVendorsRequest } from "@/lib/vendors/client-event-vendors-api";
 import type { ClientEventVendorsRpcClient } from "@/lib/vendors/client-event-vendors-rpc";
-import type { ClientEventVendorsAuthClient } from "@/lib/vendors/client-event-vendors-service";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -33,7 +32,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const envCheck = validateClientEventAuthEnvironment();
     const serviceRoleCheck = validateClientEventOperationalEnvironment();
-    const auth = await resolveClientEventReadRequestAuth<ClientEventVendorsAuthClient>(request);
+    const auth = await resolveClientEventReadRequestAuth(request);
     const rpcClient = serviceRoleCheck.ok
       ? createClientEventOperationalRpcClient<ClientEventVendorsRpcClient>()
       : null;

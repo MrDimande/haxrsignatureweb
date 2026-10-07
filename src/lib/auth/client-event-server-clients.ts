@@ -3,20 +3,39 @@ import {
   validateNeonServerEnvironment,
 } from "@/lib/neon/config";
 import { neonQuery } from "@/lib/neon/server-db";
+import {
+  normalizeClientEventRow,
+} from "@/lib/events/client-event-row-normalizer";
+import type { ClientEventRow } from "@/lib/events/client-app-database.types";
 
 export type ClientAppAuthEnvCheck =
   | { ok: true; projectRef: string }
   | { ok: false; message: string };
 
 type QueryError = { message: string; code?: string } | null;
-type QueryResult<T> = { data: T | null; error: QueryError };
+export type ClientEventReadQueryResult<T> = { data: T | null; error: QueryError };
 
 type ClientEventReadTable = "client_events" | "event_members";
 type FilterValue = string | boolean;
+type ClientEventMemberRow = { id: string };
 
 type Filter = {
   column: string;
   value: FilterValue;
+};
+
+export type ClientEventReadQuery<T> = {
+  eq(column: string, value: FilterValue): ClientEventReadQuery<T>;
+  maybeSingle(): Promise<ClientEventReadQueryResult<T>>;
+};
+
+type ClientEventReadTableClient<T> = {
+  select(columns: string): ClientEventReadQuery<T>;
+};
+
+export type ClientEventReadAuthClient = {
+  from(table: "client_events"): ClientEventReadTableClient<ClientEventRow>;
+  from(table: "event_members"): ClientEventReadTableClient<ClientEventMemberRow>;
 };
 
 const ALLOWED_FILTERS: Record<ClientEventReadTable, ReadonlySet<string>> = {
@@ -29,12 +48,13 @@ const ALLOWED_FILTERS: Record<ClientEventReadTable, ReadonlySet<string>> = {
   event_members: new Set(["id", "client_event_id", "user_id"]),
 };
 
-class NeonReadQuery<T> {
+class NeonReadQuery<T> implements ClientEventReadQuery<T> {
   private readonly filters: Filter[] = [];
 
   constructor(
     private readonly table: ClientEventReadTable,
     private readonly columns: string,
+    private readonly normalizeRow: (row: Record<string, unknown>) => T,
   ) {}
 
   eq(column: string, value: FilterValue): this {
@@ -45,7 +65,7 @@ class NeonReadQuery<T> {
     return this;
   }
 
-  async maybeSingle(): Promise<QueryResult<T>> {
+  async maybeSingle(): Promise<ClientEventReadQueryResult<T>> {
     try {
       const values = this.filters.map((filter) => filter.value);
       const where = this.filters.length
@@ -63,7 +83,7 @@ class NeonReadQuery<T> {
       );
 
       return {
-        data: (result.rows[0] as T | undefined) ?? null,
+        data: result.rows[0] ? this.normalizeRow(result.rows[0]) : null,
         error: null,
       };
     } catch (cause) {
@@ -77,11 +97,29 @@ class NeonReadQuery<T> {
   }
 }
 
-class NeonClientEventReadClient {
-  from(table: ClientEventReadTable) {
+function normalizeEventMemberRow(row: Record<string, unknown>): ClientEventMemberRow {
+  if (typeof row.id !== "string" || !row.id.trim()) {
+    throw new Error("event_member_row_invalid:id");
+  }
+  return { id: row.id };
+}
+
+class NeonClientEventReadClient implements ClientEventReadAuthClient {
+  from(table: "client_events"): ClientEventReadTableClient<ClientEventRow>;
+  from(table: "event_members"): ClientEventReadTableClient<ClientEventMemberRow>;
+  from(
+    table: ClientEventReadTable,
+  ): ClientEventReadTableClient<ClientEventRow> | ClientEventReadTableClient<ClientEventMemberRow> {
+    if (table === "client_events") {
+      return {
+        select: (columns: string) =>
+          new NeonReadQuery(table, columns, normalizeClientEventRow),
+      };
+    }
+
     return {
-      select: <T = Record<string, unknown>>(columns: string) =>
-        new NeonReadQuery<T>(table, columns),
+      select: (columns: string) =>
+        new NeonReadQuery(table, columns, normalizeEventMemberRow),
     };
   }
 }
@@ -100,7 +138,7 @@ class NeonClientEventOperationalRpcClient {
   async rpc(
     fn: NeonOperationalRpcName,
     args: { p_client_event_id: string },
-  ): Promise<QueryResult<unknown>> {
+  ): Promise<ClientEventReadQueryResult<unknown>> {
     const sqlFunction = NEON_OPERATIONAL_RPCS[fn];
     if (!sqlFunction) {
       return {
@@ -150,22 +188,23 @@ export function validateClientEventOperationalEnvironment(): ClientAppAuthEnvChe
   return validateNeonAsClientAppEnvironment();
 }
 
-export async function createClientEventReadAuthClient<T>(): Promise<T | null> {
+export async function createClientEventReadAuthClient(): Promise<ClientEventReadAuthClient | null> {
   const envCheck = validateClientEventAuthEnvironment();
   if (!envCheck.ok) return null;
 
-  return new NeonClientEventReadClient() as unknown as T;
+  return new NeonClientEventReadClient();
 }
 
 export function createClientEventOperationalRpcClient<T>(): T {
   return new NeonClientEventOperationalRpcClient() as unknown as T;
 }
 
-export async function resolveClientEventReadRequestAuth<T>(request: Request): Promise<{
+export async function resolveClientEventReadRequestAuth(request: Request): Promise<{
   user: { id: string } | null;
   profile: Awaited<ReturnType<typeof getCurrentAppSession>>["profile"];
-  authClient: T | null;
+  authClient: ClientEventReadAuthClient | null;
 }> {
+  void request;
   const session = await getCurrentAppSession();
   const envCheck = validateClientEventAuthEnvironment();
   if (!envCheck.ok) {
@@ -175,6 +214,6 @@ export async function resolveClientEventReadRequestAuth<T>(request: Request): Pr
   return {
     user: session.user,
     profile: session.profile,
-    authClient: new NeonClientEventReadClient() as unknown as T,
+    authClient: new NeonClientEventReadClient(),
   };
 }

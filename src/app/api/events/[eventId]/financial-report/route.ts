@@ -8,7 +8,6 @@ import {
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { handleClientEventFinancialReportRequest } from "@/lib/payments/client-event-payments-api";
 import type { ClientEventPaymentsRpcClient } from "@/lib/payments/client-event-payments-rpc";
-import type { ClientEventPaymentsAuthClient } from "@/lib/payments/client-event-payments-service";
 
 export const runtime = "nodejs";
 
@@ -32,7 +31,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const envCheck = validateClientEventAuthEnvironment();
     const serviceRoleCheck = validateClientEventOperationalEnvironment();
-    const auth = await resolveClientEventReadRequestAuth<ClientEventPaymentsAuthClient>(request);
+    const auth = await resolveClientEventReadRequestAuth(request);
     const rpcClient = serviceRoleCheck.ok
       ? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>()
       : null;
