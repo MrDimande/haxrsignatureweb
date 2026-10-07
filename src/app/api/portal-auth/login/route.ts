@@ -28,7 +28,13 @@ export async function POST(request: Request) {
     });
     if (result.kind === "denied") rateLimit(`portal-login:${ip}`, RATE_LIMITS.adminLogin);
     return result.response;
-  } catch {
+  } catch (error) {
+    console.error("portal_login_failed", {
+      code: typeof error === "object" && error && "code" in error && typeof error.code === "string"
+        ? error.code
+        : null,
+      name: error instanceof Error ? error.name : "unknown",
+    });
     return NextResponse.json(
       { error: "A autenticação está temporariamente indisponível." },
       { status: 503 },
