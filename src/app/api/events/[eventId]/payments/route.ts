@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  createClientEventOperationalRpcClient,
   resolveClientEventReadRequestAuth,
   validateClientEventAuthEnvironment,
   validateClientEventOperationalEnvironment,
@@ -9,7 +8,7 @@ import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { getBudgetModuleData } from "@/lib/event-modules/get-event-module-data";
 import type { BudgetModuleData, ModuleDataResult } from "@/lib/event-modules/types";
 import { handleClientEventPaymentsRequest } from "@/lib/payments/client-event-payments-api";
-import type { ClientEventPaymentsRpcClient } from "@/lib/payments/client-event-payments-rpc";
+import { createClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -33,8 +32,8 @@ export async function GET(request: Request, context: RouteContext) {
     const envCheck = validateClientEventAuthEnvironment();
     const serviceRoleCheck = validateClientEventOperationalEnvironment();
     const auth = await resolveClientEventReadRequestAuth(request);
-    const rpcClient = serviceRoleCheck.ok
-      ? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>()
+    const operationalReader = serviceRoleCheck.ok
+      ? createClientEventOperationalReader()
       : null;
 
     const result = await handleClientEventPaymentsRequest({
@@ -43,7 +42,7 @@ export async function GET(request: Request, context: RouteContext) {
       user: auth.user,
       eventId: trimmedEventId,
       authClient: auth.authClient,
-      rpcClient,
+      operationalReader,
     });
 
     return NextResponse.json(result.body satisfies ModuleDataResult<BudgetModuleData>, {

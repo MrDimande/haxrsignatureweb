@@ -23,8 +23,8 @@ export default function ModulePageClient<T>({
   modulePath,
   apiPath,
   initialResult,
-  emptyTitle = "Ainda não existe um evento activo.",
-  emptyDescription = "Crie o vosso evento para começar a usar este módulo.",
+  emptyTitle = "Evento não encontrado.",
+  emptyDescription = "Não foi possível localizar o evento pedido.",
   children,
 }: ModulePageClientProps<T>) {
   const [result, setResult] = useState(initialResult);
@@ -57,7 +57,7 @@ export default function ModulePageClient<T>({
         <ModuleEmptyState
           title={emptyTitle}
           description={emptyDescription}
-          cta={{ label: "Criar novo evento", href: "/onboarding" }}
+          cta={{ label: "Voltar ao painel", href: "/app/dashboard" }}
         />
       );
     }

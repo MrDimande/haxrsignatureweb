@@ -1,6 +1,5 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
-  createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
   type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
@@ -12,7 +11,10 @@ import {
   getClientEventChecklistData,
   type ClientEventChecklistAuthClient,
 } from "@/lib/checklist/client-event-checklist-service";
-import type { ClientEventChecklistRpcClient } from "@/lib/checklist/client-event-checklist-rpc";
+import {
+  createClientEventOperationalReader,
+  type ClientEventOperationalReader,
+} from "@/lib/portal/client-event-operational.neon.repository";
 
 export type HandleClientEventChecklistRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;
@@ -20,7 +22,7 @@ export type HandleClientEventChecklistRequestDeps = {
   user: { id: string } | null;
   eventId: string;
   authClient: ClientEventChecklistAuthClient | null;
-  rpcClient?: ClientEventChecklistRpcClient | null;
+  operationalReader?: ClientEventOperationalReader | null;
 };
 
 export type ClientEventChecklistApiResult = {
@@ -47,13 +49,12 @@ export async function handleClientEventChecklistRequest(
     return { status: 503, body: { ok: false, error: "unavailable", message: deps.serviceRoleCheck.message } };
   }
 
-  const rpcClient =
-    deps.rpcClient ?? createClientEventOperationalRpcClient<ClientEventChecklistRpcClient>();
+  const operationalReader = deps.operationalReader ?? createClientEventOperationalReader();
 
   try {
     const result = await getClientEventChecklistData({
       authClient: deps.authClient,
-      rpcClient,
+      operationalReader,
       userId: deps.user.id,
       eventId: deps.eventId,
     });
@@ -98,8 +99,8 @@ export async function loadClientEventChecklistModuleData(
   const authClient = envCheck.ok
     ? await createClientEventReadAuthClient()
     : null;
-  const rpcClient = serviceRoleCheck.ok
-    ? createClientEventOperationalRpcClient<ClientEventChecklistRpcClient>()
+  const operationalReader = serviceRoleCheck.ok
+    ? createClientEventOperationalReader()
     : null;
 
   const result = await handleClientEventChecklistRequest({
@@ -108,7 +109,7 @@ export async function loadClientEventChecklistModuleData(
     user: session.user,
     eventId: trimmedEventId,
     authClient,
-    rpcClient,
+    operationalReader,
   });
 
   return result.body;

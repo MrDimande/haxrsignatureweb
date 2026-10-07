@@ -46,7 +46,7 @@ export default function ChecklistModuleView({ data }: { data: ChecklistModuleDat
 
       {!hasTasks ? (
         <ModuleEmptyState
-          title="Ainda não há tarefas na checklist"
+          title="Ainda não existem tarefas na checklist."
           description="Quando a equipa HAXR ou o Concierge validar tarefas operacionais para este evento, elas aparecerão aqui com prioridade, prazo e estado."
         />
       ) : (

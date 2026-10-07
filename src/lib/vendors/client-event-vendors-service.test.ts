@@ -14,11 +14,10 @@ import {
   type ClientEventVendorsAuthClient,
 } from "@/lib/vendors/client-event-vendors-service";
 import {
-  GET_CLIENT_EVENT_VENDORS_RPC,
   parseClientEventVendorsRpcPayload,
-  type ClientEventVendorsRpcClient,
   type ClientEventVendorsRpcPayload,
 } from "@/lib/vendors/client-event-vendors-rpc";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
 const OPERATIONAL_EVENT_ID = "1251bc6e-fac7-46cd-981d-bb3e4c066ce8";
@@ -160,17 +159,21 @@ function createAuthClient(input: {
   return client as ClientEventVendorsAuthClient;
 }
 
-function createRpcClient(payload: ClientEventVendorsRpcPayload | null, errorMessage?: string) {
+function createOperationalReader(
+  payload: ClientEventVendorsRpcPayload,
+  errorMessage?: string,
+  calls?: string[],
+): ClientEventOperationalReader {
   return {
-    async rpc(fn: typeof GET_CLIENT_EVENT_VENDORS_RPC, args: { p_client_event_id: string }) {
-      assert.equal(fn, GET_CLIENT_EVENT_VENDORS_RPC);
-      assert.equal(args.p_client_event_id, EVENT_ID);
+    async listVendors(operationalEventId) {
+      calls?.push(operationalEventId);
+      assert.equal(operationalEventId, OPERATIONAL_EVENT_ID);
       if (errorMessage) {
-        return { data: null, error: { message: errorMessage } };
+        throw new Error(errorMessage);
       }
-      return { data: payload, error: null };
+      return payload;
     },
-  } satisfies ClientEventVendorsRpcClient;
+  } as ClientEventOperationalReader;
 }
 
 describe("client-event-vendors-rpc", () => {
@@ -254,7 +257,7 @@ describe("client-event-vendors-service", () => {
   it("getClientEventVendorsData returns not_found for missing event", async () => {
     const result = await getClientEventVendorsData({
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -264,7 +267,7 @@ describe("client-event-vendors-service", () => {
   it("getClientEventVendorsData returns forbidden for non-owner non-member", async () => {
     const result = await getClientEventVendorsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OTHER_USER_ID,
       eventId: EVENT_ID,
     });
@@ -274,38 +277,31 @@ describe("client-event-vendors-service", () => {
   it("getClientEventVendorsData returns operational_not_linked without operational_event_id", async () => {
     const result = await getClientEventVendorsData({
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
     assert.equal(result.kind, "operational_not_linked");
   });
 
-  it("getClientEventVendorsData calls RPC when operational_event_id exists", async () => {
-    let rpcCalled = false;
-    const rpcClient = {
-      async rpc(fn: typeof GET_CLIENT_EVENT_VENDORS_RPC) {
-        assert.equal(fn, GET_CLIENT_EVENT_VENDORS_RPC);
-        rpcCalled = true;
-        return { data: sampleRpcPayload, error: null };
-      },
-    } satisfies ClientEventVendorsRpcClient;
+  it("getClientEventVendorsData reads only the authorized operational event", async () => {
+    const calls: string[] = [];
 
     const result = await getClientEventVendorsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient,
+      operationalReader: createOperationalReader(sampleRpcPayload, undefined, calls),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
 
-    assert.equal(rpcCalled, true);
+    assert.deepEqual(calls, [OPERATIONAL_EVENT_ID]);
     assert.equal(result.kind, "ok");
     if (result.kind === "ok") {
       assert.equal(result.data.vendors.length, 2);
     }
   });
 
-  it("getClientEventVendorsData returns empty list when RPC has no vendors", async () => {
+  it("getClientEventVendorsData returns empty list when the operational event has no vendors", async () => {
     const emptyPayload: ClientEventVendorsRpcPayload = {
       vendors: [],
       summary: {
@@ -322,7 +318,7 @@ describe("client-event-vendors-service", () => {
 
     const result = await getClientEventVendorsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(emptyPayload),
+      operationalReader: createOperationalReader(emptyPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -334,10 +330,10 @@ describe("client-event-vendors-service", () => {
     }
   });
 
-  it("getClientEventVendorsData returns unavailable when RPC fails", async () => {
+  it("getClientEventVendorsData returns unavailable when the operational reader fails", async () => {
     const result = await getClientEventVendorsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(null, "permission denied for table event_vendors"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table event_vendors"),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -380,7 +376,7 @@ describe("client-event-vendors-api", () => {
       user: null,
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 401);
 
@@ -400,7 +396,7 @@ describe("client-event-vendors-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 404);
 
@@ -420,7 +416,7 @@ describe("client-event-vendors-api", () => {
       user: { id: OTHER_USER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 403);
 
@@ -440,7 +436,7 @@ describe("client-event-vendors-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 409);
 
@@ -460,7 +456,7 @@ describe("client-event-vendors-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 200);
     assert.equal(result.body.ok, true);
@@ -470,14 +466,14 @@ describe("client-event-vendors-api", () => {
     }
   });
 
-  it("returns 503 when RPC fails", async () => {
+  it("returns 503 when the operational reader fails", async () => {
     const result = await handleClientEventVendorsRequest({
       envCheck: okEnv,
       serviceRoleCheck: okEnv,
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(null, "permission denied for table event_vendors"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table event_vendors"),
     });
     assert.equal(result.status, 503);
 

@@ -1,6 +1,5 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
-  createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
   type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
@@ -12,7 +11,10 @@ import {
   getClientEventDocumentsData,
   type ClientEventDocumentsAuthClient,
 } from "@/lib/documents/client-event-documents-service";
-import type { ClientEventDocumentsRpcClient } from "@/lib/documents/client-event-documents-rpc";
+import {
+  createClientEventOperationalReader,
+  type ClientEventOperationalReader,
+} from "@/lib/portal/client-event-operational.neon.repository";
 
 export type HandleClientEventDocumentsRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;
@@ -20,7 +22,7 @@ export type HandleClientEventDocumentsRequestDeps = {
   user: { id: string } | null;
   eventId: string;
   authClient: ClientEventDocumentsAuthClient | null;
-  rpcClient?: ClientEventDocumentsRpcClient | null;
+  operationalReader?: ClientEventOperationalReader | null;
 };
 
 export type ClientEventDocumentsApiResult = {
@@ -51,13 +53,12 @@ export async function handleClientEventDocumentsRequest(
     return { status: 503, body: { ok: false, error: "unavailable", message: deps.serviceRoleCheck.message } };
   }
 
-  const rpcClient =
-    deps.rpcClient ?? createClientEventOperationalRpcClient<ClientEventDocumentsRpcClient>();
+  const operationalReader = deps.operationalReader ?? createClientEventOperationalReader();
 
   try {
     const result = await getClientEventDocumentsData({
       authClient: deps.authClient,
-      rpcClient,
+      operationalReader,
       userId: deps.user.id,
       eventId: deps.eventId,
     });
@@ -102,8 +103,8 @@ export async function loadClientEventDocumentsModuleData(
   const authClient = envCheck.ok
     ? await createClientEventReadAuthClient()
     : null;
-  const rpcClient = serviceRoleCheck.ok
-    ? createClientEventOperationalRpcClient<ClientEventDocumentsRpcClient>()
+  const operationalReader = serviceRoleCheck.ok
+    ? createClientEventOperationalReader()
     : null;
 
   const result = await handleClientEventDocumentsRequest({
@@ -112,7 +113,7 @@ export async function loadClientEventDocumentsModuleData(
     user: session.user,
     eventId: trimmedEventId,
     authClient,
-    rpcClient,
+    operationalReader,
   });
 
   return result.body;

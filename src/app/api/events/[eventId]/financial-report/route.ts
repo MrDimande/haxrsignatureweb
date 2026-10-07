@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import {
-  createClientEventOperationalRpcClient,
   resolveClientEventReadRequestAuth,
   validateClientEventAuthEnvironment,
   validateClientEventOperationalEnvironment,
 } from "@/lib/auth/client-event-server-clients";
 import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { handleClientEventFinancialReportRequest } from "@/lib/payments/client-event-payments-api";
-import type { ClientEventPaymentsRpcClient } from "@/lib/payments/client-event-payments-rpc";
+import { createClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 export const runtime = "nodejs";
 
@@ -32,8 +31,8 @@ export async function GET(request: Request, context: RouteContext) {
     const envCheck = validateClientEventAuthEnvironment();
     const serviceRoleCheck = validateClientEventOperationalEnvironment();
     const auth = await resolveClientEventReadRequestAuth(request);
-    const rpcClient = serviceRoleCheck.ok
-      ? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>()
+    const operationalReader = serviceRoleCheck.ok
+      ? createClientEventOperationalReader()
       : null;
 
     const result = await handleClientEventFinancialReportRequest({
@@ -42,7 +41,7 @@ export async function GET(request: Request, context: RouteContext) {
       user: auth.user,
       eventId: trimmedEventId,
       authClient: auth.authClient,
-      rpcClient,
+      operationalReader,
     });
 
     if (result.status !== 200 || !result.buffer) {

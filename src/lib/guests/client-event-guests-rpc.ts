@@ -82,7 +82,10 @@ function readGuestRow(value: unknown): OperationalGuestRow | null {
         ? value.plus_ones
         : 0,
     seat_id: readNullableString(value.seat_id),
-    qr_token: typeof value.qr_token === "string" ? value.qr_token : "",
+    invite_sent:
+      value.invite_sent === true ||
+      (typeof value.qr_token === "string" && value.qr_token.length >= 16),
+    updated_at: typeof value.updated_at === "string" ? value.updated_at : undefined,
     seats: readSeat(value.seats),
     guest_groups: readGroup(value.guest_groups),
     checkins: readCheckin(value.checkins),

@@ -11,13 +11,12 @@ import {
   type OperationalGuestRow,
 } from "@/lib/guests/client-event-guests-service";
 import {
-  GET_CLIENT_EVENT_GUESTS_RPC,
   parseClientEventGuestsRpcPayload,
-  type ClientEventGuestsRpcClient,
   type ClientEventGuestsRpcPayload,
 } from "@/lib/guests/client-event-guests-rpc";
 import { mapRpcPayloadToDashboardGuestMetrics } from "@/lib/guests/client-event-guests-dashboard";
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
 const OPERATIONAL_EVENT_ID = "1251bc6e-fac7-46cd-981d-bb3e4c066ce8";
@@ -57,7 +56,8 @@ const sampleGuestRows: OperationalGuestRow[] = [
     status: "confirmed",
     plus_ones: 1,
     seat_id: "seat-1",
-    qr_token: "0123456789abcdef",
+    invite_sent: true,
+    updated_at: "2026-07-09T12:00:00.000Z",
     seats: { table_name: "A", seat_number: 1, label: "Mesa A · Lugar 1" },
     guest_groups: { name: "Família noiva" },
     checkins: null,
@@ -70,7 +70,8 @@ const sampleGuestRows: OperationalGuestRow[] = [
     status: "invited",
     plus_ones: 0,
     seat_id: null,
-    qr_token: "short",
+    invite_sent: false,
+    updated_at: "2026-07-09T12:00:00.000Z",
     guest_groups: { name: "Amigos" },
     checkins: null,
   },
@@ -82,7 +83,8 @@ const sampleGuestRows: OperationalGuestRow[] = [
     status: "declined",
     plus_ones: 0,
     seat_id: null,
-    qr_token: "fedcba9876543210",
+    invite_sent: true,
+    updated_at: "2026-07-09T12:00:00.000Z",
     guest_groups: { name: "Trabalho" },
     checkins: null,
   },
@@ -162,29 +164,24 @@ function createAuthClient(input: {
   return client as ClientEventGuestsAuthClient;
 }
 
-function createRpcClient(input: {
-  payload?: ClientEventGuestsRpcPayload;
-  error?: { message: string };
-  rpcCalls?: string[];
-}): ClientEventGuestsRpcClient {
+function createOperationalReader(input: {
+  guests?: OperationalGuestRow[];
+  tablesTotal?: number;
+  error?: Error;
+  calls?: string[];
+}): ClientEventOperationalReader {
   return {
-    async rpc(fn, args) {
-      input.rpcCalls?.push(`${fn}:${args.p_client_event_id}`);
+    async listGuests(operationalEventId) {
+      input.calls?.push(operationalEventId);
       if (input.error) {
-        return { data: null, error: input.error };
+        throw input.error;
       }
-      if (args.p_client_event_id !== EVENT_ID) {
-        return {
-          data: null,
-          error: { message: `client_event_not_found: ${args.p_client_event_id}` },
-        };
+      if (operationalEventId !== OPERATIONAL_EVENT_ID) {
+        throw new Error(`operational_event_not_found: ${operationalEventId}`);
       }
-      return {
-        data: input.payload ?? buildRpcPayload([]),
-        error: null,
-      };
+      return { guests: input.guests ?? [], tablesTotal: input.tablesTotal ?? 0 };
     },
-  };
+  } as ClientEventOperationalReader;
 }
 
 const okEnv = { ok: true as const, projectRef: "uxleigndoomoezwsxlan" };
@@ -253,7 +250,7 @@ describe("client-event-guests-service", () => {
   it("getClientEventGuestsData returns not_found for missing event", async () => {
     const result = await getClientEventGuestsData({
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient({}),
+      operationalReader: createOperationalReader({}),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -263,7 +260,7 @@ describe("client-event-guests-service", () => {
   it("getClientEventGuestsData returns forbidden for non-owner non-member", async () => {
     const result = await getClientEventGuestsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({}),
+      operationalReader: createOperationalReader({}),
       userId: OTHER_USER_ID,
       eventId: EVENT_ID,
     });
@@ -275,36 +272,37 @@ describe("client-event-guests-service", () => {
       authClient: createAuthClient({
         event: { ...baseEvent, operational_event_id: null },
       }),
-      rpcClient: createRpcClient({}),
+      operationalReader: createOperationalReader({}),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
     assert.equal(result.kind, "operational_not_linked");
   });
 
-  it("getClientEventGuestsData calls RPC when operational_event_id exists", async () => {
-    const rpcCalls: string[] = [];
+  it("getClientEventGuestsData reads only the authorized operational event", async () => {
+    const calls: string[] = [];
     const result = await getClientEventGuestsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({
-        payload: buildRpcPayload(sampleGuestRows, 8),
-        rpcCalls,
+      operationalReader: createOperationalReader({
+        guests: sampleGuestRows,
+        tablesTotal: 8,
+        calls,
       }),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
 
     assert.equal(result.kind, "ok");
-    assert.deepEqual(rpcCalls, [`${GET_CLIENT_EVENT_GUESTS_RPC}:${EVENT_ID}`]);
+    assert.deepEqual(calls, [OPERATIONAL_EVENT_ID]);
     if (result.kind !== "ok") return;
     assert.equal(result.data.summary.total, 3);
     assert.equal(result.data.guests[0]?.name, "Ana Silva");
   });
 
-  it("getClientEventGuestsData returns empty list when RPC has no guests", async () => {
+  it("getClientEventGuestsData returns empty list when the operational event has no guests", async () => {
     const result = await getClientEventGuestsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({ payload: buildRpcPayload([], 0) }),
+      operationalReader: createOperationalReader({ guests: [], tablesTotal: 0 }),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -314,11 +312,11 @@ describe("client-event-guests-service", () => {
     assert.deepEqual(result.data.guests, []);
   });
 
-  it("getClientEventGuestsData returns unavailable when RPC fails", async () => {
+  it("getClientEventGuestsData returns unavailable when the operational reader fails", async () => {
     const result = await getClientEventGuestsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({
-        error: { message: "permission denied for function get_client_event_guests" },
+      operationalReader: createOperationalReader({
+        error: new Error("permission denied for table guests"),
       }),
       userId: OWNER_ID,
       eventId: EVENT_ID,
@@ -336,7 +334,7 @@ describe("client-event-guests-api", () => {
       user: null,
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({}),
+      operationalReader: createOperationalReader({}),
     });
     assert.equal(result.status, 401);
     assert.equal(result.body.ok, false);
@@ -351,7 +349,7 @@ describe("client-event-guests-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient({}),
+      operationalReader: createOperationalReader({}),
     });
     assert.equal(result.status, 404);
     if (result.body.ok) return;
@@ -365,7 +363,7 @@ describe("client-event-guests-api", () => {
       user: { id: OTHER_USER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({}),
+      operationalReader: createOperationalReader({}),
     });
     assert.equal(result.status, 403);
     if (result.body.ok) return;
@@ -381,7 +379,7 @@ describe("client-event-guests-api", () => {
       authClient: createAuthClient({
         event: { ...baseEvent, operational_event_id: null },
       }),
-      rpcClient: createRpcClient({}),
+      operationalReader: createOperationalReader({}),
     });
     assert.equal(result.status, 409);
     if (result.body.ok) return;
@@ -395,8 +393,9 @@ describe("client-event-guests-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({
-        payload: buildRpcPayload(sampleGuestRows, 5),
+      operationalReader: createOperationalReader({
+        guests: sampleGuestRows,
+        tablesTotal: 5,
       }),
     });
     assert.equal(result.status, 200);
@@ -405,15 +404,15 @@ describe("client-event-guests-api", () => {
     assert.equal(result.body.data.summary.total, 3);
   });
 
-  it("returns 503 when RPC fails", async () => {
+  it("returns 503 when the operational reader fails", async () => {
     const result = await handleClientEventGuestsRequest({
       envCheck: okEnv,
       serviceRoleCheck: okEnv,
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient({
-        error: { message: "function get_client_event_guests does not exist" },
+      operationalReader: createOperationalReader({
+        error: new Error("permission denied for table guests"),
       }),
     });
     assert.equal(result.status, 503);

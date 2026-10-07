@@ -16,11 +16,10 @@ import {
   type ClientEventChecklistAuthClient,
 } from "@/lib/checklist/client-event-checklist-service";
 import {
-  GET_CLIENT_EVENT_CHECKLIST_RPC,
   parseClientEventChecklistRpcPayload,
-  type ClientEventChecklistRpcClient,
   type ClientEventChecklistRpcPayload,
 } from "@/lib/checklist/client-event-checklist-rpc";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
 const OPERATIONAL_EVENT_ID = "1251bc6e-fac7-46cd-981d-bb3e4c066ce8";
@@ -163,17 +162,21 @@ function createAuthClient(input: {
   return client as ClientEventChecklistAuthClient;
 }
 
-function createRpcClient(payload: ClientEventChecklistRpcPayload | null, errorMessage?: string) {
+function createOperationalReader(
+  payload: ClientEventChecklistRpcPayload,
+  errorMessage?: string,
+  calls?: string[],
+): ClientEventOperationalReader {
   return {
-    async rpc(fn: typeof GET_CLIENT_EVENT_CHECKLIST_RPC, args: { p_client_event_id: string }) {
-      assert.equal(fn, GET_CLIENT_EVENT_CHECKLIST_RPC);
-      assert.equal(args.p_client_event_id, EVENT_ID);
+    async listChecklist(operationalEventId) {
+      calls?.push(operationalEventId);
+      assert.equal(operationalEventId, OPERATIONAL_EVENT_ID);
       if (errorMessage) {
-        return { data: null, error: { message: errorMessage } };
+        throw new Error(errorMessage);
       }
-      return { data: payload, error: null };
+      return payload;
     },
-  } satisfies ClientEventChecklistRpcClient;
+  } as ClientEventOperationalReader;
 }
 
 describe("client-event-checklist-rpc", () => {
@@ -227,7 +230,7 @@ describe("client-event-checklist-service", () => {
   it("getClientEventChecklistData returns not_found for missing event", async () => {
     const result = await getClientEventChecklistData({
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -237,7 +240,7 @@ describe("client-event-checklist-service", () => {
   it("getClientEventChecklistData returns forbidden for non-owner non-member", async () => {
     const result = await getClientEventChecklistData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OTHER_USER_ID,
       eventId: EVENT_ID,
     });
@@ -247,38 +250,31 @@ describe("client-event-checklist-service", () => {
   it("getClientEventChecklistData returns operational_not_linked without operational_event_id", async () => {
     const result = await getClientEventChecklistData({
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
     assert.equal(result.kind, "operational_not_linked");
   });
 
-  it("getClientEventChecklistData calls RPC when operational_event_id exists", async () => {
-    let rpcCalled = false;
-    const rpcClient = {
-      async rpc(fn: typeof GET_CLIENT_EVENT_CHECKLIST_RPC) {
-        assert.equal(fn, GET_CLIENT_EVENT_CHECKLIST_RPC);
-        rpcCalled = true;
-        return { data: sampleRpcPayload, error: null };
-      },
-    } satisfies ClientEventChecklistRpcClient;
+  it("getClientEventChecklistData reads only the authorized operational event", async () => {
+    const calls: string[] = [];
 
     const result = await getClientEventChecklistData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient,
+      operationalReader: createOperationalReader(sampleRpcPayload, undefined, calls),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
 
-    assert.equal(rpcCalled, true);
+    assert.deepEqual(calls, [OPERATIONAL_EVENT_ID]);
     assert.equal(result.kind, "ok");
     if (result.kind === "ok") {
       assert.equal(result.data.tasks.length, 3);
     }
   });
 
-  it("getClientEventChecklistData returns empty list when RPC has no tasks", async () => {
+  it("getClientEventChecklistData returns empty list when the operational event has no tasks", async () => {
     const emptyPayload: ClientEventChecklistRpcPayload = {
       items: [],
       summary: {
@@ -295,7 +291,7 @@ describe("client-event-checklist-service", () => {
 
     const result = await getClientEventChecklistData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(emptyPayload),
+      operationalReader: createOperationalReader(emptyPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -307,10 +303,10 @@ describe("client-event-checklist-service", () => {
     }
   });
 
-  it("getClientEventChecklistData returns unavailable when RPC fails", async () => {
+  it("getClientEventChecklistData returns unavailable when the operational reader fails", async () => {
     const result = await getClientEventChecklistData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(null, "permission denied for table event_checklist_items"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table event_checklist_items"),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -356,7 +352,7 @@ describe("client-event-checklist-api", () => {
       user: null,
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 401);
 
@@ -376,7 +372,7 @@ describe("client-event-checklist-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 404);
 
@@ -396,7 +392,7 @@ describe("client-event-checklist-api", () => {
       user: { id: OTHER_USER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 403);
 
@@ -416,7 +412,7 @@ describe("client-event-checklist-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 409);
 
@@ -436,7 +432,7 @@ describe("client-event-checklist-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 200);
     assert.equal(result.body.ok, true);
@@ -446,14 +442,14 @@ describe("client-event-checklist-api", () => {
     }
   });
 
-  it("returns 503 when RPC fails", async () => {
+  it("returns 503 when the operational reader fails", async () => {
     const result = await handleClientEventChecklistRequest({
       envCheck: okEnv,
       serviceRoleCheck: okEnv,
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(null, "permission denied for table event_checklist_items"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table event_checklist_items"),
     });
     assert.equal(result.status, 503);
 

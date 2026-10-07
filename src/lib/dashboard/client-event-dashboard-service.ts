@@ -1,9 +1,9 @@
 import { formatOnboardingEventDate } from "@/lib/auth/onboarding-storage";
 import type { ClientAppProfile } from "@/lib/auth/app-user-display";
 import {
-  createClientEventOperationalRpcClient,
   type ClientEventReadAuthClient,
 } from "@/lib/auth/client-event-server-clients";
+import { createClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 import {
   EMPTY_OPERATIONAL_KPIS,
   mapVendorStatusLabel,
@@ -23,27 +23,22 @@ import {
   mapRpcPayloadToDashboardFinanceMetrics,
   type ClientEventDashboardFinanceMetrics,
 } from "@/lib/payments/client-event-payments-finance";
-import { fetchClientEventPaymentsViaRpc } from "@/lib/payments/client-event-payments-rpc";
 import {
   mapRpcPayloadToDashboardChecklistMetrics,
   type ClientEventDashboardChecklistMetrics,
 } from "@/lib/checklist/client-event-checklist-dashboard";
-import { fetchClientEventChecklistViaRpc } from "@/lib/checklist/client-event-checklist-rpc";
 import {
   mapRpcPayloadToDashboardDocumentMetrics,
   type ClientEventDashboardDocumentMetrics,
 } from "@/lib/documents/client-event-documents-dashboard";
-import { fetchClientEventDocumentsViaRpc } from "@/lib/documents/client-event-documents-rpc";
 import {
   mapRpcPayloadToDashboardGuestMetrics,
   type ClientEventDashboardGuestMetrics,
 } from "@/lib/guests/client-event-guests-dashboard";
-import { fetchClientEventGuestsViaRpc } from "@/lib/guests/client-event-guests-rpc";
 import {
   mapRpcPayloadToDashboardVendorMetrics,
   type ClientEventDashboardVendorMetrics,
 } from "@/lib/vendors/client-event-vendors-dashboard";
-import { fetchClientEventVendorsViaRpc } from "@/lib/vendors/client-event-vendors-rpc";
 
 export type ClientEventDashboardAccessResult =
   | { kind: "ok"; event: ClientEventRow }
@@ -444,7 +439,7 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
 
   if (event.operational_event_id && hasOperationalBackend) {
     try {
-      const rpcClient = createClientEventOperationalRpcClient<unknown>();
+      const operationalReader = createClientEventOperationalReader();
       const portalScope = { clientEventId: event.id, slug: event.slug };
 
       operationalKpis = await fetchOperationalKpisNeon(
@@ -453,19 +448,33 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
       );
 
       try {
-        const guestsPayload = await fetchClientEventGuestsViaRpc(
-          rpcClient as never,
-          event.id,
+        const guestsPayload = await operationalReader.listGuests(
+          event.operational_event_id,
         );
-        guestMetrics = mapRpcPayloadToDashboardGuestMetrics(guestsPayload);
+        guestMetrics = mapRpcPayloadToDashboardGuestMetrics({
+          guests: guestsPayload.guests,
+          summary: {
+            total: guestsPayload.guests.length,
+            confirmed: guestsPayload.guests.filter(
+              (guest) => guest.status === "confirmed" || guest.status === "checked_in",
+            ).length,
+            pending: guestsPayload.guests.filter((guest) => guest.status === "invited").length,
+            declined: guestsPayload.guests.filter((guest) => guest.status === "declined").length,
+            plusOnes: guestsPayload.guests.reduce(
+              (total, guest) => total + (guest.plus_ones ?? 0),
+              0,
+            ),
+            tablesAssigned: guestsPayload.guests.filter((guest) => Boolean(guest.seat_id)).length,
+            tablesTotal: guestsPayload.tablesTotal,
+          },
+        });
       } catch {
         guestMetrics = null;
       }
 
       try {
-        const paymentsPayload = await fetchClientEventPaymentsViaRpc(
-          rpcClient as never,
-          event.id,
+        const paymentsPayload = await operationalReader.listPayments(
+          event.operational_event_id,
         );
         financeMetrics = mapRpcPayloadToDashboardFinanceMetrics(event, paymentsPayload);
       } catch {
@@ -473,9 +482,8 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
       }
 
       try {
-        const vendorsPayload = await fetchClientEventVendorsViaRpc(
-          rpcClient as never,
-          event.id,
+        const vendorsPayload = await operationalReader.listVendors(
+          event.operational_event_id,
         );
         vendorMetrics = mapRpcPayloadToDashboardVendorMetrics(vendorsPayload);
         vendorSnapshot = vendorMetrics.vendorSnapshot;
@@ -491,9 +499,8 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
       }
 
       try {
-        const checklistPayload = await fetchClientEventChecklistViaRpc(
-          rpcClient as never,
-          event.id,
+        const checklistPayload = await operationalReader.listChecklist(
+          event.operational_event_id,
         );
         checklistMetrics = mapRpcPayloadToDashboardChecklistMetrics(checklistPayload);
         checklistSnapshot = checklistMetrics.checklistSnapshot;
@@ -503,9 +510,8 @@ export async function mapClientEventToDashboardDataWithOperationalKpis(
       }
 
       try {
-        const documentsPayload = await fetchClientEventDocumentsViaRpc(
-          rpcClient as never,
-          event.id,
+        const documentsPayload = await operationalReader.listDocuments(
+          event.operational_event_id,
         );
         documentMetrics = mapRpcPayloadToDashboardDocumentMetrics(event, documentsPayload);
         documentSnapshot = documentMetrics.documentSnapshot;

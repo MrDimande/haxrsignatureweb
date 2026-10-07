@@ -10,10 +10,9 @@ import type {
   VendorModuleData,
   VendorStatus,
 } from "@/lib/event-modules/types";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 import {
   ClientEventVendorsRpcError,
-  fetchClientEventVendorsViaRpc,
-  type ClientEventVendorsRpcClient,
   type ClientEventVendorsRpcPayload,
   type ClientEventVendorsRpcVendorRow,
 } from "@/lib/vendors/client-event-vendors-rpc";
@@ -229,7 +228,7 @@ export function mapRpcPayloadToVendorModuleData(
 
 export async function getClientEventVendorsData(input: {
   authClient: ClientEventVendorsAuthClient;
-  rpcClient: ClientEventVendorsRpcClient;
+  operationalReader: ClientEventOperationalReader;
   userId: string;
   eventId: string;
 }): Promise<ClientEventVendorsAccessResult> {
@@ -252,25 +251,15 @@ export async function getClientEventVendorsData(input: {
   }
 
   try {
-    const payload = await fetchClientEventVendorsViaRpc(
-      input.rpcClient,
-      access.event.id,
+    const payload = await input.operationalReader.listVendors(
+      access.event.operational_event_id,
     );
 
     return {
       kind: "ok",
       data: mapRpcPayloadToVendorModuleData(access.event, payload),
     };
-  } catch (error) {
-    if (error instanceof ClientEventVendorsRpcError) {
-      if (error.code === "client_event_not_found") {
-        return { kind: "not_found" };
-      }
-      if (error.code === "operational_not_linked") {
-        return { kind: "operational_not_linked", event: access.event };
-      }
-    }
-
+  } catch {
     return {
       kind: "unavailable",
       message: "Não foi possível carregar os fornecedores operacionais.",

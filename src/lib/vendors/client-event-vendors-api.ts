@@ -1,6 +1,5 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
-  createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
   type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
@@ -12,7 +11,10 @@ import {
   getClientEventVendorsData,
   type ClientEventVendorsAuthClient,
 } from "@/lib/vendors/client-event-vendors-service";
-import type { ClientEventVendorsRpcClient } from "@/lib/vendors/client-event-vendors-rpc";
+import {
+  createClientEventOperationalReader,
+  type ClientEventOperationalReader,
+} from "@/lib/portal/client-event-operational.neon.repository";
 
 export type HandleClientEventVendorsRequestDeps = {
   envCheck: ClientAppAuthEnvCheck;
@@ -20,7 +22,7 @@ export type HandleClientEventVendorsRequestDeps = {
   user: { id: string } | null;
   eventId: string;
   authClient: ClientEventVendorsAuthClient | null;
-  rpcClient?: ClientEventVendorsRpcClient | null;
+  operationalReader?: ClientEventOperationalReader | null;
 };
 
 export type ClientEventVendorsApiResult = {
@@ -47,13 +49,12 @@ export async function handleClientEventVendorsRequest(
     return { status: 503, body: { ok: false, error: "unavailable", message: deps.serviceRoleCheck.message } };
   }
 
-  const rpcClient =
-    deps.rpcClient ?? createClientEventOperationalRpcClient<ClientEventVendorsRpcClient>();
+  const operationalReader = deps.operationalReader ?? createClientEventOperationalReader();
 
   try {
     const result = await getClientEventVendorsData({
       authClient: deps.authClient,
-      rpcClient,
+      operationalReader,
       userId: deps.user.id,
       eventId: deps.eventId,
     });
@@ -98,8 +99,8 @@ export async function loadClientEventVendorsModuleData(
   const authClient = envCheck.ok
     ? await createClientEventReadAuthClient()
     : null;
-  const rpcClient = serviceRoleCheck.ok
-    ? createClientEventOperationalRpcClient<ClientEventVendorsRpcClient>()
+  const operationalReader = serviceRoleCheck.ok
+    ? createClientEventOperationalReader()
     : null;
 
   const result = await handleClientEventVendorsRequest({
@@ -108,7 +109,7 @@ export async function loadClientEventVendorsModuleData(
     user: session.user,
     eventId: trimmedEventId,
     authClient,
-    rpcClient,
+    operationalReader,
   });
 
   return result.body;

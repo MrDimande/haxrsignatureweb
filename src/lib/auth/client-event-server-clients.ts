@@ -124,46 +124,6 @@ class NeonClientEventReadClient implements ClientEventReadAuthClient {
   }
 }
 
-const NEON_OPERATIONAL_RPCS = {
-  get_client_event_guests: "get_client_event_guests",
-  get_client_event_payments: "get_client_event_payments",
-  get_client_event_checklist: "get_client_event_checklist",
-  get_client_event_documents: "get_client_event_documents",
-  get_client_event_vendors: "get_client_event_vendors",
-} as const;
-
-type NeonOperationalRpcName = keyof typeof NEON_OPERATIONAL_RPCS;
-
-class NeonClientEventOperationalRpcClient {
-  async rpc(
-    fn: NeonOperationalRpcName,
-    args: { p_client_event_id: string },
-  ): Promise<ClientEventReadQueryResult<unknown>> {
-    const sqlFunction = NEON_OPERATIONAL_RPCS[fn];
-    if (!sqlFunction) {
-      return {
-        data: null,
-        error: { message: `RPC operacional não permitida: ${String(fn)}` },
-      };
-    }
-
-    try {
-      const result = await neonQuery<{ payload: unknown }>(
-        `SELECT public.${sqlFunction}($1::uuid) AS payload`,
-        [args.p_client_event_id],
-      );
-      return { data: result.rows[0]?.payload ?? null, error: null };
-    } catch (cause) {
-      return {
-        data: null,
-        error: {
-          message: cause instanceof Error ? cause.message : "Falha ao executar RPC Neon.",
-        },
-      };
-    }
-  }
-}
-
 function validateNeonAsClientAppEnvironment(): ClientAppAuthEnvCheck {
   const neon = validateNeonServerEnvironment();
   if (!neon.ok) {
@@ -193,10 +153,6 @@ export async function createClientEventReadAuthClient(): Promise<ClientEventRead
   if (!envCheck.ok) return null;
 
   return new NeonClientEventReadClient();
-}
-
-export function createClientEventOperationalRpcClient<T>(): T {
-  return new NeonClientEventOperationalRpcClient() as unknown as T;
 }
 
 export async function resolveClientEventReadRequestAuth(request: Request): Promise<{

@@ -15,11 +15,10 @@ import {
   type ClientEventDocumentsAuthClient,
 } from "@/lib/documents/client-event-documents-service";
 import {
-  GET_CLIENT_EVENT_DOCUMENTS_RPC,
   parseClientEventDocumentsRpcPayload,
-  type ClientEventDocumentsRpcClient,
   type ClientEventDocumentsRpcPayload,
 } from "@/lib/documents/client-event-documents-rpc";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
 const OPERATIONAL_EVENT_ID = "1251bc6e-fac7-46cd-981d-bb3e4c066ce8";
@@ -178,17 +177,21 @@ function createAuthClient(input: {
   return client as ClientEventDocumentsAuthClient;
 }
 
-function createRpcClient(payload: ClientEventDocumentsRpcPayload | null, errorMessage?: string) {
+function createOperationalReader(
+  payload: ClientEventDocumentsRpcPayload,
+  errorMessage?: string,
+  calls?: string[],
+): ClientEventOperationalReader {
   return {
-    async rpc(fn: typeof GET_CLIENT_EVENT_DOCUMENTS_RPC, args: { p_client_event_id: string }) {
-      assert.equal(fn, GET_CLIENT_EVENT_DOCUMENTS_RPC);
-      assert.equal(args.p_client_event_id, EVENT_ID);
+    async listDocuments(operationalEventId) {
+      calls?.push(operationalEventId);
+      assert.equal(operationalEventId, OPERATIONAL_EVENT_ID);
       if (errorMessage) {
-        return { data: null, error: { message: errorMessage } };
+        throw new Error(errorMessage);
       }
-      return { data: payload, error: null };
+      return payload;
     },
-  } satisfies ClientEventDocumentsRpcClient;
+  } as ClientEventOperationalReader;
 }
 
 describe("client-event-documents-rpc", () => {
@@ -235,7 +238,7 @@ describe("client-event-documents-service", () => {
   it("getClientEventDocumentsData returns not_found for missing event", async () => {
     const result = await getClientEventDocumentsData({
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -245,7 +248,7 @@ describe("client-event-documents-service", () => {
   it("getClientEventDocumentsData returns forbidden for non-owner non-member", async () => {
     const result = await getClientEventDocumentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OTHER_USER_ID,
       eventId: EVENT_ID,
     });
@@ -255,38 +258,31 @@ describe("client-event-documents-service", () => {
   it("getClientEventDocumentsData returns operational_not_linked without operational_event_id", async () => {
     const result = await getClientEventDocumentsData({
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
     assert.equal(result.kind, "operational_not_linked");
   });
 
-  it("getClientEventDocumentsData calls RPC when operational_event_id exists", async () => {
-    let rpcCalled = false;
-    const rpcClient = {
-      async rpc(fn: typeof GET_CLIENT_EVENT_DOCUMENTS_RPC) {
-        assert.equal(fn, GET_CLIENT_EVENT_DOCUMENTS_RPC);
-        rpcCalled = true;
-        return { data: sampleRpcPayload, error: null };
-      },
-    } satisfies ClientEventDocumentsRpcClient;
+  it("getClientEventDocumentsData reads only the authorized operational event", async () => {
+    const calls: string[] = [];
 
     const result = await getClientEventDocumentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient,
+      operationalReader: createOperationalReader(sampleRpcPayload, undefined, calls),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
 
-    assert.equal(rpcCalled, true);
+    assert.deepEqual(calls, [OPERATIONAL_EVENT_ID]);
     assert.equal(result.kind, "ok");
     if (result.kind === "ok") {
       assert.equal(result.data.documents.length, 3);
     }
   });
 
-  it("getClientEventDocumentsData returns empty list when RPC has no documents", async () => {
+  it("getClientEventDocumentsData returns empty list when the operational event has no documents", async () => {
     const emptyPayload: ClientEventDocumentsRpcPayload = {
       items: [],
       summary: {
@@ -305,7 +301,7 @@ describe("client-event-documents-service", () => {
 
     const result = await getClientEventDocumentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(emptyPayload),
+      operationalReader: createOperationalReader(emptyPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -317,10 +313,10 @@ describe("client-event-documents-service", () => {
     }
   });
 
-  it("getClientEventDocumentsData returns unavailable when RPC fails", async () => {
+  it("getClientEventDocumentsData returns unavailable when the operational reader fails", async () => {
     const result = await getClientEventDocumentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(null, "permission denied for table concierge_uploads"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table documents"),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -368,7 +364,7 @@ describe("client-event-documents-api", () => {
       user: null,
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 401);
 
@@ -388,7 +384,7 @@ describe("client-event-documents-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 404);
 
@@ -408,7 +404,7 @@ describe("client-event-documents-api", () => {
       user: { id: OTHER_USER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 403);
 
@@ -428,7 +424,7 @@ describe("client-event-documents-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 409);
 
@@ -448,7 +444,7 @@ describe("client-event-documents-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 200);
     assert.equal(result.body.ok, true);
@@ -458,14 +454,14 @@ describe("client-event-documents-api", () => {
     }
   });
 
-  it("returns 503 when RPC fails", async () => {
+  it("returns 503 when the operational reader fails", async () => {
     const result = await handleClientEventDocumentsRequest({
       envCheck: okEnv,
       serviceRoleCheck: okEnv,
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(null, "permission denied for table concierge_uploads"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table documents"),
     });
     assert.equal(result.status, 503);
 

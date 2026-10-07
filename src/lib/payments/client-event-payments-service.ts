@@ -9,18 +9,12 @@ import type {
   PaymentRecord,
   Vendor,
 } from "@/lib/event-modules/types";
-import { mapRpcPayloadToDashboardFinanceMetrics } from "@/lib/payments/client-event-payments-finance";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 import {
   ClientEventPaymentsRpcError,
-  fetchClientEventPaymentsViaRpc,
-  type ClientEventPaymentsRpcClient,
   type ClientEventPaymentsRpcPaymentRow,
   type ClientEventPaymentsRpcPayload,
 } from "@/lib/payments/client-event-payments-rpc";
-import {
-  fetchClientEventVendorsViaRpc,
-  type ClientEventVendorsRpcClient,
-} from "@/lib/vendors/client-event-vendors-rpc";
 import { mapRpcPayloadToVendorModuleData } from "@/lib/vendors/client-event-vendors-service";
 import {
   buildNormalizedFinancialLedger,
@@ -147,7 +141,7 @@ export type ClientEventFinancialLedgerAccessResult =
 
 export async function getClientEventFinancialLedger(input: {
   authClient: ClientEventPaymentsAuthClient;
-  rpcClient: ClientEventPaymentsRpcClient;
+  operationalReader: ClientEventOperationalReader;
   userId: string;
   eventId: string;
 }): Promise<ClientEventFinancialLedgerAccessResult> {
@@ -170,16 +164,14 @@ export async function getClientEventFinancialLedger(input: {
   }
 
   try {
-    const paymentsPayload = await fetchClientEventPaymentsViaRpc(
-      input.rpcClient,
-      access.event.id,
+    const paymentsPayload = await input.operationalReader.listPayments(
+      access.event.operational_event_id,
     );
 
     let vendors: Vendor[] = [];
     try {
-      const vendorsPayload = await fetchClientEventVendorsViaRpc(
-        input.rpcClient as unknown as ClientEventVendorsRpcClient,
-        access.event.id,
+      const vendorsPayload = await input.operationalReader.listVendors(
+        access.event.operational_event_id,
       );
       if (vendorsPayload) {
         vendors = mapRpcPayloadToVendorModuleData(access.event, vendorsPayload).vendors;
@@ -199,16 +191,7 @@ export async function getClientEventFinancialLedger(input: {
       ledger,
       event: access.event,
     };
-  } catch (error) {
-    if (error instanceof ClientEventPaymentsRpcError) {
-      if (error.code === "client_event_not_found") {
-        return { kind: "not_found" };
-      }
-      if (error.code === "operational_not_linked") {
-        return { kind: "operational_not_linked", event: access.event };
-      }
-    }
-
+  } catch {
     return {
       kind: "unavailable",
       message: "Não foi possível carregar os pagamentos operacionais.",
@@ -218,7 +201,7 @@ export async function getClientEventFinancialLedger(input: {
 
 export async function getClientEventPaymentsData(input: {
   authClient: ClientEventPaymentsAuthClient;
-  rpcClient: ClientEventPaymentsRpcClient;
+  operationalReader: ClientEventOperationalReader;
   userId: string;
   eventId: string;
 }): Promise<ClientEventPaymentsAccessResult> {

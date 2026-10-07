@@ -1,6 +1,5 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
-  createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
   type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
@@ -13,7 +12,10 @@ import {
   getClientEventPaymentsData,
   type ClientEventPaymentsAuthClient,
 } from "@/lib/payments/client-event-payments-service";
-import type { ClientEventPaymentsRpcClient } from "@/lib/payments/client-event-payments-rpc";
+import {
+  createClientEventOperationalReader,
+  type ClientEventOperationalReader,
+} from "@/lib/portal/client-event-operational.neon.repository";
 import { generateWeddingFinancialReportBuffer } from "@/lib/export/wedding-financial-report/pdf-generator";
 import { generateWeddingFinancialReportFilename } from "@/lib/export/wedding-financial-report/report-formatters";
 
@@ -23,7 +25,7 @@ export type HandleClientEventPaymentsRequestDeps = {
   user: { id: string } | null;
   eventId: string;
   authClient: ClientEventPaymentsAuthClient | null;
-  rpcClient?: ClientEventPaymentsRpcClient | null;
+  operationalReader?: ClientEventOperationalReader | null;
 };
 
 export type ClientEventPaymentsApiResult = {
@@ -50,13 +52,12 @@ export async function handleClientEventPaymentsRequest(
     return { status: 503, body: { ok: false, error: "unavailable", message: deps.serviceRoleCheck.message } };
   }
 
-  const rpcClient =
-    deps.rpcClient ?? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>();
+  const operationalReader = deps.operationalReader ?? createClientEventOperationalReader();
 
   try {
     const result = await getClientEventPaymentsData({
       authClient: deps.authClient,
-      rpcClient,
+      operationalReader,
       userId: deps.user.id,
       eventId: deps.eventId,
     });
@@ -101,8 +102,8 @@ export async function loadClientEventPaymentsModuleData(
   const authClient = envCheck.ok
     ? await createClientEventReadAuthClient()
     : null;
-  const rpcClient = serviceRoleCheck.ok
-    ? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>()
+  const operationalReader = serviceRoleCheck.ok
+    ? createClientEventOperationalReader()
     : null;
 
   const result = await handleClientEventPaymentsRequest({
@@ -111,7 +112,7 @@ export async function loadClientEventPaymentsModuleData(
     user: session.user,
     eventId: trimmedEventId,
     authClient,
-    rpcClient,
+    operationalReader,
   });
 
   return result.body;
@@ -135,13 +136,13 @@ export async function handleClientEventFinancialReportRequest(
   if (!deps.authClient) return { status: 503, error: "Cliente de acesso indisponível." };
   if (!deps.serviceRoleCheck.ok) return { status: 503, error: deps.serviceRoleCheck.message };
 
-  const rpcClient =
-    deps.rpcClient ?? createClientEventOperationalRpcClient<ClientEventPaymentsRpcClient>();
+  const operationalReader =
+    deps.operationalReader ?? createClientEventOperationalReader();
 
   try {
     const result = await getClientEventFinancialLedger({
       authClient: deps.authClient,
-      rpcClient,
+      operationalReader,
       userId: deps.user.id,
       eventId: deps.eventId,
     });

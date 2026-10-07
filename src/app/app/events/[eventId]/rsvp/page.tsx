@@ -1,11 +1,16 @@
 import { Suspense } from "react";
 import { RSVPModulePageClient } from "@/components/app/modules/module-page-clients";
 import { ModuleSkeleton } from "@/components/app/modules/ModuleShell";
+import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { getRsvpModuleData } from "@/lib/event-modules/get-event-module-data";
+import { loadClientEventRsvpModuleData } from "@/lib/rsvp/client-event-rsvp-api";
 
 async function RSVPContent({ eventId }: { eventId: string }) {
-  const result = await getRsvpModuleData(eventId);
-  return <RSVPModulePageClient eventId={eventId} initialResult={result} />;
+  const trimmedEventId = eventId.trim();
+  const result = isRealClientEventId(trimmedEventId)
+    ? await loadClientEventRsvpModuleData(trimmedEventId)
+    : await getRsvpModuleData(trimmedEventId);
+  return <RSVPModulePageClient eventId={trimmedEventId} initialResult={result} />;
 }
 
 export default async function RSVPPage({

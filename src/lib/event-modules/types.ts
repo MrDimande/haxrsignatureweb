@@ -44,6 +44,7 @@ export interface Guest {
   table?: string;
   inviteSent: boolean;
   checkedIn: boolean;
+  updatedAt?: string;
 }
 
 export interface GuestGroup {

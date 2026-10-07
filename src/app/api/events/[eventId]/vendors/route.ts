@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  createClientEventOperationalRpcClient,
   resolveClientEventReadRequestAuth,
   validateClientEventAuthEnvironment,
   validateClientEventOperationalEnvironment,
@@ -9,7 +8,7 @@ import { isRealClientEventId } from "@/lib/auth/resolve-active-event-id";
 import { getVendorModuleData } from "@/lib/event-modules/get-event-module-data";
 import type { ModuleDataResult, VendorModuleData } from "@/lib/event-modules/types";
 import { handleClientEventVendorsRequest } from "@/lib/vendors/client-event-vendors-api";
-import type { ClientEventVendorsRpcClient } from "@/lib/vendors/client-event-vendors-rpc";
+import { createClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -33,8 +32,8 @@ export async function GET(request: Request, context: RouteContext) {
     const envCheck = validateClientEventAuthEnvironment();
     const serviceRoleCheck = validateClientEventOperationalEnvironment();
     const auth = await resolveClientEventReadRequestAuth(request);
-    const rpcClient = serviceRoleCheck.ok
-      ? createClientEventOperationalRpcClient<ClientEventVendorsRpcClient>()
+    const operationalReader = serviceRoleCheck.ok
+      ? createClientEventOperationalReader()
       : null;
 
     const result = await handleClientEventVendorsRequest({
@@ -43,7 +42,7 @@ export async function GET(request: Request, context: RouteContext) {
       user: auth.user,
       eventId: trimmedEventId,
       authClient: auth.authClient,
-      rpcClient,
+      operationalReader,
     });
 
     return NextResponse.json(result.body satisfies ModuleDataResult<VendorModuleData>, {

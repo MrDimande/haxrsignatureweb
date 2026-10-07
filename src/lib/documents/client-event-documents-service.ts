@@ -10,10 +10,9 @@ import type {
   EventDocument,
   EventModuleContext,
 } from "@/lib/event-modules/types";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 import {
   ClientEventDocumentsRpcError,
-  fetchClientEventDocumentsViaRpc,
-  type ClientEventDocumentsRpcClient,
   type ClientEventDocumentsRpcItemRow,
   type ClientEventDocumentsRpcPayload,
 } from "@/lib/documents/client-event-documents-rpc";
@@ -225,7 +224,7 @@ export function mapRpcPayloadToDocumentModuleData(
 
 export async function getClientEventDocumentsData(input: {
   authClient: ClientEventDocumentsAuthClient;
-  rpcClient: ClientEventDocumentsRpcClient;
+  operationalReader: ClientEventOperationalReader;
   userId: string;
   eventId: string;
 }): Promise<ClientEventDocumentsAccessResult> {
@@ -248,25 +247,15 @@ export async function getClientEventDocumentsData(input: {
   }
 
   try {
-    const payload = await fetchClientEventDocumentsViaRpc(
-      input.rpcClient,
-      access.event.id,
+    const payload = await input.operationalReader.listDocuments(
+      access.event.operational_event_id,
     );
 
     return {
       kind: "ok",
       data: mapRpcPayloadToDocumentModuleData(access.event, payload),
     };
-  } catch (error) {
-    if (error instanceof ClientEventDocumentsRpcError) {
-      if (error.code === "client_event_not_found") {
-        return { kind: "not_found" };
-      }
-      if (error.code === "operational_not_linked") {
-        return { kind: "operational_not_linked", event: access.event };
-      }
-    }
-
+  } catch {
     return {
       kind: "unavailable",
       message: "Não foi possível carregar os documentos operacionais.",

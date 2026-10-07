@@ -13,34 +13,16 @@ import type {
   GuestModuleData,
   PortalRsvpStatus,
 } from "@/lib/event-modules/types";
+import type {
+  ClientEventOperationalReader,
+  OperationalGuestRow,
+  OperationalGuestSeatRow,
+} from "@/lib/portal/client-event-operational.neon.repository";
 import {
-  ClientEventGuestsRpcError,
-  fetchClientEventGuestsViaRpc,
-  type ClientEventGuestsRpcClient,
   type ClientEventGuestsRpcPayload,
 } from "@/lib/guests/client-event-guests-rpc";
 
 export type ClientEventGuestsAuthClient = ClientEventDashboardAuthClient;
-
-export type OperationalGuestSeatRow = {
-  table_name: string;
-  seat_number: number;
-  label: string;
-};
-
-export type OperationalGuestRow = {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  status: string;
-  plus_ones: number | null;
-  seat_id: string | null;
-  qr_token: string;
-  seats?: OperationalGuestSeatRow | OperationalGuestSeatRow[] | null;
-  guest_groups?: { name: string } | { name: string }[] | null;
-  checkins?: { checkin_time: string } | { checkin_time: string }[] | null;
-};
 
 export type ClientEventGuestsAccessResult =
   | { kind: "not_found" }
@@ -49,12 +31,7 @@ export type ClientEventGuestsAccessResult =
   | { kind: "unavailable"; message: string }
   | { kind: "ok"; data: GuestModuleData };
 
-export { ClientEventGuestsRpcError };
-
-function firstRelation<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
+export type { OperationalGuestRow, OperationalGuestSeatRow };
 
 function formatEventDate(date: string | null): string {
   if (!date) return "Data por definir";
@@ -129,9 +106,9 @@ export function buildGuestModuleContext(event: ClientEventRow): EventModuleConte
 }
 
 export function mapOperationalGuestRow(row: OperationalGuestRow): Guest {
-  const seat = firstRelation(row.seats);
-  const group = firstRelation(row.guest_groups);
-  const checkin = firstRelation(row.checkins);
+  const seat = row.seats ?? null;
+  const group = row.guest_groups ?? null;
+  const checkin = row.checkins ?? null;
   const checkedIn = row.status === "checked_in" || Boolean(checkin?.checkin_time);
 
   return {
@@ -143,8 +120,9 @@ export function mapOperationalGuestRow(row: OperationalGuestRow): Guest {
     rsvpStatus: mapGuestStatusToRsvp(row.status, checkedIn),
     plusOnes: row.plus_ones ?? 0,
     table: formatTableLabel(seat),
-    inviteSent: Boolean(row.qr_token && row.qr_token.trim().length >= 16),
+    inviteSent: row.invite_sent ?? false,
     checkedIn,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -225,7 +203,7 @@ export function mapRpcPayloadToModuleData(
 
 export async function getClientEventGuestsData(input: {
   authClient: ClientEventGuestsAuthClient;
-  rpcClient: ClientEventGuestsRpcClient;
+  operationalReader: ClientEventOperationalReader;
   userId: string;
   eventId: string;
 }): Promise<ClientEventGuestsAccessResult> {
@@ -248,25 +226,19 @@ export async function getClientEventGuestsData(input: {
   }
 
   try {
-    const payload = await fetchClientEventGuestsViaRpc(
-      input.rpcClient,
-      access.event.id,
+    const operationalData = await input.operationalReader.listGuests(
+      access.event.operational_event_id,
     );
 
     return {
       kind: "ok",
-      data: mapRpcPayloadToModuleData(access.event, payload),
+      data: mapOperationalGuestsToModuleData(
+        access.event,
+        operationalData.guests,
+        operationalData.tablesTotal,
+      ),
     };
-  } catch (error) {
-    if (error instanceof ClientEventGuestsRpcError) {
-      if (error.code === "client_event_not_found") {
-        return { kind: "not_found" };
-      }
-      if (error.code === "operational_not_linked") {
-        return { kind: "operational_not_linked", event: access.event };
-      }
-    }
-
+  } catch {
     return {
       kind: "unavailable",
       message: "Não foi possível carregar os convidados operacionais.",

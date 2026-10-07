@@ -5,6 +5,7 @@ import { RSVP_STATUS_STYLES } from "@/lib/event-modules/presentation";
 import { formatPercentage } from "@/lib/formatters";
 import {
   EventContextBar,
+  ModuleEmptyState,
   ModuleHeader,
   ModulePanel,
   ModuleShell,
@@ -60,6 +61,12 @@ export default function RSVPModuleView({ data }: { data: RSVPModuleData }) {
       </div>
 
       <ModulePanel title="Respostas Recentes">
+        {recentResponses.length === 0 ? (
+          <ModuleEmptyState
+            title="Ainda não existem respostas RSVP"
+            description="As respostas dos convidados aparecerão aqui quando forem registadas no evento."
+          />
+        ) : (
         <div className="divide-y divide-white/5">
           {recentResponses.map((row) => (
             <div key={row.id} className="flex items-center justify-between gap-4 py-3 text-xs">
@@ -81,6 +88,7 @@ export default function RSVPModuleView({ data }: { data: RSVPModuleData }) {
             </div>
           ))}
         </div>
+        )}
       </ModulePanel>
     </ModuleShell>
   );

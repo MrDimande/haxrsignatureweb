@@ -11,10 +11,9 @@ import type {
   ChecklistTask,
   EventModuleContext,
 } from "@/lib/event-modules/types";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 import {
   ClientEventChecklistRpcError,
-  fetchClientEventChecklistViaRpc,
-  type ClientEventChecklistRpcClient,
   type ClientEventChecklistRpcItemRow,
   type ClientEventChecklistRpcPayload,
 } from "@/lib/checklist/client-event-checklist-rpc";
@@ -218,7 +217,7 @@ export function mapRpcPayloadToChecklistModuleData(
 
 export async function getClientEventChecklistData(input: {
   authClient: ClientEventChecklistAuthClient;
-  rpcClient: ClientEventChecklistRpcClient;
+  operationalReader: ClientEventOperationalReader;
   userId: string;
   eventId: string;
 }): Promise<ClientEventChecklistAccessResult> {
@@ -241,25 +240,15 @@ export async function getClientEventChecklistData(input: {
   }
 
   try {
-    const payload = await fetchClientEventChecklistViaRpc(
-      input.rpcClient,
-      access.event.id,
+    const payload = await input.operationalReader.listChecklist(
+      access.event.operational_event_id,
     );
 
     return {
       kind: "ok",
       data: mapRpcPayloadToChecklistModuleData(access.event, payload),
     };
-  } catch (error) {
-    if (error instanceof ClientEventChecklistRpcError) {
-      if (error.code === "client_event_not_found") {
-        return { kind: "not_found" };
-      }
-      if (error.code === "operational_not_linked") {
-        return { kind: "operational_not_linked", event: access.event };
-      }
-    }
-
+  } catch {
     return {
       kind: "unavailable",
       message: "Não foi possível carregar a checklist operacional.",

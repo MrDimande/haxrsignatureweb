@@ -8,12 +8,11 @@ import {
   type ClientEventPaymentsAuthClient,
 } from "@/lib/payments/client-event-payments-service";
 import {
-  GET_CLIENT_EVENT_PAYMENTS_RPC,
   parseClientEventPaymentsRpcPayload,
-  type ClientEventPaymentsRpcClient,
   type ClientEventPaymentsRpcPayload,
 } from "@/lib/payments/client-event-payments-rpc";
 import type { ClientEventRow } from "@/lib/events/client-app-database.types";
+import type { ClientEventOperationalReader } from "@/lib/portal/client-event-operational.neon.repository";
 
 const EVENT_ID = "f51ce8b2-6b5c-4692-852e-fb1dad1842e1";
 const OPERATIONAL_EVENT_ID = "1251bc6e-fac7-46cd-981d-bb3e4c066ce8";
@@ -143,17 +142,21 @@ function createAuthClient(input: {
   return client as ClientEventPaymentsAuthClient;
 }
 
-function createRpcClient(payload: ClientEventPaymentsRpcPayload | null, errorMessage?: string) {
+function createOperationalReader(
+  payload: ClientEventPaymentsRpcPayload,
+  errorMessage?: string,
+  calls?: string[],
+): ClientEventOperationalReader {
   return {
-    async rpc(fn: typeof GET_CLIENT_EVENT_PAYMENTS_RPC, args: { p_client_event_id: string }) {
-      assert.equal(fn, GET_CLIENT_EVENT_PAYMENTS_RPC);
-      assert.equal(args.p_client_event_id, EVENT_ID);
+    async listPayments(operationalEventId) {
+      calls?.push(operationalEventId);
+      assert.equal(operationalEventId, OPERATIONAL_EVENT_ID);
       if (errorMessage) {
-        return { data: null, error: { message: errorMessage } };
+        throw new Error(errorMessage);
       }
-      return { data: payload, error: null };
+      return payload;
     },
-  } satisfies ClientEventPaymentsRpcClient;
+  } as ClientEventOperationalReader;
 }
 
 describe("client-event-payments-rpc", () => {
@@ -230,7 +233,7 @@ describe("client-event-payments-service", () => {
   it("getClientEventPaymentsData returns not_found for missing event", async () => {
     const result = await getClientEventPaymentsData({
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -240,7 +243,7 @@ describe("client-event-payments-service", () => {
   it("getClientEventPaymentsData returns forbidden for non-owner non-member", async () => {
     const result = await getClientEventPaymentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OTHER_USER_ID,
       eventId: EVENT_ID,
     });
@@ -250,38 +253,31 @@ describe("client-event-payments-service", () => {
   it("getClientEventPaymentsData returns operational_not_linked without operational_event_id", async () => {
     const result = await getClientEventPaymentsData({
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
     assert.equal(result.kind, "operational_not_linked");
   });
 
-  it("getClientEventPaymentsData calls RPC when operational_event_id exists", async () => {
-    let rpcCalled = false;
-    const rpcClient = {
-      async rpc(fn: typeof GET_CLIENT_EVENT_PAYMENTS_RPC) {
-        assert.equal(fn, GET_CLIENT_EVENT_PAYMENTS_RPC);
-        rpcCalled = true;
-        return { data: sampleRpcPayload, error: null };
-      },
-    } satisfies ClientEventPaymentsRpcClient;
+  it("getClientEventPaymentsData reads only the authorized operational event", async () => {
+    const calls: string[] = [];
 
     const result = await getClientEventPaymentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient,
+      operationalReader: createOperationalReader(sampleRpcPayload, undefined, calls),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
 
-    assert.equal(rpcCalled, true);
+    assert.deepEqual(calls, [OPERATIONAL_EVENT_ID]);
     assert.equal(result.kind, "ok");
     if (result.kind === "ok") {
       assert.equal(result.data.recentPayments.length, 2);
     }
   });
 
-  it("getClientEventPaymentsData returns empty list when RPC has no payments", async () => {
+  it("getClientEventPaymentsData returns empty list when the operational event has no payments", async () => {
     const emptyPayload: ClientEventPaymentsRpcPayload = {
       payments: [],
       summary: {
@@ -299,7 +295,7 @@ describe("client-event-payments-service", () => {
 
     const result = await getClientEventPaymentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(emptyPayload),
+      operationalReader: createOperationalReader(emptyPayload),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -311,10 +307,10 @@ describe("client-event-payments-service", () => {
     }
   });
 
-  it("getClientEventPaymentsData returns unavailable when RPC fails", async () => {
+  it("getClientEventPaymentsData returns unavailable when the operational reader fails", async () => {
     const result = await getClientEventPaymentsData({
       authClient: createAuthClient({ event: baseEvent }),
-      rpcClient: createRpcClient(null, "permission denied for table payments"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table payments"),
       userId: OWNER_ID,
       eventId: EVENT_ID,
     });
@@ -333,7 +329,7 @@ describe("client-event-payments-api", () => {
       user: null,
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 401);
 
@@ -353,7 +349,7 @@ describe("client-event-payments-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: null }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 404);
 
@@ -373,7 +369,7 @@ describe("client-event-payments-api", () => {
       user: { id: OTHER_USER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 403);
 
@@ -393,7 +389,7 @@ describe("client-event-payments-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient: createAuthClient({ event: { ...baseEvent, operational_event_id: null } }),
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 409);
 
@@ -413,7 +409,7 @@ describe("client-event-payments-api", () => {
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(sampleRpcPayload),
+      operationalReader: createOperationalReader(sampleRpcPayload),
     });
     assert.equal(result.status, 200);
     assert.equal(result.body.ok, true);
@@ -423,14 +419,14 @@ describe("client-event-payments-api", () => {
     }
   });
 
-  it("returns 503 when RPC fails", async () => {
+  it("returns 503 when the operational reader fails", async () => {
     const result = await handleClientEventPaymentsRequest({
       envCheck: okEnv,
       serviceRoleCheck: okEnv,
       user: { id: OWNER_ID },
       eventId: EVENT_ID,
       authClient,
-      rpcClient: createRpcClient(null, "permission denied for table payments"),
+      operationalReader: createOperationalReader(sampleRpcPayload, "permission denied for table payments"),
     });
     assert.equal(result.status, 503);
 

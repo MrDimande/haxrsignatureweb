@@ -1,6 +1,5 @@
 import { getCurrentAppSession } from "@/lib/auth/app-session";
 import {
-  createClientEventOperationalRpcClient,
   createClientEventReadAuthClient,
   type ClientAppAuthEnvCheck,
   validateClientEventAuthEnvironment,
@@ -11,7 +10,10 @@ import {
   getClientEventGuestsData,
   type ClientEventGuestsAuthClient,
 } from "@/lib/guests/client-event-guests-service";
-import type { ClientEventGuestsRpcClient } from "@/lib/guests/client-event-guests-rpc";
+import {
+  createClientEventOperationalReader,
+  type ClientEventOperationalReader,
+} from "@/lib/portal/client-event-operational.neon.repository";
 import type { GuestModuleData, ModuleDataResult } from "@/lib/event-modules/types";
 
 export type HandleClientEventGuestsRequestDeps = {
@@ -20,7 +22,7 @@ export type HandleClientEventGuestsRequestDeps = {
   user: { id: string } | null;
   eventId: string;
   authClient: ClientEventGuestsAuthClient | null;
-  rpcClient?: ClientEventGuestsRpcClient | null;
+  operationalReader?: ClientEventOperationalReader | null;
 };
 
 export type ClientEventGuestsApiResult = {
@@ -86,13 +88,12 @@ export async function handleClientEventGuestsRequest(
     };
   }
 
-  const rpcClient =
-    deps.rpcClient ?? createClientEventOperationalRpcClient<ClientEventGuestsRpcClient>();
+  const operationalReader = deps.operationalReader ?? createClientEventOperationalReader();
 
   try {
     const result = await getClientEventGuestsData({
       authClient: deps.authClient,
-      rpcClient,
+      operationalReader,
       userId: deps.user.id,
       eventId: deps.eventId,
     });
@@ -180,8 +181,8 @@ export async function loadClientEventGuestsModuleData(
   const authClient = envCheck.ok
     ? await createClientEventReadAuthClient()
     : null;
-  const rpcClient = serviceRoleCheck.ok
-    ? createClientEventOperationalRpcClient<ClientEventGuestsRpcClient>()
+  const operationalReader = serviceRoleCheck.ok
+    ? createClientEventOperationalReader()
     : null;
 
   const result = await handleClientEventGuestsRequest({
@@ -190,7 +191,7 @@ export async function loadClientEventGuestsModuleData(
     user: session.user,
     eventId: trimmedEventId,
     authClient,
-    rpcClient,
+    operationalReader,
   });
 
   return result.body;
