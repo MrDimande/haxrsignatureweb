@@ -179,7 +179,10 @@ export async function createPortalLoginResponse(input: {
     [account.account_id],
   );
 
-  const response = NextResponse.json({ success: true });
+  const response = NextResponse.json({
+    success: true,
+    activeClientEventId: account.active_client_event_id,
+  });
   applyPortalCookie(response, createPortalCookieValue(sessionId, secret), maxAge);
   return { kind: "authenticated", response };
 }

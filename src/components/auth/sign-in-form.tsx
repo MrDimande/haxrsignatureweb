@@ -1,10 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import AuthRoleToggle from "@/components/auth/auth-role-toggle";
 import {
   buildSignUpPath,
   resolvePostLoginRedirectWithReturnPath,
@@ -12,7 +8,11 @@ import {
 } from "@/lib/auth/client-app-middleware";
 import { isOnboardingComplete } from "@/lib/auth/onboarding-status";
 import { hasSignInFieldErrors, validateSignInCredentials } from "@/lib/auth/sign-in-auth";
-import AuthRoleToggle from "@/components/auth/auth-role-toggle";
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -50,12 +50,20 @@ export default function SignInForm() {
         credentials: "same-origin",
         body: JSON.stringify({ email, password, rememberMe }),
       });
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        activeClientEventId?: string | null;
+      };
       if (!response.ok) {
         setFormError(body.error ?? "Não foi possível iniciar sessão. Tente novamente.");
         return;
       }
-      router.replace(resolvePostLoginRedirectWithReturnPath(fromParam, isOnboardingComplete()));
+      const hasActiveEvent = Boolean(body.activeClientEventId);
+      const target =
+        !hasActiveEvent && !isOnboardingComplete()
+          ? "/onboarding/profile/1"
+          : resolvePostLoginRedirectWithReturnPath(fromParam, isOnboardingComplete());
+      router.replace(target);
       router.refresh();
     } catch {
       setFormError("Não foi possível ligar ao servidor. Tente novamente.");
@@ -65,6 +73,7 @@ export default function SignInForm() {
   }
 
   const inputClass = "w-full rounded-xl border bg-brand-ivory/55 px-4 py-3.5 font-sans text-sm font-light text-brand-text-dark placeholder:text-zinc-400 transition-all duration-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold/25 focus:border-brand-gold disabled:cursor-not-allowed disabled:opacity-60";
+  const isActivated = searchParams?.get("activated") === "1";
 
   return (
     <motion.div
@@ -78,6 +87,12 @@ export default function SignInForm() {
         <div className="flex justify-center"><AuthRoleToggle currentRole="couple" vendorHref="/for-pros" /></div>
         <p className="font-sans text-sm font-light leading-relaxed text-brand-text-dark/65">Entre para aceder ao vosso Painel de Casamento.</p>
       </header>
+
+      {isActivated && !formError ? (
+        <p className="mb-5 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-xs font-light text-emerald-800 text-center" role="status">
+          Conta activada com sucesso. Inicie sessão para continuar.
+        </p>
+      ) : null}
 
       {formError ? <p className="mb-5 rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-xs font-light text-red-700" role="alert">{formError}</p> : null}
 
@@ -103,7 +118,7 @@ export default function SignInForm() {
           {loading ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /><span>A entrar...</span></> : <span>Entrar</span>}
         </button>
       </form>
-      <div className="mt-8 space-y-4 text-center"><p className="font-sans text-xs font-light text-brand-text-dark/65">Ainda não tem conta? <Link href={buildSignUpPath(fromParam)} className="font-semibold text-brand-gold hover:underline">Pedir acesso</Link></p><p className="font-sans text-xs font-light text-brand-text-dark/55">É fornecedor? <Link href="/for-pros" className="font-semibold text-brand-text-dark/75 hover:text-brand-gold hover:underline">Junte-se à comunidade HAXR</Link></p></div>
+      <div className="mt-8 space-y-4 text-center"><p className="font-sans text-xs font-light text-brand-text-dark/65">Ainda não tem conta? <Link href={buildSignUpPath(fromParam)} className="font-semibold text-brand-gold hover:underline">Criar conta</Link></p><p className="font-sans text-xs font-light text-brand-text-dark/55">É fornecedor? <Link href="/for-pros" className="font-semibold text-brand-text-dark/75 hover:text-brand-gold hover:underline">Junte-se à comunidade HAXR</Link></p></div>
     </motion.div>
   );
 }

@@ -5,9 +5,9 @@ import AuthShell from "@/components/auth/auth-shell";
 import SignUpForm from "@/components/auth/sign-up-form";
 
 export const metadata: Metadata = {
-  title: "Criar Conta | HAXR Signature",
+  title: "Criar Conta HAXR — Painel de Casamento | HAXR Signature",
   description:
-    "Crie uma conta HAXR para organizar o casamento, guardar fornecedores e aceder às ferramentas de planeamento.",
+    "Crie a sua conta HAXR para organizar o vosso evento num espaço privado: convidados, RSVP, orçamento, fornecedores e decisões importantes.",
   robots: { index: false, follow: false },
 };
 

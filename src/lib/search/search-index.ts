@@ -317,12 +317,12 @@ export const SITE_SEARCH_INDEX: readonly SearchItem[] = [
   },
   {
     id: "criar-conta",
-    title: "Criar Conta Gratuita",
+    title: "Criar Conta HAXR",
     category: "geral",
     categoryLabel: "Conta",
-    description: "Crie a sua conta gratuita para organizar o casamento e desbloquear as ferramentas.",
+    description: "Crie a sua conta HAXR para organizar o vosso evento e aceder às ferramentas de planeamento.",
     href: "/sign-up",
-    keywords: ["criar conta", "sign up", "registar", "cadastro", "começar", "grátis"],
+    keywords: ["criar conta", "sign up", "registar", "começar", "conta haxr", "adesão"],
   },
   {
     id: "sobre-nos",

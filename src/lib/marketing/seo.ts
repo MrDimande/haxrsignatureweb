@@ -227,15 +227,15 @@ export const marketingPagesSeo = {
   },
   signUp: {
     path: "/sign-up",
-    title: "Criar Conta Gratuita — Painel de Casamento | HAXR",
+    title: "Criar Conta HAXR — Painel de Casamento | HAXR Signature",
     description:
-      "Registe-se gratuitamente na HAXR: Style Quiz, checklist, orçamento, convidados, fornecedores e painel editorial do vosso casamento.",
+      "Crie a sua conta HAXR para organizar o vosso evento num espaço privado: convidados, RSVP, orçamento, fornecedores e decisões importantes.",
     keywords: [
       "criar conta casamento",
-      "painel casamento gratuito",
+      "painel casamento",
       "wedding dashboard",
       "Criar Painel de Casamento",
-      "Registo de Casamento Gratuito",
+      "Registo de Casamento",
       "Dashboard de Casamento Online",
       "Criar Conta HAXR",
       "HAXR Signature registo",
@@ -291,9 +291,9 @@ export const marketingPagesSeo = {
   },
   ferramentas: {
     path: "/ferramentas",
-    title: "Ferramentas de Casamento — RSVP, Orçamento e Concierge | HAXR",
+    title: "Ferramentas de Casamento - RSVP, Orçamento e Concierge | HAXR Signature",
     description:
-      "Hub de ferramentas HAXR: Concierge, lista de convidados, orçamento, checklist, vision boards, RSVP e check-in — incluídas nos pacotes premium em Maputo.",
+      "Hub de ferramentas HAXR: Concierge, lista de convidados, orçamento, checklist, vision boards, RSVP e check-in, incluídas nos pacotes premium em Maputo.",
     keywords: [
       "ferramentas casamento",
       "RSVP digital",
@@ -303,6 +303,9 @@ export const marketingPagesSeo = {
       "Ferramentas para Noivos",
       "Checklist de Casamento",
       "Orçamentador de Casamento",
+      "Ferramentas Haxr Signature",
+      "Orcamentador de eventos",
+      "Ferramentas para Casamento",
       "Planeamento de Casamento Online",
       "Ferramentas HAXR para Noivos",
       "Checklist de Casamento Passo a Passo",
@@ -319,8 +322,8 @@ export const marketingPagesSeo = {
     path: "/experiencias",
     title: "Experiências Digitais — Convites e Save the Date | HAXR",
     description:
-      "Demonstrações ao vivo de convites digitais e save the date assinados HAXR — RSVP, música e identidade editorial.",
-    keywords: ["convite digital demo", "save the date Maputo", "experiências casamento"],
+      "Demonstrações ao vivo de convites digitais para eventos e save the date assinados HAXR — RSVP, música e identidade editorial.",
+    keywords: ["convite digital demo", "save the date Maputo", "experiências eventos", "experiências casamento"],
   },
   submitWedding: {
     path: "/portfolio/submeter",
@@ -348,8 +351,14 @@ export const marketingPagesSeo = {
       "wedding vendors Moçambique",
       "Fornecedores de Casamento Premium",
       "Rede de Fornecedores de Eventos",
-      "Parceiros de Casamento Moçambique",
+      "Parceiros de Eventos",
+      "Fornecedores de Eventos Premium",
+      "Rede de Fornecedores de Eventos Premium",
+      "Parceiros de Eventos Premium",
+      "Parceiros de Eventos Moçambique",
+      "Parceiros de Casamento",
       "Fornecedores de Casamento Curados",
+      "Fornecedores de Eventos Curados",
     ],
   },
   haxrConcierge: {
@@ -363,6 +372,8 @@ export const marketingPagesSeo = {
       "HAXR Concierge",
       "mordomia digital casamento",
       "assistente casamento",
+      "assistente wedding",
+      "assistente de eventos",
       "Assistência Personalizada para Eventos",
       "Concierge Digital de Casamento",
       "Gestão de Propostas e Pagamentos",
