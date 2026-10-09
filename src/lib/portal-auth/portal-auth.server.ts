@@ -264,6 +264,101 @@ export async function invalidatePortalAccountToken(input: {
   return result.rowCount === 1;
 }
 
+export type PortalTokenInspectionResult =
+  | {
+      valid: true;
+      accountId: string;
+      email: string;
+      accountStatus: PortalAccountStatus;
+    }
+  | {
+      valid: false;
+      reason:
+        | "missing_token"
+        | "invalid_format"
+        | "not_found"
+        | "expired"
+        | "already_consumed"
+        | "invalidated"
+        | "account_suspended"
+        | "account_already_active";
+    };
+
+/**
+ * Read-only pre-validation of a portal account token.
+ * Never mutates tokens, never consumes tokens, and never leaks secrets.
+ */
+export async function inspectPortalAccountToken(
+  token: string,
+  purpose: "activation" | "password_reset",
+  query: typeof neonQuery = neonQuery,
+): Promise<PortalTokenInspectionResult> {
+  const trimmed = typeof token === "string" ? token.trim() : "";
+  if (!trimmed) {
+    return { valid: false, reason: "missing_token" };
+  }
+  if (!/^[A-Za-z0-9_-]{43}$/.test(trimmed)) {
+    return { valid: false, reason: "invalid_format" };
+  }
+
+  const result = await query<{
+    token_id: string;
+    account_id: string;
+    email: string | null;
+    account_status: PortalAccountStatus;
+    is_expired: boolean;
+    is_consumed: boolean;
+    is_invalidated: boolean;
+  }>(
+    `SELECT t.id AS token_id,
+            t.account_id,
+            a.email,
+            a.status::text AS account_status,
+            (t.expires_at <= now()) AS is_expired,
+            (t.consumed_at IS NOT NULL) AS is_consumed,
+            (t.invalidated_at IS NOT NULL) AS is_invalidated
+       FROM public.portal_account_tokens t
+       JOIN public.portal_accounts a ON a.id = t.account_id
+      WHERE t.token_hash = $1
+        AND t.purpose = $2::public.portal_token_purpose
+      ORDER BY t.created_at DESC
+      LIMIT 1`,
+    [hashPortalSecret(trimmed), purpose],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    return { valid: false, reason: "not_found" };
+  }
+
+  if (row.is_consumed) {
+    return { valid: false, reason: "already_consumed" };
+  }
+
+  if (row.is_invalidated) {
+    return { valid: false, reason: "invalidated" };
+  }
+
+  if (row.is_expired) {
+    return { valid: false, reason: "expired" };
+  }
+
+  if (row.account_status === "SUSPENDED") {
+    return { valid: false, reason: "account_suspended" };
+  }
+
+  if (purpose === "activation" && row.account_status === "ACTIVE") {
+    return { valid: false, reason: "account_already_active" };
+  }
+
+  return {
+    valid: true,
+    accountId: row.account_id,
+    email: row.email ?? "",
+    accountStatus: row.account_status,
+  };
+}
+
 export async function activatePortalAccount(input: {
   token: string;
   password: string;

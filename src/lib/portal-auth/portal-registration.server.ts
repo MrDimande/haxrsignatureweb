@@ -1,6 +1,5 @@
 import "server-only";
 
-import { headers } from "next/headers";
 import { neonQuery, withNeonTransaction } from "@/lib/neon/server-db";
 import { sendPortalActivationEmail } from "@/lib/email/portal-activation";
 import {
@@ -11,6 +10,7 @@ import {
   invalidatePortalAccountToken,
   issuePortalAccountToken,
 } from "@/lib/portal-auth/portal-auth.server";
+import { getPortalAuthBaseUrl } from "@/lib/portal-auth/portal-env.server";
 import {
   hasSignUpFieldErrors,
   validateSignUpInput,
@@ -66,43 +66,8 @@ export type PortalRegistrationDependencies = {
   getOrigin: () => Promise<string>;
 };
 
-function parseHttpsOrigin(value: string): string | null {
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return null;
-    return parsed.origin;
-  } catch {
-    return null;
-  }
-}
-
 async function getTrustedRegistrationOrigin(): Promise<string> {
-  if (process.env.VERCEL_ENV === "preview") {
-    const previewHost = process.env.VERCEL_BRANCH_URL?.trim() || process.env.VERCEL_URL?.trim();
-    const previewOrigin = previewHost ? parseHttpsOrigin(`https://${previewHost}`) : null;
-    if (previewOrigin) return previewOrigin;
-  }
-
-  const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  const origin = configuredOrigin ? parseHttpsOrigin(configuredOrigin) : null;
-  if (origin) return origin;
-
-  if (process.env.NODE_ENV !== "production") {
-    try {
-      const requestHeaders = await headers();
-      const host = requestHeaders.get("host");
-      if (host) {
-        const proto =
-          requestHeaders.get("x-forwarded-proto") ||
-          (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
-        return `${proto}://${host}`;
-      }
-    } catch {
-      // Outside request context (e.g. tests)
-    }
-  }
-
-  return "https://haxrsignature.com";
+  return getPortalAuthBaseUrl();
 }
 
 async function defaultFindAccountByEmail(email: string): Promise<ExistingPortalIdentity | null> {

@@ -15,6 +15,9 @@ export async function POST(request: Request) {
   try {
     const result = await activatePortalAccount({ token: body.token, password: body.password });
     if (!result.ok) {
+      console.warn("[portal-auth:activate-rejected]", {
+        reason: result.reason,
+      });
       return NextResponse.json(
         {
           error:
@@ -22,11 +25,14 @@ export async function POST(request: Request) {
               ? "A palavra-passe não cumpre os requisitos de segurança."
               : "O link de activação expirou ou já não é válido.",
         },
-        { status: result.reason === "invalid_password" ? 400 : 400 },
+        { status: 400 },
       );
     }
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error("[portal-auth:activate-exception]", {
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     return NextResponse.json({ error: "Não foi possível activar a conta." }, { status: 503 });
   }
 }
