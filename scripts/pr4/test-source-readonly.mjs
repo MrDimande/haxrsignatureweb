@@ -16,7 +16,7 @@ process.env.PGOPTIONS = "-c default_transaction_read_only=on";
 
 const client = new pg.Client({
   connectionString: sourceUrl,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: true },
 });
 
 const report = { pass: false, readOnly: null, mutateBlocked: null, error: null };

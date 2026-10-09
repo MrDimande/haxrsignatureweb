@@ -47,7 +47,7 @@ export function buildPgClientConfig(libpqUrl, password) {
     database: (parsed.pathname || "/postgres").replace(/^\//, "") || "postgres",
     user: decodeURIComponent(parsed.username),
     password: password == null ? "" : String(password),
-    ssl: { rejectUnauthorized: false },
+    ssl: { rejectUnauthorized: true },
   };
 }
 

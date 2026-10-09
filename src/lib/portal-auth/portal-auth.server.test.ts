@@ -155,6 +155,20 @@ describe("activatePortalAccount server-side password validation", () => {
     });
   });
 
+  it("rejects empty or whitespace-only password", async () => {
+    const emptyResult = await activatePortalAccount({
+      token: valid43Token,
+      password: "",
+    });
+    assert.deepEqual(emptyResult, { ok: false, reason: "invalid_password" });
+
+    const wsResult = await activatePortalAccount({
+      token: valid43Token,
+      password: "            ",
+    });
+    assert.deepEqual(wsResult, { ok: false, reason: "invalid_password" });
+  });
+
   it("rejects invalid token format before touching database", async () => {
     const result = await activatePortalAccount({
       token: "short",

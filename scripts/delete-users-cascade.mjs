@@ -34,7 +34,7 @@ if (!dbUrl) {
   process.exit(1);
 }
 
-const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: true } });
 await client.connect();
 
 const targetEmails = ["aldimande@outlook.com", "aludimande@gmail.com"];

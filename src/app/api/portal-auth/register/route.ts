@@ -36,7 +36,9 @@ export async function POST(request: Request) {
   }
 
   const ip = getRequestIp(request);
-  const limit = await persistentRateLimit(`portal-register:${ip}`, RATE_LIMITS.portalRegister);
+  const limit = await persistentRateLimit(`portal-register:${ip}`, RATE_LIMITS.portalRegister, {
+    failClosed: true,
+  });
   if (!limit.allowed) {
     return rateLimitResponse(limit, { error: "too_many_registration_attempts" });
   }

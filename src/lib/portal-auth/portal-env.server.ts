@@ -19,7 +19,7 @@ function parseValidOrigin(value: string | undefined): string | null {
  *
  * 1. Explicit PORTAL_AUTH_BASE_URL overrides all environments.
  * 2. Vercel Preview (VERCEL_ENV === "preview"): isolated to VERCEL_BRANCH_URL / VERCEL_URL.
- * 3. Production: NEXT_PUBLIC_SITE_URL or safe canonical fallback https://haxrsignature.com.
+ * 3. Production: NEXT_PUBLIC_SITE_URL strictly required. If missing, throws an explicit Error.
  * 4. Local development / tests: http://localhost:3000.
  */
 export function getPortalAuthBaseUrl(): string {

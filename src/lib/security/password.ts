@@ -18,7 +18,10 @@ export const SCRYPT_PARAMS = {
 };
 
 export function validatePassword(value: string): string | null {
-  if (value.length < PASSWORD_MIN_LENGTH) {
+  if (typeof value !== "string" || !value.trim()) {
+    return `A palavra-passe não pode estar vazia.`;
+  }
+  if (value.length < PASSWORD_MIN_LENGTH || value.trim().length < PASSWORD_MIN_LENGTH) {
     return `Use pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`;
   }
   if (value.length > PASSWORD_MAX_LENGTH) {

@@ -5,7 +5,9 @@ import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request);
-  const limit = await persistentRateLimit(`portal-activate:${ip}`, RATE_LIMITS.portalActivate);
+  const limit = await persistentRateLimit(`portal-activate:${ip}`, RATE_LIMITS.portalActivate, {
+    failClosed: true,
+  });
   if (!limit.allowed) {
     return rateLimitResponse(limit, { error: "too_many_attempts" });
   }

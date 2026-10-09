@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { executePortalResendActivation } from "@/lib/portal-auth/portal-resend-activation.server";
-import { normalizePortalEmail } from "@/lib/portal-auth/credentials";
+import { normalizePortalEmail, hashPortalSecret } from "@/lib/portal-auth/credentials";
 import {
   getRequestIp,
   rateLimitResponse,
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
   const ipLimit = await persistentRateLimit(
     `portal-resend-activation-ip:${ip}`,
     RATE_LIMITS.portalResendActivationIp,
+    { failClosed: true },
   );
   if (!ipLimit.allowed) {
     return rateLimitResponse(ipLimit, { error: "too_many_attempts" });
@@ -61,9 +62,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const emailHash = hashPortalSecret(normalizedEmail);
   const emailLimit = await persistentRateLimit(
-    `portal-resend-activation-email:${normalizedEmail}`,
+    `portal-resend-activation-email:${emailHash}`,
     RATE_LIMITS.portalResendActivationEmail,
+    { failClosed: true },
   );
   if (!emailLimit.allowed) {
     return rateLimitResponse(emailLimit, { error: "too_many_attempts" });

@@ -68,7 +68,7 @@ if (!dbUrl) {
 }
 
 const sql = readFileSync(absSql, "utf8");
-const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: true } });
 
 try {
   await client.connect();
