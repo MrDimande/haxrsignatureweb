@@ -20,7 +20,9 @@ const buckets = new Map<string, Bucket>();
 
 export const RATE_LIMITS = {
   adminLogin: { max: 5, windowMs: 15 * 60 * 1000 },
+  portalLogin: { max: 5, windowMs: 15 * 60 * 1000 },
   portalRegister: { max: 5, windowMs: 15 * 60 * 1000 },
+  portalActivate: { max: 10, windowMs: 15 * 60 * 1000 },
   portalResendActivationIp: { max: 5, windowMs: 15 * 60 * 1000 },
   portalResendActivationEmail: { max: 3, windowMs: 15 * 60 * 1000 },
   findSeat: { max: 10, windowMs: 60 * 1000 },

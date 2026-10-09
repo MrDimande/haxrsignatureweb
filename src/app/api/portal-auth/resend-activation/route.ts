@@ -3,10 +3,10 @@ import { executePortalResendActivation } from "@/lib/portal-auth/portal-resend-a
 import { normalizePortalEmail } from "@/lib/portal-auth/credentials";
 import {
   getRequestIp,
-  rateLimit,
   rateLimitResponse,
   RATE_LIMITS,
 } from "@/lib/security/rate-limit";
+import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
 
 function isTrustedSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
@@ -37,7 +37,10 @@ export async function POST(request: Request) {
   }
 
   const ip = getRequestIp(request);
-  const ipLimit = rateLimit(`portal-resend-activation-ip:${ip}`, RATE_LIMITS.portalResendActivationIp);
+  const ipLimit = await persistentRateLimit(
+    `portal-resend-activation-ip:${ip}`,
+    RATE_LIMITS.portalResendActivationIp,
+  );
   if (!ipLimit.allowed) {
     return rateLimitResponse(ipLimit, { error: "too_many_attempts" });
   }
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const emailLimit = rateLimit(
+  const emailLimit = await persistentRateLimit(
     `portal-resend-activation-email:${normalizedEmail}`,
     RATE_LIMITS.portalResendActivationEmail,
   );

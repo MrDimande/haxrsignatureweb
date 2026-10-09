@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { executePortalRegistration } from "@/lib/portal-auth/portal-registration.server";
 import {
   getRequestIp,
-  rateLimit,
   rateLimitResponse,
   RATE_LIMITS,
 } from "@/lib/security/rate-limit";
+import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
 
 function isTrustedSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getRequestIp(request);
-  const limit = rateLimit(`portal-register:${ip}`, RATE_LIMITS.portalRegister);
+  const limit = await persistentRateLimit(`portal-register:${ip}`, RATE_LIMITS.portalRegister);
   if (!limit.allowed) {
     return rateLimitResponse(limit, { error: "too_many_registration_attempts" });
   }

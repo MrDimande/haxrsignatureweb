@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { activatePortalAccount } from "@/lib/portal-auth/portal-auth.server";
+import { getRequestIp, rateLimitResponse, RATE_LIMITS } from "@/lib/security/rate-limit";
+import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
 
 export async function POST(request: Request) {
+  const ip = getRequestIp(request);
+  const limit = await persistentRateLimit(`portal-activate:${ip}`, RATE_LIMITS.portalActivate);
+  if (!limit.allowed) {
+    return rateLimitResponse(limit, { error: "too_many_attempts" });
+  }
+
   let body: { token?: unknown; password?: unknown };
   try {
     body = (await request.json()) as { token?: unknown; password?: unknown };

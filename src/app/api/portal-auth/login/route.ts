@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createPortalLoginResponse } from "@/lib/portal-auth/portal-auth.server";
-import { getRequestIp, rateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/security/rate-limit";
+import { getRequestIp, rateLimitResponse, RATE_LIMITS } from "@/lib/security/rate-limit";
+import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request);
-  const limit = rateLimit(`portal-login:${ip}`, RATE_LIMITS.adminLogin, { increment: false });
+  const limit = await persistentRateLimit(`portal-login:${ip}`, RATE_LIMITS.portalLogin, { increment: false });
   if (!limit.allowed) {
     return rateLimitResponse(limit, { error: "too_many_login_attempts" });
   }
@@ -26,7 +27,9 @@ export async function POST(request: Request) {
       password: body.password,
       rememberMe: body.rememberMe === true,
     });
-    if (result.kind === "denied") rateLimit(`portal-login:${ip}`, RATE_LIMITS.adminLogin);
+    if (result.kind === "denied") {
+      await persistentRateLimit(`portal-login:${ip}`, RATE_LIMITS.portalLogin, { increment: true });
+    }
     return result.response;
   } catch {
     return NextResponse.json(
