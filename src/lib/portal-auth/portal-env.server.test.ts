@@ -42,7 +42,7 @@ describe("getPortalAuthBaseUrl", () => {
     resetEnv();
   });
 
-  it("resolves to production canonical domain in production when not in preview", () => {
+  it("resolves to configured domain in production when not in preview", () => {
     resetEnv();
     delete process.env.PORTAL_AUTH_BASE_URL;
     delete process.env.VERCEL_ENV;
@@ -52,6 +52,22 @@ describe("getPortalAuthBaseUrl", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://haxrsignature.com";
 
     assert.equal(getPortalAuthBaseUrl(), "https://haxrsignature.com");
+    resetEnv();
+  });
+
+  it("throws explicit error in production when neither PORTAL_AUTH_BASE_URL nor NEXT_PUBLIC_SITE_URL is provided", () => {
+    resetEnv();
+    delete process.env.PORTAL_AUTH_BASE_URL;
+    delete process.env.VERCEL_ENV;
+    delete process.env.VERCEL_BRANCH_URL;
+    delete process.env.VERCEL_URL;
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+
+    assert.throws(
+      () => getPortalAuthBaseUrl(),
+      /portal_auth_base_url_missing_in_production/,
+    );
     resetEnv();
   });
 

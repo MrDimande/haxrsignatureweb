@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { inspectPortalAccountToken } from "./portal-auth.server";
+import { inspectPortalAccountToken, activatePortalAccount } from "./portal-auth.server";
 import type { neonQuery } from "@/lib/neon/server-db";
 
 const valid43Token = "1234567890123456789012345678901234567890123";
@@ -126,6 +126,44 @@ describe("inspectPortalAccountToken", () => {
       accountId: "acc-1",
       email: "client@example.com",
       accountStatus: "PENDING_ACTIVATION",
+    });
+  });
+});
+
+describe("activatePortalAccount server-side password validation", () => {
+  it("rejects password shorter than 12 characters before any DB mutation", async () => {
+    const result = await activatePortalAccount({
+      token: valid43Token,
+      password: "curta123", // 8 chars (< 12)
+    });
+
+    assert.deepEqual(result, {
+      ok: false,
+      reason: "invalid_password",
+    });
+  });
+
+  it("rejects password longer than 1024 characters before any DB mutation", async () => {
+    const result = await activatePortalAccount({
+      token: valid43Token,
+      password: "a".repeat(1025),
+    });
+
+    assert.deepEqual(result, {
+      ok: false,
+      reason: "invalid_password",
+    });
+  });
+
+  it("rejects invalid token format before touching database", async () => {
+    const result = await activatePortalAccount({
+      token: "short",
+      password: "PalavraPasseSegura2026!Teste",
+    });
+
+    assert.deepEqual(result, {
+      ok: false,
+      reason: "invalid_token",
     });
   });
 });

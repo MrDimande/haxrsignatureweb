@@ -42,7 +42,7 @@ export function getPortalAuthBaseUrl(): string {
     if (configuredOrigin) {
       return configuredOrigin;
     }
-    return "https://haxrsignature.com";
+    throw new Error("portal_auth_base_url_missing_in_production");
   }
 
   const devOrigin = parseValidOrigin(process.env.NEXT_PUBLIC_SITE_URL);

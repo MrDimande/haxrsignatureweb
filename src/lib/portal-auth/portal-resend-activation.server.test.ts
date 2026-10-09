@@ -124,6 +124,25 @@ describe("Portal resend activation service", () => {
     assert.equal(calls.sent.length, 0);
   });
 
+  it("returns neutral message and sends no email when account is PENDING_IDENTITY_RESOLUTION", async () => {
+    const { dependencies, calls } = createMockDependencies({
+      findAccountByEmail: async () => ({
+        accountId: "legacy-identity-account-id",
+        status: "PENDING_IDENTITY_RESOLUTION",
+      }),
+    });
+
+    const result = await executePortalResendActivation(
+      { email: "legacy@example.com" },
+      dependencies,
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(result.message, PORTAL_RESEND_ACTIVATION_SUCCESS_MESSAGE);
+    assert.equal(calls.issued.length, 0);
+    assert.equal(calls.sent.length, 0);
+  });
+
   it("fails with user-friendly error on invalid email format", async () => {
     const { dependencies } = createMockDependencies();
 
