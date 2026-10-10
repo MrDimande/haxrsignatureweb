@@ -9,11 +9,22 @@ describe("getPortalAuthBaseUrl", () => {
     process.env = { ...originalEnv };
   }
 
-  it("prioritises explicit PORTAL_AUTH_BASE_URL above all other variables", () => {
+  it("preserves isolated preview origin when VERCEL_ENV is preview even if PORTAL_AUTH_BASE_URL is set", () => {
     resetEnv();
-    process.env.PORTAL_AUTH_BASE_URL = "https://custom-portal.haxrsignature.com";
+    process.env.PORTAL_AUTH_BASE_URL = "https://production-portal.haxrsignature.com";
     process.env.VERCEL_ENV = "preview";
     process.env.VERCEL_BRANCH_URL = "preview-branch.vercel.app";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://haxrsignature.com";
+
+    assert.equal(getPortalAuthBaseUrl(), "https://preview-branch.vercel.app");
+    resetEnv();
+  });
+
+  it("prioritises PORTAL_AUTH_BASE_URL over NEXT_PUBLIC_SITE_URL in production", () => {
+    resetEnv();
+    process.env.PORTAL_AUTH_BASE_URL = "https://custom-portal.haxrsignature.com";
+    delete process.env.VERCEL_ENV;
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     process.env.NEXT_PUBLIC_SITE_URL = "https://haxrsignature.com";
 
     assert.equal(getPortalAuthBaseUrl(), "https://custom-portal.haxrsignature.com");
