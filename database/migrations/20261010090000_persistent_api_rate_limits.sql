@@ -89,6 +89,8 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime') THEN
     GRANT USAGE ON SCHEMA public TO haxrweb_runtime;
+    -- Revoke direct mutation rights that default privileges may have granted
+    REVOKE INSERT, UPDATE ON TABLE public.api_rate_limits FROM haxrweb_runtime;
     -- SELECT reads the current bucket only; DELETE is limited to the authenticated cron route.
     GRANT SELECT, DELETE ON TABLE public.api_rate_limits TO haxrweb_runtime;
     GRANT EXECUTE ON FUNCTION public.check_api_rate_limit(TEXT, INTEGER, INTEGER) TO haxrweb_runtime;
