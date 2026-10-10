@@ -10,6 +10,10 @@ import {
   executePortalRegistration,
   PORTAL_REGISTRATION_SUCCESS_MESSAGE,
 } from "@/lib/portal-auth/portal-registration.server";
+import {
+  validateSignUpInput,
+  hasSignUpFieldErrors,
+} from "@/lib/auth/sign-up-auth";
 import { executePortalResendActivation } from "@/lib/portal-auth/portal-resend-activation.server";
 import {
   persistentRateLimit,
@@ -206,6 +210,24 @@ export function createPortalRegisterHandler(dependencies: PortalRegisterRouteDep
       };
     } catch {
       return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+    }
+
+    const validationErrors = validateSignUpInput({
+      fullName: typeof body.fullName === "string" ? body.fullName.trim() : "",
+      email: typeof body.email === "string" ? body.email.trim() : "",
+      termsAccepted: body.termsAccepted === true,
+    });
+
+    if (hasSignUpFieldErrors(validationErrors)) {
+      const firstErrorMessage =
+        validationErrors.fullName ||
+        validationErrors.email ||
+        validationErrors.termsAccepted ||
+        "Dados de registo inválidos.";
+      return NextResponse.json(
+        { error: firstErrorMessage, fieldErrors: validationErrors },
+        { status: 400 },
+      );
     }
 
     const normalizedEmail = normalizePortalEmail(

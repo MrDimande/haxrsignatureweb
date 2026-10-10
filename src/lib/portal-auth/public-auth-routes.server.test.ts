@@ -240,6 +240,46 @@ test("registration enforces shared email rate limit and returns identical anti-e
   assert.equal(registrationInvoked, false);
 });
 
+test("registration validates request body before consuming email rate limit", async () => {
+  let emailRateLimitChecked = false;
+  let registrationInvoked = false;
+
+  const handler = createPortalRegisterHandler({
+    getIp: () => "198.51.100.8",
+    hashIdentifier: (email) => `hashed_${email}`,
+    rateLimit: async (key: string) => {
+      if (key.startsWith("portal-resend-activation-email:")) {
+        emailRateLimitChecked = true;
+      }
+      return { allowed: true, remaining: 5, retryAfterSeconds: 0 };
+    },
+    executeRegistration: async () => {
+      registrationInvoked = true;
+      return { success: true, message: PORTAL_REGISTRATION_SUCCESS_MESSAGE };
+    },
+  });
+
+  // Envio de payload inválido (termos não aceites e nome curto)
+  const response = await handler(
+    new Request("https://preview.example.test/api/portal-auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        fullName: "A",
+        email: "valido@example.test",
+        termsAccepted: false,
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as { error: string; fieldErrors: Record<string, string> };
+  assert.equal(body.fieldErrors.termsAccepted, "Aceite os termos para continuar.");
+  // Garantia: o rate limit por email NÃO foi consumido nem avaliado
+  assert.equal(emailRateLimitChecked, false);
+  assert.equal(registrationInvoked, false);
+});
+
 test("rejects localhost and 127.0.0.1 in production across auth routes including login", async () => {
   const originalEnv = { ...process.env };
   try {

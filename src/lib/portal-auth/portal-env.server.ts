@@ -45,6 +45,7 @@ export function getPortalAuthBaseUrl(): string {
     if (previewOrigin) {
       return previewOrigin;
     }
+    throw new Error("portal_auth_preview_url_missing");
   }
 
   const devOrigin = parseValidOrigin(process.env.NEXT_PUBLIC_SITE_URL);
