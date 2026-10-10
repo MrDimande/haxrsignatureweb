@@ -6,12 +6,24 @@ import {
   hashPortalRateLimitIdentifier,
   normalizePortalEmail,
 } from "@/lib/portal-auth/credentials";
-import { executePortalRegistration } from "@/lib/portal-auth/portal-registration.server";
+import {
+  executePortalRegistration,
+  PORTAL_REGISTRATION_SUCCESS_MESSAGE,
+} from "@/lib/portal-auth/portal-registration.server";
 import { executePortalResendActivation } from "@/lib/portal-auth/portal-resend-activation.server";
-import { persistentRateLimit } from "@/lib/security/persistent-rate-limit";
-import { getRequestIp, rateLimitResponse, RATE_LIMITS } from "@/lib/security/rate-limit";
+import {
+  persistentRateLimit,
+  refundPersistentRateLimit,
+} from "@/lib/security/persistent-rate-limit";
+import {
+  getRequestIp,
+  rateLimitResponse,
+  RATE_LIMITS,
+  type RateLimitResult,
+} from "@/lib/security/rate-limit";
 
 type RateLimitDependency = typeof persistentRateLimit;
+type RefundLimitDependency = typeof refundPersistentRateLimit;
 
 function isTrustedSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
@@ -26,10 +38,38 @@ function isTrustedSameOrigin(request: Request): boolean {
     if (siteUrl && originUrl.origin === new URL(siteUrl).origin) return true;
     if (process.env.VERCEL_URL && originUrl.host === process.env.VERCEL_URL) return true;
     if (process.env.VERCEL_BRANCH_URL && originUrl.host === process.env.VERCEL_BRANCH_URL) return true;
+
+    const isProduction =
+      process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+    if (isProduction) {
+      return false;
+    }
+
     return originUrl.hostname === "localhost" || originUrl.hostname === "127.0.0.1";
   } catch {
     return false;
   }
+}
+
+function formatRateLimitOrServiceUnavailable(
+  result: RateLimitResult,
+  body?: Record<string, unknown>,
+): NextResponse {
+  if (result.serviceUnavailable) {
+    return NextResponse.json(
+      {
+        error: "service_unavailable",
+        message: "O serviço está temporariamente indisponível. Tente novamente dentro de instantes.",
+      },
+      {
+        status: 503,
+        headers: {
+          "Retry-After": String(result.retryAfterSeconds),
+        },
+      },
+    );
+  }
+  return rateLimitResponse(result, body);
 }
 
 export type PortalLoginRouteDependencies = {
@@ -37,6 +77,7 @@ export type PortalLoginRouteDependencies = {
   getIp?: typeof getRequestIp;
   hashIdentifier?: typeof hashPortalRateLimitIdentifier;
   rateLimit?: RateLimitDependency;
+  refundLimit?: RefundLimitDependency;
 };
 
 export function createPortalLoginHandler(dependencies: PortalLoginRouteDependencies = {}) {
@@ -44,22 +85,34 @@ export function createPortalLoginHandler(dependencies: PortalLoginRouteDependenc
   const getIp = dependencies.getIp ?? getRequestIp;
   const hashIdentifier = dependencies.hashIdentifier ?? hashPortalRateLimitIdentifier;
   const limitRequest = dependencies.rateLimit ?? persistentRateLimit;
+  const refundLimit = dependencies.refundLimit ?? refundPersistentRateLimit;
 
   return async function POST(request: Request) {
+    if (!isTrustedSameOrigin(request)) {
+      return NextResponse.json({ error: "Origem não autorizada." }, { status: 403 });
+    }
+
     const ip = getIp(request);
-    const ipLimit = await limitRequest(`portal-login:${ip}`, RATE_LIMITS.portalLogin, {
-      increment: false,
+    const ipKey = `portal-login:${ip}`;
+
+    // 1. Reserva atómica da tentativa de IP ANTES de verificar a palavra-passe
+    const ipLimit = await limitRequest(ipKey, RATE_LIMITS.portalLogin, {
+      increment: true,
       failClosed: true,
     });
-    if (!ipLimit.allowed) return rateLimitResponse(ipLimit, { error: "too_many_login_attempts" });
+    if (!ipLimit.allowed) {
+      return formatRateLimitOrServiceUnavailable(ipLimit, { error: "too_many_login_attempts" });
+    }
 
     let body: { email?: unknown; password?: unknown; rememberMe?: unknown };
     try {
       body = (await request.json()) as { email?: unknown; password?: unknown; rememberMe?: unknown };
     } catch {
+      await refundLimit(ipKey);
       return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
     }
     if (typeof body.email !== "string" || typeof body.password !== "string") {
+      await refundLimit(ipKey);
       return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
     }
 
@@ -68,6 +121,7 @@ export function createPortalLoginHandler(dependencies: PortalLoginRouteDependenc
     try {
       emailKey = normalizedEmail ? `portal-login-email:${hashIdentifier(normalizedEmail)}` : null;
     } catch (error) {
+      await refundLimit(ipKey);
       console.error("[portal-auth:login-rate-limit-key-unavailable]", {
         error: error instanceof Error ? error.message : "unknown_error",
       });
@@ -77,12 +131,16 @@ export function createPortalLoginHandler(dependencies: PortalLoginRouteDependenc
       );
     }
 
+    // 2. Reserva atómica da tentativa de Email ANTES de verificar a palavra-passe
     if (emailKey) {
       const emailLimit = await limitRequest(emailKey, RATE_LIMITS.portalLogin, {
-        increment: false,
+        increment: true,
         failClosed: true,
       });
-      if (!emailLimit.allowed) return rateLimitResponse(emailLimit, { error: "too_many_login_attempts" });
+      if (!emailLimit.allowed) {
+        await refundLimit(ipKey);
+        return formatRateLimitOrServiceUnavailable(emailLimit, { error: "too_many_login_attempts" });
+      }
     }
 
     try {
@@ -91,26 +149,21 @@ export function createPortalLoginHandler(dependencies: PortalLoginRouteDependenc
         password: body.password,
         rememberMe: body.rememberMe === true,
       });
-      if (result.kind === "denied") {
-        const failedIpLimit = await limitRequest(`portal-login:${ip}`, RATE_LIMITS.portalLogin, {
-          increment: true,
-          failClosed: true,
-        });
-        if (!failedIpLimit.allowed) {
-          return rateLimitResponse(failedIpLimit, { error: "too_many_login_attempts" });
-        }
+
+      // 3. Se o login tiver sucesso, devolve a tentativa reservada no IP e no Email
+      if (result.kind !== "denied") {
+        await refundLimit(ipKey);
         if (emailKey) {
-          const failedEmailLimit = await limitRequest(emailKey, RATE_LIMITS.portalLogin, {
-            increment: true,
-            failClosed: true,
-          });
-          if (!failedEmailLimit.allowed) {
-            return rateLimitResponse(failedEmailLimit, { error: "too_many_login_attempts" });
-          }
+          await refundLimit(emailKey);
         }
       }
+
       return result.response;
     } catch {
+      await refundLimit(ipKey);
+      if (emailKey) {
+        await refundLimit(emailKey);
+      }
       return NextResponse.json(
         { error: "A autenticação está temporariamente indisponível." },
         { status: 503 },
@@ -122,12 +175,14 @@ export function createPortalLoginHandler(dependencies: PortalLoginRouteDependenc
 export type PortalRegisterRouteDependencies = {
   executeRegistration?: typeof executePortalRegistration;
   getIp?: typeof getRequestIp;
+  hashIdentifier?: typeof hashPortalRateLimitIdentifier;
   rateLimit?: RateLimitDependency;
 };
 
 export function createPortalRegisterHandler(dependencies: PortalRegisterRouteDependencies = {}) {
   const executeRegistration = dependencies.executeRegistration ?? executePortalRegistration;
   const getIp = dependencies.getIp ?? getRequestIp;
+  const hashIdentifier = dependencies.hashIdentifier ?? hashPortalRateLimitIdentifier;
   const limitRequest = dependencies.rateLimit ?? persistentRateLimit;
 
   return async function POST(request: Request) {
@@ -135,10 +190,12 @@ export function createPortalRegisterHandler(dependencies: PortalRegisterRouteDep
       return NextResponse.json({ error: "Origem não autorizada." }, { status: 403 });
     }
 
-    const limit = await limitRequest(`portal-register:${getIp(request)}`, RATE_LIMITS.portalRegister, {
+    const ipLimit = await limitRequest(`portal-register:${getIp(request)}`, RATE_LIMITS.portalRegister, {
       failClosed: true,
     });
-    if (!limit.allowed) return rateLimitResponse(limit, { error: "too_many_registration_attempts" });
+    if (!ipLimit.allowed) {
+      return formatRateLimitOrServiceUnavailable(ipLimit, { error: "too_many_registration_attempts" });
+    }
 
     let body: { fullName?: unknown; email?: unknown; termsAccepted?: unknown };
     try {
@@ -149,6 +206,41 @@ export function createPortalRegisterHandler(dependencies: PortalRegisterRouteDep
       };
     } catch {
       return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+    }
+
+    const normalizedEmail = normalizePortalEmail(
+      typeof body.email === "string" ? body.email.trim() : "",
+    );
+
+    if (normalizedEmail) {
+      let emailHash: string;
+      try {
+        emailHash = hashIdentifier(normalizedEmail);
+      } catch (error) {
+        console.error("[portal-auth:register-rate-limit-key-unavailable]", {
+          error: error instanceof Error ? error.message : "unknown_error",
+        });
+        return NextResponse.json(
+          { error: "O serviço de registo está temporariamente indisponível." },
+          { status: 503 },
+        );
+      }
+
+      // Limite por email partilhado com o reenvio (contando sempre, resposta anti-enumeração idêntica)
+      const emailLimit = await limitRequest(
+        `portal-resend-activation-email:${emailHash}`,
+        RATE_LIMITS.portalResendActivationEmail,
+        { failClosed: true, increment: true },
+      );
+      if (!emailLimit.allowed) {
+        if (emailLimit.serviceUnavailable) {
+          return formatRateLimitOrServiceUnavailable(emailLimit);
+        }
+        return NextResponse.json({
+          success: true,
+          message: PORTAL_REGISTRATION_SUCCESS_MESSAGE,
+        });
+      }
     }
 
     try {
@@ -198,7 +290,9 @@ export function createPortalResendActivationHandler(
       RATE_LIMITS.portalResendActivationIp,
       { failClosed: true },
     );
-    if (!ipLimit.allowed) return rateLimitResponse(ipLimit, { error: "too_many_attempts" });
+    if (!ipLimit.allowed) {
+      return formatRateLimitOrServiceUnavailable(ipLimit, { error: "too_many_attempts" });
+    }
 
     let body: { email?: unknown };
     try {
@@ -230,7 +324,9 @@ export function createPortalResendActivationHandler(
       RATE_LIMITS.portalResendActivationEmail,
       { failClosed: true },
     );
-    if (!emailLimit.allowed) return rateLimitResponse(emailLimit, { error: "too_many_attempts" });
+    if (!emailLimit.allowed) {
+      return formatRateLimitOrServiceUnavailable(emailLimit, { error: "too_many_attempts" });
+    }
 
     try {
       const result = await executeResendActivation({ email: normalizedEmail });
@@ -260,10 +356,16 @@ export function createPortalActivateHandler(dependencies: PortalActivateRouteDep
   const limitRequest = dependencies.rateLimit ?? persistentRateLimit;
 
   return async function POST(request: Request) {
+    if (!isTrustedSameOrigin(request)) {
+      return NextResponse.json({ error: "Origem não autorizada." }, { status: 403 });
+    }
+
     const limit = await limitRequest(`portal-activate:${getIp(request)}`, RATE_LIMITS.portalActivate, {
       failClosed: true,
     });
-    if (!limit.allowed) return rateLimitResponse(limit, { error: "too_many_attempts" });
+    if (!limit.allowed) {
+      return formatRateLimitOrServiceUnavailable(limit, { error: "too_many_attempts" });
+    }
 
     let body: { token?: unknown; password?: unknown };
     try {
