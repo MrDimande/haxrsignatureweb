@@ -98,13 +98,13 @@ export default function SignInForm() {
 
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div className="space-y-1.5">
-          <label htmlFor="sign-in-email" className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60">Email</label>
+          <label htmlFor="sign-in-email" className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/80">Email</label>
           <input ref={emailInputRef} id="sign-in-email" name="email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(event) => setEmail(event.target.value)} aria-invalid={fieldErrors.email ? true : undefined} placeholder="nome@exemplo.com" disabled={loading} className={`${inputClass} ${fieldErrors.email ? "border-red-400/60" : "border-brand-champagne/45"}`} />
           {fieldErrors.email ? <p className="pl-1 text-xs font-light text-red-600" role="alert">{fieldErrors.email}</p> : null}
         </div>
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3 px-1">
-            <label htmlFor="sign-in-password" className="font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60">Palavra-passe</label>
+            <label htmlFor="sign-in-password" className="font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/80">Palavra-passe</label>
             <Link href="/forgot-password" className="font-mono text-[9px] font-bold uppercase tracking-wider text-brand-gold-accessible hover:underline">Esqueceu a palavra-passe?</Link>
           </div>
           <div className="relative">

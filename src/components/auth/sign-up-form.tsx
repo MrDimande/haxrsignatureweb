@@ -172,7 +172,7 @@ export default function SignUpForm() {
         <div className="space-y-1.5">
           <label
             htmlFor="sign-up-fullname"
-            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
+            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/80"
           >
             Nome completo
           </label>
@@ -204,7 +204,7 @@ export default function SignUpForm() {
         <div className="space-y-1.5">
           <label
             htmlFor="sign-up-email"
-            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60"
+            className="pl-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/80"
           >
             Email
           </label>

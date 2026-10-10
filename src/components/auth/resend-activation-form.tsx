@@ -74,7 +74,7 @@ export default function ResendActivationForm({
         <div className="pt-2">
           <Link
             href="/sign-in"
-            className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-brand-gold hover:underline"
+            className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-brand-gold-accessible hover:underline"
           >
             Voltar ao início de sessão
           </Link>

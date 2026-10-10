@@ -89,14 +89,5 @@ export async function refundPersistentRateLimitNeon(
       SELECT public.refund_api_rate_limit($1::text)
     `,
     [key],
-  ).catch(async () => {
-    await query(
-      `
-        UPDATE public.api_rate_limits
-           SET request_count = GREATEST(0, request_count - 1)
-         WHERE bucket_key = $1::text
-      `,
-      [key],
-    ).catch(() => {});
-  });
+  ).catch(() => {});
 }
