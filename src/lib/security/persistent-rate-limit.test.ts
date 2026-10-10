@@ -109,12 +109,17 @@ describe("persistentRateLimit", () => {
     }
   });
 
-  it("bloqueia preventivamente quando failClosed: true em caso de falha de banco", async () => {
+  it("bloqueia preventivamente com 503 e Retry-After curto quando failClosed: true em caso de falha de banco", async () => {
     const originalWarn = console.warn;
+    let warnedPrefix: unknown = null;
     try {
-      console.warn = () => {};
+      console.warn = (_msg: unknown, meta?: unknown) => {
+        if (typeof meta === "object" && meta !== null && "bucket" in meta) {
+          warnedPrefix = (meta as { bucket: unknown }).bucket;
+        }
+      };
 
-      const result = await persistentRateLimit("fail-closed-key", config, {
+      const result = await persistentRateLimit("portal-login:192.168.1.1", config, {
         failClosed: true,
         dependencies: {
           invokeNeon: async () => {
@@ -125,10 +130,80 @@ describe("persistentRateLimit", () => {
 
       assert.equal(result.allowed, false);
       assert.equal(result.remaining, 0);
-      assert.equal(result.retryAfterSeconds, 60);
+      assert.equal(result.retryAfterSeconds, 30);
+      assert.equal(result.serviceUnavailable, true);
+      assert.equal(warnedPrefix, "portal-login");
     } finally {
       console.warn = originalWarn;
     }
+  });
+
+  it("nega preventivamente quando a RPC de rate limit devolve resultado nulo com failClosed: true", async () => {
+    const originalWarn = console.warn;
+    let loggedBucket: unknown = null;
+    try {
+      console.warn = (_msg: unknown, meta?: unknown) => {
+        if (typeof meta === "object" && meta !== null && "bucket" in meta) {
+          loggedBucket = (meta as { bucket: unknown }).bucket;
+        }
+      };
+
+      const result = await persistentRateLimit("portal-login:10.0.0.5", config, {
+        failClosed: true,
+        dependencies: {
+          invokeNeon: async () => null,
+        },
+      });
+
+      assert.equal(result.allowed, false);
+      assert.equal(result.remaining, 0);
+      assert.equal(result.retryAfterSeconds, 30);
+      assert.equal(result.serviceUnavailable, true);
+      assert.equal(loggedBucket, "portal-login");
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it("nega preventivamente quando a RPC de rate limit devolve resultado malformado com failClosed: true", async () => {
+    const originalWarn = console.warn;
+    try {
+      console.warn = () => {};
+
+      const result = await persistentRateLimit("portal-register:172.16.0.1", config, {
+        failClosed: true,
+        dependencies: {
+          invokeNeon: async () => ({ invalid_structure: 123 }),
+        },
+      });
+
+      assert.equal(result.allowed, false);
+      assert.equal(result.remaining, 0);
+      assert.equal(result.retryAfterSeconds, 30);
+      assert.equal(result.serviceUnavailable, true);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it("reembolsa tentativa atómica persistente chamando neon e memória graciosamente", async () => {
+    let neonRefundCalledWith: string | null = null;
+    let memoryRefundCalledWith: string | null = null;
+
+    const { refundPersistentRateLimit } = await import("./persistent-rate-limit");
+    await refundPersistentRateLimit("portal-login:192.168.1.1", {
+      dependencies: {
+        refundNeon: async (key: string) => {
+          neonRefundCalledWith = key;
+        },
+        memoryRefund: (key: string) => {
+          memoryRefundCalledWith = key;
+        },
+      },
+    });
+
+    assert.equal(neonRefundCalledWith, "portal-login:192.168.1.1");
+    assert.equal(memoryRefundCalledWith, "portal-login:192.168.1.1");
   });
 
   it("bloqueia a próxima tentativa quando o contador de falhas já atingiu o limite", async () => {

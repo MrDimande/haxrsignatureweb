@@ -9,6 +9,7 @@ export type RateLimitResult = {
   allowed: boolean;
   remaining: number;
   retryAfterSeconds: number;
+  serviceUnavailable?: boolean;
 };
 
 type Bucket = {
@@ -17,6 +18,18 @@ type Bucket = {
 };
 
 const buckets = new Map<string, Bucket>();
+
+export function getBucketPrefix(key: string): string {
+  const colonIndex = key.indexOf(":");
+  return colonIndex === -1 ? key : key.slice(0, colonIndex);
+}
+
+export function refundRateLimit(key: string): void {
+  const bucket = buckets.get(key);
+  if (bucket && bucket.count > 0) {
+    bucket.count -= 1;
+  }
+}
 
 export const RATE_LIMITS = {
   adminLogin: { max: 5, windowMs: 15 * 60 * 1000 },
