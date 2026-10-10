@@ -1,1 +1,4 @@
 * text=auto eol=lf
+package.json -text
+.env.example -text
+src/lib/marketing/seo.ts -text
