@@ -18,7 +18,7 @@ export default function AuthShell({ children }: AuthShellProps) {
             <AuthBrandPanel />
           </div>
 
-          <div className="hidden items-center justify-between border-b border-brand-gold/15 px-10 py-6 font-mono text-[8px] uppercase tracking-[0.28em] text-brand-text-dark/50 lg:flex">
+          <div className="hidden items-center justify-between border-b border-brand-gold/15 px-10 py-6 font-mono text-[8px] uppercase tracking-[0.28em] text-brand-text-dark/80 lg:flex">
             <span>HAXR Private Client</span>
             <span>Maputo · Mozambique</span>
           </div>
@@ -27,7 +27,7 @@ export default function AuthShell({ children }: AuthShellProps) {
             <div className="w-full max-w-[34rem]">{children}</div>
           </div>
 
-          <div className="hidden items-center justify-between border-t border-brand-gold/15 px-10 py-5 font-mono text-[8px] uppercase tracking-[0.26em] text-brand-text-dark/40 lg:flex">
+          <div className="hidden items-center justify-between border-t border-brand-gold/15 px-10 py-5 font-mono text-[8px] uppercase tracking-[0.26em] text-brand-text-dark/70 lg:flex">
             <span>Discrição · Curadoria · Precisão</span>
             <span>© 2026 HAXR</span>
           </div>

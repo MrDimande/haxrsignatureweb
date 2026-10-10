@@ -105,7 +105,7 @@ export default function SignInForm() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3 px-1">
             <label htmlFor="sign-in-password" className="font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-text-dark/60">Palavra-passe</label>
-            <Link href="/forgot-password" className="font-mono text-[9px] font-bold uppercase tracking-wider text-brand-gold hover:underline">Esqueceu a palavra-passe?</Link>
+            <Link href="/forgot-password" className="font-mono text-[9px] font-bold uppercase tracking-wider text-brand-gold-accessible hover:underline">Esqueceu a palavra-passe?</Link>
           </div>
           <div className="relative">
             <input id="sign-in-password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} aria-invalid={fieldErrors.password ? true : undefined} placeholder="••••••••••••" disabled={loading} className={`${inputClass} pr-11 ${fieldErrors.password ? "border-red-400/60" : "border-brand-champagne/45"}`} />
@@ -118,7 +118,7 @@ export default function SignInForm() {
           {loading ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /><span>A entrar...</span></> : <span>Entrar</span>}
         </button>
       </form>
-      <div className="mt-8 space-y-4 text-center"><p className="font-sans text-xs font-light text-brand-text-dark/65">Ainda não tem conta? <Link href={buildSignUpPath(fromParam)} className="font-semibold text-brand-gold hover:underline">Criar conta</Link></p><p className="font-sans text-xs font-light text-brand-text-dark/55">É fornecedor? <Link href="/for-pros" className="font-semibold text-brand-text-dark/75 hover:text-brand-gold hover:underline">Junte-se à comunidade HAXR</Link></p></div>
+      <div className="mt-8 space-y-4 text-center"><p className="font-sans text-xs font-light text-brand-text-dark/65">Ainda não tem conta? <Link href={buildSignUpPath(fromParam)} className="font-semibold text-brand-gold-accessible hover:underline">Criar conta</Link></p><p className="font-sans text-xs font-light text-brand-text-dark/55">É fornecedor? <Link href="/for-pros" className="font-semibold text-brand-text-dark/75 hover:text-brand-gold-accessible hover:underline">Junte-se à comunidade HAXR</Link></p></div>
     </motion.div>
   );
 }

@@ -275,7 +275,7 @@ export default function SignUpForm() {
           Já tem conta?{" "}
           <Link
             href={buildSignInPath(fromParam)}
-            className="font-semibold text-brand-gold hover:underline"
+            className="font-semibold text-brand-gold-accessible hover:underline"
           >
             Iniciar sessão
           </Link>
@@ -284,7 +284,7 @@ export default function SignUpForm() {
           É fornecedor?{" "}
           <Link
             href="/for-pros"
-            className="font-semibold text-brand-text-dark/75 hover:text-brand-gold hover:underline"
+            className="font-semibold text-brand-text-dark/75 hover:text-brand-gold-accessible hover:underline"
           >
             Junte-se à comunidade HAXR
           </Link>

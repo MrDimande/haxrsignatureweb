@@ -264,7 +264,7 @@ export default function ActivateAccountForm({
       <p className="mt-6 text-center text-xs text-brand-text-dark/70">
         <Link
           href="/sign-in"
-          className="font-semibold text-brand-gold hover:underline"
+          className="font-semibold text-brand-gold-accessible hover:underline"
         >
           Voltar ao início de sessão
         </Link>
