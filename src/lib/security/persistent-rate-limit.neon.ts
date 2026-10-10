@@ -10,7 +10,8 @@ export async function pruneExpiredPersistentRateLimits(
     `
       WITH deleted AS (
         DELETE FROM public.api_rate_limits
-         WHERE window_start < now() - make_interval(secs => $1::integer)
+         WHERE bucket_key LIKE 'portal-%'
+           AND window_start < now() - make_interval(secs => $1::integer)
         RETURNING 1
       )
       SELECT count(*)::text AS count FROM deleted

@@ -227,10 +227,12 @@ describe("persistentRateLimit", () => {
   });
 
   it("limpa buckets expirados com TTL explícito no trabalho agendado", async () => {
+    let executedQuery = "";
     let calledWith: unknown[] = [];
     const deleted = await pruneExpiredPersistentRateLimits(
       86_400,
-      (async (_query: unknown, values?: readonly unknown[]) => {
+      (async (queryText: unknown, values?: readonly unknown[]) => {
+        executedQuery = String(queryText);
         calledWith = (values ?? []) as unknown[];
         return {
           rows: [{ count: "3" }],
@@ -242,6 +244,7 @@ describe("persistentRateLimit", () => {
     );
 
     assert.deepEqual(calledWith, [86_400]);
+    assert.match(executedQuery, /bucket_key LIKE 'portal-%'/);
     assert.equal(deleted, 3);
   });
 });
