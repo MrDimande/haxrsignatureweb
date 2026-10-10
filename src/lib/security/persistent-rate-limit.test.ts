@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { persistentRateLimit } from "./persistent-rate-limit";
+import {
+  pruneExpiredPersistentRateLimits,
+  queryPersistentRateLimitState,
+} from "./persistent-rate-limit.neon";
 
 describe("persistentRateLimit", () => {
   const config = { max: 5, windowMs: 60 * 1000 };
@@ -125,5 +129,44 @@ describe("persistentRateLimit", () => {
     } finally {
       console.warn = originalWarn;
     }
+  });
+
+  it("bloqueia a próxima tentativa quando o contador de falhas já atingiu o limite", async () => {
+    const result = await queryPersistentRateLimitState(
+      "portal-login-email:test",
+      5,
+      60,
+      (async () => ({
+        rows: [{ request_count: 5, window_start: new Date().toISOString() }],
+        rowCount: 1,
+        fields: [],
+        command: "SELECT",
+      })) as never,
+    );
+
+    assert.deepEqual(result, {
+      allowed: false,
+      remaining: 0,
+      retry_after_seconds: 60,
+    });
+  });
+
+  it("limpa buckets expirados com TTL explícito no trabalho agendado", async () => {
+    let calledWith: unknown[] = [];
+    const deleted = await pruneExpiredPersistentRateLimits(
+      86_400,
+      (async (_query: unknown, values?: readonly unknown[]) => {
+        calledWith = (values ?? []) as unknown[];
+        return {
+          rows: [{ count: "3" }],
+          rowCount: 1,
+          fields: [],
+          command: "SELECT",
+        };
+      }) as never,
+    );
+
+    assert.deepEqual(calledWith, [86_400]);
+    assert.equal(deleted, 3);
   });
 });

@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes, createHash, createHmac } from "node:crypto";
 import {
   PASSWORD_MIN_LENGTH,
   hashPassword,
@@ -43,6 +43,26 @@ export function createPortalSecret(): string {
 /** SHA-256 is only for high-entropy opaque secrets, never user passwords. */
 export function hashPortalSecret(secret: string): string {
   return createHash("sha256").update(secret, "utf8").digest("hex");
+}
+
+/**
+ * Produces a non-reversible, environment-scoped key for rate-limit buckets.
+ *
+ * Unlike opaque session and activation secrets, email addresses have low
+ * entropy. They must therefore be keyed with a server-only HMAC rather than a
+ * plain digest, otherwise a copied bucket key can be correlated offline.
+ */
+export function hashPortalRateLimitIdentifier(identifier: string): string {
+  const secret = process.env.PORTAL_RATE_LIMIT_HMAC_SECRET?.trim();
+  if (!secret) {
+    throw new Error("portal_rate_limit_hmac_secret_missing");
+  }
+
+  if (Buffer.byteLength(secret, "utf8") < 32) {
+    throw new Error("portal_rate_limit_hmac_secret_too_short");
+  }
+
+  return createHmac("sha256", secret).update(identifier, "utf8").digest("hex");
 }
 
 export function createPortalCookieValue(sessionId: string, secret: string): string {

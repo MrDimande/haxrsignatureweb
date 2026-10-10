@@ -5,6 +5,7 @@ import {
   createPortalSecret,
   decidePortalLogin,
   hashPortalPassword,
+  hashPortalRateLimitIdentifier,
   hashPortalSecret,
   parsePortalCookieValue,
   validatePortalPassword,
@@ -26,6 +27,29 @@ test("portal secrets are opaque, hashable, and cookie parsing rejects malformed 
   const value = createPortalCookieValue("123e4567-e89b-42d3-a456-426614174000", secret);
   assert.deepEqual(parsePortalCookieValue(value), { sessionId: "123e4567-e89b-42d3-a456-426614174000", secret });
   assert.equal(parsePortalCookieValue("spoofed"), null);
+});
+
+test("email-derived rate-limit keys require a strong server HMAC secret", () => {
+  const previous = process.env.PORTAL_RATE_LIMIT_HMAC_SECRET;
+  try {
+    process.env.PORTAL_RATE_LIMIT_HMAC_SECRET = "a".repeat(32);
+    const first = hashPortalRateLimitIdentifier("client@example.com");
+    const repeat = hashPortalRateLimitIdentifier("client@example.com");
+    assert.equal(first, repeat);
+    assert.equal(first.length, 64);
+
+    process.env.PORTAL_RATE_LIMIT_HMAC_SECRET = "b".repeat(32);
+    assert.notEqual(hashPortalRateLimitIdentifier("client@example.com"), first);
+
+    delete process.env.PORTAL_RATE_LIMIT_HMAC_SECRET;
+    assert.throws(() => hashPortalRateLimitIdentifier("client@example.com"), /hmac_secret_missing/);
+
+    process.env.PORTAL_RATE_LIMIT_HMAC_SECRET = "short";
+    assert.throws(() => hashPortalRateLimitIdentifier("client@example.com"), /hmac_secret_too_short/);
+  } finally {
+    if (previous === undefined) delete process.env.PORTAL_RATE_LIMIT_HMAC_SECRET;
+    else process.env.PORTAL_RATE_LIMIT_HMAC_SECRET = previous;
+  }
 });
 
 test("pending and suspended accounts are never authenticated", () => {

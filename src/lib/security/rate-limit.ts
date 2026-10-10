@@ -57,12 +57,21 @@ function getBucket(key: string, windowMs: number, now: number): Bucket {
 }
 
 export function getRequestIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || "unknown";
+  const candidates = [
+    request.headers.get("x-real-ip"),
+    request.headers.get("x-vercel-forwarded-for"),
+    request.headers.get("x-forwarded-for")?.split(",")[0],
+  ];
+
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value && value.length <= 128) return value;
   }
 
-  return request.headers.get("x-real-ip")?.trim() || "unknown";
+  // A missing proxy identity must never turn all affected visitors into one
+  // shared "unknown" bucket. This key is intentionally single-request: the
+  // platform edge remains the fallback abuse control when no client IP exists.
+  return `unattributed:${globalThis.crypto.randomUUID()}`;
 }
 
 export function rateLimit(
