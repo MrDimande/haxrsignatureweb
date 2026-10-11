@@ -75,6 +75,37 @@ describe("Core Event Registry Alignment", () => {
     assert.equal(resolveEditionSlug("nianwebnight"), "nianwebnight");
   });
 
+  it("resolves neidyejosewedding and its aliases correctly", () => {
+    assert.equal(resolveEditionSlug("neidyejosewedding"), "neidyejosewedding");
+    assert.equal(resolveEditionSlug("neidyejose"), "neidyejosewedding");
+    assert.equal(resolveEditionSlug("neidy-jose"), "neidyejosewedding");
+    assert.equal(resolveEditionSlug("neidy-e-jose"), "neidyejosewedding");
+    assert.equal(resolveEditionSlug("neidymarinoejosecabral"), "neidyejosewedding");
+    assert.equal(resolveEditionSlug("  NeidyEJoseWedding  "), "neidyejosewedding");
+  });
+
+  it("binds neidyejosewedding exclusively to EDITION_EVENT_NEIDY_JOSE_ID", () => {
+    process.env.EDITION_EVENT_NEIDY_JOSE_ID = "test-neidy-jose-uuid";
+    process.env.EDITION_EVENT_STAN_ID = "test-stan-event";
+    try {
+      const binding = getEditionEventBinding("neidyejosewedding");
+      const byAlias = getEditionEventBinding("neidyejose");
+      assert.ok(binding, "Binding for neidyejosewedding should exist.");
+      assert.ok(byAlias, "Binding for alias neidyejose should exist.");
+      assert.equal(binding.slug, "neidyejosewedding");
+      assert.equal(byAlias.slug, "neidyejosewedding");
+      assert.equal(binding.envVar, "EDITION_EVENT_NEIDY_JOSE_ID");
+      assert.equal(byAlias.envVar, "EDITION_EVENT_NEIDY_JOSE_ID");
+      assert.equal(binding.eventId, "test-neidy-jose-uuid");
+      assert.equal(byAlias.eventId, "test-neidy-jose-uuid");
+      assert.notEqual(binding.envVar, "EDITION_EVENT_STAN_ID");
+      assert.notEqual(binding.eventId, "test-stan-event");
+    } finally {
+      delete process.env.EDITION_EVENT_NEIDY_JOSE_ID;
+      delete process.env.EDITION_EVENT_STAN_ID;
+    }
+  });
+
   it("binds queenkailanecrisma exclusively to EDITION_EVENT_QUEEN_KAILANE_ID", () => {
     process.env.EDITION_EVENT_QUEEN_KAILANE_ID = "test-queen-event";
     try {
@@ -121,6 +152,7 @@ describe("Core Event Registry Alignment", () => {
       "jessicachadelingerie": "EDITION_EVENT_JESSICA_FAREWELL_ID",
       stanturns5: "EDITION_EVENT_STAN_ID",
       nianwebnight: "EDITION_EVENT_NIAN_ID",
+      neidyejosewedding: "EDITION_EVENT_NEIDY_JOSE_ID",
     };
 
     for (const [slug, envVar] of Object.entries(expectedVars)) {
@@ -183,6 +215,7 @@ describe("Core Event Registry Alignment", () => {
       "cha-de-lingerie",
       "cha-de-panela",
       "jessicachadelingerie",
+      "neidyejosewedding",
     ];
 
     for (let i = 0; i < canonicals.length; i++) {

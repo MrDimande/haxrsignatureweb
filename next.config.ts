@@ -10,11 +10,36 @@ const nextConfig: NextConfig = {
       process.env.VERCEL_GIT_COMMIT_REF?.trim() ?? "",
   },
   async redirects() {
-    return seoRedirectSources.map((route) => ({
+    const seoRedirects = seoRedirectSources.map((route) => ({
       source: route.source,
       destination: route.destination,
       permanent: true,
     }));
+
+    const editionInviteRedirects = [
+      {
+        source: "/neidyejosewedding",
+        destination: "https://edition.haxrsignature.com/neidyejosewedding",
+        permanent: false,
+      },
+      {
+        source: "/neidyejose",
+        destination: "https://edition.haxrsignature.com/neidyejosewedding",
+        permanent: false,
+      },
+      {
+        source: "/neidy-jose",
+        destination: "https://edition.haxrsignature.com/neidyejosewedding",
+        permanent: false,
+      },
+      {
+        source: "/neidy-e-jose",
+        destination: "https://edition.haxrsignature.com/neidyejosewedding",
+        permanent: false,
+      },
+    ];
+
+    return [...seoRedirects, ...editionInviteRedirects];
   },
   experimental: {
     optimizePackageImports: [

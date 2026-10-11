@@ -118,6 +118,20 @@ export const EDITION_INVITE_CATALOG: Readonly<
     status: "active",
     experienceType: "invitation",
   },
+  "neidy-jose-vinculo": {
+    registryKey: "neidy-jose-vinculo",
+    inviteSlug: "neidyejosewedding",
+    label: "Edition · Casamento · Neidy Marino e José Mateus",
+    status: "active",
+    experienceType: "invitation",
+  },
+  neidyejosewedding: {
+    registryKey: "neidy-jose-vinculo",
+    inviteSlug: "neidyejosewedding",
+    label: "Edition · Casamento · Neidy Marino e José Mateus",
+    status: "active",
+    experienceType: "invitation",
+  },
 };
 
 export type EditionAssociationState =
