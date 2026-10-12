@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, ArrowLeft, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, Camera, Trash2 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import EventForm from "@/components/events/EventForm";
 import SeatAssignment from "@/components/events/SeatAssignment";
@@ -401,7 +401,7 @@ export default function EventDetailClient({
       ) : null}
 
       {tab === "checkin" ? (
-        <CheckInDashboard guests={initialGuests} stats={initialStats} />
+        <CheckInDashboard eventId={event.id} guests={initialGuests} stats={initialStats} />
       ) : null}
 
       {tab === "concierge" ? (
