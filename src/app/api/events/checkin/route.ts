@@ -1,10 +1,8 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { performCheckin } from "@/lib/events/services/checkin.service";
 import { getEventById } from "@/lib/events/repositories/events.repository";
-import { ADMIN_SESSION_COOKIE, isValidSession } from "@/lib/admin/auth";
-import { getCurrentAdminIdentity } from "@/lib/admin/admin-identity.server";
+import { verifyCheckinSession } from "@/lib/events/services/checkin-auth";
 import {
   getRequestIp,
   rateLimit,
@@ -16,41 +14,6 @@ const schema = z.object({
   eventId: z.string().uuid("Evento inválido"),
   token: z.string().min(16).max(128),
 });
-
-export type CheckinAuthVerificationResult =
-  | { authorized: true }
-  | { authorized: false; error: "unauthorized" | "forbidden"; status: 401 | 403; message: string };
-
-export async function verifyCheckinSession(): Promise<CheckinAuthVerificationResult> {
-  let sessionToken: string | undefined;
-  try {
-    const cookieStore = await cookies();
-    sessionToken = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  } catch {
-    // Fora de contexto de cookies do Next.js
-  }
-
-  if (!sessionToken || !(await isValidSession(sessionToken))) {
-    return {
-      authorized: false,
-      error: "unauthorized",
-      status: 401,
-      message: "Sessão não autorizada para realizar check-in.",
-    };
-  }
-
-  const identity = await getCurrentAdminIdentity();
-  if (!identity || identity.status !== "active") {
-    return {
-      authorized: false,
-      error: "forbidden",
-      status: 403,
-      message: "Identidade administrativa inactiva ou suspensa.",
-    };
-  }
-
-  return { authorized: true };
-}
 
 export async function POST(request: Request) {
   try {

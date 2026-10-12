@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import jsQR from "jsqr";
 import {
   ArrowLeft,
   Camera,
@@ -9,11 +10,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
-  Users,
-  Search,
-  Sparkles,
   ShieldCheck,
-  RotateCcw
 } from "lucide-react";
 import type { ManagedEvent, EventStats } from "@/lib/events/types";
 
@@ -32,6 +29,24 @@ type Props = {
   event: ManagedEvent;
   initialStats: EventStats;
 };
+
+interface BarcodeDetectorResult {
+  rawValue?: string;
+}
+
+interface BarcodeDetectorInstance {
+  detect: (source: ImageBitmapSource) => Promise<BarcodeDetectorResult[]>;
+}
+
+interface BarcodeDetectorConstructor {
+  new (options?: { formats: string[] }): BarcodeDetectorInstance;
+}
+
+interface WindowWithWebkitAudio extends Window {
+  AudioContext?: typeof AudioContext;
+  webkitAudioContext?: typeof AudioContext;
+  BarcodeDetector?: BarcodeDetectorConstructor;
+}
 
 // Extracção segura de token a partir de URL ou string crua
 export function extractQrToken(rawInput: string): string {
@@ -53,14 +68,25 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
   const [scanResult, setScanResult] = useState<ScannerResult | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const detectorRef = useRef<any>(null);
+  const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Som suave de confirmação via Web Audio API (sem assets externos)
+  // Travamento estrito de concorrência e debouncing de frames
+  const isProcessingRef = useRef(false);
+  const lastScannedTokenRef = useRef<string>("");
+  const lastScanTimestampRef = useRef<number>(0);
+
+  // Som suave de confirmação via Web Audio API (compatível com Safari e Chrome sem any)
   const playBeep = useCallback((type: "success" | "warning" | "error") => {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const win = typeof window !== "undefined" ? (window as unknown as WindowWithWebkitAudio) : null;
+      if (!win) return;
+      const AudioCtxClass = win.AudioContext || win.webkitAudioContext;
+      if (!AudioCtxClass) return;
+
+      const ctx = new AudioCtxClass();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -87,87 +113,137 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
         osc.stop(ctx.currentTime + 0.35);
       }
     } catch {
-      // Audio não suportado no navegador
+      // Áudio não suportado ou bloqueado pelo navegador
     }
   }, []);
 
-  const handleProcessCheckin = useCallback(async (rawToken: string) => {
-    const token = extractQrToken(rawToken);
-    if (!token || token.length < 16) {
-      setScanResult({
-        status: "error",
-        message: "Token inválido ou demasiado curto (mínimo 16 caracteres).",
-      });
-      playBeep("error");
-      return;
-    }
-
-    setIsProcessing(true);
-    setScanResult(null);
-
-    try {
-      const res = await fetch("/api/events/checkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId: event.id,
-          token,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.ok) {
+  const handleProcessCheckin = useCallback(
+    async (rawToken: string) => {
+      const token = extractQrToken(rawToken);
+      if (!token || token.length < 16) {
         setScanResult({
           status: "error",
-          message: data.message || "Passe não reconhecido ou pertencente a outro evento.",
+          message: "Token inválido ou demasiado curto (mínimo 16 caracteres).",
         });
         playBeep("error");
         return;
       }
 
-      if (data.alreadyCheckedIn) {
-        setScanResult({
-          status: "already_checked_in",
-          message: "Este passe já registou entrada anteriormente!",
-          guestName: data.guest?.name,
-          partySize: 1 + (data.guest?.plusOnes ?? 0),
-          plusOnes: data.guest?.plusOnes ?? 0,
-          tableName: data.seat?.tableName,
-          seatLabel: data.seat?.label || data.seat?.seatNumber,
-          notes: data.guest?.dietaryNotes || data.guest?.guestNotes,
-        });
-        playBeep("warning");
-      } else {
-        // Sucesso
-        setScanResult({
-          status: "success",
-          message: "Entrada registada com sucesso!",
-          guestName: data.guest?.name,
-          partySize: 1 + (data.guest?.plusOnes ?? 0),
-          plusOnes: data.guest?.plusOnes ?? 0,
-          tableName: data.seat?.tableName,
-          seatLabel: data.seat?.label || data.seat?.seatNumber,
-          notes: data.guest?.dietaryNotes || data.guest?.guestNotes,
-        });
-        playBeep("success");
-        setStats((prev) => ({
-          ...prev,
-          checkedIn: prev.checkedIn + 1,
-        }));
+      // Bloqueio de submissão duplicada no mesmo frame ou enquanto uma requisição está pendente
+      const now = Date.now();
+      if (
+        isProcessingRef.current ||
+        (lastScannedTokenRef.current === token && now - lastScanTimestampRef.current < 3500)
+      ) {
+        return;
       }
-    } catch {
-      setScanResult({
-        status: "error",
-        message: "Erro de comunicação com o servidor de check-in.",
-      });
-      playBeep("error");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [event.id, playBeep]);
 
-  // Iniciar câmara
+      isProcessingRef.current = true;
+      lastScannedTokenRef.current = token;
+      lastScanTimestampRef.current = now;
+
+      setIsProcessing(true);
+      setScanResult(null);
+
+      try {
+        const res = await fetch("/api/events/checkin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId: event.id,
+            token,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          setScanResult({
+            status: "error",
+            message: data.message || "Passe não reconhecido ou pertencente a outro evento.",
+          });
+          playBeep("error");
+          return;
+        }
+
+        if (data.alreadyCheckedIn) {
+          setScanResult({
+            status: "already_checked_in",
+            message: "Este passe já registou entrada anteriormente!",
+            guestName: data.guest?.name,
+            partySize: 1 + (data.guest?.plusOnes ?? 0),
+            plusOnes: data.guest?.plusOnes ?? 0,
+            tableName: data.seat?.tableName,
+            seatLabel: data.seat?.label || data.seat?.seatNumber,
+            notes: data.guest?.dietaryNotes || data.guest?.guestNotes,
+          });
+          playBeep("warning");
+        } else {
+          // Entrada registada com sucesso
+          setScanResult({
+            status: "success",
+            message: "Entrada registada com sucesso!",
+            guestName: data.guest?.name,
+            partySize: 1 + (data.guest?.plusOnes ?? 0),
+            plusOnes: data.guest?.plusOnes ?? 0,
+            tableName: data.seat?.tableName,
+            seatLabel: data.seat?.label || data.seat?.seatNumber,
+            notes: data.guest?.dietaryNotes || data.guest?.guestNotes,
+          });
+          playBeep("success");
+          setStats((prev) => ({
+            ...prev,
+            checkedIn: prev.checkedIn + 1,
+          }));
+        }
+      } catch {
+        setScanResult({
+          status: "error",
+          message: "Erro de comunicação com o servidor de check-in.",
+        });
+        playBeep("error");
+      } finally {
+        isProcessingRef.current = false;
+        setIsProcessing(false);
+      }
+    },
+    [event.id, playBeep]
+  );
+
+  // Leitura de frame via jsQR (compatível com iOS Safari e Android Chrome)
+  const scanVideoFrame = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    if (isProcessingRef.current) return;
+
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement("canvas");
+    }
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (width === 0 || height === 0) return;
+
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    ctx.drawImage(video, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "dontInvert",
+    });
+
+    if (decoded?.data) {
+      handleProcessCheckin(decoded.data);
+    }
+  }, [handleProcessCheckin]);
+
+  // Iniciar câmara com preferências para traseira (environment)
   const startCamera = async () => {
     setCameraError(null);
     try {
@@ -176,7 +252,12 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
       });
 
       streamRef.current = stream;
@@ -186,10 +267,11 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       }
       setIsCameraActive(true);
 
-      // BarcodeDetector
-      if ("BarcodeDetector" in window) {
+      // Tenta BarcodeDetector nativo se disponível (Chrome / Edge moderno)
+      const win = typeof window !== "undefined" ? (window as unknown as WindowWithWebkitAudio) : null;
+      if (win?.BarcodeDetector) {
         try {
-          detectorRef.current = new (window as any).BarcodeDetector({
+          detectorRef.current = new win.BarcodeDetector({
             formats: ["qr_code"],
           });
         } catch {
@@ -197,33 +279,41 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
         }
       }
 
-      // Intervalo de leitura
+      // Ciclo contínuo de leitura a cada 250ms
       scanIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || !detectorRef.current || isProcessing) return;
-        try {
-          const barcodes = await detectorRef.current.detect(videoRef.current);
-          if (barcodes.length > 0) {
-            const rawValue = barcodes[0].rawValue;
-            if (rawValue) {
-              handleProcessCheckin(rawValue);
+        if (!videoRef.current || isProcessingRef.current) return;
+
+        // Se detector nativo estiver activo, usa-o primeiro
+        if (detectorRef.current) {
+          try {
+            const barcodes = await detectorRef.current.detect(videoRef.current);
+            if (barcodes.length > 0 && barcodes[0]?.rawValue) {
+              handleProcessCheckin(barcodes[0].rawValue);
+              return;
             }
+          } catch {
+            // Fallback silencioso para jsQR
           }
-        } catch {
-          // Frame sem código
         }
-      }, 500);
-    } catch (err: any) {
-      console.error("[Scanner] Erro na câmara:", err);
+
+        // Leitura universal via jsQR (compatível com Safari iOS e Android Chrome)
+        scanVideoFrame();
+      }, 250);
+    } catch (err: unknown) {
+      const isError = err instanceof Error;
+      const errorName = isError ? err.name : "";
+      console.error("[Scanner] Erro ao aceder à câmara:", err);
+
       setCameraError(
-        err?.name === "NotAllowedError"
-          ? "Permissão de câmara recusada. Por favor autorize o acesso à câmara ou utilize o campo manual."
+        errorName === "NotAllowedError" || errorName === "PermissionDeniedError"
+          ? "Permissão de câmara recusada. Por favor autorize o acesso à câmara nas definições do navegador ou utilize o campo manual."
           : "Não foi possível aceder à câmara deste dispositivo."
       );
       setIsCameraActive(false);
     }
   };
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
@@ -235,207 +325,288 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    detectorRef.current = null;
     setIsCameraActive(false);
-  };
+  }, []);
 
   useEffect(() => {
     return () => {
       stopCamera();
     };
-  }, []);
+  }, [stopCamera]);
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualToken.trim()) {
+      handleProcessCheckin(manualToken.trim());
+      setManualToken("");
+    }
+  };
+
+  const pct =
+    stats.confirmed > 0
+      ? Math.round((stats.checkedIn / stats.confirmed) * 100)
+      : 0;
 
   return (
-    <div className="min-h-screen bg-[#07130F] text-[#FCFDFC] p-4 sm:p-6 lg:p-8 flex flex-col items-center">
-      <div className="w-full max-w-xl">
-        {/* Header de navegação */}
-        <div className="flex items-center justify-between mb-6">
-          <Link
-            href={`/admin/events/${event.id}`}
-            className="inline-flex items-center gap-2 text-xs font-mono tracking-widest text-[#CBB994] hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            VOLTAR AO EVENTO
-          </Link>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#153B30] text-[#CBB994] text-[10px] tracking-wider uppercase border border-[#CBB994]/30">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Sessão Autorizada
+    <div className="space-y-6">
+      {/* Barra de Navegação Superior */}
+      <div className="flex items-center justify-between">
+        <Link
+          href={`/admin/events/${event.id}`}
+          className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-grey/60 hover:text-gold transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Voltar ao Evento</span>
+        </Link>
+        <div className="flex items-center gap-2 text-xs font-mono text-grey/50">
+          <ShieldCheck className="w-3.5 h-3.5 text-gold" />
+          <span>Modo Recepção Oficial</span>
+        </div>
+      </div>
+
+      {/* Cabeçalho do Scanner */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8 backdrop-blur-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs font-mono mb-3">
+              <span>{event.name}</span>
+            </div>
+            <h1 className="font-serif text-2xl sm:text-3xl text-white font-light">
+              Scanner de Controlo de Entrada
+            </h1>
+            <p className="text-sm text-grey/60 mt-1 max-w-xl leading-relaxed">
+              Aponte a câmara para o Passe Digital apresentado pelo convidado ou insira o código manual para validação instantânea.
+            </p>
+          </div>
+
+          {/* Métrica Rápida */}
+          <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8">
+            <div className="text-center">
+              <p className="font-mono text-2xl sm:text-3xl font-light text-gold">
+                {stats.checkedIn}
+              </p>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-grey/50 mt-1">
+                Entradas
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="font-mono text-2xl sm:text-3xl font-light text-white/80">
+                {stats.confirmed}
+              </p>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-grey/50 mt-1">
+                Confirmados
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="font-mono text-2xl sm:text-3xl font-light text-emerald-400">
+                {pct}%
+              </p>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-grey/50 mt-1">
+                Presença
+              </p>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Título e estatística de acolhimento */}
-        <div className="bg-[#0A211A] border border-[#CBB994]/30 rounded-2xl p-5 mb-6 shadow-xl">
-          <p className="text-[10px] uppercase font-mono tracking-[0.3em] text-[#CBB994] mb-1">
-            Recepção & Portaria
-          </p>
-          <h1 className="font-serif text-2xl font-light text-white mb-3">
-            {event.name}
-          </h1>
-          <div className="grid grid-cols-3 gap-2 border-t border-[#CBB994]/20 pt-3 text-center">
-            <div>
-              <p className="text-[9px] uppercase font-mono text-[#EBE4D5]/60">Confirmados</p>
-              <p className="font-serif text-lg text-white">{stats.confirmed}</p>
-            </div>
-            <div>
-              <p className="text-[9px] uppercase font-mono text-[#CBB994]">Entradas</p>
-              <p className="font-serif text-lg text-[#CBB994] font-medium">{stats.checkedIn}</p>
-            </div>
-            <div>
-              <p className="text-[9px] uppercase font-mono text-[#EBE4D5]/60">Total</p>
-              <p className="font-serif text-lg text-white">{stats.totalGuests}</p>
-            </div>
-          </div>
-        </div>
+      {/* Área Central: Câmara + Feedback */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Painel da Câmara */}
+        <div className="lg:col-span-7 flex flex-col gap-4">
+          <div className="relative aspect-[4/3] sm:aspect-video w-full rounded-2xl bg-black border border-white/10 overflow-hidden flex items-center justify-center shadow-2xl">
+            {/* Elemento de Vídeo com playsInline obrigatório para iOS Safari */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover ${isCameraActive ? "block" : "hidden"}`}
+            />
 
-        {/* Resultado do Check-in em destaque */}
-        {scanResult && (
-          <div
-            className={`rounded-2xl p-6 mb-6 border shadow-2xl transition-all duration-300 ${
-              scanResult.status === "success"
-                ? "bg-emerald-950/80 border-emerald-500/60 text-emerald-100"
-                : scanResult.status === "already_checked_in"
-                ? "bg-amber-950/80 border-amber-500/60 text-amber-100"
-                : "bg-rose-950/80 border-rose-500/60 text-rose-100"
-            }`}
-          >
-            <div className="flex items-start gap-4">
-              {scanResult.status === "success" ? (
-                <CheckCircle2 className="w-9 h-9 text-emerald-400 shrink-0 mt-0.5" />
-              ) : scanResult.status === "already_checked_in" ? (
-                <AlertTriangle className="w-9 h-9 text-amber-400 shrink-0 mt-0.5" />
-              ) : (
-                <XCircle className="w-9 h-9 text-rose-400 shrink-0 mt-0.5" />
-              )}
-              <div className="flex-1">
-                <p className="text-xs uppercase font-mono tracking-widest font-semibold">
-                  {scanResult.message}
+            {/* Overlay da Mira do Scanner */}
+            {isCameraActive && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="relative w-64 h-64 border-2 border-gold/70 rounded-3xl shadow-[0_0_50px_rgba(203,185,148,0.2)]">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-gold rounded-tl-xl -mt-1 -ml-1" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-gold rounded-tr-xl -mt-1 -mr-1" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-gold rounded-bl-xl -mb-1 -ml-1" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-gold rounded-br-xl -mb-1 -mr-1" />
+                  {isProcessing && (
+                    <div className="absolute inset-0 bg-gold/10 backdrop-blur-[2px] rounded-3xl flex items-center justify-center">
+                      <div className="text-center font-mono text-xs uppercase tracking-widest text-gold animate-pulse">
+                        A validar…
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Estado quando a câmara está desligada */}
+            {!isCameraActive && (
+              <div className="text-center p-8">
+                <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center mx-auto mb-4 text-grey/40">
+                  <CameraOff className="w-8 h-8" />
+                </div>
+                <p className="font-serif text-lg text-white/80">
+                  Câmara desligada
                 </p>
-                {scanResult.guestName && (
-                  <p className="font-serif text-2xl text-white mt-1">
-                    {scanResult.guestName}
-                  </p>
-                )}
-                {scanResult.partySize !== undefined && (
-                  <div className="mt-2 text-sm text-[#EBE4D5]">
-                    <span className="font-medium">Lotação autorizada:</span>{" "}
-                    {scanResult.partySize} {scanResult.partySize === 1 ? "pessoa" : "pessoas"}{" "}
-                    {scanResult.plusOnes ? `(1 titular + ${scanResult.plusOnes} acompanhantes)` : "(individual)"}
+                <p className="text-xs text-grey/50 mt-1 max-w-sm leading-relaxed">
+                  Active a câmara para iniciar o scanner óptico contínuo na porta do evento.
+                </p>
+                {cameraError && (
+                  <div className="mt-4 p-3 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-300 max-w-md mx-auto text-left">
+                    {cameraError}
                   </div>
                 )}
-                {scanResult.tableName && (
-                  <p className="text-sm text-gold mt-1">
-                    Mesa: <span className="font-semibold">{scanResult.tableName}</span>
-                    {scanResult.seatLabel && ` (Lugar ${scanResult.seatLabel})`}
-                  </p>
-                )}
-                {scanResult.notes && (
-                  <p className="text-xs italic text-[#EBE4D5]/70 mt-2">
-                    Nota: {scanResult.notes}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setScanResult(null)}
-              className="mt-4 w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-mono uppercase tracking-wider text-white transition-colors"
-            >
-              Concluído / Próximo Convidado
-            </button>
-          </div>
-        )}
-
-        {/* Viewfinder da Câmara */}
-        <div className="bg-[#0A211A] border border-[#CBB994]/30 rounded-2xl p-5 mb-6 flex flex-col items-center">
-          <div className="relative w-full aspect-square max-w-sm rounded-xl overflow-hidden bg-black/60 border border-[#CBB994]/20 flex items-center justify-center">
-            {isCameraActive ? (
-              <>
-                <video
-                  ref={videoRef}
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
-                {/* Mira óptica do scanner */}
-                <div className="pointer-events-none absolute inset-10 border-2 border-[#CBB994]/60 rounded-2xl">
-                  <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#CBB994]" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#CBB994]" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#CBB994]" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#CBB994]" />
-                </div>
-              </>
-            ) : (
-              <div className="text-center p-6">
-                <Camera className="w-12 h-12 text-[#CBB994]/50 mx-auto mb-3" />
-                <p className="text-xs text-[#EBE4D5]/70 max-w-xs">
-                  Aponte a câmara do telemóvel ou tablet para o código QR do passe do convidado.
-                </p>
               </div>
             )}
           </div>
 
-          {cameraError && (
-            <p className="text-xs text-rose-400 text-center mt-3 leading-relaxed">
-              {cameraError}
-            </p>
-          )}
-
-          <div className="mt-4 w-full flex gap-3">
+          {/* Botão de Controlo da Câmara */}
+          <div className="flex items-center gap-3">
             {!isCameraActive ? (
               <button
                 type="button"
                 onClick={startCamera}
-                className="flex-1 py-3 px-4 rounded-xl bg-[#CBB994] text-[#0A211A] text-xs font-mono uppercase tracking-wider font-semibold hover:bg-[#DCD1B8] transition-colors inline-flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-6 rounded-xl bg-gold text-black font-serif text-sm tracking-wide font-medium hover:bg-gold-light transition-colors flex items-center justify-center gap-2 shadow-lg shadow-gold/10"
               >
                 <Camera className="w-4 h-4" />
-                Activar Câmara
+                <span>Activar Câmara do Dispositivo</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={stopCamera}
-                className="flex-1 py-3 px-4 rounded-xl bg-white/10 text-white text-xs font-mono uppercase tracking-wider hover:bg-white/20 transition-colors inline-flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-6 rounded-xl bg-white/10 text-white font-serif text-sm tracking-wide hover:bg-white/15 transition-colors flex items-center justify-center gap-2"
               >
                 <CameraOff className="w-4 h-4" />
-                Desactivar Câmara
+                <span>Desactivar Câmara</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Recuperação Manual (Fallback de Segurança) */}
-        <div className="bg-[#0A211A] border border-[#CBB994]/30 rounded-2xl p-5 shadow-lg">
-          <p className="text-[10px] uppercase font-mono tracking-[0.25em] text-[#CBB994] mb-1">
-            Recuperação Manual
-          </p>
-          <p className="text-xs text-[#EBE4D5]/70 mb-3">
-            Se a câmara não puder ser utilizada, cole o link do passe ou digite o código de 32 caracteres.
-          </p>
+        {/* Painel Lateral: Resultado do Check-in & Input Manual */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          {/* Card de Feedback do Último Passe Lido */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex flex-col justify-between flex-1 min-h-[300px]">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-grey/50 mb-4">
+                Resultado da Última Leitura
+              </p>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (manualToken.trim()) {
-                handleProcessCheckin(manualToken);
-              }
-            }}
-            className="flex flex-col sm:flex-row gap-2"
-          >
-            <input
-              type="text"
-              value={manualToken}
-              onChange={(e) => setManualToken(e.target.value)}
-              placeholder="Cole o link ou token..."
-              className="flex-1 bg-black/40 border border-[#CBB994]/30 rounded-xl px-4 py-2.5 text-xs text-white placeholder-[#EBE4D5]/30 focus:outline-none focus:border-[#CBB994]"
-            />
-            <button
-              type="submit"
-              disabled={isProcessing || !manualToken.trim()}
-              className="py-2.5 px-5 rounded-xl bg-[#153B30] hover:bg-[#1E5244] border border-[#CBB994]/40 text-xs font-mono uppercase tracking-wider text-[#CBB994] transition-colors disabled:opacity-50"
-            >
-              {isProcessing ? "A validar..." : "Registar"}
-            </button>
-          </form>
+              {scanResult ? (
+                <div className="space-y-4">
+                  {scanResult.status === "success" && (
+                    <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-300">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        <span className="font-serif text-base font-medium">
+                          {scanResult.message}
+                        </span>
+                      </div>
+                      <p className="font-serif text-2xl text-white mt-3">
+                        {scanResult.guestName}
+                      </p>
+                      <div className="mt-3 pt-3 border-t border-emerald-500/20 text-xs font-mono space-y-1">
+                        <p>
+                          Lotação: {scanResult.partySize} pessoa(s)
+                          {Boolean(scanResult.plusOnes) && ` (+${scanResult.plusOnes} acompanhante(s))`}
+                        </p>
+                        {scanResult.tableName && (
+                          <p className="text-gold">
+                            Mesa: {scanResult.tableName}
+                            {scanResult.seatLabel ? ` · Lugar ${scanResult.seatLabel}` : ""}
+                          </p>
+                        )}
+                        {scanResult.notes && (
+                          <p className="text-grey/70 italic mt-1 font-sans">
+                            {scanResult.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {scanResult.status === "already_checked_in" && (
+                    <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-300">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-400" />
+                        <span className="font-serif text-base font-medium">
+                          {scanResult.message}
+                        </span>
+                      </div>
+                      <p className="font-serif text-2xl text-white mt-3">
+                        {scanResult.guestName}
+                      </p>
+                      <div className="mt-3 pt-3 border-t border-amber-500/20 text-xs font-mono space-y-1">
+                        <p>Lotação autorizada: {scanResult.partySize} pessoa(s)</p>
+                        {scanResult.tableName && (
+                          <p className="text-gold">
+                            Mesa: {scanResult.tableName}
+                            {scanResult.seatLabel ? ` · Lugar ${scanResult.seatLabel}` : ""}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {scanResult.status === "error" && (
+                    <div className="p-4 rounded-xl bg-red-950/30 border border-red-500/30 text-red-300">
+                      <div className="flex items-center gap-2 mb-2">
+                        <XCircle className="w-5 h-5 text-red-400" />
+                        <span className="font-serif text-base font-medium">
+                          Entrada Não Autorizada
+                        </span>
+                      </div>
+                      <p className="text-xs text-red-200 mt-2 leading-relaxed">
+                        {scanResult.message}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-grey/40">
+                  <p className="font-serif text-sm">
+                    Nenhum código lido nesta sessão.
+                  </p>
+                  <p className="text-xs text-grey/50 mt-1">
+                    Aguardando apresentação de Passe Digital…
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Rodapé Informativo */}
+            <div className="pt-4 border-t border-white/5 text-[11px] text-grey/40 font-mono">
+              Validação atómica segura · HAXR Signature Check-in v2
+            </div>
+          </div>
+
+          {/* Fallback de Entrada Manual de Código */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-grey/50 mb-3">
+              Validação Manual por Código / Token
+            </p>
+            <form onSubmit={handleManualSubmit} className="flex gap-2">
+              <input
+                type="text"
+                value={manualToken}
+                onChange={(e) => setManualToken(e.target.value)}
+                placeholder="Insira o código ou token do passe…"
+                className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-grey/30 font-mono focus:border-gold outline-none transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={isProcessing || !manualToken.trim()}
+                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-gold hover:text-black text-white text-xs font-serif tracking-wide transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Validar
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

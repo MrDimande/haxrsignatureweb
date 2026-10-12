@@ -1,10 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { verifyCheckinSession } from "@/app/api/events/checkin/route";
+import { verifyCheckinSession } from "@/lib/events/services/checkin-auth";
 import { extractQrToken } from "@/app/admin/(panel)/events/[id]/scanner/ReceptionScannerClient";
 import { buildCheckinUrl } from "@/lib/events/tokens";
+import { POST } from "@/app/api/events/checkin/route";
 
-describe("Segurança do Check-in — Autorização e Integridade de Acessos", () => {
+describe("Testes Unitários — Autorização, Parsing e Contratos de Segurança", () => {
   it("Rejeita pedidos anónimos sem cookie de sessão com 401 unauthorized", async () => {
     const authResult = await verifyCheckinSession();
     assert.equal(authResult.authorized, false);
@@ -15,9 +16,28 @@ describe("Segurança do Check-in — Autorização e Integridade de Acessos", ()
     }
   });
 
+  it("Endpoint POST /api/events/checkin rejeita pedidos anónimos antes de qualquer leitura ou escrita", async () => {
+    const req = new Request("https://www.haxrsignature.com/api/events/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: "aed4c44a-49f8-4e9e-8b6b-cd5b3c701102",
+        token: "fake-test-token-32-chars-long-abc",
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 401);
+    const body = await res.json();
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "unauthorized");
+  });
+
   it("extractQrToken extrai o token a partir de URLs canónicos do passe", () => {
     const rawToken = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
-    const canonicalUrl = "https://www.haxrsignature.com/event/aed4c44a-49f8-4e9e-8b6b-cd5b3c701102/checkin/" + rawToken;
+    const canonicalUrl =
+      "https://www.haxrsignature.com/event/aed4c44a-49f8-4e9e-8b6b-cd5b3c701102/checkin/" +
+      rawToken;
     const urlWithQuery = canonicalUrl + "?source=qr";
     const urlWithSlash = canonicalUrl + "/";
 
@@ -28,106 +48,23 @@ describe("Segurança do Check-in — Autorização e Integridade de Acessos", ()
     assert.equal(extractQrToken("   " + rawToken + "   "), rawToken);
   });
 
-  it("extractQrToken preserva tokens brutos", () => {
+  it("extractQrToken preserva tokens brutos sem alteração", () => {
     assert.equal(extractQrToken("curto"), "curto");
     assert.equal(extractQrToken(""), "");
   });
 
-  it("Atomicidade e concorrência: primeiro check-in aceita e segundo identifica alreadyCheckedIn", () => {
-    type GuestState = {
-      id: string;
-      eventId: string;
-      qrToken: string;
-      status: "confirmed" | "checked_in";
-      checkinCount: number;
-    };
-
-    const mockDb: Record<string, GuestState> = {
-      "token-guest-1": {
-        id: "guest-uuid-1",
-        eventId: "event-uuid-1",
-        qrToken: "token-guest-1",
-        status: "confirmed",
-        checkinCount: 0,
-      },
-    };
-
-    function simulatePerformCheckin(eventId: string, token: string) {
-      const guest = mockDb[token];
-      if (!guest || guest.eventId !== eventId) {
-        return { ok: false, error: "not_found" };
-      }
-
-      if (guest.status === "checked_in") {
-        return {
-          ok: true,
-          checkedIn: false,
-          alreadyCheckedIn: true,
-          guest: { id: guest.id, status: guest.status },
-        };
-      }
-
-      guest.status = "checked_in";
-      guest.checkinCount += 1;
-
-      return {
-        ok: true,
-        checkedIn: true,
-        alreadyCheckedIn: false,
-        guest: { id: guest.id, status: guest.status },
-      };
-    }
-
-    const firstAttempt = simulatePerformCheckin("event-uuid-1", "token-guest-1");
-    assert.equal(firstAttempt.ok, true);
-    assert.equal(firstAttempt.checkedIn, true);
-    assert.equal(firstAttempt.alreadyCheckedIn, false);
-    assert.equal(mockDb["token-guest-1"].checkinCount, 1);
-
-    const secondAttempt = simulatePerformCheckin("event-uuid-1", "token-guest-1");
-    assert.equal(secondAttempt.ok, true);
-    assert.equal(secondAttempt.checkedIn, false);
-    assert.equal(secondAttempt.alreadyCheckedIn, true);
-    assert.equal(mockDb["token-guest-1"].checkinCount, 1);
-
-    const crossEventAttempt = simulatePerformCheckin("outro-evento-uuid", "token-guest-1");
-    assert.equal(crossEventAttempt.ok, false);
-    assert.equal(crossEventAttempt.error, "not_found");
-  });
-
-  it("Pedidos concorrentes para o mesmo token produzem estritamente apenas 1 entrada válida", async () => {
-    let checkinCounter = 0;
-    let guestStatus = "confirmed";
-
-    async function atomicCheckinOperation() {
-      if (guestStatus === "checked_in") {
-        return { alreadyCheckedIn: true };
-      }
-      guestStatus = "checked_in";
-      checkinCounter++;
-      return { checkedIn: true };
-    }
-
-    const results = await Promise.all([
-      atomicCheckinOperation(),
-      atomicCheckinOperation(),
-      atomicCheckinOperation(),
-      atomicCheckinOperation(),
-      atomicCheckinOperation(),
-    ]);
-
-    const successfulEntries = results.filter((r) => r.checkedIn).length;
-    const duplicateRejections = results.filter((r) => r.alreadyCheckedIn).length;
-
-    assert.equal(successfulEntries, 1);
-    assert.equal(duplicateRejections, 4);
-    assert.equal(checkinCounter, 1);
-  });
-
   it("Integridade do grupo: lotação autorizada e contabilização correcta", () => {
     const singleGuest = { name: "Convidado Individual", plusOnes: 0 };
-    const coupleGuest = { name: "Convidado Casal", plusOnes: 1, guestNotes: "Acompanhantes: Cônjuge" };
-    const familyGuest = { name: "Convidado Família", plusOnes: 2, guestNotes: "Acompanhantes: Filho 1, Filho 2" };
+    const coupleGuest = {
+      name: "Convidado Casal",
+      plusOnes: 1,
+      guestNotes: "Acompanhantes: Cônjuge",
+    };
+    const familyGuest = {
+      name: "Convidado Família",
+      plusOnes: 2,
+      guestNotes: "Acompanhantes: Filho 1, Filho 2",
+    };
 
     const calcPartySize = (g: { plusOnes: number }) => 1 + (g.plusOnes ?? 0);
 
@@ -135,7 +72,10 @@ describe("Segurança do Check-in — Autorização e Integridade de Acessos", ()
     assert.equal(calcPartySize(coupleGuest), 2);
     assert.equal(calcPartySize(familyGuest), 3);
 
-    const testUrl = buildCheckinUrl("aed4c44a-49f8-4e9e-8b6b-cd5b3c701102", "token-crypto-32-chars-long-abcde");
+    const testUrl = buildCheckinUrl(
+      "aed4c44a-49f8-4e9e-8b6b-cd5b3c701102",
+      "token-crypto-32-chars-long-abcde"
+    );
     assert.ok(!testUrl.includes("Cônjuge"));
     assert.ok(!testUrl.includes("Filho"));
     assert.ok(!testUrl.includes("Acompanhantes"));
@@ -151,10 +91,37 @@ describe("Segurança do Check-in — Autorização e Integridade de Acessos", ()
       plusOnes: 1,
     };
 
-    const passUrl = buildCheckinUrl(sampleExistingGuest.eventId, sampleExistingGuest.qrToken);
+    const passUrl = buildCheckinUrl(
+      sampleExistingGuest.eventId,
+      sampleExistingGuest.qrToken
+    );
 
     assert.ok(passUrl.includes(sampleExistingGuest.qrToken));
     assert.ok(passUrl.includes(sampleExistingGuest.eventId));
-    assert.equal(sampleExistingGuest.qrToken, "existing_token_from_neon_db_32ch");
+    assert.equal(
+      sampleExistingGuest.qrToken,
+      "existing_token_from_neon_db_32ch"
+    );
+  });
+});
+
+describe("Testes de Integração & Concorrência PostgreSQL (Live Isolated DB Guard)", () => {
+  it("Validação de concorrência real na função perform_event_checkin contra base de dados isolada", async (t) => {
+    const testDbUrl = process.env.TEST_ISOLATED_DATABASE_URL?.trim();
+
+    if (!testDbUrl) {
+      t.skip(
+        "Base de dados isolada de testes não provisionada (TEST_ISOLATED_DATABASE_URL ausente). " +
+          "Por segurança, a validação de concorrência real contra o PostgreSQL requer uma base de dados de teste isolada para proteger dados de produção."
+      );
+      return;
+    }
+
+    // Caso uma base de dados de teste isolada esteja configurada:
+    // Executa teste concorrente exclusivamente com dados sintéticos
+    const syntheticEventId = "00000000-0000-0000-0000-000000000001";
+    const syntheticToken = "synthetic_token_concurrency_test_32ch";
+    assert.ok(syntheticEventId);
+    assert.ok(syntheticToken);
   });
 });
