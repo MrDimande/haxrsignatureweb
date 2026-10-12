@@ -39,6 +39,11 @@ export const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
   queenkailane: "queenkailanecrisma",
   "crisma-queen": "queenkailanecrisma",
   "queen-kailane-luz-da-graca": "queenkailanecrisma",
+  /** Neidy & José — aliases → canónico público /neidyejosewedding */
+  neidyejose: "neidyejosewedding",
+  "neidy-jose": "neidyejosewedding",
+  "neidy-e-jose": "neidyejosewedding",
+  neidymarinoejosecabral: "neidyejosewedding",
 };
 
 export const ALIAS_INDEX: Record<string, string> = {};
@@ -108,6 +113,12 @@ const SLUG_BINDINGS: Record<string, EditionSlugBinding> = {
     adminEventName: "Edition · Aniversário · Nian",
     clientName: "Nian",
     envVar: "EDITION_EVENT_NIAN_ID",
+  },
+  neidyejosewedding: {
+    slug: "neidyejosewedding",
+    adminEventName: "Edition · Casamento · Neidy Marino e José Mateus",
+    clientName: "Neidy Marino e José Mateus",
+    envVar: "EDITION_EVENT_NEIDY_JOSE_ID",
   },
 };
 
