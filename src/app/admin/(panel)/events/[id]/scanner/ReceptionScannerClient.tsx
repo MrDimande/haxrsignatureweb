@@ -292,7 +292,6 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
-    try {
       // Prioriza a mira central, onde o passe é apresentado, para reduzir o custo por frame.
       const frameNumber = framesAnalysedRef.current;
       const cropWidth = Math.max(1, Math.round(width * 0.72));
@@ -395,7 +394,7 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       !streamRef.current ||
       isProcessingRef.current ||
       detectorBusyRef.current ||
-      now - lastNativeAttemptRef.current < 700
+      now - lastNativeAttemptRef.current < 250
     ) {
       return;
     }
@@ -481,7 +480,7 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       setIsCameraActive(true);
       setScanFeedback("Câmara activa — aponte para o passe digital do convidado.");
       if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = setInterval(scanTick, 180);
+      scanIntervalRef.current = setInterval(scanTick, 140);
     } catch (err: unknown) {
       const isError = err instanceof Error;
       const errorName = isError ? err.name : "";
