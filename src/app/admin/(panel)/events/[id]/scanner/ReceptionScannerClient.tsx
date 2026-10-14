@@ -292,61 +292,84 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
-    const fullScale = Math.min(1, 1440 / Math.max(width, height));
-    const fullWidth = Math.max(1, Math.round(width * fullScale));
-    const fullHeight = Math.max(1, Math.round(height * fullScale));
-    if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
-      canvas.width = fullWidth;
-      canvas.height = fullHeight;
-    }
-
     try {
-      ctx.drawImage(video, 0, 0, fullWidth, fullHeight);
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-      });
+      // Prioriza a mira central, onde o passe é apresentado, para reduzir o custo por frame.
+      const frameNumber = framesAnalysedRef.current;
+      const cropWidth = Math.max(1, Math.round(width * 0.72));
+      const cropHeight = Math.max(1, Math.round(height * 0.72));
+      const sourceX = Math.round((width - cropWidth) / 2);
+      const sourceY = Math.round((height - cropHeight) / 2);
 
-      // O passe é normalmente apresentado ao centro. A cada terceiro frame,
-      // tentamos ainda um recorte central ampliado se a leitura do frame inteiro falhar.
-      if (!decoded && framesAnalysedRef.current % 3 === 0) {
-        const cropWidth = Math.max(1, Math.round(width * 0.72));
-        const cropHeight = Math.max(1, Math.round(height * 0.72));
-        const sourceX = Math.round((width - cropWidth) / 2);
-        const sourceY = Math.round((height - cropHeight) / 2);
-        const cropScale = Math.min(1.5, 1440 / Math.max(cropWidth, cropHeight));
+      let decoded: ReturnType<typeof jsQR> = null;
+      let cropImageData: ImageData | null = null;
+      let fullImageData: ImageData | null = null;
 
-        if (!cropCanvasRef.current) {
-          cropCanvasRef.current = document.createElement("canvas");
+      if (!cropCanvasRef.current) {
+        cropCanvasRef.current = document.createElement("canvas");
+      }
+      const cropCanvas = cropCanvasRef.current;
+      const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
+
+      if (cropCtx) {
+        // Não ampliar artificialmente a imagem: processar menos píxeis reduz a latência.
+        const cropScale = Math.min(1, 800 / Math.max(cropWidth, cropHeight));
+        const cropTargetWidth = Math.max(1, Math.round(cropWidth * cropScale));
+        const cropTargetHeight = Math.max(1, Math.round(cropHeight * cropScale));
+
+        if (cropCanvas.width !== cropTargetWidth || cropCanvas.height !== cropTargetHeight) {
+          cropCanvas.width = cropTargetWidth;
+          cropCanvas.height = cropTargetHeight;
         }
-        const cropCanvas = cropCanvasRef.current;
-        const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
-        if (cropCtx) {
-          const cropTargetWidth = Math.max(1, Math.round(cropWidth * cropScale));
-          const cropTargetHeight = Math.max(1, Math.round(cropHeight * cropScale));
-          if (
-            cropCanvas.width !== cropTargetWidth ||
-            cropCanvas.height !== cropTargetHeight
-          ) {
-            cropCanvas.width = cropTargetWidth;
-            cropCanvas.height = cropTargetHeight;
-          }
-          cropCtx.drawImage(
-            video,
-            sourceX,
-            sourceY,
-            cropWidth,
-            cropHeight,
-            0,
-            0,
-            cropTargetWidth,
-            cropTargetHeight
-          );
-          imageData = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
-          decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "attemptBoth",
-          });
+
+        cropCtx.drawImage(
+          video,
+          sourceX,
+          sourceY,
+          cropWidth,
+          cropHeight,
+          0,
+          0,
+          cropTargetWidth,
+          cropTargetHeight
+        );
+        cropImageData = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
+
+        // O modo normal é o caminho rápido. A leitura invertida fica como fallback periódico.
+        decoded = jsQR(cropImageData.data, cropImageData.width, cropImageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+      }
+
+      // Procura no frame completo periodicamente para QR fora da mira ou junto às margens.
+      // Se o recorte não estiver disponível, usa o frame completo em todos os ciclos.
+      if (!decoded && (frameNumber % 4 === 0 || !cropImageData)) {
+        const fullScale = Math.min(1, 960 / Math.max(width, height));
+        const fullWidth = Math.max(1, Math.round(width * fullScale));
+        const fullHeight = Math.max(1, Math.round(height * fullScale));
+
+        if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
+          canvas.width = fullWidth;
+          canvas.height = fullHeight;
         }
+
+        ctx.drawImage(video, 0, 0, fullWidth, fullHeight);
+        fullImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        decoded = jsQR(fullImageData.data, fullImageData.width, fullImageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+      }
+
+      // Mantém compatibilidade com QR invertidos sem pagar esse custo em todos os frames.
+      if (!decoded && cropImageData && frameNumber % 6 === 0) {
+        decoded = jsQR(cropImageData.data, cropImageData.width, cropImageData.height, {
+          inversionAttempts: "onlyInvert",
+        });
+      }
+
+      if (!decoded && fullImageData && frameNumber % 12 === 0) {
+        decoded = jsQR(fullImageData.data, fullImageData.width, fullImageData.height, {
+          inversionAttempts: "onlyInvert",
+        });
       }
 
       if (decoded?.data) {
