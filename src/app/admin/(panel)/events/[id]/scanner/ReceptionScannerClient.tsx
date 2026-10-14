@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import jsQR from "jsqr";
 import { extractQrToken } from "@/lib/events/qr-token";
-export { extractQrToken };
 
 import {
   ArrowLeft,
