@@ -16,6 +16,9 @@ import {
 } from "lucide-react";
 import type { ManagedEvent, EventStats } from "@/lib/events/types";
 
+// Compatibilidade com os testes e consumidores existentes do scanner.
+export { extractQrToken };
+
 type ScannerResult = {
   status: "success" | "already_checked_in" | "error";
   message: string;
