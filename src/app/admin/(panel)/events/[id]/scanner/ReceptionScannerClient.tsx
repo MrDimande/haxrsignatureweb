@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   XCircle,
   ShieldCheck,
+  LockKeyhole,
 } from "lucide-react";
 import type { ManagedEvent, EventStats } from "@/lib/events/types";
 
@@ -349,284 +350,313 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Barra de Navegação Superior */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/events/checkin"
-            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-grey/60 hover:text-emerald-400 transition-colors"
-            title="Voltar ao portal multi-evento de recepção"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Recepção Geral</span>
-          </Link>
-          <span className="text-white/20">/</span>
-          <Link
-            href={`/admin/events/${event.id}?tab=checkin`}
-            className="text-xs font-mono uppercase tracking-widest text-grey/60 hover:text-gold transition-colors"
-            title="Abrir painel de check-in deste evento"
-          >
-            <span>Painel Check-in</span>
-          </Link>
-          <span className="text-white/20">/</span>
-          <Link
-            href={`/admin/events/${event.id}`}
-            className="text-xs font-mono uppercase tracking-widest text-grey/40 hover:text-white transition-colors"
-          >
-            <span>Evento</span>
-          </Link>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-mono text-grey/50">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Scanner Óptico Activo</span>
-        </div>
+    <div className="relative isolate space-y-7 pb-4 text-white">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-8 -z-10 h-[460px] overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(184,138,42,0.13),transparent_65%)]" />
+        <div className="absolute right-0 top-8 h-72 w-72 translate-x-1/3 rounded-full border border-brand-champagne/[0.06]" />
+        <div className="absolute right-10 top-16 h-56 w-56 translate-x-1/3 rounded-full border border-brand-champagne/[0.05]" />
       </div>
 
-      {/* Cabeçalho do Scanner */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8 backdrop-blur-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs font-mono mb-3">
-              <span>{event.name}</span>
-            </div>
-            <h1 className="font-serif text-2xl sm:text-3xl text-white font-light">
-              Scanner de Controlo de Entrada
-            </h1>
-            <p className="text-sm text-grey/60 mt-1 max-w-xl leading-relaxed">
-              Aponte a câmara para o Passe Digital apresentado pelo convidado ou insira o código manual para validação instantânea.
-            </p>
-          </div>
-
-          {/* Métrica Rápida */}
-          <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8">
-            <div className="text-center">
-              <p className="font-mono text-2xl sm:text-3xl font-light text-gold">
-                {stats.checkedIn}
-              </p>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-grey/50 mt-1">
-                Entradas
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="font-mono text-2xl sm:text-3xl font-light text-white/80">
-                {stats.confirmed}
-              </p>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-grey/50 mt-1">
-                Confirmados
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="font-mono text-2xl sm:text-3xl font-light text-emerald-400">
-                {pct}%
-              </p>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-grey/50 mt-1">
-                Presença
-              </p>
-            </div>
-          </div>
+      <nav aria-label="Navegação do scanner" className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-champagne/10 pb-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-mono uppercase tracking-[0.2em]">
+          <Link href="/admin/events/checkin" className="inline-flex items-center gap-2 text-brand-champagne/70 transition-colors hover:text-brand-champagne" title="Voltar ao portal multi-evento de recepção">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Recepção geral</span>
+          </Link>
+          <span className="text-brand-champagne/25">/</span>
+          <Link href={`/admin/events/${event.id}?tab=checkin`} className="text-brand-champagne/55 transition-colors hover:text-brand-champagne" title="Abrir painel de check-in deste evento">
+            Painel do evento
+          </Link>
+          <span className="text-brand-champagne/25">/</span>
+          <span className="text-brand-champagne">Scanner</span>
         </div>
-      </div>
-
-      {/* Área Central: Câmara + Feedback */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Painel da Câmara */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
-          <div className="relative aspect-[4/3] sm:aspect-video w-full rounded-2xl bg-black border border-white/10 overflow-hidden flex items-center justify-center shadow-2xl">
-            {/* Elemento de Vídeo com playsInline obrigatório para iOS Safari */}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${isCameraActive ? "block" : "hidden"}`}
-            />
-
-            {/* Overlay da Mira do Scanner */}
-            {isCameraActive && (
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="relative w-64 h-64 border-2 border-gold/70 rounded-3xl shadow-[0_0_50px_rgba(203,185,148,0.2)]">
-                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-gold rounded-tl-xl -mt-1 -ml-1" />
-                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-gold rounded-tr-xl -mt-1 -mr-1" />
-                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-gold rounded-bl-xl -mb-1 -ml-1" />
-                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-gold rounded-br-xl -mb-1 -mr-1" />
-                  {isProcessing && (
-                    <div className="absolute inset-0 bg-gold/10 backdrop-blur-[2px] rounded-3xl flex items-center justify-center">
-                      <div className="text-center font-mono text-xs uppercase tracking-widest text-gold animate-pulse">
-                        A validar…
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Estado quando a câmara está desligada */}
-            {!isCameraActive && (
-              <div className="text-center p-8">
-                <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center mx-auto mb-4 text-grey/40">
-                  <CameraOff className="w-8 h-8" />
-                </div>
-                <p className="font-serif text-lg text-white/80">
-                  Câmara desligada
-                </p>
-                <p className="text-xs text-grey/50 mt-1 max-w-sm leading-relaxed">
-                  Active a câmara para iniciar o scanner óptico contínuo na porta do evento.
-                </p>
-                {cameraError && (
-                  <div className="mt-4 p-3 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-300 max-w-md mx-auto text-left">
-                    {cameraError}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Botão de Controlo da Câmara */}
-          <div className="flex items-center gap-3">
-            {!isCameraActive ? (
-              <button
-                type="button"
-                onClick={startCamera}
-                className="flex-1 py-3 px-6 rounded-xl bg-gold text-black font-serif text-sm tracking-wide font-medium hover:bg-gold-light transition-colors flex items-center justify-center gap-2 shadow-lg shadow-gold/10"
-              >
-                <Camera className="w-4 h-4" />
-                <span>Activar Câmara do Dispositivo</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={stopCamera}
-                className="flex-1 py-3 px-6 rounded-xl bg-white/10 text-white font-serif text-sm tracking-wide hover:bg-white/15 transition-colors flex items-center justify-center gap-2"
-              >
-                <CameraOff className="w-4 h-4" />
-                <span>Desactivar Câmara</span>
-              </button>
-            )}
-          </div>
+        <div className="inline-flex items-center gap-2 border border-brand-champagne/15 bg-black/20 px-3 py-2 text-[9px] font-mono uppercase tracking-[0.18em] text-brand-champagne/80">
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 ${isCameraActive ? "animate-ping bg-emerald-400" : "bg-brand-champagne/30"}`} />
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${isCameraActive ? "bg-emerald-400" : "bg-brand-champagne/50"}`} />
+          </span>
+          {isCameraActive ? "Leitor óptico activo" : "Recepção protegida"}
         </div>
+      </nav>
 
-        {/* Painel Lateral: Resultado do Check-in & Input Manual */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          {/* Card de Feedback do Último Passe Lido */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex flex-col justify-between flex-1 min-h-[300px]">
+      <header className="relative overflow-hidden border border-brand-champagne/20 bg-gradient-to-br from-[#19140E] via-[#0C0B09] to-[#17120D]">
+        <div aria-hidden="true" className="absolute inset-y-0 right-0 hidden w-1/3 border-l border-brand-champagne/[0.07] md:block">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(184,138,42,0.1),transparent_68%)]" />
+          <div className="absolute right-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full border border-brand-champagne/[0.09]" />
+          <div className="absolute right-[4.35rem] top-1/2 h-32 w-32 -translate-y-1/2 rounded-full border border-brand-champagne/[0.08]" />
+          <div className="absolute right-[7.2rem] top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-brand-champagne/30" />
+        </div>
+        <div className="relative p-6 sm:p-8 lg:p-10">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center border border-brand-champagne/30 text-brand-champagne">
+              <ShieldCheck className="h-4 w-4" strokeWidth={1.4} />
+            </div>
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-grey/50 mb-4">
-                Resultado da Última Leitura
-              </p>
+              <p className="text-[9px] font-mono uppercase tracking-[0.32em] text-brand-champagne/65">HAXR Signature</p>
+              <p className="mt-1 text-[9px] font-mono uppercase tracking-[0.2em] text-white/35">Hospitalidade · Controlo de acessos</p>
+            </div>
+          </div>
 
-              {scanResult ? (
-                <div className="space-y-4">
-                  {scanResult.status === "success" && (
-                    <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-300">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                        <span className="font-serif text-base font-medium">
-                          {scanResult.message}
-                        </span>
-                      </div>
-                      <p className="font-serif text-2xl text-white mt-3">
-                        {scanResult.guestName}
-                      </p>
-                      <div className="mt-3 pt-3 border-t border-emerald-500/20 text-xs font-mono space-y-1">
-                        <p>
-                          Lotação: {scanResult.partySize} pessoa(s)
-                          {Boolean(scanResult.plusOnes) && ` (+${scanResult.plusOnes} acompanhante(s))`}
-                        </p>
-                        {scanResult.tableName && (
-                          <p className="text-gold">
-                            Mesa: {scanResult.tableName}
-                            {scanResult.seatLabel ? ` · Lugar ${scanResult.seatLabel}` : ""}
-                          </p>
-                        )}
-                        {scanResult.notes && (
-                          <p className="text-grey/70 italic mt-1 font-sans">
-                            {scanResult.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+          <div className="max-w-2xl">
+            <p className="mb-3 flex items-center gap-3 text-[9px] font-mono uppercase tracking-[0.3em] text-brand-champagne/75">
+              <span className="h-px w-7 bg-brand-gold/80" />
+              Recepção & validação
+            </p>
+            <h1 className="font-display text-3xl font-light leading-tight tracking-[-0.035em] text-[#F5EFE4] sm:text-4xl lg:text-[2.85rem]">
+              O momento da chegada.
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-[#D6CCBC]/70">
+              A equipa lê o passe uma única vez. A presença é validada e registada de imediato, com confirmação clara para a recepção.
+            </p>
+            <div className="mt-5 inline-flex max-w-full items-center gap-2 border border-brand-champagne/15 bg-black/20 px-3 py-2 text-[9px] font-mono uppercase tracking-[0.16em] text-brand-champagne/80">
+              <span className="truncate">{event.name}</span>
+              <span className="text-brand-champagne/35">·</span>
+              <span className="shrink-0">Posto de entrada</span>
+            </div>
+          </div>
+        </div>
 
-                  {scanResult.status === "already_checked_in" && (
-                    <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-300">
-                      <div className="flex items-center gap-2 mb-2">
-                        <AlertTriangle className="w-5 h-5 text-amber-400" />
-                        <span className="font-serif text-base font-medium">
-                          {scanResult.message}
-                        </span>
-                      </div>
-                      <p className="font-serif text-2xl text-white mt-3">
-                        {scanResult.guestName}
-                      </p>
-                      <div className="mt-3 pt-3 border-t border-amber-500/20 text-xs font-mono space-y-1">
-                        <p>Lotação autorizada: {scanResult.partySize} pessoa(s)</p>
-                        {scanResult.tableName && (
-                          <p className="text-gold">
-                            Mesa: {scanResult.tableName}
-                            {scanResult.seatLabel ? ` · Lugar ${scanResult.seatLabel}` : ""}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+        <div className="relative grid grid-cols-3 border-t border-brand-champagne/15 bg-black/15">
+          <div className="border-r border-brand-champagne/10 px-4 py-4 sm:px-7">
+            <p className="text-[8px] font-mono uppercase tracking-[0.22em] text-white/40 sm:text-[9px]">Entradas</p>
+            <p className="mt-1 font-display text-2xl font-light tabular-nums text-brand-champagne sm:text-3xl">{stats.checkedIn}<span className="ml-2 text-xs text-white/35">/</span><span className="ml-2 text-base text-white/60 sm:text-lg">{stats.confirmed}</span></p>
+            <p className="mt-1 text-[9px] tracking-wide text-white/35">registadas / confirmados</p>
+          </div>
+          <div className="border-r border-brand-champagne/10 px-4 py-4 sm:px-7">
+            <p className="text-[8px] font-mono uppercase tracking-[0.22em] text-white/40 sm:text-[9px]">Presença</p>
+            <p className="mt-1 font-display text-2xl font-light tabular-nums text-[#E8D7B8] sm:text-3xl">{pct}<span className="ml-1 text-sm">%</span></p>
+            <div className="mt-2 h-px w-full bg-white/10">
+              <div className="h-px bg-brand-gold transition-all duration-500" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+          <div className="px-4 py-4 sm:px-7">
+            <p className="text-[8px] font-mono uppercase tracking-[0.22em] text-white/40 sm:text-[9px]">Segurança</p>
+            <p className="mt-2 flex items-center gap-2 text-xs text-[#D8CDBB] sm:text-sm">
+              <LockKeyhole className="h-3.5 w-3.5 text-brand-champagne/70" />
+              Sessão autenticada
+            </p>
+            <p className="mt-1 text-[9px] tracking-wide text-white/35">validação no servidor</p>
+          </div>
+        </div>
+      </header>
 
-                  {scanResult.status === "error" && (
-                    <div className="p-4 rounded-xl bg-red-950/30 border border-red-500/30 text-red-300">
-                      <div className="flex items-center gap-2 mb-2">
-                        <XCircle className="w-5 h-5 text-red-400" />
-                        <span className="font-serif text-base font-medium">
-                          Entrada Não Autorizada
-                        </span>
+      <main className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
+        <section className="min-w-0 border border-brand-champagne/15 bg-[#0D0B09]/90">
+          <div className="flex items-start justify-between gap-4 border-b border-brand-champagne/10 px-5 py-4 sm:px-6">
+            <div>
+              <p className="text-[9px] font-mono uppercase tracking-[0.27em] text-brand-champagne/55">01 / Leitura óptica</p>
+              <h2 className="mt-2 font-display text-xl font-light text-[#F5EFE4] sm:text-2xl">Scanner da recepção</h2>
+            </div>
+            <span className="mt-1 border border-brand-champagne/15 px-2 py-1 text-[8px] font-mono uppercase tracking-[0.15em] text-white/45">QR · seguro</span>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            <div className="relative aspect-[4/3] w-full overflow-hidden border border-brand-champagne/15 bg-[#050504] sm:aspect-[16/10]">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(184,138,42,0.1),transparent_65%)]" />
+              <div aria-hidden="true" className="pointer-events-none absolute inset-5 border border-brand-champagne/[0.07] sm:inset-7" />
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`absolute inset-0 h-full w-full object-cover ${isCameraActive ? "block" : "hidden"}`}
+              />
+
+              {isCameraActive && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="relative flex aspect-square w-[min(62%,17rem)] items-center justify-center border border-brand-champagne/70 shadow-[0_0_55px_rgba(184,138,42,0.12)]">
+                    <span className="absolute -left-px -top-px h-7 w-7 border-l-2 border-t-2 border-brand-champagne" />
+                    <span className="absolute -right-px -top-px h-7 w-7 border-r-2 border-t-2 border-brand-champagne" />
+                    <span className="absolute -bottom-px -left-px h-7 w-7 border-b-2 border-l-2 border-brand-champagne" />
+                    <span className="absolute -bottom-px -right-px h-7 w-7 border-b-2 border-r-2 border-brand-champagne" />
+                    <span className="absolute left-0 right-0 top-1/2 h-px bg-brand-champagne/25" />
+                    {isProcessing && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/65 backdrop-blur-sm">
+                        <span className="animate-pulse text-[10px] font-mono uppercase tracking-[0.25em] text-brand-champagne">A validar o passe</span>
                       </div>
-                      <p className="text-xs text-red-200 mt-2 leading-relaxed">
-                        {scanResult.message}
-                      </p>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-12 text-grey/40">
-                  <p className="font-serif text-sm">
-                    Nenhum código lido nesta sessão.
-                  </p>
-                  <p className="text-xs text-grey/50 mt-1">
-                    Aguardando apresentação de Passe Digital…
-                  </p>
+              )}
+
+              {!isCameraActive && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center px-6 py-8 text-center">
+                  <div className="mb-5 flex h-16 w-16 items-center justify-center border border-brand-champagne/25 bg-brand-champagne/[0.035] text-brand-champagne/75">
+                    <CameraOff className="h-6 w-6" strokeWidth={1.2} />
+                  </div>
+                  <p className="font-display text-2xl font-light tracking-tight text-[#F0E7D8]">Pronto para receber.</p>
+                  <p className="mt-2 max-w-xs text-xs leading-6 text-white/45">Active a câmara e peça ao convidado que apresente o passe digital no seu telemóvel.</p>
+                  <div className="mt-5 flex items-center gap-2 text-[8px] font-mono uppercase tracking-[0.2em] text-brand-champagne/45">
+                    <span className="h-px w-5 bg-brand-gold/60" />
+                    Um passe · Uma leitura
+                    <span className="h-px w-5 bg-brand-gold/60" />
+                  </div>
+                  {cameraError && (
+                    <div className="mt-5 max-w-md border border-red-400/25 bg-red-950/25 p-3 text-left text-xs leading-5 text-red-200" role="alert">
+                      {cameraError}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Rodapé Informativo */}
-            <div className="pt-4 border-t border-white/5 text-[11px] text-grey/40 font-mono">
-              Validação atómica segura · HAXR Signature Check-in v2
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+              {!isCameraActive ? (
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 border border-brand-champagne/80 bg-brand-champagne px-5 py-3 text-xs font-mono uppercase tracking-[0.14em] text-[#15110B] transition-colors hover:border-[#F2E4C9] hover:bg-[#F2E4C9] focus:outline-none focus:ring-2 focus:ring-brand-champagne/50 focus:ring-offset-2 focus:ring-offset-[#0D0B09]"
+                >
+                  <Camera className="h-4 w-4" strokeWidth={1.5} />
+                  Activar câmara
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={stopCamera}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 border border-brand-champagne/30 bg-white/[0.035] px-5 py-3 text-xs font-mono uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-brand-champagne/65 hover:text-brand-champagne focus:outline-none focus:ring-2 focus:ring-brand-champagne/40"
+                >
+                  <CameraOff className="h-4 w-4" strokeWidth={1.5} />
+                  Desactivar câmara
+                </button>
+              )}
+              <div className="flex items-center justify-center gap-2 border border-white/[0.07] px-4 py-3 text-[9px] font-mono uppercase tracking-[0.14em] text-white/40">
+                <ShieldCheck className="h-3.5 w-3.5 text-brand-champagne/60" />
+                Acesso controlado
+              </div>
             </div>
           </div>
-
-          {/* Fallback de Entrada Manual de Código */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-grey/50 mb-3">
-              Validação Manual por Código / Token
-            </p>
-            <form onSubmit={handleManualSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={manualToken}
-                onChange={(e) => setManualToken(e.target.value)}
-                placeholder="Insira o código ou token do passe…"
-                className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-grey/30 font-mono focus:border-gold outline-none transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={isProcessing || !manualToken.trim()}
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-gold hover:text-black text-white text-xs font-serif tracking-wide transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Validar
-              </button>
-            </form>
+          <div className="flex items-center justify-between gap-4 border-t border-brand-champagne/10 px-5 py-3 text-[8px] font-mono uppercase tracking-[0.15em] text-white/30 sm:px-6">
+            <span>HAXR Signature · Access desk</span>
+            <span>Protocolo de entrada v2</span>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <aside className="flex min-w-0 flex-col gap-5">
+          <section aria-live="polite" className="flex min-h-[340px] flex-1 flex-col border border-brand-champagne/15 bg-gradient-to-br from-[#17130E] to-[#0A0908]">
+            <div className="flex items-start justify-between gap-4 border-b border-brand-champagne/10 px-5 py-4 sm:px-6">
+              <div>
+                <p className="text-[9px] font-mono uppercase tracking-[0.27em] text-brand-champagne/55">02 / Resultado</p>
+                <h2 className="mt-2 font-display text-xl font-light text-[#F5EFE4] sm:text-2xl">Registo de presença</h2>
+              </div>
+              <span className="mt-1 text-[9px] font-mono uppercase tracking-[0.15em] text-white/35">{isProcessing ? "A validar" : scanResult ? "Actualizado" : "Em espera"}</span>
+            </div>
+
+            <div className="flex flex-1 flex-col justify-center p-5 sm:p-6">
+              {scanResult ? (
+                <div className="space-y-4">
+                  {scanResult.status === "success" && (
+                    <div className="border border-emerald-400/25 bg-emerald-950/25 p-5 text-emerald-100">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-emerald-300/30 bg-emerald-300/10">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-300" strokeWidth={1.4} />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono uppercase tracking-[0.2em] text-emerald-300/70">Validação concluída</p>
+                          <p className="mt-1 font-display text-xl font-light text-emerald-100">{scanResult.message}</p>
+                        </div>
+                      </div>
+                      <p className="mt-5 border-t border-emerald-300/15 pt-4 font-display text-3xl font-light text-white">{scanResult.guestName}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-emerald-300/15 pt-4 text-xs">
+                        <div>
+                          <p className="text-[8px] font-mono uppercase tracking-[0.17em] text-emerald-100/45">Lotação</p>
+                          <p className="mt-1 text-emerald-50">{scanResult.partySize} pessoa(s)</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] font-mono uppercase tracking-[0.17em] text-emerald-100/45">Lugar</p>
+                          <p className="mt-1 text-emerald-50">{scanResult.tableName ? `${scanResult.tableName}${scanResult.seatLabel ? ` · ${scanResult.seatLabel}` : ""}` : "A confirmar"}</p>
+                        </div>
+                      </div>
+                      {scanResult.notes && <p className="mt-4 border-t border-emerald-300/15 pt-3 text-xs italic leading-5 text-emerald-50/65">{scanResult.notes}</p>}
+                    </div>
+                  )}
+
+                  {scanResult.status === "already_checked_in" && (
+                    <div className="border border-amber-300/25 bg-amber-950/25 p-5 text-amber-100">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-amber-300/30 bg-amber-300/10">
+                          <AlertTriangle className="h-5 w-5 text-amber-300" strokeWidth={1.4} />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono uppercase tracking-[0.2em] text-amber-200/70">Atenção · duplicado</p>
+                          <p className="mt-1 font-display text-xl font-light">{scanResult.message}</p>
+                        </div>
+                      </div>
+                      <p className="mt-5 border-t border-amber-300/15 pt-4 font-display text-3xl font-light text-white">{scanResult.guestName}</p>
+                      <p className="mt-3 text-xs text-amber-100/70">Lotação autorizada: {scanResult.partySize} pessoa(s)</p>
+                      {scanResult.tableName && <p className="mt-2 text-xs text-brand-champagne">{scanResult.tableName}{scanResult.seatLabel ? ` · Lugar ${scanResult.seatLabel}` : ""}</p>}
+                    </div>
+                  )}
+
+                  {scanResult.status === "error" && (
+                    <div className="border border-red-300/25 bg-red-950/25 p-5 text-red-100">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-red-300/30 bg-red-300/10">
+                          <XCircle className="h-5 w-5 text-red-300" strokeWidth={1.4} />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono uppercase tracking-[0.2em] text-red-200/70">Acesso não autorizado</p>
+                          <p className="mt-1 font-display text-xl font-light">Não foi possível validar o passe.</p>
+                        </div>
+                      </div>
+                      <p className="mt-4 border-t border-red-300/15 pt-3 text-xs leading-6 text-red-100/75">{scanResult.message}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-brand-champagne/15 bg-brand-champagne/[0.035] text-brand-champagne/60">
+                    <ShieldCheck className="h-6 w-6" strokeWidth={1.2} />
+                  </div>
+                  <p className="mt-5 font-display text-2xl font-light text-[#EFE5D5]">À espera do primeiro passe.</p>
+                  <p className="mx-auto mt-2 max-w-xs text-xs leading-6 text-white/40">Quando o código for lido, os dados essenciais e o estado da entrada surgem aqui.</p>
+                  <div className="mx-auto mt-6 flex max-w-[190px] items-center gap-3">
+                    <span className="h-px flex-1 bg-brand-champagne/20" />
+                    <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-brand-champagne/45">Pronto</span>
+                    <span className="h-px flex-1 bg-brand-champagne/20" />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-brand-champagne/10 px-5 py-3 text-[8px] font-mono uppercase tracking-[0.14em] text-white/30 sm:px-6">
+              Validação atómica · resposta imediata
+            </div>
+          </section>
+
+          <section className="border border-brand-champagne/15 bg-[#0D0B09]/90">
+            <div className="border-b border-brand-champagne/10 px-5 py-4">
+              <p className="text-[9px] font-mono uppercase tracking-[0.25em] text-brand-champagne/55">03 / Contingência</p>
+              <h2 className="mt-2 font-display text-lg font-light text-[#F5EFE4]">Validação manual</h2>
+              <p className="mt-1 text-xs leading-5 text-white/40">Utilize apenas se a leitura óptica não estiver disponível.</p>
+            </div>
+            <form onSubmit={handleManualSubmit} className="space-y-3 p-4 sm:p-5">
+              <label htmlFor="manual-pass-token" className="block text-[8px] font-mono uppercase tracking-[0.18em] text-white/45">Código ou token do passe</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="manual-pass-token"
+                  type="text"
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                  placeholder="Introduza o código de entrada"
+                  className="min-h-11 min-w-0 flex-1 border border-white/10 bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/25 outline-none transition-colors focus:border-brand-champagne/60 focus:ring-1 focus:ring-brand-champagne/20"
+                />
+                <button
+                  type="submit"
+                  disabled={isProcessing || !manualToken.trim()}
+                  className="min-h-11 border border-brand-champagne/25 bg-white/[0.035] px-5 py-2 text-[9px] font-mono uppercase tracking-[0.16em] text-brand-champagne transition-colors hover:border-brand-champagne/70 hover:bg-brand-champagne/10 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  Validar código
+                </button>
+              </div>
+            </form>
+          </section>
+        </aside>
+      </main>
+
+      <footer className="flex flex-col gap-2 border-t border-brand-champagne/10 pt-4 text-[8px] font-mono uppercase tracking-[0.17em] text-white/25 sm:flex-row sm:items-center sm:justify-between">
+        <span>HAXR Signature · Alta-costura digital</span>
+        <span>Um passe · Uma leitura · Uma confirmação</span>
+      </footer>
     </div>
   );
 }
