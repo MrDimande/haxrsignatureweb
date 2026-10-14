@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import jsQR from "jsqr";
+import { extractQrToken } from "@/lib/events/qr-token";
 import {
   ArrowLeft,
   Camera,
@@ -31,20 +32,22 @@ type Props = {
   initialStats: EventStats;
 };
 
+interface BarcodeDetectorResult {
+  rawValue?: string;
+}
+
+interface BarcodeDetectorInstance {
+  detect: (source: ImageBitmapSource) => Promise<BarcodeDetectorResult[]>;
+}
+
+interface BarcodeDetectorConstructor {
+  new (options?: { formats: string[] }): BarcodeDetectorInstance;
+}
+
 interface WindowWithWebkitAudio extends Window {
   AudioContext?: typeof AudioContext;
   webkitAudioContext?: typeof AudioContext;
-}
-
-// Extracção segura de token a partir de URL ou string crua
-export function extractQrToken(rawInput: string): string {
-  const trimmed = rawInput.trim();
-  if (trimmed.includes("/checkin/")) {
-    const segments = trimmed.split("/checkin/");
-    const tokenPart = segments[1]?.split("?")[0]?.split("/")[0]?.trim();
-    if (tokenPart) return tokenPart;
-  }
-  return trimmed;
+  BarcodeDetector?: BarcodeDetectorConstructor;
 }
 
 export default function ReceptionScannerClient({ event, initialStats }: Props) {
@@ -55,16 +58,31 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanResult, setScanResult] = useState<ScannerResult | null>(null);
   const [scanFeedback, setScanFeedback] = useState("Active a câmara para iniciar a leitura automática.");
+  const [nativeDetectorAvailable, setNativeDetectorAvailable] = useState(false);
+  const [scannerDiagnostics, setScannerDiagnostics] = useState({
+    frames: 0,
+    width: 0,
+    height: 0,
+    readyState: 0,
+  });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const detectorBusyRef = useRef(false);
+  const lastNativeAttemptRef = useRef(0);
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Travamento estrito de concorrência e debouncing de frames
   const isProcessingRef = useRef(false);
   const lastScannedTokenRef = useRef<string>("");
   const lastScanTimestampRef = useRef<number>(0);
+  const framesAnalysedRef = useRef(0);
+  const cameraStartedAtRef = useRef(0);
+  const lastDiagnosticsUpdateRef = useRef(0);
+  const lastDecodedAtRef = useRef(0);
 
   // Som suave de confirmação via Web Audio API (compatível com Safari e Chrome sem any)
   const playBeep = useCallback((type: "success" | "warning" | "error") => {
@@ -149,8 +167,14 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
           const message =
             data.message ||
             (res.status === 401 || res.status === 403
-              ? "Sessão de recepção não autorizada. Inicie sessão novamente."
-              : "Passe não reconhecido ou pertencente a outro evento.");
+              ? "QR descodificado, mas a sessão de recepção não está autorizada. Inicie sessão novamente."
+              : res.status === 404
+                ? "QR descodificado, mas o token não foi encontrado neste evento/ambiente. Confirme se o passe e o scanner pertencem ao mesmo Preview."
+                : res.status === 429
+                  ? "QR descodificado, mas o limite temporário de validações foi atingido. Aguarde alguns segundos."
+                  : res.status >= 500
+                    ? `QR descodificado, mas o servidor de check-in falhou (HTTP ${res.status}).`
+                    : `QR descodificado, mas a API recusou o passe (HTTP ${res.status}${data.error ? `, ${String(data.error)}` : ""}).`);
           setScanResult({ status: "error", message });
           setScanFeedback(message);
           playBeep("error");
@@ -190,7 +214,7 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
           }));
         }
       } catch {
-        const message = "QR detectado, mas houve uma falha de comunicação com o servidor.";
+        const message = "QR descodificado, mas não foi possível concluir a comunicação com o servidor.";
         setScanResult({ status: "error", message });
         setScanFeedback(message);
         playBeep("error");
@@ -202,47 +226,179 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     [event.id, playBeep]
   );
 
-  // jsQR é o leitor principal para manter o mesmo comportamento em todos os navegadores.
-  // Não exigimos HAVE_ENOUGH_DATA (4): frames já disponíveis também podem ser analisados.
+  // Descodificação por imagem (jsQR) em cada frame e recorte central de recurso.
+  // Não dependemos de video.paused: alguns navegadores reportam esse estado de forma
+  // transitória mesmo quando o stream continua a fornecer frames.
   const scanVideoFrame = useCallback(() => {
     const video = videoRef.current;
-    if (
-      !video ||
-      video.readyState < 2 ||
-      video.paused ||
-      video.videoWidth <= 0 ||
-      video.videoHeight <= 0 ||
-      isProcessingRef.current
-    ) return;
+    if (!video || isProcessingRef.current) return;
+
+    const now = Date.now();
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (video.readyState < 2 || width <= 0 || height <= 0) {
+      if (
+        cameraStartedAtRef.current > 0 &&
+        now - lastDiagnosticsUpdateRef.current >= 1000
+      ) {
+        lastDiagnosticsUpdateRef.current = now;
+        setScannerDiagnostics({
+          frames: framesAnalysedRef.current,
+          width,
+          height,
+          readyState: video.readyState,
+        });
+        if (now - cameraStartedAtRef.current > 1500 && now - lastDecodedAtRef.current > 1500) {
+          setScanFeedback(
+            `Câmara aberta, mas sem frames prontos para análise (estado ${video.readyState}; imagem ${width}×${height}).`
+          );
+        }
+      }
+      return;
+    }
+
+    framesAnalysedRef.current += 1;
+    if (now - lastDiagnosticsUpdateRef.current >= 1000) {
+      lastDiagnosticsUpdateRef.current = now;
+      setScannerDiagnostics({
+        frames: framesAnalysedRef.current,
+        width,
+        height,
+        readyState: video.readyState,
+      });
+
+      const elapsed = now - cameraStartedAtRef.current;
+      const sinceDecoded = lastDecodedAtRef.current
+        ? now - lastDecodedAtRef.current
+        : Number.POSITIVE_INFINITY;
+      if (!isProcessingRef.current && elapsed > 2500 && sinceDecoded > 3500) {
+        setScanFeedback(
+          `A analisar a imagem da câmara (${width}×${height}; ${framesAnalysedRef.current} frames). Ainda não foi descodificado nenhum QR.`
+        );
+      } else if (!isProcessingRef.current && lastDecodedAtRef.current && sinceDecoded > 5000) {
+        setScanFeedback(
+          `À procura do próximo passe — ${framesAnalysedRef.current} frames analisados (${width}×${height}).`
+        );
+      }
+    }
 
     if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
-    const width = video.videoWidth;
-    const height = video.videoHeight;
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
+    const fullScale = Math.min(1, 1440 / Math.max(width, height));
+    const fullWidth = Math.max(1, Math.round(width * fullScale));
+    const fullHeight = Math.max(1, Math.round(height * fullScale));
+    if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
+      canvas.width = fullWidth;
+      canvas.height = fullHeight;
     }
 
     try {
-      ctx.drawImage(video, 0, 0, width, height);
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+      ctx.drawImage(video, 0, 0, fullWidth, fullHeight);
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let decoded = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "attemptBoth",
       });
 
+      // O passe é normalmente apresentado ao centro. A cada terceiro frame,
+      // tentamos ainda um recorte central ampliado se a leitura do frame inteiro falhar.
+      if (!decoded && framesAnalysedRef.current % 3 === 0) {
+        const cropWidth = Math.max(1, Math.round(width * 0.72));
+        const cropHeight = Math.max(1, Math.round(height * 0.72));
+        const sourceX = Math.round((width - cropWidth) / 2);
+        const sourceY = Math.round((height - cropHeight) / 2);
+        const cropScale = Math.min(1.5, 1440 / Math.max(cropWidth, cropHeight));
+
+        if (!cropCanvasRef.current) {
+          cropCanvasRef.current = document.createElement("canvas");
+        }
+        const cropCanvas = cropCanvasRef.current;
+        const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
+        if (cropCtx) {
+          const cropTargetWidth = Math.max(1, Math.round(cropWidth * cropScale));
+          const cropTargetHeight = Math.max(1, Math.round(cropHeight * cropScale));
+          if (
+            cropCanvas.width !== cropTargetWidth ||
+            cropCanvas.height !== cropTargetHeight
+          ) {
+            cropCanvas.width = cropTargetWidth;
+            cropCanvas.height = cropTargetHeight;
+          }
+          cropCtx.drawImage(
+            video,
+            sourceX,
+            sourceY,
+            cropWidth,
+            cropHeight,
+            0,
+            0,
+            cropTargetWidth,
+            cropTargetHeight
+          );
+          imageData = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
+          decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth",
+          });
+        }
+      }
+
       if (decoded?.data) {
-        setScanFeedback("QR detectado — a validar o passe…");
+        lastDecodedAtRef.current = Date.now();
+        setScanFeedback("QR descodificado por imagem — a validar o passe…");
         void handleProcessCheckin(decoded.data);
       }
     } catch (error) {
       console.error("[Scanner] Erro ao analisar frame QR:", error);
-      setScanFeedback("A câmara está activa, mas não foi possível analisar a imagem.");
+      setScanFeedback("A câmara está activa, mas ocorreu um erro ao analisar a imagem.");
     }
   }, [handleProcessCheckin]);
+
+  // Leitor nativo opcional em paralelo. Se detect() estiver lento ou falhar, o jsQR
+  // continua a analisar os frames no mesmo ciclo, sem esperar pela API nativa.
+  const runNativeDetection = useCallback(() => {
+    const video = videoRef.current;
+    const detector = detectorRef.current;
+    const now = Date.now();
+
+    if (
+      !video ||
+      !detector ||
+      !streamRef.current ||
+      isProcessingRef.current ||
+      detectorBusyRef.current ||
+      now - lastNativeAttemptRef.current < 700
+    ) {
+      return;
+    }
+
+    lastNativeAttemptRef.current = now;
+    detectorBusyRef.current = true;
+    void detector
+      .detect(video)
+      .then((codes) => {
+        const rawValue = codes.find(
+          (code) => typeof code.rawValue === "string" && code.rawValue.trim().length > 0
+        )?.rawValue;
+        if (!rawValue || !streamRef.current || isProcessingRef.current) return;
+        lastDecodedAtRef.current = Date.now();
+        setScanFeedback("QR descodificado pelo leitor nativo — a validar o passe…");
+        void handleProcessCheckin(rawValue);
+      })
+      .catch(() => {
+        // O leitor nativo varia por navegador; jsQR mantém-se activo como leitor principal.
+      })
+      .finally(() => {
+        detectorBusyRef.current = false;
+      });
+  }, [handleProcessCheckin]);
+
+  const scanTick = useCallback(() => {
+    scanVideoFrame();
+    runNativeDetection();
+  }, [scanVideoFrame, runNativeDetection]);
 
   // Iniciar a câmara e ligar a leitura QR contínua.
   const startCamera = async () => {
@@ -269,11 +425,37 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       video.playsInline = true;
       await video.play();
 
+      detectorRef.current = null;
+      detectorBusyRef.current = false;
+      setNativeDetectorAvailable(false);
+      const win =
+        typeof window !== "undefined"
+          ? (window as unknown as WindowWithWebkitAudio)
+          : null;
+      if (win?.BarcodeDetector) {
+        try {
+          detectorRef.current = new win.BarcodeDetector({ formats: ["qr_code"] });
+          setNativeDetectorAvailable(true);
+        } catch {
+          detectorRef.current = null;
+        }
+      }
+
+      framesAnalysedRef.current = 0;
+      cameraStartedAtRef.current = Date.now();
+      lastDiagnosticsUpdateRef.current = 0;
+      lastDecodedAtRef.current = 0;
+      lastNativeAttemptRef.current = 0;
+      setScannerDiagnostics({
+        frames: 0,
+        width: video.videoWidth,
+        height: video.videoHeight,
+        readyState: video.readyState,
+      });
       setIsCameraActive(true);
-      setScanFeedback("Câmara activa — mantenha o QR inteiro dentro da imagem para leitura automática.");
+      setScanFeedback("Câmara activa — a inicializar a análise contínua dos frames…");
       if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-      // Leitura sincronizada, sem chamadas nativas assíncronas concorrentes.
-      scanIntervalRef.current = setInterval(scanVideoFrame, 180);
+      scanIntervalRef.current = setInterval(scanTick, 180);
     } catch (err: unknown) {
       const isError = err instanceof Error;
       const errorName = isError ? err.name : "";
@@ -290,6 +472,8 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
             : errorName === "NotReadableError" || errorName === "AbortError"
               ? "A câmara está ocupada por outra aplicação. Feche-a e tente novamente."
               : "Não foi possível iniciar a câmara. Utilize o código manual como alternativa.";
+      detectorRef.current = null;
+      setNativeDetectorAvailable(false);
       setCameraError(message);
       setScanFeedback(message);
       setIsCameraActive(false);
@@ -308,7 +492,16 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    detectorRef.current = null;
+    detectorBusyRef.current = false;
+    setNativeDetectorAvailable(false);
     setIsCameraActive(false);
+    setScannerDiagnostics({
+      frames: framesAnalysedRef.current,
+      width: 0,
+      height: 0,
+      readyState: 0,
+    });
     setScanFeedback("Leitura pausada. Active a câmara para voltar a procurar códigos QR.");
   }, []);
 
@@ -483,7 +676,14 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
             </div>
 
             <div aria-live="polite" role="status" className="mt-4 border border-brand-champagne/15 bg-brand-champagne/[0.035] px-4 py-3 text-xs leading-5 text-brand-champagne/75">
-              {scanFeedback}
+              <p>{scanFeedback}</p>
+              {isCameraActive && (
+                <p className="mt-1 text-[10px] leading-4 text-white/40">
+                  {scannerDiagnostics.width > 0 && scannerDiagnostics.height > 0
+                    ? `${scannerDiagnostics.frames} frames analisados · ${scannerDiagnostics.width}×${scannerDiagnostics.height} · jsQR${nativeDetectorAvailable ? " + leitor nativo" : ""} · estado ${scannerDiagnostics.readyState}`
+                    : `A aguardar frames do sensor · estado ${scannerDiagnostics.readyState}`}
+                </p>
+              )}
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
               {!isCameraActive ? (
