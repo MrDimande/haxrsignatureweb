@@ -6,6 +6,8 @@ import QRCode from "qrcode";
 import {
   Camera,
   CheckCircle2,
+  Loader2,
+  UserCheck,
   Copy,
   ExternalLink,
   MessageCircle,
@@ -17,6 +19,7 @@ import {
 } from "lucide-react";
 import { GUEST_STATUS_LABELS, GUEST_STATUS_STYLES } from "@/lib/events/constants";
 import { buildCheckinUrl } from "@/lib/events/tokens";
+import { checkInGuestAction } from "@/lib/events/actions/guests.actions";
 import type { EventGuest, EventStats } from "@/lib/events/types";
 
 type CheckInDashboardProps = {
@@ -46,6 +49,33 @@ export default function CheckInDashboard({
   const [selectedGuest, setSelectedGuest] = useState<EventGuest | null>(null);
   const [passQrDataUrl, setPassQrDataUrl] = useState<string>("");
   const [copiedLink, setCopiedLink] = useState(false);
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  const handleManualCheckIn = async (guest: EventGuest) => {
+    if (guest.status === "checked_in") return;
+    const confirmed = window.confirm(
+      `Confirmar entrada manual de ${guest.name} (${1 + (guest.plusOnes ?? 0)} pax)?`
+    );
+    if (!confirmed) return;
+
+    setCheckingInId(guest.id);
+    setActionFeedback(null);
+    try {
+      const res = await checkInGuestAction(currentEventId, guest.id);
+      if (res.success) {
+        setActionFeedback(`Entrada confirmada: ${guest.name}`);
+        setTimeout(() => setActionFeedback(null), 4000);
+      } else {
+        alert(res.error || "Erro ao registar entrada manual.");
+      }
+    } catch (err) {
+      console.error("Check-in manual failed:", err);
+      alert("Falha na ligação ao servidor.");
+    } finally {
+      setCheckingInId(null);
+    }
+  };
 
   // Geração do QR code para o convidado seleccionado no concierge
   useEffect(() => {
@@ -112,30 +142,65 @@ export default function CheckInDashboard({
 
   return (
     <div className="space-y-8">
-      {/* Barra de acções de topo com botão de Scanner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0A211A]/80 border border-[#CBB994]/30 rounded-2xl p-5 shadow-lg">
-        <div>
-          <div className="inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.3em] text-[#CBB994] mb-1">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Controlo Operacional de Entradas</span>
+      {/* Barra de acções de topo com botão de Scanner e Distinção de Modos */}
+      <div className="space-y-4">
+        {actionFeedback && (
+          <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{actionFeedback}</span>
           </div>
-          <h2 className="font-serif text-xl font-light text-white">
-            Recepção & Validação de Acessos
-          </h2>
-          <p className="text-xs text-[#EBE4D5]/70 mt-1">
-            Aceda ao leitor óptico em smartphone ou recupere passes emitidos para os convidados.
-          </p>
-        </div>
+        )}
 
-        {currentEventId ? (
-          <Link
-            href={`/admin/events/${currentEventId}/scanner`}
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#CBB994] text-[#0A211A] text-xs font-mono uppercase tracking-wider font-semibold hover:bg-[#DCD1B8] transition-colors shadow-md shrink-0"
-          >
-            <Camera className="w-4 h-4" />
-            Abrir Scanner da Recepção
-          </Link>
-        ) : null}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Painel 1: Leitura Óptica QR (Scanner) */}
+          <div className="bg-gradient-to-br from-[#0c231b] to-[#040e0b] border border-emerald-500/40 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.25em] text-emerald-400 mb-1">
+                <Camera className="w-3.5 h-3.5" />
+                <span>Modo Principal · Validação Óptica</span>
+              </div>
+              <h2 className="font-serif text-lg font-light text-white">
+                Scanner da Recepção (Passe Digital QR)
+              </h2>
+              <p className="text-xs text-[#EBE4D5]/70 mt-1 leading-relaxed">
+                Leitura instantânea do código QR através da câmara do telemóvel ou tablet. Valida autenticidade, mesa e previne duplicações.
+              </p>
+            </div>
+
+            {currentEventId ? (
+              <div className="mt-4 pt-3 border-t border-emerald-500/20">
+                <Link
+                  href={`/admin/events/${currentEventId}/scanner`}
+                  className="inline-flex items-center justify-center gap-2 w-full px-5 py-2.5 rounded-xl bg-[#CBB994] text-[#0A211A] text-xs font-mono uppercase tracking-wider font-semibold hover:bg-[#DCD1B8] transition-colors shadow-md"
+                >
+                  <Camera className="w-4 h-4" />
+                  Abrir Scanner da Recepção
+                </Link>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Painel 2: Modo de Entrada Manual (Concierge) */}
+          <div className="bg-black-soft/90 border border-white/10 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.25em] text-[#CBB994] mb-1">
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Modo de Contingência · Entrada Manual</span>
+              </div>
+              <h2 className="font-serif text-lg font-light text-white">
+                Registo Manual & Concierge
+              </h2>
+              <p className="text-xs text-grey-medium/70 mt-1 leading-relaxed">
+                Para convidados sem telemóvel ou sem passe digital: utilize a pesquisa abaixo para localizar o nome do convidado e registar a entrada manual com 1 clique.
+              </p>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-grey-medium">
+              <span>Pesquisa por nome / telefone</span>
+              <span className="text-[#CBB994]">Acesso Directo Abaixo ↓</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Estatísticas */}
@@ -213,33 +278,59 @@ export default function CheckInDashboard({
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedGuest(guest)}
-                      className="flex-1 py-1.5 px-3 rounded-lg bg-[#CBB994]/15 hover:bg-[#CBB994]/25 text-[#CBB994] text-xs font-mono uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5"
-                    >
-                      <QrCode className="w-3.5 h-3.5" />
-                      Ver Passe
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyPassUrl(guest)}
-                      title="Copiar link do passe"
-                      className="p-1.5 rounded-lg border border-white/10 hover:border-gold/40 text-grey-medium/70 hover:text-white transition-colors"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    {guest.phone && (
+                  <div className="mt-4 pt-3 border-t border-white/5 space-y-2">
+                    {/* Botão de Check-in Manual Directo */}
+                    {guest.status === "checked_in" ? (
+                      <div className="w-full py-1.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono uppercase tracking-wider inline-flex items-center justify-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Entrada Registada</span>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => handleOpenWhatsApp(guest)}
-                        title="Enviar via WhatsApp"
-                        className="p-1.5 rounded-lg border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 transition-colors"
+                        disabled={checkingInId === guest.id}
+                        onClick={() => handleManualCheckIn(guest)}
+                        className="w-full py-1.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-200 text-xs font-mono uppercase tracking-wider font-semibold transition-colors inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
-                        <MessageCircle className="w-3.5 h-3.5" />
+                        {checkingInId === guest.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        )}
+                        <span>Check-in Manual</span>
                       </button>
                     )}
+
+                    {/* Acções do Passe Digital QR */}
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGuest(guest)}
+                        className="flex-1 py-1 px-2.5 rounded-md bg-[#CBB994]/15 hover:bg-[#CBB994]/25 text-[#CBB994] text-[10px] font-mono uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1"
+                        title="Ver código QR do passe digital"
+                      >
+                        <QrCode className="w-3 h-3" />
+                        Ver QR
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPassUrl(guest)}
+                        title="Copiar link do passe"
+                        className="p-1 rounded-md border border-white/10 hover:border-gold/40 text-grey-medium/70 hover:text-white transition-colors"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                      {guest.phone && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenWhatsApp(guest)}
+                          title="Enviar via WhatsApp"
+                          className="p-1 rounded-md border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 transition-colors"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

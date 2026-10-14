@@ -50,10 +50,12 @@ async function loadFloorPlan(eventId: string) {
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 };
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   try {
     const event = await eventsRepo.getEventById(id);
@@ -205,6 +207,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         clientPhone={linkedClient?.phone ?? null}
         initialFloorPlan={floorPlanState.plan}
         floorPlanSchemaAvailable={floorPlanState.schemaAvailable}
+        initialTab={resolvedSearchParams?.tab ?? null}
       />
     );
   } catch (error) {

@@ -351,17 +351,35 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
   return (
     <div className="space-y-6">
       {/* Barra de Navegação Superior */}
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/admin/events/${event.id}`}
-          className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-grey/60 hover:text-gold transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Voltar ao Evento</span>
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/events/checkin"
+            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-grey/60 hover:text-emerald-400 transition-colors"
+            title="Voltar ao portal multi-evento de recepção"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Recepção Geral</span>
+          </Link>
+          <span className="text-white/20">/</span>
+          <Link
+            href={`/admin/events/${event.id}?tab=checkin`}
+            className="text-xs font-mono uppercase tracking-widest text-grey/60 hover:text-gold transition-colors"
+            title="Abrir painel de check-in deste evento"
+          >
+            <span>Painel Check-in</span>
+          </Link>
+          <span className="text-white/20">/</span>
+          <Link
+            href={`/admin/events/${event.id}`}
+            className="text-xs font-mono uppercase tracking-widest text-grey/40 hover:text-white transition-colors"
+          >
+            <span>Evento</span>
+          </Link>
+        </div>
         <div className="flex items-center gap-2 text-xs font-mono text-grey/50">
-          <ShieldCheck className="w-3.5 h-3.5 text-gold" />
-          <span>Modo Recepção Oficial</span>
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Scanner Óptico Activo</span>
         </div>
       </div>
 

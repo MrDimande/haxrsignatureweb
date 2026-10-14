@@ -11,6 +11,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Mail,
+  QrCode,
   Settings,
   Shield,
   Store,
@@ -46,6 +47,7 @@ const navSections: NavSection[] = [
     title: "Operacional",
     items: [
       { href: "/admin/events", label: "Eventos", icon: Calendar },
+      { href: "/admin/events/checkin", label: "Recepção & Check-in", icon: QrCode },
       { href: "/admin/invitations", label: "Convites", icon: Mail },
       { href: "/admin/leads", label: "Leads", icon: Inbox },
       { href: "/admin/suppliers", label: "Fornecedores", icon: Store },
@@ -199,8 +201,15 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
 
               <div className="space-y-1">
                 {section.items.map(({ href, label, icon: Icon }) => {
+                  const isCheckInBranch =
+                    pathname === "/admin/events/checkin" ||
+                    (pathname?.startsWith("/admin/events/checkin/") ?? false);
                   const active =
-                    pathname === href || (pathname?.startsWith(`${href}/`) ?? false);
+                    href === "/admin/events"
+                      ? pathname === href ||
+                        ((pathname?.startsWith(`${href}/`) ?? false) && !isCheckInBranch)
+                      : pathname === href ||
+                        (pathname?.startsWith(`${href}/`) ?? false);
                   const badge = badgeForHref(href);
                   return (
                     <Link

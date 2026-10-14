@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, ArrowLeft, Camera, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, Camera, ShieldCheck, Trash2 } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import EventForm from "@/components/events/EventForm";
 import SeatAssignment from "@/components/events/SeatAssignment";
@@ -118,6 +118,7 @@ type EventDetailClientProps = {
   clientPhone?: string | null;
   initialFloorPlan: EventFloorPlan;
   floorPlanSchemaAvailable: boolean;
+  initialTab?: string | null;
 };
 
 function formatDate(date: string | null): string {
@@ -162,10 +163,16 @@ export default function EventDetailClient({
   clientPhone = null,
   initialFloorPlan,
   floorPlanSchemaAvailable,
+  initialTab = null,
 }: EventDetailClientProps) {
   const router = useRouter();
   const [event, setEvent] = useState(initialEvent);
-  const [tab, setTab] = useState<Tab>("guests");
+  const isValidInitialTab = (t?: string | null): t is Tab =>
+    Boolean(t && [
+      "guests", "review", "contacts", "seats", "floor-plan", "qr", "sheets",
+      "checkin", "report", "gifts", "history", "concierge", "portal", "settings"
+    ].includes(t));
+  const [tab, setTab] = useState<Tab>(isValidInitialTab(initialTab) ? initialTab : "guests");
   const [archiving, setArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -254,10 +261,20 @@ export default function EventDetailClient({
       title={event.name}
       subtitle={`${EVENT_TYPE_LABELS[event.type]} · ${formatDate(event.date)}`}
       actions={
-        <Link href="/admin/events" className="admin-btn-secondary">
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/events/${event.id}/scanner`}
+            className="admin-btn-secondary inline-flex items-center gap-1.5 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/60"
+            title="Abrir Scanner da Recepção"
+          >
+            <Camera className="w-4 h-4 text-emerald-400" />
+            Scanner da Recepção
+          </Link>
+          <Link href="/admin/events" className="admin-btn-secondary">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Link>
+        </div>
       }
     >
       <EventKpiPanel event={event} stats={initialStats} />
@@ -318,25 +335,43 @@ export default function EventDetailClient({
       ) : null}
 
       <div className="flex flex-wrap gap-2 mb-8 border-b border-grey-dark/80 pb-4">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setTab(item.id)}
-            className={`px-4 py-2 font-mono text-[9px] tracking-[0.25em] uppercase border rounded-sm transition-colors ${
-              tab === item.id
-                ? "bg-admin-gold/10 text-admin-gold border-admin-gold/25"
-                : "text-grey/60 border-transparent hover:text-white"
-            }`}
-          >
-            {item.label}
-            {item.badge ? (
-              <span className="ml-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-amber-500/20 text-amber-200 px-1.5 py-0.5 text-[8px]">
-                {item.badge}
-              </span>
-            ) : null}
-          </button>
-        ))}
+        {tabs.map((item) => {
+          const isCheckin = item.id === "checkin";
+          const isActive = tab === item.id;
+
+          let btnClass = "";
+          if (isCheckin) {
+            btnClass = isActive
+              ? "bg-emerald-950/60 text-emerald-300 border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.2)] font-semibold"
+              : "bg-emerald-950/25 text-emerald-400/90 border-emerald-500/30 hover:border-emerald-400 hover:text-emerald-200 hover:bg-emerald-950/45 font-medium";
+          } else if (isActive) {
+            btnClass = "bg-admin-gold/10 text-admin-gold border-admin-gold/30 font-medium";
+          } else {
+            btnClass = "text-grey-light/80 border-white/5 bg-white/[0.02] hover:text-white hover:border-white/20";
+          }
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={`px-4 py-2 font-mono text-[9px] tracking-[0.25em] uppercase border rounded-sm transition-all duration-200 inline-flex items-center gap-1.5 ${btnClass}`}
+            >
+              {isCheckin && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+              <span>{item.label}</span>
+              {isCheckin && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[8px] font-mono">
+                  {initialStats.checkedIn}/{initialStats.confirmed || initialStats.totalGuests}
+                </span>
+              )}
+              {item.badge ? (
+                <span className="ml-1 inline-flex min-w-[1.25rem] justify-center rounded-full bg-amber-500/20 text-amber-200 px-1.5 py-0.5 text-[8px]">
+                  {item.badge}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "guests" ? (
