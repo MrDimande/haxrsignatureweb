@@ -31,22 +31,9 @@ type Props = {
   initialStats: EventStats;
 };
 
-interface BarcodeDetectorResult {
-  rawValue?: string;
-}
-
-interface BarcodeDetectorInstance {
-  detect: (source: ImageBitmapSource) => Promise<BarcodeDetectorResult[]>;
-}
-
-interface BarcodeDetectorConstructor {
-  new (options?: { formats: string[] }): BarcodeDetectorInstance;
-}
-
 interface WindowWithWebkitAudio extends Window {
   AudioContext?: typeof AudioContext;
   webkitAudioContext?: typeof AudioContext;
-  BarcodeDetector?: BarcodeDetectorConstructor;
 }
 
 // Extracção segura de token a partir de URL ou string crua
@@ -67,12 +54,12 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
   const [manualToken, setManualToken] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanResult, setScanResult] = useState<ScannerResult | null>(null);
+  const [scanFeedback, setScanFeedback] = useState("Active a câmara para iniciar a leitura automática.");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
-  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Travamento estrito de concorrência e debouncing de frames
   const isProcessingRef = useRef(false);
@@ -122,10 +109,9 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     async (rawToken: string) => {
       const token = extractQrToken(rawToken);
       if (!token || token.length < 16) {
-        setScanResult({
-          status: "error",
-          message: "Token inválido ou demasiado curto (mínimo 16 caracteres).",
-        });
+        const message = "O QR foi lido, mas não contém um passe digital HAXR válido.";
+        setScanResult({ status: "error", message });
+        setScanFeedback(message);
         playBeep("error");
         return;
       }
@@ -145,6 +131,7 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
 
       setIsProcessing(true);
       setScanResult(null);
+      setScanFeedback("Código detectado — a validar o passe no servidor…");
 
       try {
         const res = await fetch("/api/events/checkin", {
@@ -159,15 +146,19 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
         const data = await res.json();
 
         if (!res.ok || !data.ok) {
-          setScanResult({
-            status: "error",
-            message: data.message || "Passe não reconhecido ou pertencente a outro evento.",
-          });
+          const message =
+            data.message ||
+            (res.status === 401 || res.status === 403
+              ? "Sessão de recepção não autorizada. Inicie sessão novamente."
+              : "Passe não reconhecido ou pertencente a outro evento.");
+          setScanResult({ status: "error", message });
+          setScanFeedback(message);
           playBeep("error");
           return;
         }
 
         if (data.alreadyCheckedIn) {
+          setScanFeedback("Passe reconhecido — esta entrada já estava registada.");
           setScanResult({
             status: "already_checked_in",
             message: "Este passe já registou entrada anteriormente!",
@@ -181,6 +172,7 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
           playBeep("warning");
         } else {
           // Entrada registada com sucesso
+          setScanFeedback("Entrada validada. Pode aproximar o próximo passe.");
           setScanResult({
             status: "success",
             message: "Entrada registada com sucesso!",
@@ -198,10 +190,9 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
           }));
         }
       } catch {
-        setScanResult({
-          status: "error",
-          message: "Erro de comunicação com o servidor de check-in.",
-        });
+        const message = "QR detectado, mas houve uma falha de comunicação com o servidor.";
+        setScanResult({ status: "error", message });
+        setScanFeedback(message);
         playBeep("error");
       } finally {
         isProcessingRef.current = false;
@@ -211,47 +202,56 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     [event.id, playBeep]
   );
 
-  // Leitura de frame via jsQR (compatível com iOS Safari e Android Chrome)
+  // jsQR é o leitor principal para manter o mesmo comportamento em todos os navegadores.
+  // Não exigimos HAVE_ENOUGH_DATA (4): frames já disponíveis também podem ser analisados.
   const scanVideoFrame = useCallback(() => {
     const video = videoRef.current;
-    if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
-    if (isProcessingRef.current) return;
+    if (
+      !video ||
+      video.readyState < 2 ||
+      video.paused ||
+      video.videoWidth <= 0 ||
+      video.videoHeight <= 0 ||
+      isProcessingRef.current
+    ) return;
 
-    if (!canvasRef.current) {
-      canvasRef.current = document.createElement("canvas");
-    }
+    if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
     const width = video.videoWidth;
     const height = video.videoHeight;
-    if (width === 0 || height === 0) return;
-
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
     }
 
-    ctx.drawImage(video, 0, 0, width, height);
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "dontInvert",
-    });
+    try {
+      ctx.drawImage(video, 0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth",
+      });
 
-    if (decoded?.data) {
-      handleProcessCheckin(decoded.data);
+      if (decoded?.data) {
+        setScanFeedback("QR detectado — a validar o passe…");
+        void handleProcessCheckin(decoded.data);
+      }
+    } catch (error) {
+      console.error("[Scanner] Erro ao analisar frame QR:", error);
+      setScanFeedback("A câmara está activa, mas não foi possível analisar a imagem.");
     }
   }, [handleProcessCheckin]);
 
-  // Iniciar câmara com preferências para traseira (environment)
+  // Iniciar a câmara e ligar a leitura QR contínua.
   const startCamera = async () => {
     setCameraError(null);
+    setScanFeedback("A solicitar acesso à câmara…");
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Câmara não suportada pelo navegador.");
+        throw new Error("Câmara não suportada neste navegador ou contexto.");
       }
-
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
@@ -260,56 +260,38 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
         },
         audio: false,
       });
-
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      const video = videoRef.current;
+      if (!video) throw new Error("O elemento de vídeo do scanner não está disponível.");
+
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+      await video.play();
+
       setIsCameraActive(true);
-
-      // Tenta BarcodeDetector nativo se disponível (Chrome / Edge moderno)
-      const win = typeof window !== "undefined" ? (window as unknown as WindowWithWebkitAudio) : null;
-      if (win?.BarcodeDetector) {
-        try {
-          detectorRef.current = new win.BarcodeDetector({
-            formats: ["qr_code"],
-          });
-        } catch {
-          detectorRef.current = null;
-        }
-      }
-
-      // Ciclo contínuo de leitura a cada 250ms
-      scanIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || isProcessingRef.current) return;
-
-        // Se detector nativo estiver activo, usa-o primeiro
-        if (detectorRef.current) {
-          try {
-            const barcodes = await detectorRef.current.detect(videoRef.current);
-            if (barcodes.length > 0 && barcodes[0]?.rawValue) {
-              handleProcessCheckin(barcodes[0].rawValue);
-              return;
-            }
-          } catch {
-            // Fallback silencioso para jsQR
-          }
-        }
-
-        // Leitura universal via jsQR (compatível com Safari iOS e Android Chrome)
-        scanVideoFrame();
-      }, 250);
+      setScanFeedback("Câmara activa — mantenha o QR inteiro dentro da imagem para leitura automática.");
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+      // Leitura sincronizada, sem chamadas nativas assíncronas concorrentes.
+      scanIntervalRef.current = setInterval(scanVideoFrame, 180);
     } catch (err: unknown) {
       const isError = err instanceof Error;
       const errorName = isError ? err.name : "";
-      console.error("[Scanner] Erro ao aceder à câmara:", err);
-
-      setCameraError(
+      console.error("[Scanner] Erro ao iniciar leitura QR:", err);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      const message =
         errorName === "NotAllowedError" || errorName === "PermissionDeniedError"
-          ? "Permissão de câmara recusada. Por favor autorize o acesso à câmara nas definições do navegador ou utilize o campo manual."
-          : "Não foi possível aceder à câmara deste dispositivo."
-      );
+          ? "Permissão da câmara recusada. Autorize o acesso no navegador ou utilize o código manual."
+          : errorName === "NotFoundError"
+            ? "Não foi encontrada uma câmara neste dispositivo."
+            : errorName === "NotReadableError" || errorName === "AbortError"
+              ? "A câmara está ocupada por outra aplicação. Feche-a e tente novamente."
+              : "Não foi possível iniciar a câmara. Utilize o código manual como alternativa.";
+      setCameraError(message);
+      setScanFeedback(message);
       setIsCameraActive(false);
     }
   };
@@ -326,8 +308,8 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    detectorRef.current = null;
     setIsCameraActive(false);
+    setScanFeedback("Leitura pausada. Active a câmara para voltar a procurar códigos QR.");
   }, []);
 
   useEffect(() => {
@@ -500,6 +482,9 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
               )}
             </div>
 
+            <div aria-live="polite" role="status" className="mt-4 border border-brand-champagne/15 bg-brand-champagne/[0.035] px-4 py-3 text-xs leading-5 text-brand-champagne/75">
+              {scanFeedback}
+            </div>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
               {!isCameraActive ? (
                 <button
