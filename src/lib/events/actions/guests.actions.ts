@@ -66,7 +66,14 @@ export async function confirmGuestAction(eventId: string, guestId: string) {
 }
 
 export async function checkInGuestAction(eventId: string, guestId: string) {
-  const result = await runAction(() => guestsRepo.checkInGuest(guestId));
+  const result = await runAction(async () => {
+    // Validação de autorização efectiva por evento
+    const event = await eventsRepo.getEventById(eventId);
+    if (!event || !event.isActive) {
+      throw new Error("Evento não encontrado ou inactivo.");
+    }
+    return guestsRepo.checkInGuest(guestId, eventId);
+  });
   if (result.success) revalidateEvent(eventId);
   return result;
 }

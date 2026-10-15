@@ -546,30 +546,84 @@ export async function confirmGuest(id: string): Promise<EventGuest> {
   return updateGuestStatus(id, "confirmed");
 }
 
-export async function checkInGuest(id: string): Promise<EventGuest> {
-  const guest = await getGuestById(id);
-  if (!guest) throw new Error("Convidado não encontrado.");
-  const now = new Date().toISOString();
+export class GuestAlreadyCheckedInError extends Error {
+  constructor(message = "Convidado já fez check-in.") {
+    super(message);
+    this.name = "GuestAlreadyCheckedInError";
+  }
+}
 
-  await withNeonTransaction(async (client) => {
+export async function checkInGuest(
+  id: string,
+  eventId: string,
+): Promise<EventGuest> {
+  const { guestRow } = await withNeonTransaction(async (client) => {
+    // 1. Bloqueio ao nível de linha (FOR UPDATE) para serialização estrita e prevenção de concorrência
+    const guestRes = await client.query<{
+      id: string;
+      event_id: string;
+      name: string;
+      status: GuestStatus;
+      deleted_at: string | null;
+      archived_at: string | null;
+    }>(
+      `SELECT id, event_id, name, status, deleted_at, archived_at
+       FROM public.guests
+       WHERE id = $1::uuid
+       FOR UPDATE`,
+      [id],
+    );
+
+    const row = guestRes.rows[0];
+    if (!row || row.deleted_at || row.archived_at) {
+      throw new Error("Convidado não encontrado.");
+    }
+
+    // Validação mandatória e estrita de pertença ao evento no servidor
+    if (row.event_id !== eventId) {
+      throw new Error("Convidado não pertence a este evento.");
+    }
+
+    // 2. Verificação de idempotência no servidor: nunca sobrescreve check-in existente
+    const checkinRes = await client.query<{ id: string; checkin_time: Date }>(
+      `SELECT id, checkin_time FROM public.checkins WHERE guest_id = $1::uuid`,
+      [id],
+    );
+
+    if (row.status === "checked_in" || checkinRes.rows.length > 0) {
+      throw new GuestAlreadyCheckedInError("Convidado já fez check-in.");
+    }
+
+    const now = new Date().toISOString();
+
+    // 3. Actualização atómica do estado do convidado
     await client.query(
       `UPDATE public.guests
        SET status = 'checked_in'::public.guest_status, updated_at = $2::timestamptz
        WHERE id = $1::uuid`,
       [id, now],
     );
-    await client.query(
+
+    // 4. Inserção atómica com ON CONFLICT (guest_id) DO NOTHING
+    // Preserva integralmente o horário de entrada original e impede duplicação
+    const insertRes = await client.query<{ id: string }>(
       `INSERT INTO public.checkins (guest_id, event_id, checkin_time)
        VALUES ($1::uuid, $2::uuid, $3::timestamptz)
-       ON CONFLICT (guest_id)
-       DO UPDATE SET event_id = EXCLUDED.event_id, checkin_time = EXCLUDED.checkin_time`,
-      [id, guest.eventId, now],
+       ON CONFLICT (guest_id) DO NOTHING
+       RETURNING id`,
+      [id, row.event_id, now],
     );
+
+    if (insertRes.rows.length === 0) {
+      throw new GuestAlreadyCheckedInError("Convidado já fez check-in.");
+    }
+
+    return { guestRow: row };
   });
 
   const updated = await getGuestById(id);
   if (!updated) throw new Error("Falha ao registar check-in.");
-  await logGuestAudit(id, guest.eventId, guest.name, "Check-in registado", "Admin");
+  await logGuestAudit(id, guestRow.event_id, guestRow.name, "Check-in registado", "Admin");
   return updated;
 }
 
@@ -967,8 +1021,19 @@ export async function bulkCheckInGuests(
   for (const id of guestIds) {
     const guest = await getGuestById(id);
     if (!guest || guest.status === "checked_in") continue;
-    await checkInGuest(id);
-    count++;
+    try {
+      await checkInGuest(id, eventId);
+      count++;
+    } catch (err) {
+      // Distingue duplicação legítima (concorrência entre operadores) de falha operacional
+      if (
+        err instanceof GuestAlreadyCheckedInError ||
+        (err instanceof Error && err.message === "Convidado já fez check-in.")
+      ) {
+        continue;
+      }
+      throw err; // Falhas operacionais críticas (DB indisponível, timeout) são propagadas
+    }
   }
   return count;
 }
@@ -1092,7 +1157,18 @@ export async function mergeGuests(
   });
 
   if (mergedStatus === "checked_in" && !updated.checkedInAt) {
-    await checkInGuest(primaryId);
+    try {
+      await checkInGuest(primaryId, eventId);
+    } catch (err) {
+      if (
+        !(
+          err instanceof GuestAlreadyCheckedInError ||
+          (err instanceof Error && err.message === "Convidado já fez check-in.")
+        )
+      ) {
+        throw err;
+      }
+    }
   }
 
   for (const secondary of secondaries) {

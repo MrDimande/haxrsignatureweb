@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { performCheckin } from "@/lib/events/services/checkin.service";
-import { getEventById } from "@/lib/events/repositories/events.repository";
 import { verifyCheckinSession } from "@/lib/events/services/checkin-auth";
 import {
   getRequestIp,
@@ -23,16 +22,7 @@ export async function POST(request: Request) {
       return rateLimitResponse(limited, { ok: false });
     }
 
-    // 1. Verificação obrigatória de autenticação no servidor (princípio da defesa em profundidade)
-    const authCheck = await verifyCheckinSession();
-    if (!authCheck.authorized) {
-      return NextResponse.json(
-        { ok: false, error: authCheck.error, message: authCheck.message },
-        { status: authCheck.status }
-      );
-    }
-
-    // 2. Validação dos parâmetros da requisição
+    // 1. Validação dos parâmetros da requisição para isolar o evento
     const raw = await request.json();
     const parsed = schema.safeParse(raw);
 
@@ -43,12 +33,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Validação do evento (deve existir e estar activo)
-    const event = await getEventById(parsed.data.eventId);
-    if (!event || !event.isActive) {
+    // 2. Verificação de autorização efectiva do operador sobre o evento específico
+    const authCheck = await verifyCheckinSession(parsed.data.eventId);
+    if (!authCheck.authorized) {
       return NextResponse.json(
-        { ok: false, error: "event_not_found", message: "Evento não encontrado ou inactivo." },
-        { status: 404 }
+        { ok: false, error: authCheck.error, message: authCheck.message },
+        { status: authCheck.status }
       );
     }
 

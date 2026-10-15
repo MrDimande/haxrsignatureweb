@@ -125,3 +125,47 @@ describe("Testes de Integração & Concorrência PostgreSQL (Live Isolated DB Gu
     assert.ok(syntheticToken);
   });
 });
+
+describe("Check-in Hardening — Validação de Escopo de Evento e Preservação Transaccional", () => {
+  it("Rejeita check-in para convidado inexistente", async (t) => {
+    const dbUrl = process.env.DATABASE_URL || process.env.TEST_ISOLATED_DATABASE_URL;
+    if (!dbUrl) {
+      t.skip("Base de dados não configurada no ambiente local de testes (offline)");
+      return;
+    }
+    const { checkInGuest } = await import("@/lib/events/repositories/guests.neon.repository");
+    const fakeId = "00000000-0000-0000-0000-000000000099";
+    const sampleEventId = "00000000-0000-0000-0000-000000000001";
+    await assert.rejects(
+      async () => {
+        await checkInGuest(fakeId, sampleEventId);
+      },
+      {
+        name: "Error",
+        message: "Convidado não encontrado.",
+      }
+    );
+  });
+
+  it("Rejeita check-in quando o convidado não pertence ao evento especificado", async (t) => {
+    const dbUrl = process.env.DATABASE_URL || process.env.TEST_ISOLATED_DATABASE_URL;
+    if (!dbUrl) {
+      t.skip("Base de dados não configurada no ambiente local de testes (offline)");
+      return;
+    }
+    const { checkInGuest } = await import("@/lib/events/repositories/guests.neon.repository");
+    const fakeId = "00000000-0000-0000-0000-000000000001";
+    const wrongEventId = "00000000-0000-0000-0000-000000000002";
+    await assert.rejects(
+      async () => {
+        await checkInGuest(fakeId, wrongEventId);
+      },
+      (err: Error) => {
+        return (
+          err.message === "Convidado não encontrado." ||
+          err.message === "Convidado não pertence a este evento."
+        );
+      }
+    );
+  });
+});
