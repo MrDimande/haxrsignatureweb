@@ -50,6 +50,7 @@ interface BarcodeDetectorInstance {
 
 interface BarcodeDetectorConstructor {
   new (options?: { formats: string[] }): BarcodeDetectorInstance;
+  getSupportedFormats?: () => Promise<string[]>;
 }
 
 interface WindowWithWebkitAudio extends Window {
@@ -72,17 +73,19 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     frames: 0,
     width: 0,
     height: 0,
-    readyState: 0,
+    fps: 0,
+    lastLatencyMs: 0,
   });
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const roiCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fullCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
-  const detectorBusyRef = useRef(false);
-  const lastNativeAttemptRef = useRef(0);
-  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasNativeDetectorRef = useRef(false);
+  const isScanTickBusyRef = useRef(false);
+  const rafIdRef = useRef<number | null>(null);
+  const isMountedRef = useRef(false);
 
   // Travamento de concorrência e debouncing
   const isProcessingRef = useRef(false);
@@ -92,6 +95,37 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
   const cameraStartedAtRef = useRef(0);
   const lastDiagnosticsUpdateRef = useRef(0);
   const lastDecodedAtRef = useRef(0);
+  const lastTickTimeRef = useRef(0);
+  const lastLatencyMsRef = useRef(0);
+  const fpsCounterRef = useRef(0);
+  const lastFpsTimeRef = useRef(0);
+  const currentFpsRef = useRef(0);
+  const scanTickRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Dois Canvas Offscreen Fixos (Zero Realocação de Memória)
+  const getRoiCanvas = useCallback(() => {
+    if (!roiCanvasRef.current && typeof document !== "undefined") {
+      const c = document.createElement("canvas");
+      c.width = 480;
+      c.height = 480;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      if (ctx) ctx.imageSmoothingEnabled = false;
+      roiCanvasRef.current = c;
+    }
+    return roiCanvasRef.current;
+  }, []);
+
+  const getFullCanvas = useCallback(() => {
+    if (!fullCanvasRef.current && typeof document !== "undefined") {
+      const c = document.createElement("canvas");
+      c.width = 640;
+      c.height = 360;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      if (ctx) ctx.imageSmoothingEnabled = false;
+      fullCanvasRef.current = c;
+    }
+    return fullCanvasRef.current;
+  }, []);
 
   // Som sutil de confirmação via Web Audio API
   const playBeep = useCallback((type: "success" | "warning" | "error") => {
@@ -233,163 +267,178 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
     [event.id, playBeep]
   );
 
-  const scanVideoFrame = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || isProcessingRef.current) return;
+  const scheduleNextTick = useCallback(() => {
+    if (!isMountedRef.current || !streamRef.current) return;
+    rafIdRef.current = requestAnimationFrame(() => {
+      void scanTickRef.current?.();
+    });
+  }, []);
 
-    const now = Date.now();
-    const width = video.videoWidth;
-    const height = video.videoHeight;
+  const scanTick = useCallback(async () => {
+    if (!isMountedRef.current || !streamRef.current) return;
 
-    if (video.readyState < 2 || width <= 0 || height <= 0) {
-      if (
-        cameraStartedAtRef.current > 0 &&
-        now - lastDiagnosticsUpdateRef.current >= 1000
-      ) {
-        lastDiagnosticsUpdateRef.current = now;
-        setScannerDiagnostics({
-          frames: framesAnalysedRef.current,
-          width,
-          height,
-          readyState: video.readyState,
-        });
-        if (now - cameraStartedAtRef.current > 1500 && now - lastDecodedAtRef.current > 1500) {
-          setScanFeedback("Câmara em calibração óptica… aguardando sinal do sensor.");
-        }
-      }
+    const now = performance.now();
+    const interval = hasNativeDetectorRef.current ? 80 : 65;
+    if (now - lastTickTimeRef.current < interval) {
+      scheduleNextTick();
       return;
     }
 
+    if (isScanTickBusyRef.current || isProcessingRef.current) {
+      scheduleNextTick();
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) {
+      scheduleNextTick();
+      return;
+    }
+
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    if (videoWidth <= 0 || videoHeight <= 0) {
+      scheduleNextTick();
+      return;
+    }
+
+    isScanTickBusyRef.current = true;
+    lastTickTimeRef.current = now;
     framesAnalysedRef.current += 1;
+    const frameCount = framesAnalysedRef.current;
+
+    // Métricas de cadência e FPS
+    fpsCounterRef.current += 1;
+    if (now - lastFpsTimeRef.current >= 1000) {
+      currentFpsRef.current = Math.round(
+        (fpsCounterRef.current * 1000) / (now - lastFpsTimeRef.current)
+      );
+      fpsCounterRef.current = 0;
+      lastFpsTimeRef.current = now;
+    }
+
+    // Telemetria secundária com throttle estrito de 1000ms (Regra 4: zero re-renders por frame)
     if (now - lastDiagnosticsUpdateRef.current >= 1000) {
       lastDiagnosticsUpdateRef.current = now;
       setScannerDiagnostics({
-        frames: framesAnalysedRef.current,
-        width,
-        height,
-        readyState: video.readyState,
+        frames: frameCount,
+        width: videoWidth,
+        height: videoHeight,
+        fps: currentFpsRef.current,
+        lastLatencyMs: lastLatencyMsRef.current,
       });
 
-      const elapsed = now - cameraStartedAtRef.current;
+      const elapsed = Date.now() - cameraStartedAtRef.current;
       const sinceDecoded = lastDecodedAtRef.current
-        ? now - lastDecodedAtRef.current
+        ? Date.now() - lastDecodedAtRef.current
         : Number.POSITIVE_INFINITY;
       if (!isProcessingRef.current && elapsed > 2500 && sinceDecoded > 3500) {
-        setScanFeedback("Lente óptica activa. Aproxime o código QR do passe digital.");
+        setScanFeedback("Lente óptica activa. Aponte para o passe digital.");
       }
     }
 
-    if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-
-    const fullScale = Math.min(1, 1440 / Math.max(width, height));
-    const fullWidth = Math.max(1, Math.round(width * fullScale));
-    const fullHeight = Math.max(1, Math.round(height * fullScale));
-    if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
-      canvas.width = fullWidth;
-      canvas.height = fullHeight;
-    }
+    const tickStart = performance.now();
+    let decodedRaw: string | null = null;
 
     try {
-      ctx.drawImage(video, 0, 0, fullWidth, fullHeight);
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-      });
-
-      if (!decoded && framesAnalysedRef.current % 3 === 0) {
-        const cropWidth = Math.max(1, Math.round(width * 0.72));
-        const cropHeight = Math.max(1, Math.round(height * 0.72));
-        const sourceX = Math.round((width - cropWidth) / 2);
-        const sourceY = Math.round((height - cropHeight) / 2);
-        const cropScale = Math.min(1.5, 1440 / Math.max(cropWidth, cropHeight));
-
-        if (!cropCanvasRef.current) {
-          cropCanvasRef.current = document.createElement("canvas");
-        }
-        const cropCanvas = cropCanvasRef.current;
-        const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
-        if (cropCtx) {
-          const cropTargetWidth = Math.max(1, Math.round(cropWidth * cropScale));
-          const cropTargetHeight = Math.max(1, Math.round(cropHeight * cropScale));
-          if (
-            cropCanvas.width !== cropTargetWidth ||
-            cropCanvas.height !== cropTargetHeight
-          ) {
-            cropCanvas.width = cropTargetWidth;
-            cropCanvas.height = cropTargetHeight;
+      // ─── TIER 1: BarcodeDetector Nativo (Zero-Copy) ───
+      if (hasNativeDetectorRef.current && detectorRef.current) {
+        try {
+          const barcodes = await detectorRef.current.detect(video);
+          if (barcodes && barcodes.length > 0) {
+            const matched = barcodes.find(
+              (b) => typeof b.rawValue === "string" && b.rawValue.trim().length > 0
+            )?.rawValue;
+            if (matched) {
+              decodedRaw = matched;
+            }
           }
-          cropCtx.drawImage(
-            video,
-            sourceX,
-            sourceY,
-            cropWidth,
-            cropHeight,
-            0,
-            0,
-            cropTargetWidth,
-            cropTargetHeight
-          );
-          imageData = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
-          decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "attemptBoth",
-          });
+        } catch {
+          // Degradação graciosa em caso de erro transitório no driver nativo
         }
       }
 
-      if (decoded?.data) {
+      // Se já detectou pelo Tier 1 nativo, conclui sem tocar em Canvas
+      if (decodedRaw) {
+        lastLatencyMsRef.current = Math.round(performance.now() - tickStart);
         lastDecodedAtRef.current = Date.now();
-        setScanFeedback("Código capturado com precisão — a verificar folha de convite…");
-        void handleProcessCheckin(decoded.data);
+        setScanFeedback("QR detectado — a validar credencial…");
+        void handleProcessCheckin(decodedRaw);
+        return;
       }
-    } catch (error) {
-      console.error("[Scanner] Erro na análise óptica:", error);
-    }
-  }, [handleProcessCheckin]);
 
-  const runNativeDetection = useCallback(() => {
-    const video = videoRef.current;
-    const detector = detectorRef.current;
-    const now = Date.now();
+      // Se o detector nativo está activo e saudável, corre jsQR apenas 1 a cada 4 frames como apoio para reflexos
+      const shouldRunJsQr = !hasNativeDetectorRef.current || frameCount % 4 === 0;
 
-    if (
-      !video ||
-      !detector ||
-      !streamRef.current ||
-      isProcessingRef.current ||
-      detectorBusyRef.current ||
-      now - lastNativeAttemptRef.current < 700
-    ) {
-      return;
-    }
+      if (shouldRunJsQr) {
+        const roiCanvas = getRoiCanvas();
+        const roiCtx = roiCanvas?.getContext("2d", { willReadFrequently: true });
 
-    lastNativeAttemptRef.current = now;
-    detectorBusyRef.current = true;
-    void detector
-      .detect(video)
-      .then((codes) => {
-        const rawValue = codes.find(
-          (code) => typeof code.rawValue === "string" && code.rawValue.trim().length > 0
-        )?.rawValue;
-        if (!rawValue || !streamRef.current || isProcessingRef.current) return;
+        if (roiCanvas && roiCtx) {
+          roiCtx.imageSmoothingEnabled = false;
+
+          // Recorte do sensor prevenindo corte de finder patterns (78% da menor dimensão)
+          const sourceSize = Math.floor(Math.min(videoWidth, videoHeight) * 0.78);
+          const sourceX = Math.round((videoWidth - sourceSize) / 2);
+          const sourceY = Math.round((videoHeight - sourceSize) / 2);
+
+          roiCtx.drawImage(video, sourceX, sourceY, sourceSize, sourceSize, 0, 0, 480, 480);
+          const roiImageData = roiCtx.getImageData(0, 0, 480, 480);
+
+          // ─── TIER 2: Motor Primário jsQR ROI 480x480 (dontInvert) ───
+          let decoded = jsQR(roiImageData.data, 480, 480, {
+            inversionAttempts: "dontInvert",
+          });
+
+          // ─── TIER 3: Inversão Rápida no ROI reutilizando o mesmo ImageData ───
+          if (!decoded && frameCount % 3 === 0) {
+            decoded = jsQR(roiImageData.data, 480, 480, {
+              inversionAttempts: "onlyInvert",
+            });
+          }
+
+          // ─── TIER 4: Fallback Periférico 640x360 Sem Jank ───
+          if (!decoded && frameCount % 6 === 0) {
+            const fullCanvas = getFullCanvas();
+            const fullCtx = fullCanvas?.getContext("2d", { willReadFrequently: true });
+            if (fullCanvas && fullCtx) {
+              fullCtx.imageSmoothingEnabled = false;
+              fullCtx.drawImage(video, 0, 0, 640, 360);
+              const fullImageData = fullCtx.getImageData(0, 0, 640, 360);
+              decoded = jsQR(fullImageData.data, 640, 360, {
+                inversionAttempts: "dontInvert",
+              });
+            }
+          }
+
+          if (decoded?.data) {
+            decodedRaw = decoded.data;
+          }
+        }
+      }
+
+      if (decodedRaw) {
+        lastLatencyMsRef.current = Math.round(performance.now() - tickStart);
         lastDecodedAtRef.current = Date.now();
-        setScanFeedback("Código capturado pelo sensor nativo — a verificar…");
-        void handleProcessCheckin(rawValue);
-      })
-      .catch(() => {
-        // Fallback contínuo via jsQR
-      })
-      .finally(() => {
-        detectorBusyRef.current = false;
-      });
-  }, [handleProcessCheckin]);
+        setScanFeedback("QR detectado — a validar credencial…");
+        void handleProcessCheckin(decodedRaw);
+      }
+    } catch (err) {
+      console.error("[Scanner] Erro no ciclo óptico:", err);
+    } finally {
+      isScanTickBusyRef.current = false;
+      scheduleNextTick();
+    }
+  }, [
+    getRoiCanvas,
+    getFullCanvas,
+    handleProcessCheckin,
+    scheduleNextTick,
+  ]);
 
-  const scanTick = useCallback(() => {
-    scanVideoFrame();
-    runNativeDetection();
-  }, [scanVideoFrame, runNativeDetection]);
+  useEffect(() => {
+    scanTickRef.current = scanTick;
+  }, [scanTick]);
 
   const startCamera = async () => {
     setCameraError(null);
@@ -398,6 +447,7 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Dispositivo óptico não suportado neste ambiente.");
       }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
@@ -407,6 +457,30 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
         audio: false,
       });
       streamRef.current = stream;
+
+      // Calibração óptica segura: autofocus contínuo onde suportado
+      try {
+        const [videoTrack] = stream.getVideoTracks();
+        if (videoTrack) {
+          const capabilities =
+            typeof videoTrack.getCapabilities === "function"
+              ? (videoTrack.getCapabilities() as Record<string, unknown>)
+              : null;
+          if (
+            capabilities &&
+            "focusMode" in capabilities &&
+            Array.isArray(capabilities.focusMode) &&
+            capabilities.focusMode.includes("continuous")
+          ) {
+            await videoTrack.applyConstraints({
+              advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+            });
+          }
+        }
+      } catch {
+        // Silencioso se o hardware não suportar restrições avançadas
+      }
+
       const video = videoRef.current;
       if (!video) throw new Error("O visor óptico não está disponível.");
 
@@ -416,36 +490,55 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       await video.play();
 
       detectorRef.current = null;
-      detectorBusyRef.current = false;
-      setNativeDetectorAvailable(false);
+      let hasNative = false;
       const win =
         typeof window !== "undefined"
           ? (window as unknown as WindowWithWebkitAudio)
           : null;
       if (win?.BarcodeDetector) {
         try {
-          detectorRef.current = new win.BarcodeDetector({ formats: ["qr_code"] });
-          setNativeDetectorAvailable(true);
+          const supported =
+            typeof win.BarcodeDetector.getSupportedFormats === "function"
+              ? await win.BarcodeDetector.getSupportedFormats()
+              : ["qr_code"];
+          if (supported.includes("qr_code")) {
+            detectorRef.current = new win.BarcodeDetector({ formats: ["qr_code"] });
+            hasNative = true;
+          }
         } catch {
           detectorRef.current = null;
+          hasNative = false;
         }
       }
+      hasNativeDetectorRef.current = hasNative;
+      setNativeDetectorAvailable(hasNative);
 
       framesAnalysedRef.current = 0;
+      fpsCounterRef.current = 0;
+      lastFpsTimeRef.current = performance.now();
+      currentFpsRef.current = 0;
       cameraStartedAtRef.current = Date.now();
       lastDiagnosticsUpdateRef.current = 0;
       lastDecodedAtRef.current = 0;
-      lastNativeAttemptRef.current = 0;
+      lastTickTimeRef.current = 0;
+      lastLatencyMsRef.current = 0;
+      isScanTickBusyRef.current = false;
+
       setScannerDiagnostics({
         frames: 0,
-        width: video.videoWidth,
-        height: video.videoHeight,
-        readyState: video.readyState,
+        width: video.videoWidth || 1280,
+        height: video.videoHeight || 720,
+        fps: 0,
+        lastLatencyMs: 0,
       });
+
       setIsCameraActive(true);
-      setScanFeedback("Abertura óptica calibrada. Aponte para o passe digital.");
-      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = setInterval(scanTick, 180);
+      setScanFeedback("Scanner pronto. Aproxime o passe digital.");
+
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = requestAnimationFrame(() => {
+        void scanTickRef.current?.();
+      });
     } catch (err: unknown) {
       const isError = err instanceof Error;
       const errorName = isError ? err.name : "";
@@ -463,6 +556,7 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
               ? "O sensor de vídeo está ocupado por outro processo. Feche outras aplicações e tente novamente."
               : "Não foi possível calibrar a câmara. Recorra à validação manual abaixo.";
       detectorRef.current = null;
+      hasNativeDetectorRef.current = false;
       setNativeDetectorAvailable(false);
       setCameraError(message);
       setScanFeedback(message);
@@ -471,9 +565,9 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
   };
 
   const stopCamera = useCallback(() => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -483,20 +577,24 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
       videoRef.current.srcObject = null;
     }
     detectorRef.current = null;
-    detectorBusyRef.current = false;
+    hasNativeDetectorRef.current = false;
+    isScanTickBusyRef.current = false;
     setNativeDetectorAvailable(false);
     setIsCameraActive(false);
     setScannerDiagnostics({
       frames: framesAnalysedRef.current,
       width: 0,
       height: 0,
-      readyState: 0,
+      fps: 0,
+      lastLatencyMs: 0,
     });
     setScanFeedback("Abertura óptica em pausa. Active o leitor para acolher convidados.");
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       stopCamera();
     };
   }, [stopCamera]);
@@ -621,9 +719,16 @@ export default function ReceptionScannerClient({ event, initialStats }: Props) {
                   Abertura de Leitura Óptica
                 </h2>
               </div>
-              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#EAD8B8]/40">
-                HAXR Optical Engine v2.4
-              </span>
+              <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-[#EAD8B8]/40">
+                {isCameraActive && scannerDiagnostics.width > 0 && (
+                  <span className="text-[#EAD8B8]/60 tabular-nums">
+                    {scannerDiagnostics.width}×{scannerDiagnostics.height}
+                    {scannerDiagnostics.fps > 0 ? ` · ${scannerDiagnostics.fps} FPS` : ""}
+                    {scannerDiagnostics.lastLatencyMs > 0 ? ` · ${scannerDiagnostics.lastLatencyMs}ms` : ""}
+                  </span>
+                )}
+                <span>HAXR Optical Engine v2.5</span>
+              </div>
             </div>
 
             {/* O Viewfinder (Lente) */}
