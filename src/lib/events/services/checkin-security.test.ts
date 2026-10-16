@@ -169,3 +169,90 @@ describe("Check-in Hardening — Validação de Escopo de Evento e Preservação
     );
   });
 });
+
+describe("Endpoint POST /api/events/checkin — Autenticação Precoce e Tratamento de Payload", () => {
+  it("sem sessão + corpo vazio = 401", async () => {
+    const req = new Request("https://www.haxrsignature.com/api/events/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "",
+    });
+    const res = await POST(req);
+    assert.equal(res.status, 401);
+    const body = await res.json();
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "unauthorized");
+  });
+
+  it("sem sessão + JSON inválido = 401", async () => {
+    const req = new Request("https://www.haxrsignature.com/api/events/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{ invalid json payload",
+    });
+    const res = await POST(req);
+    assert.equal(res.status, 401);
+    const body = await res.json();
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "unauthorized");
+  });
+
+  it("sem sessão + corpo válido = 401", async () => {
+    const req = new Request("https://www.haxrsignature.com/api/events/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: "aed4c44a-49f8-4e9e-8b6b-cd5b3c701102",
+        token: "fake-test-token-32-chars-long-abc",
+      }),
+    });
+    const res = await POST(req);
+    assert.equal(res.status, 401);
+    const body = await res.json();
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "unauthorized");
+  });
+
+  it("com sessão + JSON inválido = 400", async () => {
+    const { createRequire } = await import("node:module");
+    const reqModule = createRequire(import.meta.url);
+    const checkinAuthPath = reqModule.resolve("@/lib/events/services/checkin-auth");
+    const originalAuth = reqModule(checkinAuthPath);
+    const routePath = reqModule.resolve("@/app/api/events/checkin/route");
+
+    const originalEntry = reqModule.cache[checkinAuthPath];
+    reqModule.cache[checkinAuthPath] = {
+      ...originalEntry,
+      id: checkinAuthPath,
+      filename: checkinAuthPath,
+      loaded: true,
+      exports: {
+        ...originalAuth,
+        verifyCheckinSession: async () => ({ authorized: true }),
+      },
+    } as unknown as NodeJS.Module;
+
+    delete reqModule.cache[routePath];
+    const { POST: postWithAuth } = reqModule(routePath);
+
+    try {
+      const req = new Request("https://www.haxrsignature.com/api/events/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{ malformed json",
+      });
+      const res = await postWithAuth(req);
+      assert.equal(res.status, 400);
+      const body = await res.json();
+      assert.equal(body.ok, false);
+      assert.equal(body.error, "invalid_request");
+    } finally {
+      if (originalEntry) {
+        reqModule.cache[checkinAuthPath] = originalEntry;
+      } else {
+        delete reqModule.cache[checkinAuthPath];
+      }
+      delete reqModule.cache[routePath];
+    }
+  });
+});

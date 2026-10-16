@@ -16,16 +16,35 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // 1. Rate limit
     const ip = getRequestIp(request);
     const limited = rateLimit(`event-checkin:${ip}`, RATE_LIMITS.eventAction);
     if (!limited.allowed) {
       return rateLimitResponse(limited, { ok: false });
     }
 
-    // 1. Validação dos parâmetros da requisição para isolar o evento
-    const raw = await request.json();
-    const parsed = schema.safeParse(raw);
+    // 2. Autenticação obrigatória do operador no servidor (sem eventId) -> 401 se não houver sessão
+    const sessionCheck = await verifyCheckinSession();
+    if (!sessionCheck.authorized) {
+      return NextResponse.json(
+        { ok: false, error: sessionCheck.error, message: sessionCheck.message },
+        { status: sessionCheck.status }
+      );
+    }
 
+    // 3. Leitura do corpo dentro de try/catch próprio -> 400 invalid_request se for JSON inválido
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return NextResponse.json(
+        { ok: false, error: "invalid_request" },
+        { status: 400 }
+      );
+    }
+
+    // 4. Validação com o schema zod -> 400
+    const parsed = schema.safeParse(raw);
     if (!parsed.success) {
       return NextResponse.json(
         { ok: false, error: "invalid_request" },
@@ -33,16 +52,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Verificação de autorização efectiva do operador sobre o evento específico
-    const authCheck = await verifyCheckinSession(parsed.data.eventId);
-    if (!authCheck.authorized) {
+    // 5. Autorização efectiva do operador sobre o evento específico (404/403)
+    const eventAuthCheck = await verifyCheckinSession(parsed.data.eventId);
+    if (!eventAuthCheck.authorized) {
       return NextResponse.json(
-        { ok: false, error: authCheck.error, message: authCheck.message },
-        { status: authCheck.status }
+        { ok: false, error: eventAuthCheck.error, message: eventAuthCheck.message },
+        { status: eventAuthCheck.status }
       );
     }
 
-    // 4. Execução atómica do check-in através da RPC perform_event_checkin
+    // 6. Execução atómica do check-in através da RPC perform_event_checkin
     const result = await performCheckin(
       parsed.data.eventId,
       parsed.data.token
