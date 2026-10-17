@@ -33,7 +33,6 @@
     "brevo:diagnose": "node scripts/brevo-diagnose.mjs",
     "brevo:funnel": "node scripts/process-brevo-funnel.mjs",
     "brevo:funnel:direct": "node --import tsx scripts/run-brevo-funnel-direct.mjs",
-    "admin:smoke-db": "node scripts/smoke-admin-db-access.mjs",
     "admin:smoke-db": "node scripts/smoke-admin-db-access.mjs"
   },
   "dependencies": {
@@ -52,6 +51,7 @@
     "framer-motion": "^12.9.2",
     "gsap": "^3.13.0",
     "jose": "^6.2.10",
+    "jsqr": "^1.4.0",
     "lenis": "^1.3.4",
     "lucide-react": "^1.18.0",
     "mammoth": "^1.12.0",

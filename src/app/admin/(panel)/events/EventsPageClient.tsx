@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Camera, Plus, QrCode } from "lucide-react";
 import AdminShell from "@/components/admin/AdminShell";
 import DataTable from "@/components/admin/DataTable";
 import EventForm from "@/components/events/EventForm";
@@ -141,6 +142,29 @@ export default function EventsPageClient({
         return <span className="text-sm text-grey">{business?.name ?? row.businessId}</span>;
       },
     },
+    {
+      key: "actions",
+      header: "Recepção",
+      render: (row: ManagedEvent) => (
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Link
+            href={`/admin/events/${row.id}/scanner`}
+            className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono uppercase tracking-wider inline-flex items-center gap-1 transition-colors"
+            title="Abrir Scanner óptico da recepção"
+          >
+            <Camera className="w-3 h-3 text-emerald-400" />
+            Scanner
+          </Link>
+          <Link
+            href={`/admin/events/${row.id}?tab=checkin`}
+            className="p-1.5 rounded-lg border border-white/10 hover:border-admin-gold/40 text-grey-medium hover:text-admin-gold text-[10px] font-mono transition-colors"
+            title="Abrir painel de Check-in"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -148,14 +172,23 @@ export default function EventsPageClient({
       title="Eventos"
       subtitle="Gestão de convidados, lugares e check-in"
       actions={
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="admin-btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Novo evento
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/events/checkin"
+            className="admin-btn-secondary inline-flex items-center gap-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/60"
+          >
+            <Camera className="w-4 h-4 text-emerald-400" />
+            Recepção & Check-in
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="admin-btn-primary"
+          >
+            <Plus className="w-4 h-4" />
+            Novo evento
+          </button>
+        </div>
       }
     >
       {creating ? (
@@ -203,6 +236,7 @@ export default function EventsPageClient({
         data={filteredEvents}
         keyExtractor={(row) => row.id}
         rowHref={(row) => `/admin/events/${row.id}`}
+        linkedColumnKeys={["name", "date", "client", "location", "guests", "business"]}
         emptyMessage={
           activeTab === "all"
             ? "Ainda não há eventos. Crie o primeiro evento."

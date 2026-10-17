@@ -9,7 +9,7 @@ import nextConfig, {
 describe("Invitation Redirects in next.config.ts", () => {
   it("defines redirects for Neidy & José canonical URL and aliases in Production/Default", async () => {
     assert.ok(typeof nextConfig.redirects === "function", "nextConfig.redirects must be a function");
-    const redirects = await nextConfig.redirects();
+    const redirects = await nextConfig.redirects!();
 
     const canonicalRedirect = redirects.find((r) => r.source === "/neidyejosewedding");
     assert.ok(canonicalRedirect, "Redirect for /neidyejosewedding must exist");
@@ -26,7 +26,7 @@ describe("Invitation Redirects in next.config.ts", () => {
   });
 
   it("ensures no circular redirects exist", async () => {
-    const redirects = await nextConfig.redirects();
+    const redirects = await nextConfig.redirects!();
     for (const r of redirects) {
       assert.notEqual(r.source, r.destination, `Circular redirect detected: ${r.source}`);
       assert.notEqual(r.source + "/", r.destination, `Circular redirect detected: ${r.source}`);
@@ -34,7 +34,7 @@ describe("Invitation Redirects in next.config.ts", () => {
   });
 
   it("ensures Neidy & José aliases do not redirect to other events", async () => {
-    const redirects = await nextConfig.redirects();
+    const redirects = await nextConfig.redirects!();
     const neidyRedirects = redirects.filter((r) =>
       r.source.includes("neidy") || r.source.includes("jose")
     );
@@ -52,7 +52,7 @@ describe("Invitation Redirects in next.config.ts", () => {
     process.env.VERCEL_ENV = "preview";
     process.env.HAXR_EDITION_URL = previewUrl;
     try {
-      const redirects = await nextConfig.redirects();
+      const redirects = await nextConfig.redirects!();
       const canonical = redirects.find((r) => r.source === "/neidyejosewedding");
       assert.ok(canonical, "Redirect for /neidyejosewedding must exist");
       assert.equal(canonical.destination, `${previewUrl}/neidyejosewedding`);
@@ -77,7 +77,7 @@ describe("Invitation Redirects in next.config.ts", () => {
     try {
       await assert.rejects(
         async () => {
-          await nextConfig.redirects();
+          await nextConfig.redirects!();
         },
         {
           message: /não está definida no ambiente Preview/i,
@@ -94,7 +94,7 @@ describe("Invitation Redirects in next.config.ts", () => {
     try {
       await assert.rejects(
         async () => {
-          await nextConfig.redirects();
+          await nextConfig.redirects!();
         },
         {
           message: /não pode apontar para o domínio de Produção/i,
