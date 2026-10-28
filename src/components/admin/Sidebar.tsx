@@ -9,6 +9,7 @@ import {
   FileText,
   Inbox,
   KeyRound,
+  Layers,
   LayoutDashboard,
   Mail,
   QrCode,
@@ -52,6 +53,7 @@ const navSections: NavSection[] = [
       { href: "/admin/leads", label: "Leads", icon: Inbox },
       { href: "/admin/suppliers", label: "Fornecedores", icon: Store },
       { href: "/admin/clients", label: "Clientes", icon: Users },
+      { href: "/admin/portfolio", label: "Portfólio", icon: Layers },
     ],
   },
   {

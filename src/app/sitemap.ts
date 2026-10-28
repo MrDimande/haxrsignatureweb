@@ -5,6 +5,7 @@ import {
   buildMarketingSitemapEntries,
 } from "@/lib/seo/sitemap-config";
 import { insightArticles } from "@/lib/marketing/insights-articles";
+import { getPublishedPortfolioProjects } from "@/lib/portfolio/catalog";
 import { siteUrl } from "@/lib/seo";
 
 /** Data base do sitemap — actualizar quando houver alteração editorial relevante. */
@@ -38,5 +39,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.68,
   }));
 
-  return [...marketing, ...demos, ...insightPages];
+  // Projectos publicados do The Signature Collection (apenas públicos, aprovados e autorizados)
+  const portfolioPages: MetadataRoute.Sitemap = getPublishedPortfolioProjects()
+    .filter(
+      (p) =>
+        p.status === "published" &&
+        p.publicationAuthorized === true &&
+        p.editorialReviewStatus === "approved" &&
+        p.clientConsentStatus === "AUTHORIZED"
+    )
+    .map((project) => ({
+      url: `${siteUrl}/portfolio/${project.slug}`,
+      lastModified: project.publishedAt ? new Date(project.publishedAt) : lastModified,
+      changeFrequency: "monthly" as const,
+      priority: project.isFeatured ? 0.85 : 0.75,
+      images: project.coverImage
+        ? [project.coverImage.startsWith("http") ? project.coverImage : `${siteUrl}${project.coverImage}`]
+        : undefined,
+    }));
+
+  return [...marketing, ...demos, ...insightPages, ...portfolioPages];
 }

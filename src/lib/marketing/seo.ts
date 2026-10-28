@@ -165,18 +165,17 @@ export const marketingPagesSeo = {
   },
   portfolio: {
     path: "/portfolio",
-    title: "Portfólio — Casamentos e Convites Digitais HAXR Signature",
+    title: "The Signature Collection | Portfólio HAXR Signature",
     description:
-      "Casamentos, save the date e celebrações assinadas HAXR Signature em Maputo. Exemplos reais de convites digitais, assessoria e experiências memoráveis.",
+      "The Signature Collection — Uma colecção de celebrações e experiências com assinatura HAXR em Maputo. Web-Convites interactivos, assessoria de alta-costura cerimonial e memórias intemporais.",
     keywords: [
-      "portfólio casamentos",
-      "convites digitais exemplos",
-      "casamento convite digital",
-      "eventos corporativos",
-      "Portfólio de Convites Digitais",
-      "Exemplos de Convites de Casamento",
-      "Inspiração para Convites de Casamento",
-      "Design de Convites de Eventos",
+      "The Signature Collection",
+      "portfólio casamentos Maputo",
+      "alta-costura digital",
+      "web-convites HAXR",
+      "assessoria de casamentos Moçambique",
+      "convites digitais luxo",
+      "lobolo tradicional",
     ],
   },
   sobre: {

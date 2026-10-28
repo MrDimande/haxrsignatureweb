@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import React, { Suspense } from "react";
 import BrandLogo from "@/components/ui/BrandLogo";
 import LoginForm from "@/components/admin/LoginForm";
 import { isAdminConfigured } from "@/lib/admin/auth";

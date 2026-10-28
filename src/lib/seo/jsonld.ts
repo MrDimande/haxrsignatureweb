@@ -1,9 +1,9 @@
 import { brandAssets } from "@/lib/assets";
-import { caseStudies } from "@/lib/marketing/editorial";
 import {
   getDemoBySlug,
   getDemoPublicUrl,
 } from "@/lib/demos/catalog";
+import { getPublishedPortfolioProjects } from "@/lib/portfolio/catalog";
 import {
   marketingPagesSeo,
   type MarketingPageKey,
@@ -248,29 +248,20 @@ function buildHomeServiceList(): JsonLd {
 }
 
 function buildPortfolioCollection(): JsonLd {
+  const projects = getPublishedPortfolioProjects();
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
     "@id": pageId("/portfolio", "cases"),
-    name: "Portfólio HAXR Signature",
+    name: "The Signature Collection | Portfólio HAXR Signature",
     description: marketingPagesSeo.portfolio.description,
-    itemListElement: caseStudies.map((study, index) => {
-      const demo = getDemoBySlug(study.id);
-      const itemUrl = demo
-        ? getDemoPublicUrl(demo)
-        : study.href
-          ? study.href.startsWith("http")
-            ? study.href
-            : `${siteUrl}${study.href}`
-          : `${siteUrl}/portfolio`;
-      return {
-        "@type": "ListItem",
-        position: index + 1,
-        name: study.title,
-        description: study.context,
-        url: itemUrl,
-      };
-    }),
+    itemListElement: projects.map((project, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: project.title,
+      description: project.summary,
+      url: `${siteUrl}/portfolio/${project.slug}`,
+    })),
   };
 }
 

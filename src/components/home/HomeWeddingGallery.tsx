@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Users, Heart, ArrowLeft, ArrowRight } from "lucide-react";
 import RevealOnScroll from "@/components/ui/RevealOnScroll";
@@ -205,6 +206,17 @@ export default function HomeWeddingGallery() {
               </div>
             </motion.div>
           ))}
+        </div>
+
+        {/* Link para o Portfólio Geral */}
+        <div className="pt-2 text-center">
+          <Link
+            href="/portfolio"
+            className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-brand-gold hover:text-white transition-colors border-b border-brand-gold/40 pb-1"
+          >
+            Explorar The Signature Collection
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
       </div>
