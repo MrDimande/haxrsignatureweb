@@ -1,4 +1,9 @@
 import { neonQuery } from "@/lib/neon/server-db";
+import {
+  promoteProjectAssetsToPublic,
+  rollbackPromotedAssets,
+  type PortfolioPromotionSummary,
+} from "./portfolio-promotion";
 import type {
   PortfolioProject,
   PortfolioCategoryId,
@@ -278,7 +283,10 @@ export async function createProjectInDb(
     clientConsentStatus: project.clientConsentStatus || "CONFIRMATION_PENDING",
   };
 
-  // Trava de publicação segura (Publication Gate)
+  let projectToSave = secureProject;
+  let promotionSummary: PortfolioPromotionSummary | null = null;
+
+  // Trava de publicação segura (Publication Gate) e Promoção de Activos (REVIEW -> PUBLIC)
   if (secureProject.status === "published") {
     if (
       secureProject.editorialReviewStatus !== "approved" ||
@@ -289,23 +297,34 @@ export async function createProjectInDb(
         "PUBLICATION_BLOCKED: Não é permitido criar um projecto com status 'published' sem aprovação editorial ('approved'), consentimento confirmado ('AUTHORIZED') e autorização explícita ('publicationAuthorized: true')."
       );
     }
+
+    const { updatedProject, summary } = await promoteProjectAssetsToPublic(secureProject, actorEmail);
+    projectToSave = updatedProject;
+    promotionSummary = summary;
   }
 
-  await insertProject(secureProject);
+  try {
+    await insertProject(projectToSave);
+  } catch (dbError) {
+    if (promotionSummary) {
+      await rollbackPromotedAssets(projectToSave.slug, promotionSummary);
+    }
+    throw dbError;
+  }
 
   await recordPortfolioAudit({
-    projectId: secureProject.id,
+    projectId: projectToSave.id,
     actorEmail,
     action: "create",
     details: {
-      slug: secureProject.slug,
-      title: secureProject.title,
-      status: secureProject.status,
-      projectType: secureProject.projectType,
+      slug: projectToSave.slug,
+      title: projectToSave.title,
+      status: projectToSave.status,
+      projectType: projectToSave.projectType,
     },
   });
 
-  return secureProject;
+  return projectToSave;
 }
 
 export async function updateProjectInDb(
@@ -338,7 +357,10 @@ export async function updateProjectInDb(
     },
   };
 
-  // Trava de publicação segura (Publication Gate)
+  let projectToUpdate = merged;
+  let promotionSummary: PortfolioPromotionSummary | null = null;
+
+  // Trava de publicação segura (Publication Gate) e Promoção de Activos (REVIEW -> PUBLIC)
   if (merged.status === "published") {
     if (
       merged.editorialReviewStatus !== "approved" ||
@@ -349,76 +371,87 @@ export async function updateProjectInDb(
         "PUBLICATION_BLOCKED: Não é permitido publicar um projecto sem aprovação editorial ('approved'), consentimento confirmado ('AUTHORIZED') e autorização explícita de publicação ('publicationAuthorized: true')."
       );
     }
+
+    const { updatedProject, summary } = await promoteProjectAssetsToPublic(merged, actorEmail);
+    projectToUpdate = updatedProject;
+    promotionSummary = summary;
   }
 
-  await neonQuery(
-    `UPDATE public.portfolio_projects SET
-      slug = $2,
-      title = $3,
-      subtitle = $4,
-      category = $5,
-      category_label = $6,
-      location = $7,
-      year = $8,
-      guest_count = $9,
-      is_real = $10,
-      project_type = $11,
-      status = $12,
-      editorial_review_status = $13,
-      publication_authorized = $14,
-      client_consent_status = $15,
-      authorization_notes = $16,
-      material_source = $17,
-      display_order = $18,
-      is_featured = $19,
-      cover_image = $20,
-      cover_aspect = $21,
-      services = $22,
-      summary = $23,
-      narrative = $24,
-      gallery = $25,
-      details = $26,
-      credits = $27,
-      demo_url = $28,
-      demo_label = $29,
-      published_at = $30,
-      seo = $31,
-      updated_at = now()
-    WHERE id = $1;`,
-    [
-      id,
-      merged.slug,
-      merged.title,
-      merged.subtitle,
-      merged.category,
-      merged.categoryLabel,
-      merged.location,
-      merged.year,
-      merged.guestCount || null,
-      merged.isReal,
-      merged.projectType || "real",
-      merged.status,
-      merged.editorialReviewStatus || "pending_review",
-      merged.publicationAuthorized === true,
-      merged.clientConsentStatus || "CONFIRMATION_PENDING",
-      merged.authorizationNotes || null,
-      merged.materialSource || null,
-      merged.displayOrder || 0,
-      Boolean(merged.isFeatured),
-      merged.coverImage,
-      merged.coverAspect || "landscape",
-      JSON.stringify(merged.services),
-      merged.summary,
-      JSON.stringify(merged.narrative),
-      JSON.stringify(merged.gallery),
-      JSON.stringify(merged.details),
-      JSON.stringify(merged.credits || []),
-      merged.demoUrl || null,
-      merged.demoLabel || null,
-      merged.publishedAt || new Date().toISOString(),
-      JSON.stringify(merged.seo),
-    ]
-  );
+  try {
+    await neonQuery(
+      `UPDATE public.portfolio_projects SET
+        slug = $2,
+        title = $3,
+        subtitle = $4,
+        category = $5,
+        category_label = $6,
+        location = $7,
+        year = $8,
+        guest_count = $9,
+        is_real = $10,
+        project_type = $11,
+        status = $12,
+        editorial_review_status = $13,
+        publication_authorized = $14,
+        client_consent_status = $15,
+        authorization_notes = $16,
+        material_source = $17,
+        display_order = $18,
+        is_featured = $19,
+        cover_image = $20,
+        cover_aspect = $21,
+        services = $22,
+        summary = $23,
+        narrative = $24,
+        gallery = $25,
+        details = $26,
+        credits = $27,
+        demo_url = $28,
+        demo_label = $29,
+        published_at = $30,
+        seo = $31,
+        updated_at = now()
+      WHERE id = $1;`,
+      [
+        id,
+        projectToUpdate.slug,
+        projectToUpdate.title,
+        projectToUpdate.subtitle,
+        projectToUpdate.category,
+        projectToUpdate.categoryLabel,
+        projectToUpdate.location,
+        projectToUpdate.year,
+        projectToUpdate.guestCount || null,
+        projectToUpdate.isReal,
+        projectToUpdate.projectType || "real",
+        projectToUpdate.status,
+        projectToUpdate.editorialReviewStatus || "pending_review",
+        projectToUpdate.publicationAuthorized === true,
+        projectToUpdate.clientConsentStatus || "CONFIRMATION_PENDING",
+        projectToUpdate.authorizationNotes || null,
+        projectToUpdate.materialSource || null,
+        projectToUpdate.displayOrder || 0,
+        Boolean(projectToUpdate.isFeatured),
+        projectToUpdate.coverImage,
+        projectToUpdate.coverAspect || "landscape",
+        JSON.stringify(projectToUpdate.services),
+        projectToUpdate.summary,
+        JSON.stringify(projectToUpdate.narrative),
+        JSON.stringify(projectToUpdate.gallery),
+        JSON.stringify(projectToUpdate.details),
+        JSON.stringify(projectToUpdate.credits || []),
+        projectToUpdate.demoUrl || null,
+        projectToUpdate.demoLabel || null,
+        projectToUpdate.publishedAt || new Date().toISOString(),
+        JSON.stringify(projectToUpdate.seo),
+      ]
+    );
+  } catch (dbError) {
+    if (promotionSummary) {
+      await rollbackPromotedAssets(projectToUpdate.slug, promotionSummary);
+    }
+    throw dbError;
+  }
 
   const action: PortfolioAuditAction =
     updates.status && updates.status !== current.status
@@ -436,11 +469,11 @@ export async function updateProjectInDb(
     details: {
       changedKeys: Object.keys(updates),
       previousStatus: current.status,
-      newStatus: merged.status,
+      newStatus: projectToUpdate.status,
     },
   });
 
-  return merged;
+  return projectToUpdate;
 }
 
 export async function deleteProjectFromDb(

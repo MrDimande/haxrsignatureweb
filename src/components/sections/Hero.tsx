@@ -64,8 +64,9 @@ export default function Hero() {
         quality={95}
       />
 
-      {/* Dark overlay with slight color grading to match HAXR brand */}
-      <div className="absolute inset-0 bg-gradient-to-b from-brand-black/85 via-brand-black/75 to-brand-black/90 z-1" />
+      {/* Dark overlay with enhanced contrast vignette to protect editorial legibility */}
+      <div className="absolute inset-0 bg-gradient-to-b from-brand-black/90 via-brand-black/80 to-brand-black/95 z-1" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.5)_0%,rgba(0,0,0,0.9)_100%)] z-1 pointer-events-none" />
 
       {/* Main Content */}
       <div className="site-container relative z-10 w-full text-center">
@@ -74,7 +75,7 @@ export default function Hero() {
           {/* Subtitle */}
           <p
             data-hero-item
-            className="font-mono text-[10px] md:text-xs font-semibold tracking-[0.25em] sm:tracking-[0.45em] uppercase text-brand-gold mb-3 px-2"
+            className="font-mono text-[10px] md:text-xs font-semibold tracking-[0.25em] sm:tracking-[0.45em] uppercase text-brand-gold mb-3 px-2 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]"
           >
             ASSESSORIA DE EVENTOS & ALTA-COSTURA DIGITAL
           </p>
@@ -82,7 +83,7 @@ export default function Hero() {
           {/* Main Headline */}
           <h1
             data-hero-item
-            className="font-serif text-4xl sm:text-6xl lg:text-7.5xl font-light text-white leading-[1.1] tracking-wide"
+            className="font-serif text-4xl sm:text-6xl lg:text-7.5xl font-light text-white leading-[1.1] tracking-wide drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]"
           >
             A forma mais fácil de planear
           </h1>
@@ -90,7 +91,7 @@ export default function Hero() {
           {/* Supporting Copy */}
           <p
             data-hero-item
-            className="font-sans text-sm sm:text-base md:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed font-light"
+            className="font-sans text-sm sm:text-base md:text-lg text-white/90 max-w-2xl mx-auto leading-relaxed font-light drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
           >
             Assessoria de eventos, Web-Convites interactivos de alta-costura e tecnologia operacional privada para celebrações exclusivas em Moçambique. Rigor milimétrico e serenidade em cada detalhe.
           </p>

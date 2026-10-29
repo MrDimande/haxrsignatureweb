@@ -240,8 +240,32 @@ export default function PortfolioGallery({ projects, categories }: PortfolioGall
         ) : null}
 
         {filteredProjects.length === 0 ? (
-          <div className="text-center py-20 font-sans text-sm text-brand-text-dark/60">
-            Nenhum projecto publicado nesta categoria de momento.
+          <div className="py-20 md:py-28 px-6 text-center max-w-2xl mx-auto rounded-3xl border border-brand-champagne/40 bg-white/70 backdrop-blur-sm shadow-[0_12px_40px_rgba(8,7,6,0.03)] space-y-6">
+            <div className="w-10 h-10 rounded-full bg-brand-black text-brand-gold mx-auto flex items-center justify-center border border-brand-gold/30">
+              <span className="font-serif text-lg italic">H</span>
+            </div>
+
+            <div className="space-y-3">
+              <p className="font-mono text-[9px] tracking-[0.35em] uppercase text-brand-gold">
+                Arquivo Confidencial & Curadoria Privada
+              </p>
+              <h3 className="font-serif text-2xl sm:text-3xl font-light text-brand-text-dark leading-snug">
+                The Signature Collection
+              </h3>
+              <p className="font-sans text-sm md:text-base text-brand-text-dark/75 leading-relaxed font-light max-w-lg mx-auto">
+                As nossas celebrações decorrem sob estrito protocolo de discrição. Apresentações de portfólio exclusivas e dossiers de direcção criativa são partilhados exclusivamente mediante consulta confidencial com o nosso Concierge.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <Link
+                href="/contacto"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-black text-brand-ivory hover:bg-brand-gold hover:text-brand-black transition-all duration-300 font-mono text-[9.5px] tracking-[0.25em] uppercase"
+              >
+                <span>Solicitar Apresentação Privada</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         ) : null}
       </div>
