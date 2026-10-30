@@ -50,4 +50,19 @@ test("bloqueia fotografia sob revisão, outro projecto e despublicação", () =>
     resolvePublicPortfolioAsset(project({ clientConsentStatus: "CONFIRMATION_PENDING" }), projectSlug, assetId),
     null
   );
+  assert.equal(
+    resolvePublicPortfolioAsset(project({ editorialReviewStatus: "pending_review" }), projectSlug, assetId),
+    null
+  );
+  assert.equal(
+    resolvePublicPortfolioAsset(project({ publicationAuthorized: false }), projectSlug, assetId),
+    null
+  );
 });
+
+test("garante que o padrão canónico de activos públicos está fora de /images/** para isolamento estrito de cache", () => {
+  const publicUrl = getPortfolioPublicAssetUrl(projectSlug, assetId);
+  assert.ok(publicUrl.startsWith("/api/portfolio/assets/"));
+  assert.equal(publicUrl.startsWith("/images/"), false);
+});
+

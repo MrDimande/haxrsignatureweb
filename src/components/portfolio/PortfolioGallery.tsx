@@ -83,6 +83,7 @@ export default function PortfolioGallery({ projects, categories }: PortfolioGall
                     src={featured.coverImage}
                     alt={featured.title}
                     fill
+                    unoptimized
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                     sizes="(max-width: 1024px) 100vw, 60vw"
                   />
@@ -179,6 +180,7 @@ export default function PortfolioGallery({ projects, categories }: PortfolioGall
                         src={project.coverImage}
                         alt={project.title}
                         fill
+                        unoptimized
                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />

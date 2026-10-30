@@ -504,6 +504,7 @@ export default function PortfolioAdminClient({
                           src={p.coverImage}
                           alt={p.title}
                           fill
+                          unoptimized
                           className="object-cover"
                           sizes="48px"
                         />
@@ -994,6 +995,7 @@ export default function PortfolioAdminClient({
                       src={editingProject.coverImage}
                       alt="Capa"
                       fill
+                      unoptimized
                       className="object-cover"
                     />
                   </div>
@@ -1083,7 +1085,7 @@ export default function PortfolioAdminClient({
                       >
                         {/* Miniatura */}
                         <div className="relative w-20 h-20 rounded overflow-hidden border border-admin-gold/20 flex-shrink-0 bg-black">
-                          <Image src={img.src} alt={img.alt || "Galeria"} fill className="object-cover" />
+                          <Image src={img.src} alt={img.alt || "Galeria"} fill unoptimized className="object-cover" />
                         </div>
 
                         {/* Campos de Legenda, Alt e Crédito de Fotógrafo */}

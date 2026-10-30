@@ -129,6 +129,7 @@ export default function ProjectDetailView({ project, nextProject }: ProjectDetai
               alt={project.title}
               fill
               priority
+              unoptimized
               className="object-cover object-center"
               sizes="(max-width: 1200px) 100vw, 1200px"
             />
@@ -287,6 +288,7 @@ export default function ProjectDetailView({ project, nextProject }: ProjectDetai
                     src={img.src}
                     alt={img.alt}
                     fill
+                    unoptimized
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
@@ -360,6 +362,7 @@ export default function ProjectDetailView({ project, nextProject }: ProjectDetai
                 src={project.gallery[activeImageIndex].src}
                 alt={project.gallery[activeImageIndex].alt}
                 fill
+                unoptimized
                 className="object-contain"
                 sizes="100vw"
               />

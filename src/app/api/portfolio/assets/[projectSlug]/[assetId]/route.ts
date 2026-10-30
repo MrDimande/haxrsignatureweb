@@ -20,7 +20,10 @@ type RouteContext = {
 function notFoundResponse() {
   return new NextResponse(null, {
     status: 404,
-    headers: { "Cache-Control": "private, no-store, max-age=0" },
+    headers: {
+      "Cache-Control": "private, no-store, max-age=0",
+      "X-Robots-Tag": "noindex, noarchive",
+    },
   });
 }
 
@@ -72,6 +75,7 @@ export async function GET(_request: Request, context: RouteContext) {
         "Content-Length": String(body.byteLength),
         "Cache-Control": "private, no-store, max-age=0",
         "X-Content-Type-Options": "nosniff",
+        "X-Robots-Tag": "noindex, noarchive",
         "Content-Disposition": "inline",
       },
     });

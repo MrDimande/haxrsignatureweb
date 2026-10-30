@@ -58,6 +58,20 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_HAXR_GIT_COMMIT_REF:
       process.env.VERCEL_GIT_COMMIT_REF?.trim() ?? "",
   },
+  images: {
+    // Restringe o optimizador /_next/image exclusivamente aos activos estáticos públicos legítimos (/images/** e ficheiros raiz)
+    // Impede categoricamente a optimização e cache no Edge de rotas de portfólio dinâmico (/api/portfolio/assets/** e /api/admin/**)
+    localPatterns: [
+      {
+        pathname: "/images/**",
+        search: "",
+      },
+      {
+        pathname: "/*",
+        search: "",
+      },
+    ],
+  },
   async redirects() {
     const seoRedirects = seoRedirectSources.map((route) => ({
       source: route.source,
