@@ -19,6 +19,14 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'edition_runtime') THEN
     RAISE EXCEPTION 'Prerequisite role edition_runtime must exist before running migration';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_roles
+    WHERE rolname = 'haxrweb_runtime'
+      AND rolcanlogin = true AND rolsuper = false AND rolcreaterole = false
+      AND rolcreatedb = false AND rolbypassrls = false
+  ) THEN
+    RAISE EXCEPTION 'Prerequisite role haxrweb_runtime must exist with restricted runtime attributes';
+  END IF;
 END;
 $$;
 
@@ -139,38 +147,72 @@ REVOKE ALL ON public.edition_guest_sessions FROM PUBLIC;
 DROP POLICY IF EXISTS edition_gift_inventory_runtime_sel ON public.edition_gift_inventory;
 CREATE POLICY edition_gift_inventory_runtime_sel
   ON public.edition_gift_inventory FOR SELECT
-  TO edition_runtime
-  USING (true);
+  TO haxrweb_runtime
+  USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_gift_reservations_v2_runtime_all ON public.edition_gift_reservations_v2;
 CREATE POLICY edition_gift_reservations_v2_runtime_all
   ON public.edition_gift_reservations_v2 FOR ALL
-  TO edition_runtime
-  USING (true)
-  WITH CHECK (true);
+  TO haxrweb_runtime
+  USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
+  WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_gift_reservation_audit_v2_runtime_all ON public.edition_gift_reservation_audit_v2;
 CREATE POLICY edition_gift_reservation_audit_v2_runtime_all
   ON public.edition_gift_reservation_audit_v2 FOR ALL
-  TO edition_runtime
-  USING (true)
-  WITH CHECK (true);
+  TO haxrweb_runtime
+  USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
+  WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_guest_verification_challenges_runtime_all ON public.edition_guest_verification_challenges;
 CREATE POLICY edition_guest_verification_challenges_runtime_all
   ON public.edition_guest_verification_challenges FOR ALL
-  TO edition_runtime
-  USING (true)
-  WITH CHECK (true);
+  TO haxrweb_runtime
+  USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
+  WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_guest_sessions_runtime_all ON public.edition_guest_sessions;
 CREATE POLICY edition_guest_sessions_runtime_all
   ON public.edition_guest_sessions FOR ALL
-  TO edition_runtime
-  USING (true)
-  WITH CHECK (true);
+  TO haxrweb_runtime
+  USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
+  WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
--- 8. Core Internal Reservation Function (Invoked by verified wrapper)
+-- 8. Controlled canonical guest lookups. The event scope is immutable and
+-- PUBLIC never receives access to guests or events.
+CREATE OR REPLACE FUNCTION public.resolve_baby_aylla_guest_by_contact(p_contact text)
+RETURNS TABLE (
+  id uuid, event_id uuid, name text, contact text, status guest_status,
+  guest_source guest_source, archived_at timestamptz, deleted_at timestamptz, is_incorrect boolean
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+  SELECT g.id, g.event_id, g.name, COALESCE(g.phone, g.email, g.name), g.status,
+         g.guest_source, g.archived_at, g.deleted_at, g.is_incorrect
+  FROM public.guests AS g
+  WHERE g.event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+    AND (lower(COALESCE(g.phone, '')) = lower(p_contact) OR lower(COALESCE(g.email, '')) = lower(p_contact))
+  LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.resolve_baby_aylla_guest_by_id(p_guest_id uuid)
+RETURNS TABLE (
+  id uuid, event_id uuid, name text, contact text, status guest_status,
+  guest_source guest_source, archived_at timestamptz, deleted_at timestamptz, is_incorrect boolean
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+  SELECT g.id, g.event_id, g.name, COALESCE(g.phone, g.email, g.name), g.status,
+         g.guest_source, g.archived_at, g.deleted_at, g.is_incorrect
+  FROM public.guests AS g
+  WHERE g.event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid AND g.id = p_guest_id;
+$$;
+
+-- 9. Core Internal Reservation Function (Invoked by verified wrapper)
 CREATE OR REPLACE FUNCTION public.reserve_baby_aylla_gift(
   p_event_id uuid,
   p_item_id text,
@@ -253,7 +295,7 @@ BEGIN
 END;
 $$;
 
--- 9. Verified Reservation Function (Callable by edition_runtime via session)
+-- 10. Verified Reservation Function (Callable by haxrweb_runtime via session)
 CREATE OR REPLACE FUNCTION public.reserve_baby_aylla_gift_verified(
   p_session_id uuid,
   p_secret_hash text,
@@ -294,7 +336,7 @@ BEGIN
 END;
 $$;
 
--- 10. Verified Cancellation Function (Callable by edition_runtime via session)
+-- 11. Verified Cancellation Function (Callable by haxrweb_runtime via session)
 CREATE OR REPLACE FUNCTION public.cancel_baby_aylla_gift_verified(
   p_session_id uuid,
   p_secret_hash text,
@@ -348,37 +390,22 @@ BEGIN
 END;
 $$;
 
--- 11. Role Grants
+-- 12. Role Grants
 REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_by_id(uuid) FROM PUBLIC;
 
-GRANT SELECT ON public.edition_gift_inventory TO edition_runtime;
-GRANT SELECT, INSERT, UPDATE ON public.edition_gift_reservations_v2 TO edition_runtime;
-GRANT INSERT, SELECT ON public.edition_gift_reservation_audit_v2 TO edition_runtime;
-GRANT SELECT, INSERT, UPDATE ON public.edition_guest_verification_challenges TO edition_runtime;
-GRANT SELECT, INSERT, UPDATE ON public.edition_guest_sessions TO edition_runtime;
+REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) FROM haxrweb_runtime, edition_runtime;
+REVOKE ALL ON public.guests, public.events FROM haxrweb_runtime, edition_runtime;
 
-GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO edition_runtime;
-GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO edition_runtime;
-
--- Conditional Core runtime grants (following HAXR Core foundation pattern)
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime') THEN
-    -- Direct lookup permissions required by Core store (findGuestByContact, getGuestById, event verification)
-    GRANT SELECT ON public.guests TO haxrweb_runtime;
-    GRANT SELECT ON public.events TO haxrweb_runtime;
-
-    GRANT SELECT, UPDATE ON public.edition_gift_inventory TO haxrweb_runtime;
-    GRANT SELECT, INSERT, UPDATE ON public.edition_gift_reservations_v2 TO haxrweb_runtime;
-    GRANT INSERT, SELECT ON public.edition_gift_reservation_audit_v2 TO haxrweb_runtime;
-    GRANT SELECT, INSERT, UPDATE ON public.edition_guest_verification_challenges TO haxrweb_runtime;
-    GRANT SELECT, INSERT, UPDATE ON public.edition_guest_sessions TO haxrweb_runtime;
-    GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) TO haxrweb_runtime;
-    GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO haxrweb_runtime;
-    GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO haxrweb_runtime;
-  END IF;
-END $$;
+GRANT SELECT ON public.edition_gift_inventory TO haxrweb_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_guest_verification_challenges TO haxrweb_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_guest_sessions TO haxrweb_runtime;
+GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) TO haxrweb_runtime;
+GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_id(uuid) TO haxrweb_runtime;
+GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO haxrweb_runtime;
+GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO haxrweb_runtime;
 
 COMMIT;

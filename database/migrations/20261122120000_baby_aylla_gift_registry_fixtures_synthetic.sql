@@ -16,6 +16,51 @@
 
 BEGIN;
 
+-- Refuse incompatible state before any fixture mutation. A zero-row conflict
+-- update is never treated as success.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.businesses
+    WHERE id = 'haxr-canary-lab' AND name <> 'HAXR CANARY TESTS ONLY'
+  ) THEN
+    RAISE EXCEPTION 'Fixture incompatível: haxr-canary-lab belongs to another fixture set';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.events
+    WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+      AND (business_id <> 'haxr-canary-lab' OR edition_registry_key <> 'baby-aylla-couture')
+  ) THEN
+    RAISE EXCEPTION 'Fixture incompatível: canonical Baby Aylla event has incompatible ownership or registry key';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.events
+    WHERE id = 'cc608a8d-3cb9-47f0-955d-8d1be3f30faf'::uuid
+      AND business_id <> 'haxr-canary-lab'
+  ) THEN
+    RAISE EXCEPTION 'Fixture incompatível: archived CANARY event belongs to another business';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.guests
+    WHERE qr_token IN ('haxr_aylla_staging_qr_token_f47ac10b', 'haxr_aylla_staging_qr_token_e2b1c3d4')
+      AND id NOT IN ('f47ac10b-58cc-4372-a567-0e02b2c3d479'::uuid, 'e2b1c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d'::uuid)
+  ) THEN
+    RAISE EXCEPTION 'Fixture incompatível: qr_token already belongs to another guest';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.guests
+    WHERE id IN ('f47ac10b-58cc-4372-a567-0e02b2c3d479'::uuid, 'e2b1c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d'::uuid)
+      AND (event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid OR email NOT LIKE '%@haxrsignature.test')
+  ) THEN
+    RAISE EXCEPTION 'Fixture incompatível: synthetic guest ID is already associated with incompatible data';
+  END IF;
+END;
+$$;
+
 -- 1. Ensure Canary Business Exists
 INSERT INTO public.businesses (id, name, created_at, updated_at)
 VALUES (
@@ -60,7 +105,7 @@ VALUES (
   'haxr-canary-lab',
   'Baby Aylla — Édition Rose (Staging Synthetic)',
   'baby_shower'::event_type,
-  '2026-12-12'::date,
+  '2027-01-23'::date,
   'Laboratório Staging Neon HAXR',
   'Synthetic staging fixture for Baby Aylla Gift Registry Phase C.3.2 validation.',
   true,

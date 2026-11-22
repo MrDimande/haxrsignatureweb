@@ -11,6 +11,7 @@ import { AYLLA_GIFTS_CONFIG } from "@/lib/edition/gifts/aylla/config";
 import type { CoreGuestRecord } from "@/lib/edition/gifts/aylla/types";
 
 const TEST_SECRET = "production-super-secret-key-42";
+const TEST_PEPPER = "test-pepper-synthetic-c3-32-chars-long";
 const TEST_EVENT_ID = AYLLA_GIFTS_CONFIG.eventId;
 
 function makeGuest(): CoreGuestRecord {
@@ -30,6 +31,7 @@ function makeGuest(): CoreGuestRecord {
 describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", () => {
   beforeEach(() => {
     process.env.HAXR_EDITION_PROXY_SECRET = TEST_SECRET;
+    process.env.HAXR_AYLLA_GIFT_PEPPER = TEST_PEPPER;
     const store = createInMemoryAyllaGiftStore({
       guests: [makeGuest()],
     });
@@ -38,6 +40,7 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
 
   afterEach(() => {
     delete (process.env as Record<string, string | undefined>).HAXR_EDITION_PROXY_SECRET;
+    delete (process.env as Record<string, string | undefined>).HAXR_AYLLA_GIFT_PEPPER;
     delete (process.env as Record<string, string | undefined>).VERCEL_ENV;
     delete (process.env as Record<string, string | undefined>).NODE_ENV;
     setCoreAyllaGiftStoreForTesting(null);
@@ -166,7 +169,7 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
     const guest = makeGuest();
     const fixedTime = new Date("2027-01-20T12:00:00Z");
     const secret = "session-secret-999";
-    const secretHash = (await import("node:crypto")).createHmac("sha256", "haxr-core-aylla-default-pepper-phase-c3").update(secret).digest("base64url");
+    const secretHash = (await import("node:crypto")).createHmac("sha256", TEST_PEPPER).update(secret).digest("base64url");
     const sessionId = "session-valid-http";
 
     const store = createInMemoryAyllaGiftStore({

@@ -257,79 +257,26 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       return { outcome: auth.reason === "session_expired" ? "session_expired" : "access_denied" };
     }
 
-    const { guest } = auth;
     const { itemId, quantity, idempotencyKey } = input;
 
     if (!Number.isSafeInteger(quantity) || quantity < 1) {
       return { outcome: "quantity_unconfirmed" };
     }
 
-    // Idempotency check
-    const existing = await store.findReservationByIdempotency(guest.eventId, guest.id, idempotencyKey);
-    if (existing) {
-      if (existing.giftId !== itemId || existing.quantity !== quantity) {
-        return { outcome: "access_denied" };
-      }
-      return {
-        outcome: "reservation_confirmed",
-        reservation: {
-          id: existing.id,
-          giftId: existing.giftId,
-          quantity: existing.quantity,
-          status: existing.status,
-        },
-      };
+    const parsed = parseSessionToken(input.sessionToken);
+    if (!parsed) return { outcome: "session_expired" };
+    let reservationRecord: AyllaGiftReservationRecord;
+    try {
+      reservationRecord = await store.reserveVerified({
+        sessionId: parsed.sessionId,
+        secretHash: hashVerifier(parsed.secret, pepper),
+        itemId,
+        quantity,
+        idempotencyKey,
+      });
+    } catch {
+      return { outcome: "service_unavailable" };
     }
-
-    // Inventory check
-    const inventory = await store.getInventoryItem(guest.eventId, itemId);
-    if (!inventory || !inventory.familyApproved || !inventory.enabled) {
-      return { outcome: "item_unavailable" };
-    }
-
-    if (inventory.approvedQuantity === null || !inventory.specificationsComplete || !inventory.childSafetyValidated) {
-      return { outcome: "quantity_unconfirmed" };
-    }
-
-    // Stock availability
-    const existingReservations = await store.getReservationsByItem(guest.eventId, itemId);
-    const activeReserved = existingReservations
-      .filter((r) => r.status !== "cancelled")
-      .reduce((sum, r) => sum + r.quantity, 0);
-
-    const available = inventory.approvedQuantity - activeReserved;
-    if (quantity > available) {
-      return { outcome: "item_unavailable" };
-    }
-
-    const currentTime = now();
-    const reservationRecord: AyllaGiftReservationRecord = {
-      id: randomUUID(),
-      eventId: guest.eventId,
-      giftId: itemId,
-      guestId: guest.id,
-      quantity,
-      status: "reserved",
-      idempotencyKey,
-      createdAt: currentTime.toISOString(),
-      updatedAt: currentTime.toISOString(),
-    };
-
-    await store.createReservation(reservationRecord);
-
-    const auditRecord: CoreReservationAuditRecord = {
-      id: randomUUID(),
-      reservationId: reservationRecord.id,
-      eventId: guest.eventId,
-      actorGuestId: guest.id,
-      actorAdminId: null,
-      action: "reserved",
-      previousStatus: null,
-      nextStatus: "reserved",
-      reason: null,
-      createdAt: currentTime,
-    };
-    await store.createAuditRecord(auditRecord);
 
     return {
       outcome: "reservation_confirmed",
@@ -357,28 +304,18 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       return { outcome: auth.reason === "session_expired" ? "session_expired" : "access_denied" };
     }
 
-    const { guest } = auth;
-    const reservation = await store.getReservationById(guest.eventId, input.reservationId);
-    if (!reservation || reservation.guestId !== guest.id || reservation.status !== "reserved") {
+    const parsed = parseSessionToken(input.sessionToken);
+    if (!parsed) return { outcome: "session_expired" };
+    let reservation: AyllaGiftReservationRecord;
+    try {
+      reservation = await store.cancelVerified({
+        sessionId: parsed.sessionId,
+        secretHash: hashVerifier(parsed.secret, pepper),
+        reservationId: input.reservationId,
+      });
+    } catch {
       return { outcome: "access_denied" };
     }
-
-    const currentTime = now();
-    await store.updateReservationStatus(input.reservationId, "cancelled", currentTime);
-
-    const auditRecord: CoreReservationAuditRecord = {
-      id: randomUUID(),
-      reservationId: input.reservationId,
-      eventId: guest.eventId,
-      actorGuestId: guest.id,
-      actorAdminId: null,
-      action: "cancelled",
-      previousStatus: "reserved",
-      nextStatus: "cancelled",
-      reason: "cancelled_by_guest",
-      createdAt: currentTime,
-    };
-    await store.createAuditRecord(auditRecord);
 
     return {
       outcome: "reservation_confirmed",
@@ -386,7 +323,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
         id: reservation.id,
         giftId: reservation.giftId,
         quantity: reservation.quantity,
-        status: "cancelled",
+        status: reservation.status,
       },
     };
   }

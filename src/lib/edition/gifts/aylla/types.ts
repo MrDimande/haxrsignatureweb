@@ -107,6 +107,18 @@ export interface CoreGiftStore {
   createReservation(reservation: AyllaGiftReservationRecord): Promise<void>;
   updateReservationStatus(reservationId: string, status: AyllaGiftReservationStatus, now: Date): Promise<void>;
   createAuditRecord(audit: CoreReservationAuditRecord): Promise<void>;
+  reserveVerified(input: {
+    sessionId: string;
+    secretHash: string;
+    itemId: string;
+    quantity: number;
+    idempotencyKey: string;
+  }): Promise<AyllaGiftReservationRecord>;
+  cancelVerified(input: {
+    sessionId: string;
+    secretHash: string;
+    reservationId: string;
+  }): Promise<AyllaGiftReservationRecord>;
 }
 
 export interface CoreDeliveryProvider {
