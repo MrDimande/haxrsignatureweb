@@ -25,7 +25,7 @@ $$;
 -- 1. Inventory Table
 CREATE TABLE IF NOT EXISTS public.edition_gift_inventory (
   event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE RESTRICT,
-  registry_key text NOT NULL CHECK (registry_key = 'baby-aylla-couture'),
+  registry_key text NOT NULL CHECK (length(registry_key) BETWEEN 1 AND 80),
   item_id text NOT NULL CHECK (length(item_id) BETWEEN 1 AND 120),
   family_approved boolean NOT NULL DEFAULT false,
   enabled boolean NOT NULL DEFAULT false,
@@ -309,7 +309,28 @@ REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer,
 REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) FROM PUBLIC;
 
+GRANT SELECT ON public.edition_gift_inventory TO edition_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_gift_reservations_v2 TO edition_runtime;
+GRANT INSERT, SELECT ON public.edition_gift_reservation_audit_v2 TO edition_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_guest_verification_challenges TO edition_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_guest_sessions TO edition_runtime;
+
 GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO edition_runtime;
 GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO edition_runtime;
+
+-- Conditional Core runtime grants (following HAXR Core foundation pattern)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime') THEN
+    GRANT SELECT, UPDATE ON public.edition_gift_inventory TO haxrweb_runtime;
+    GRANT SELECT, INSERT, UPDATE ON public.edition_gift_reservations_v2 TO haxrweb_runtime;
+    GRANT INSERT, SELECT ON public.edition_gift_reservation_audit_v2 TO haxrweb_runtime;
+    GRANT SELECT, INSERT, UPDATE ON public.edition_guest_verification_challenges TO haxrweb_runtime;
+    GRANT SELECT, INSERT, UPDATE ON public.edition_guest_sessions TO haxrweb_runtime;
+    GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) TO haxrweb_runtime;
+    GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO haxrweb_runtime;
+    GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO haxrweb_runtime;
+  END IF;
+END $$;
 
 COMMIT;
