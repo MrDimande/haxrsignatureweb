@@ -1,0 +1,172 @@
+import { describe, it, beforeEach, afterEach } from "node:test";
+import assert from "node:assert/strict";
+import { POST as challengeHandler } from "@/app/api/v1/edition/gifts/aylla/challenge/route";
+import { POST as verifyHandler } from "@/app/api/v1/edition/gifts/aylla/verify/route";
+import { POST as sessionHandler, DELETE as sessionRevokeHandler } from "@/app/api/v1/edition/gifts/aylla/session/route";
+import { POST as reserveHandler } from "@/app/api/v1/edition/gifts/aylla/reserve/route";
+import { POST as cancelHandler } from "@/app/api/v1/edition/gifts/aylla/cancel/route";
+import { setCoreAyllaGiftStoreForTesting } from "@/lib/edition/gifts/aylla/instance";
+import { createInMemoryAyllaGiftStore } from "@/lib/edition/gifts/aylla/store";
+import { AYLLA_GIFTS_CONFIG } from "@/lib/edition/gifts/aylla/config";
+import type { CoreGuestRecord } from "@/lib/edition/gifts/aylla/types";
+
+const TEST_SECRET = "production-super-secret-key-42";
+const TEST_EVENT_ID = AYLLA_GIFTS_CONFIG.eventId;
+
+function makeGuest(): CoreGuestRecord {
+  return {
+    id: "guest-http-1",
+    eventId: TEST_EVENT_ID,
+    name: "Tia Rosa",
+    contact: "+258841234567",
+    status: "confirmed",
+    source: "edition_rsvp",
+    archived: false,
+    deleted: false,
+    incorrect: false,
+  };
+}
+
+describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1)", () => {
+  beforeEach(() => {
+    process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH = "true";
+    process.env.HAXR_EDITION_PROXY_SECRET = TEST_SECRET;
+    const store = createInMemoryAyllaGiftStore({
+      guests: [makeGuest()],
+    });
+    setCoreAyllaGiftStoreForTesting(store);
+  });
+
+  afterEach(() => {
+    delete process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH;
+    delete process.env.HAXR_EDITION_PROXY_SECRET;
+    setCoreAyllaGiftStoreForTesting(null);
+  });
+
+  it("rejects unauthorized proxy requests without secret when required", async () => {
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contact: "+258841234567" }),
+    });
+
+    const res = await challengeHandler(req);
+    assert.equal(res.status, 401);
+    const json = await res.json();
+    assert.equal(json.success, false);
+    assert.equal(json.error, "Não autorizado.");
+  });
+
+  it("accepts valid proxy secret and executes challenge route", async () => {
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": TEST_SECRET,
+      },
+      body: JSON.stringify({ contact: "+258849999999" }),
+    });
+
+    const res = await challengeHandler(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.success, true);
+    assert.equal(json.outcome, "verification_pending");
+  });
+
+  it("reserve route enforces fail-closed catalog lockdown even with valid proxy secret", async () => {
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/reserve", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "authorization": `Bearer ${TEST_SECRET}`,
+      },
+      body: JSON.stringify({
+        sessionToken: "dummy-session-id.dummy-secret",
+        itemId: "dior-dress-silk-rose",
+        quantity: 1,
+        idempotencyKey: "test-idem-key",
+      }),
+    });
+
+    const res = await reserveHandler(req);
+    assert.equal(res.status, 403);
+    const json = await res.json();
+    assert.equal(json.success, false);
+    assert.equal(json.outcome, "registry_closed");
+  });
+
+  it("session route resolves active guest and can revoke", async () => {
+    const guest = makeGuest();
+    const fixedTime = new Date("2027-01-20T12:00:00Z");
+    const secret = "session-secret-999";
+    const secretHash = (await import("node:crypto")).createHmac("sha256", "haxr-core-aylla-default-pepper-phase-c3").update(secret).digest("base64url");
+    const sessionId = "session-valid-http";
+
+    const store = createInMemoryAyllaGiftStore({
+      guests: [guest],
+      sessions: [
+        {
+          id: sessionId,
+          eventId: guest.eventId,
+          guestId: guest.id,
+          secretHash,
+          expiresAt: new Date(fixedTime.getTime() + 20 * 60 * 1000),
+          revokedAt: null,
+          createdAt: fixedTime,
+        },
+      ],
+    });
+    setCoreAyllaGiftStoreForTesting(store);
+
+    const token = `${sessionId}.${secret}`;
+
+    // Test POST /session
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/session", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": TEST_SECRET,
+      },
+      body: JSON.stringify({ sessionToken: token }),
+    });
+
+    const res = await sessionHandler(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.success, true);
+    assert.equal(json.guest.name, "Tia Rosa");
+
+    // Test DELETE /session
+    const delReq = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/session", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": TEST_SECRET,
+      },
+      body: JSON.stringify({ sessionToken: token }),
+    });
+
+    const delRes = await sessionRevokeHandler(delReq);
+    assert.equal(delRes.status, 200);
+    const delJson = await delRes.json();
+    assert.equal(delJson.success, true);
+    assert.equal(delJson.revoked, true);
+
+    // Verify session is now revoked with fresh request
+    const postRevokeReq = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/session", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": TEST_SECRET,
+      },
+      body: JSON.stringify({ sessionToken: token }),
+    });
+
+    const postRevokeRes = await sessionHandler(postRevokeReq);
+    assert.equal(postRevokeRes.status, 401);
+    const postRevokeJson = await postRevokeRes.json();
+    assert.equal(postRevokeJson.success, false);
+    assert.equal(postRevokeJson.reason, "session_expired");
+  });
+});
