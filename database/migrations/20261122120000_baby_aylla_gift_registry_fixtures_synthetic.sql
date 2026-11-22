@@ -27,6 +27,17 @@ VALUES (
 ON CONFLICT (id) DO UPDATE
 SET updated_at = now();
 
+-- 1.5. Disambiguate Pre-existing Canary Event to Prevent edition_registry_key Collisions
+-- Existing Canary Event: cc608a8d-3cb9-47f0-955d-8d1be3f30faf
+-- Had edition_registry_key = 'baby-aylla-couture'.
+-- Rebind it to 'baby-aylla-couture-canary-archive' so that queries for 'baby-aylla-couture'
+-- resolve strictly and deterministically to canonical event a0f6b5a9-4d8c-4501-81b6-52929fa9da38.
+UPDATE public.events
+SET edition_registry_key = 'baby-aylla-couture-canary-archive',
+    updated_at = now()
+WHERE id = 'cc608a8d-3cb9-47f0-955d-8d1be3f30faf'::uuid
+  AND edition_registry_key = 'baby-aylla-couture';
+
 -- 2. Canonical Baby Aylla Event Fixture
 -- ID matches AYLLA_GIFTS_CONFIG.eventId: a0f6b5a9-4d8c-4501-81b6-52929fa9da38
 -- registry_key matches AYLLA_GIFTS_CONFIG.registryKey: baby-aylla-couture

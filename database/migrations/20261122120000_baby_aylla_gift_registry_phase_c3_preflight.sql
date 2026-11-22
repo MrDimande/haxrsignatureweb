@@ -45,23 +45,23 @@ WITH preflight_checks AS (
 
   UNION ALL
 
-  -- 4. Prerequisite Role: edition_runtime
+  -- 4. Prerequisite Role: edition_runtime (Login Role Parity)
   SELECT
     4,
-    'Role: edition_runtime (NOLOGIN)',
-    'Role exists with rolcanlogin = false',
-    COALESCE((SELECT 'exists (canlogin=' || rolcanlogin::text || ')' FROM pg_roles WHERE rolname = 'edition_runtime'), 'MISSING'),
-    EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'edition_runtime' AND rolcanlogin = false)
+    'Role: edition_runtime (LOGIN=true, INHERIT=true)',
+    'Role exists with rolcanlogin = true, rolinherit = true, rolsuper = false',
+    COALESCE((SELECT 'exists (login=' || rolcanlogin::text || ', inherit=' || rolinherit::text || ', super=' || rolsuper::text || ')' FROM pg_roles WHERE rolname = 'edition_runtime'), 'MISSING'),
+    EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'edition_runtime' AND rolcanlogin = true AND rolinherit = true AND rolsuper = false AND rolbypassrls = false)
 
   UNION ALL
 
-  -- 5. Prerequisite Role: haxrweb_runtime
+  -- 5. Prerequisite Role: haxrweb_runtime (Core API Runtime, Login Role Parity)
   SELECT
     5,
-    'Role: haxrweb_runtime (Core API Runtime, NOLOGIN)',
-    'Role exists with rolcanlogin = false',
-    COALESCE((SELECT 'exists (canlogin=' || rolcanlogin::text || ')' FROM pg_roles WHERE rolname = 'haxrweb_runtime'), 'MISSING'),
-    EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime' AND rolcanlogin = false)
+    'Role: haxrweb_runtime (LOGIN=true, INHERIT=true)',
+    'Role exists with rolcanlogin = true, rolinherit = true, rolsuper = false',
+    COALESCE((SELECT 'exists (login=' || rolcanlogin::text || ', inherit=' || rolinherit::text || ', super=' || rolsuper::text || ')' FROM pg_roles WHERE rolname = 'haxrweb_runtime'), 'MISSING'),
+    EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime' AND rolcanlogin = true AND rolinherit = true AND rolsuper = false AND rolbypassrls = false)
 
   UNION ALL
 
@@ -155,20 +155,23 @@ WITH preflight_checks AS (
 
   UNION ALL
 
-  -- 11. Canonical Baby Aylla Event Record Presence & Key Match
+  -- 11. Canonical Baby Aylla Event Presence & Uniqueness (Key baby-aylla-couture)
   SELECT
     11,
-    'Baby Aylla Event Presence (Canonical UUID & Registry Key)',
-    'UUID a0f6b5a9-4d8c-4501-81b6-52929fa9da38 with registry key baby-aylla-couture',
+    'Baby Aylla Event Presence & Uniqueness (Key baby-aylla-couture)',
+    'Exactly 1 event with UUID a0f6b5a9-... and key baby-aylla-couture (0 ambiguity)',
     COALESCE((
-      SELECT 'Found: ' || name || ' (key=' || edition_registry_key || ')'
+      SELECT 'Found: ' || name || ' (count_with_key=' || (SELECT count(*) FROM public.events WHERE edition_registry_key = 'baby-aylla-couture')::text || ')'
       FROM public.events
       WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
     ), 'NOT FOUND'),
-    EXISTS (
-      SELECT 1 FROM public.events
-      WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
-        AND edition_registry_key = 'baby-aylla-couture'
+    (
+      EXISTS (
+        SELECT 1 FROM public.events
+        WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+          AND edition_registry_key = 'baby-aylla-couture'
+      ) AND
+      (SELECT count(*) FROM public.events WHERE edition_registry_key = 'baby-aylla-couture') = 1
     )
 
   UNION ALL
