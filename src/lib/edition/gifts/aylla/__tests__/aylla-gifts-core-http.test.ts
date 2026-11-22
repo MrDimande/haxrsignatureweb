@@ -27,9 +27,8 @@ function makeGuest(): CoreGuestRecord {
   };
 }
 
-describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1)", () => {
+describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", () => {
   beforeEach(() => {
-    process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH = "true";
     process.env.HAXR_EDITION_PROXY_SECRET = TEST_SECRET;
     const store = createInMemoryAyllaGiftStore({
       guests: [makeGuest()],
@@ -38,15 +37,21 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1)", () 
   });
 
   afterEach(() => {
-    delete process.env.HAXR_REQUIRE_EDITION_PROXY_AUTH;
-    delete process.env.HAXR_EDITION_PROXY_SECRET;
+    delete (process.env as Record<string, string | undefined>).HAXR_EDITION_PROXY_SECRET;
+    delete (process.env as Record<string, string | undefined>).VERCEL_ENV;
+    delete (process.env as Record<string, string | undefined>).NODE_ENV;
     setCoreAyllaGiftStoreForTesting(null);
   });
 
-  it("rejects unauthorized proxy requests without secret when required", async () => {
+  it("strictly rejects requests when HAXR_EDITION_PROXY_SECRET is missing from server config", async () => {
+    delete process.env.HAXR_EDITION_PROXY_SECRET;
+
     const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": TEST_SECRET,
+      },
       body: JSON.stringify({ contact: "+258841234567" }),
     });
 
@@ -57,12 +62,73 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1)", () 
     assert.equal(json.error, "Não autorizado.");
   });
 
-  it("accepts valid proxy secret and executes challenge route", async () => {
+  it("strictly rejects requests when presented secret is empty or whitespace", async () => {
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": "   ",
+      },
+      body: JSON.stringify({ contact: "+258841234567" }),
+    });
+
+    const res = await challengeHandler(req);
+    assert.equal(res.status, 401);
+  });
+
+  it("strictly rejects requests when presented secret is incorrect", async () => {
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": "wrong-bogus-secret",
+      },
+      body: JSON.stringify({ contact: "+258841234567" }),
+    });
+
+    const res = await challengeHandler(req);
+    assert.equal(res.status, 401);
+    const json = await res.json();
+    assert.equal(json.success, false);
+  });
+
+  it("strictly rejects unauthenticated requests even in VERCEL_ENV=preview and NODE_ENV=development (No Bypass)", async () => {
+    (process.env as Record<string, string | undefined>).VERCEL_ENV = "preview";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contact: "+258841234567" }),
+    });
+
+    const res = await challengeHandler(req);
+    assert.equal(res.status, 401);
+  });
+
+  it("accepts valid proxy secret via x-haxr-edition-proxy header and executes challenge", async () => {
     const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-haxr-edition-proxy": TEST_SECRET,
+      },
+      body: JSON.stringify({ contact: "+258849999999" }),
+    });
+
+    const res = await challengeHandler(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.success, true);
+    assert.equal(json.outcome, "verification_pending");
+  });
+
+  it("accepts valid proxy secret via Authorization Bearer header", async () => {
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "authorization": `Bearer ${TEST_SECRET}`,
       },
       body: JSON.stringify({ contact: "+258849999999" }),
     });

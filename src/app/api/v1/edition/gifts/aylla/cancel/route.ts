@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import {
   editionProxyUnauthorizedResponse,
+  validateAyllaProxyRequest,
   validateEditionProxyJsonBody,
-  validateEditionProxyRequest,
 } from "@/lib/edition/proxy-auth";
 import { getCoreAyllaGiftService } from "@/lib/edition/gifts/aylla/instance";
 
@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const proxyAuth = validateEditionProxyRequest(request);
+  const proxyAuth = validateAyllaProxyRequest(request);
   if (!proxyAuth.ok) {
     return NextResponse.json(editionProxyUnauthorizedResponse(), { status: 401 });
   }

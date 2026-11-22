@@ -58,6 +58,41 @@ export function validateEditionProxyRequest(
   return { ok: true, skipped: false };
 }
 
+let ayllaTestProxySecretOverride: string | null = null;
+
+export function setAyllaProxySecretForTesting(secret: string | null): void {
+  ayllaTestProxySecretOverride = secret;
+}
+
+/**
+ * Strict fail-closed validator for Baby Aylla Gift & Identity routes.
+ * Requires mutual service authentication in ALL environments (dev, preview, test, prod).
+ * Never permits unconfigured bypass, missing secret, or environment downgrade.
+ */
+export function validateAyllaProxyRequest(
+  request: Request
+): EditionProxyAuthResult {
+  const configured =
+    ayllaTestProxySecretOverride !== null
+      ? ayllaTestProxySecretOverride
+      : process.env.HAXR_EDITION_PROXY_SECRET?.trim();
+
+  if (!configured) {
+    return { ok: false, reason: "missing" };
+  }
+
+  const presented = readProxySecretFromRequest(request);
+  if (!presented) {
+    return { ok: false, reason: "missing" };
+  }
+
+  if (!timingSafeEqual(presented, configured)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  return { ok: true, skipped: false };
+}
+
 const MAX_EDITION_RSVP_BODY_BYTES = 32_768;
 
 export type EditionProxyBodyCheck =
