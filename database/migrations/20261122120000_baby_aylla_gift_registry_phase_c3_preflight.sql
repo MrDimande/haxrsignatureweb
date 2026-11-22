@@ -64,18 +64,18 @@ WITH preflight_checks AS (
 
   UNION ALL
 
-  -- 5. Prerequisite Role: haxrweb_runtime (Core API Operational Connection Identity)
+  -- 5. Prerequisite Role: haxr_aylla_gift_runtime (Gift Registry Dedicated Connection Identity)
   SELECT
     5,
-    'Role: haxrweb_runtime (Core API Login Identity)',
-    'Role exists with rolcanlogin = true, rolinherit = true, rolsuper = false, rolbypassrls = false',
+    'Role: haxr_aylla_gift_runtime (Gift Registry Login Identity)',
+    'Role exists with rolcanlogin = true, rolinherit = true, rolsuper = false, rolcreaterole = false, rolcreatedb = false, rolbypassrls = false',
     COALESCE((
       SELECT 'exists (login=' || rolcanlogin::text || ', inherit=' || rolinherit::text || ', super=' || rolsuper::text || ', bypassrls=' || rolbypassrls::text || ')'
-      FROM pg_roles WHERE rolname = 'haxrweb_runtime'
+      FROM pg_roles WHERE rolname = 'haxr_aylla_gift_runtime'
     ), 'MISSING'),
     EXISTS (
       SELECT 1 FROM pg_roles
-      WHERE rolname = 'haxrweb_runtime'
+      WHERE rolname = 'haxr_aylla_gift_runtime'
         AND rolcanlogin = true
         AND rolinherit = true
         AND rolsuper = false

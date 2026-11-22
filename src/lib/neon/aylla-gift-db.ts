@@ -4,8 +4,9 @@ import { AYLLA_GIFT_RUNTIME_ROLE, validateAyllaGiftDatabaseEnvironment } from ".
 
 type AyllaGiftPoolGlobal = typeof globalThis & {
   __haxrAyllaGiftPool?: Pool;
-  __haxrAyllaGiftIdentity?: Promise<void>;
 };
+
+const verifiedPhysicalClients = new WeakSet<object>();
 
 function getPool(): Pool {
   const environment = validateAyllaGiftDatabaseEnvironment();
@@ -17,30 +18,37 @@ function getPool(): Pool {
   return globalState.__haxrAyllaGiftPool;
 }
 
-async function assertRuntimeIdentity(pool: Pool): Promise<void> {
-  const globalState = globalThis as AyllaGiftPoolGlobal;
-  if (!globalState.__haxrAyllaGiftIdentity) {
-    globalState.__haxrAyllaGiftIdentity = pool.query<{
-      current_user: string;
-      rolcanlogin: boolean;
-      rolsuper: boolean;
-      rolcreaterole: boolean;
-      rolcreatedb: boolean;
-      rolbypassrls: boolean;
-    }>(`
-      SELECT current_user, rolcanlogin, rolsuper, rolcreaterole, rolcreatedb, rolbypassrls
-      FROM pg_roles WHERE rolname = current_user
-    `).then((result) => {
-      const role = result.rows[0];
-      if (
-        !role || role.current_user !== AYLLA_GIFT_RUNTIME_ROLE || !role.rolcanlogin || role.rolsuper ||
-        role.rolcreaterole || role.rolcreatedb || role.rolbypassrls
-      ) {
-        throw new Error("Gift Registry PostgreSQL runtime identity is not permitted.");
-      }
-    });
+export async function assertRuntimeIdentity(client: { query: Pool["query"] }): Promise<void> {
+  if (verifiedPhysicalClients.has(client)) {
+    return;
   }
-  await globalState.__haxrAyllaGiftIdentity;
+
+  const result = await client.query<{
+    current_user: string;
+    rolcanlogin: boolean;
+    rolsuper: boolean;
+    rolcreaterole: boolean;
+    rolcreatedb: boolean;
+    rolbypassrls: boolean;
+  }>(`
+    SELECT current_user, rolcanlogin, rolsuper, rolcreaterole, rolcreatedb, rolbypassrls
+    FROM pg_roles WHERE rolname = current_user
+  `);
+
+  const role = result.rows[0];
+  if (
+    !role ||
+    role.current_user !== AYLLA_GIFT_RUNTIME_ROLE ||
+    !role.rolcanlogin ||
+    role.rolsuper ||
+    role.rolcreaterole ||
+    role.rolcreatedb ||
+    role.rolbypassrls
+  ) {
+    throw new Error("Gift Registry PostgreSQL runtime identity is not permitted.");
+  }
+
+  verifiedPhysicalClients.add(client);
 }
 
 export async function ayllaGiftQuery<TRow extends QueryResultRow = QueryResultRow>(
@@ -48,13 +56,17 @@ export async function ayllaGiftQuery<TRow extends QueryResultRow = QueryResultRo
   values: readonly unknown[] = []
 ): Promise<QueryResult<TRow>> {
   const pool = getPool();
-  await assertRuntimeIdentity(pool);
-  return pool.query<TRow>(text, [...values]);
+  const client = await pool.connect();
+  try {
+    await assertRuntimeIdentity(client);
+    return await client.query<TRow>(text, [...values]);
+  } finally {
+    client.release();
+  }
 }
 
 export async function closeAyllaGiftPoolForTests(): Promise<void> {
   const globalState = globalThis as AyllaGiftPoolGlobal;
   await globalState.__haxrAyllaGiftPool?.end();
   delete globalState.__haxrAyllaGiftPool;
-  delete globalState.__haxrAyllaGiftIdentity;
 }

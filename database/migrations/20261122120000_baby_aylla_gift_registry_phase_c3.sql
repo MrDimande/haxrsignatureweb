@@ -21,11 +21,11 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_roles
-    WHERE rolname = 'haxrweb_runtime'
+    WHERE rolname = 'haxr_aylla_gift_runtime'
       AND rolcanlogin = true AND rolsuper = false AND rolcreaterole = false
       AND rolcreatedb = false AND rolbypassrls = false
   ) THEN
-    RAISE EXCEPTION 'Prerequisite role haxrweb_runtime must exist with restricted runtime attributes';
+    RAISE EXCEPTION 'Prerequisite role haxr_aylla_gift_runtime must exist with restricted runtime attributes';
   END IF;
 END;
 $$;
@@ -147,34 +147,34 @@ REVOKE ALL ON public.edition_guest_sessions FROM PUBLIC;
 DROP POLICY IF EXISTS edition_gift_inventory_runtime_sel ON public.edition_gift_inventory;
 CREATE POLICY edition_gift_inventory_runtime_sel
   ON public.edition_gift_inventory FOR SELECT
-  TO haxrweb_runtime
+  TO haxr_aylla_gift_runtime
   USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_gift_reservations_v2_runtime_all ON public.edition_gift_reservations_v2;
 CREATE POLICY edition_gift_reservations_v2_runtime_all
   ON public.edition_gift_reservations_v2 FOR ALL
-  TO haxrweb_runtime
+  TO haxr_aylla_gift_runtime
   USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
   WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_gift_reservation_audit_v2_runtime_all ON public.edition_gift_reservation_audit_v2;
 CREATE POLICY edition_gift_reservation_audit_v2_runtime_all
   ON public.edition_gift_reservation_audit_v2 FOR ALL
-  TO haxrweb_runtime
+  TO haxr_aylla_gift_runtime
   USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
   WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_guest_verification_challenges_runtime_all ON public.edition_guest_verification_challenges;
 CREATE POLICY edition_guest_verification_challenges_runtime_all
   ON public.edition_guest_verification_challenges FOR ALL
-  TO haxrweb_runtime
+  TO haxr_aylla_gift_runtime
   USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
   WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
 DROP POLICY IF EXISTS edition_guest_sessions_runtime_all ON public.edition_guest_sessions;
 CREATE POLICY edition_guest_sessions_runtime_all
   ON public.edition_guest_sessions FOR ALL
-  TO haxrweb_runtime
+  TO haxr_aylla_gift_runtime
   USING (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
   WITH CHECK (event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid);
 
@@ -397,15 +397,16 @@ REVOKE ALL ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) 
 REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_by_id(uuid) FROM PUBLIC;
 
-REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) FROM haxrweb_runtime, edition_runtime;
-REVOKE ALL ON public.guests, public.events FROM haxrweb_runtime, edition_runtime;
+REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) FROM haxr_aylla_gift_runtime;
 
-GRANT SELECT ON public.edition_gift_inventory TO haxrweb_runtime;
-GRANT SELECT, INSERT, UPDATE ON public.edition_guest_verification_challenges TO haxrweb_runtime;
-GRANT SELECT, INSERT, UPDATE ON public.edition_guest_sessions TO haxrweb_runtime;
-GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) TO haxrweb_runtime;
-GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_id(uuid) TO haxrweb_runtime;
-GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO haxrweb_runtime;
-GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO haxrweb_runtime;
+GRANT SELECT ON public.edition_gift_inventory TO haxr_aylla_gift_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_guest_verification_challenges TO haxr_aylla_gift_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_guest_sessions TO haxr_aylla_gift_runtime;
+GRANT SELECT, INSERT, UPDATE ON public.edition_gift_reservations_v2 TO haxr_aylla_gift_runtime;
+GRANT SELECT, INSERT ON public.edition_gift_reservation_audit_v2 TO haxr_aylla_gift_runtime;
+GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) TO haxr_aylla_gift_runtime;
+GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_id(uuid) TO haxr_aylla_gift_runtime;
+GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO haxr_aylla_gift_runtime;
+GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO haxr_aylla_gift_runtime;
 
 COMMIT;
