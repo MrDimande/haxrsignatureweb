@@ -45,23 +45,44 @@ WITH preflight_checks AS (
 
   UNION ALL
 
-  -- 4. Prerequisite Role: edition_runtime (Login Role Parity)
+  -- 4. Prerequisite Role: edition_runtime (Group/Permission Role)
   SELECT
     4,
-    'Role: edition_runtime (LOGIN=true, INHERIT=true)',
-    'Role exists with rolcanlogin = true, rolinherit = true, rolsuper = false',
-    COALESCE((SELECT 'exists (login=' || rolcanlogin::text || ', inherit=' || rolinherit::text || ', super=' || rolsuper::text || ')' FROM pg_roles WHERE rolname = 'edition_runtime'), 'MISSING'),
-    EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'edition_runtime' AND rolcanlogin = true AND rolinherit = true AND rolsuper = false AND rolbypassrls = false)
+    'Role: edition_runtime (NOLOGIN Group Role)',
+    'Role exists with rolcanlogin = false, rolsuper = false, rolbypassrls = false',
+    COALESCE((
+      SELECT 'exists (canlogin=' || rolcanlogin::text || ', super=' || rolsuper::text || ', bypassrls=' || rolbypassrls::text || ')'
+      FROM pg_roles WHERE rolname = 'edition_runtime'
+    ), 'MISSING'),
+    EXISTS (
+      SELECT 1 FROM pg_roles
+      WHERE rolname = 'edition_runtime'
+        AND rolcanlogin = false
+        AND rolsuper = false
+        AND rolbypassrls = false
+    )
 
   UNION ALL
 
-  -- 5. Prerequisite Role: haxrweb_runtime (Core API Runtime, Login Role Parity)
+  -- 5. Prerequisite Role: haxrweb_runtime (Core API Operational Connection Identity)
   SELECT
     5,
-    'Role: haxrweb_runtime (LOGIN=true, INHERIT=true)',
-    'Role exists with rolcanlogin = true, rolinherit = true, rolsuper = false',
-    COALESCE((SELECT 'exists (login=' || rolcanlogin::text || ', inherit=' || rolinherit::text || ', super=' || rolsuper::text || ')' FROM pg_roles WHERE rolname = 'haxrweb_runtime'), 'MISSING'),
-    EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime' AND rolcanlogin = true AND rolinherit = true AND rolsuper = false AND rolbypassrls = false)
+    'Role: haxrweb_runtime (Core API Login Identity)',
+    'Role exists with rolcanlogin = true, rolinherit = true, rolsuper = false, rolbypassrls = false',
+    COALESCE((
+      SELECT 'exists (login=' || rolcanlogin::text || ', inherit=' || rolinherit::text || ', super=' || rolsuper::text || ', bypassrls=' || rolbypassrls::text || ')'
+      FROM pg_roles WHERE rolname = 'haxrweb_runtime'
+    ), 'MISSING'),
+    EXISTS (
+      SELECT 1 FROM pg_roles
+      WHERE rolname = 'haxrweb_runtime'
+        AND rolcanlogin = true
+        AND rolinherit = true
+        AND rolsuper = false
+        AND rolcreaterole = false
+        AND rolcreatedb = false
+        AND rolbypassrls = false
+    )
 
   UNION ALL
 
