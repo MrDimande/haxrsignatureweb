@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS public.edition_gift_inventory (
   child_safety_validated boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (event_id, item_id)
+  PRIMARY KEY (event_id, item_id),
+  CONSTRAINT edition_gift_inventory_aylla_registry_scope CHECK (
+    event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid OR registry_key = 'baby-aylla-couture'
+  )
 );
 
 -- 2. Reservations V2 Table
@@ -131,6 +134,42 @@ REVOKE ALL ON public.edition_gift_reservation_audit_v2 FROM PUBLIC;
 REVOKE ALL ON public.edition_guest_verification_challenges FROM PUBLIC;
 REVOKE ALL ON public.edition_guest_sessions FROM PUBLIC;
 
+-- 8. Explicit Row Level Security Policies
+-- Full denial for PUBLIC. Granular access granted to authorized runtime roles.
+DROP POLICY IF EXISTS edition_gift_inventory_runtime_sel ON public.edition_gift_inventory;
+CREATE POLICY edition_gift_inventory_runtime_sel
+  ON public.edition_gift_inventory FOR SELECT
+  TO edition_runtime
+  USING (true);
+
+DROP POLICY IF EXISTS edition_gift_reservations_v2_runtime_all ON public.edition_gift_reservations_v2;
+CREATE POLICY edition_gift_reservations_v2_runtime_all
+  ON public.edition_gift_reservations_v2 FOR ALL
+  TO edition_runtime
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS edition_gift_reservation_audit_v2_runtime_all ON public.edition_gift_reservation_audit_v2;
+CREATE POLICY edition_gift_reservation_audit_v2_runtime_all
+  ON public.edition_gift_reservation_audit_v2 FOR ALL
+  TO edition_runtime
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS edition_guest_verification_challenges_runtime_all ON public.edition_guest_verification_challenges;
+CREATE POLICY edition_guest_verification_challenges_runtime_all
+  ON public.edition_guest_verification_challenges FOR ALL
+  TO edition_runtime
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS edition_guest_sessions_runtime_all ON public.edition_guest_sessions;
+CREATE POLICY edition_guest_sessions_runtime_all
+  ON public.edition_guest_sessions FOR ALL
+  TO edition_runtime
+  USING (true)
+  WITH CHECK (true);
+
 -- 8. Core Internal Reservation Function (Invoked by verified wrapper)
 CREATE OR REPLACE FUNCTION public.reserve_baby_aylla_gift(
   p_event_id uuid,
@@ -175,6 +214,11 @@ BEGIN
     OR v_inventory.approved_quantity IS NULL OR NOT v_inventory.specifications_complete
     OR NOT v_inventory.child_safety_validated THEN
     RAISE EXCEPTION 'gift item is not reservable' USING ERRCODE = '42501';
+  END IF;
+
+  -- Ensure registry key matches Baby Aylla event scope
+  IF v_inventory.registry_key <> 'baby-aylla-couture' OR p_event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid THEN
+    RAISE EXCEPTION 'registry key mismatch for event' USING ERRCODE = '42501';
   END IF;
 
   -- Re-evaluate guest eligibility
