@@ -90,9 +90,9 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
     async createChallenge(challenge: CoreVerificationChallengeRecord): Promise<void> {
       await ayllaGiftQuery(
         `
-        INSERT INTO public.edition_guest_verification_challenges
-          (id, event_id, guest_id, verifier_hash, expires_at, attempts, max_attempts, consumed_at, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+        SELECT public.create_baby_aylla_verification_challenge(
+          $1::uuid, $2::uuid, $3::uuid, $4, $5, $6
+        );
         `,
         [
           challenge.id,
@@ -100,10 +100,7 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
           challenge.guestId,
           challenge.verifierHash,
           challenge.expiresAt,
-          challenge.attempts,
           challenge.maxAttempts,
-          challenge.consumedAt,
-          challenge.createdAt,
         ]
       );
     },
@@ -145,25 +142,19 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
     },
 
     async consumeChallenge(challengeId: string, now: Date): Promise<boolean> {
-      const res = await ayllaGiftQuery(
+      const res = await ayllaGiftQuery<{ consumed: boolean }>(
         `
-        UPDATE public.edition_guest_verification_challenges
-        SET consumed_at = $2
-        WHERE id = $1 AND consumed_at IS NULL AND expires_at > $2
-        RETURNING id;
+        SELECT public.consume_baby_aylla_verification_challenge($1::uuid, $2) AS consumed;
         `,
         [challengeId, now]
       );
-      return (res.rowCount ?? 0) > 0;
+      return res.rows[0]?.consumed ?? false;
     },
 
     async incrementChallengeAttempts(challengeId: string): Promise<number> {
       const res = await ayllaGiftQuery<{ attempts: number }>(
         `
-        UPDATE public.edition_guest_verification_challenges
-        SET attempts = attempts + 1
-        WHERE id = $1
-        RETURNING attempts;
+        SELECT public.increment_baby_aylla_challenge_attempts($1::uuid) AS attempts;
         `,
         [challengeId]
       );
@@ -173,9 +164,9 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
     async createSession(session: CoreGuestSessionRecord): Promise<void> {
       await ayllaGiftQuery(
         `
-        INSERT INTO public.edition_guest_sessions
-          (id, event_id, guest_id, secret_hash, expires_at, revoked_at, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7);
+        SELECT public.create_baby_aylla_guest_session(
+          $1::uuid, $2::uuid, $3::uuid, $4, $5, $6
+        );
         `,
         [
           session.id,
@@ -183,7 +174,6 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
           session.guestId,
           session.secretHash,
           session.expiresAt,
-          session.revokedAt,
           session.createdAt,
         ]
       );
@@ -224,9 +214,7 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
     async revokeSession(sessionId: string, now: Date): Promise<void> {
       await ayllaGiftQuery(
         `
-        UPDATE public.edition_guest_sessions
-        SET revoked_at = $2
-        WHERE id = $1 AND revoked_at IS NULL;
+        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2);
         `,
         [sessionId, now]
       );
@@ -412,66 +400,61 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       };
     },
 
-    async createReservation(reservation: AyllaGiftReservationRecord): Promise<void> {
-      await ayllaGiftQuery(
-        `
-        INSERT INTO public.edition_gift_reservations_v2
-          (id, event_id, item_id, guest_id, quantity, status, idempotency_key, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8, $9);
-        `,
-        [
-          reservation.id,
-          reservation.eventId,
-          reservation.giftId,
-          reservation.guestId,
-          reservation.quantity,
-          reservation.status,
-          reservation.idempotencyKey,
-          reservation.createdAt,
-          reservation.updatedAt,
-        ]
-      );
+    async createReservation(_reservation: AyllaGiftReservationRecord): Promise<void> {
+      throw new Error("Direct reservation creation is forbidden; use reserveVerified RPC.");
     },
 
     async updateReservationStatus(
-      reservationId: string,
-      status: AyllaGiftReservationStatus,
-      now: Date
+      _reservationId: string,
+      _status: AyllaGiftReservationStatus,
+      _now: Date
     ): Promise<void> {
-      await ayllaGiftQuery(
-        `
-        UPDATE public.edition_gift_reservations_v2
-        SET status = $2,
-            updated_at = $3,
-            cancelled_at = CASE WHEN $2 = 'cancelled' THEN $3 ELSE cancelled_at END,
-            purchased_at = CASE WHEN $2 = 'purchased' THEN $3 ELSE purchased_at END,
-            delivered_at = CASE WHEN $2 = 'delivered' THEN $3 ELSE delivered_at END
-        WHERE id = $1;
-        `,
-        [reservationId, status, now]
-      );
+      throw new Error("Direct reservation status update is forbidden; use transitionAdminVerified RPC.");
     },
 
-    async createAuditRecord(audit: CoreReservationAuditRecord): Promise<void> {
-      await ayllaGiftQuery(
+    async createAuditRecord(_audit: CoreReservationAuditRecord): Promise<void> {
+      throw new Error("Direct audit record creation is forbidden; audit records are written by verified RPCs.");
+    },
+
+    async transitionAdminVerified(input: {
+      eventId: string;
+      reservationId: string;
+      adminId: string;
+      nextStatus: AyllaGiftReservationStatus;
+      reason?: string;
+    }): Promise<AyllaGiftReservationRecord> {
+      const res = await ayllaGiftQuery<{
+        id: string;
+        event_id: string;
+        item_id: string;
+        guest_id: string;
+        quantity: number;
+        status: AyllaGiftReservationStatus;
+        idempotency_key: string;
+        created_at: string;
+        updated_at: string;
+      }>(
         `
-        INSERT INTO public.edition_gift_reservation_audit_v2
-          (id, reservation_id, event_id, actor_guest_id, actor_admin_id, action, previous_status, next_status, reason, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+        SELECT id, event_id, item_id, guest_id, quantity, status, idempotency_key::text, created_at, updated_at
+        FROM public.transition_baby_aylla_gift_reservation_admin($1::uuid, $2::uuid, $3::uuid, $4, $5);
         `,
-        [
-          audit.id,
-          audit.reservationId,
-          audit.eventId,
-          audit.actorGuestId,
-          audit.actorAdminId,
-          audit.action,
-          audit.previousStatus,
-          audit.nextStatus,
-          audit.reason,
-          audit.createdAt,
-        ]
+        [input.eventId, input.reservationId, input.adminId, input.nextStatus, input.reason ?? null]
       );
+
+      const row = res.rows[0];
+      if (!row) throw new Error("Admin transition RPC returned no row.");
+
+      return {
+        id: row.id,
+        eventId: row.event_id,
+        giftId: row.item_id,
+        guestId: row.guest_id,
+        quantity: row.quantity,
+        status: row.status,
+        idempotencyKey: row.idempotency_key,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
     },
 
     async reserveVerified(input) {
@@ -624,6 +607,40 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
     },
     async createAuditRecord(audit) {
       audits.push({ ...audit });
+    },
+    async transitionAdminVerified(input) {
+      const r = reservations.get(input.reservationId);
+      if (!r || r.eventId !== input.eventId) {
+        throw new Error("reservation not found");
+      }
+      let validTransition = false;
+      if (r.status === "reserved" && (input.nextStatus === "purchased" || input.nextStatus === "cancelled")) {
+        validTransition = true;
+      } else if (r.status === "purchased" && input.nextStatus === "delivered") {
+        validTransition = true;
+      }
+      if (!validTransition) {
+        throw new Error(`invalid reservation status transition from ${r.status} to ${input.nextStatus}`);
+      }
+      const updated: AyllaGiftReservationRecord = {
+        ...r,
+        status: input.nextStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      reservations.set(input.reservationId, updated);
+      audits.push({
+        id: crypto.randomUUID(),
+        reservationId: input.reservationId,
+        eventId: input.eventId,
+        actorGuestId: null,
+        actorAdminId: input.adminId,
+        action: input.nextStatus,
+        previousStatus: r.status,
+        nextStatus: input.nextStatus,
+        reason: input.reason ?? null,
+        createdAt: new Date(),
+      });
+      return updated;
     },
     async reserveVerified(input) {
       const session = sessions.get(input.sessionId);

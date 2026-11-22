@@ -107,6 +107,13 @@ export interface CoreGiftStore {
   createReservation(reservation: AyllaGiftReservationRecord): Promise<void>;
   updateReservationStatus(reservationId: string, status: AyllaGiftReservationStatus, now: Date): Promise<void>;
   createAuditRecord(audit: CoreReservationAuditRecord): Promise<void>;
+  transitionAdminVerified?(input: {
+    eventId: string;
+    reservationId: string;
+    adminId: string;
+    nextStatus: AyllaGiftReservationStatus;
+    reason?: string;
+  }): Promise<AyllaGiftReservationRecord>;
   reserveVerified(input: {
     sessionId: string;
     secretHash: string;

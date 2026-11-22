@@ -6,8 +6,6 @@ type AyllaGiftPoolGlobal = typeof globalThis & {
   __haxrAyllaGiftPool?: Pool;
 };
 
-const verifiedPhysicalClients = new WeakSet<object>();
-
 function getPool(): Pool {
   const environment = validateAyllaGiftDatabaseEnvironment();
   if (!environment.ok) throw new Error(environment.message);
@@ -19,10 +17,6 @@ function getPool(): Pool {
 }
 
 export async function assertRuntimeIdentity(client: { query: Pool["query"] }): Promise<void> {
-  if (verifiedPhysicalClients.has(client)) {
-    return;
-  }
-
   const result = await client.query<{
     current_user: string;
     rolcanlogin: boolean;
@@ -47,8 +41,6 @@ export async function assertRuntimeIdentity(client: { query: Pool["query"] }): P
   ) {
     throw new Error("Gift Registry PostgreSQL runtime identity is not permitted.");
   }
-
-  verifiedPhysicalClients.add(client);
 }
 
 export async function ayllaGiftQuery<TRow extends QueryResultRow = QueryResultRow>(

@@ -69,7 +69,7 @@ describe("Aylla Gift Registry database identity", () => {
     );
   });
 
-  it("assertRuntimeIdentity verifies identity on each new physical connection", async () => {
+  it("assertRuntimeIdentity verifies identity on each query checkout without caching", async () => {
     let queryCount = 0;
     const client1 = {
       async query() {
@@ -92,11 +92,11 @@ describe("Aylla Gift Registry database identity", () => {
     await assertRuntimeIdentity(client1 as any);
     assert.equal(queryCount, 1);
 
-    // Warm client does not re-query
+    // Each checkout re-verifies against pg_roles to prevent dynamic role alteration (e.g. SET ROLE)
     await assertRuntimeIdentity(client1 as any);
-    assert.equal(queryCount, 1);
+    assert.equal(queryCount, 2);
 
-    // New physical client connection (e.g. after reconnection) must be verified
+    // New physical client connection (e.g. after reconnection) is also verified
     const client2 = {
       async query() {
         queryCount++;
@@ -116,6 +116,6 @@ describe("Aylla Gift Registry database identity", () => {
     };
 
     await assertRuntimeIdentity(client2 as any);
-    assert.equal(queryCount, 2);
+    assert.equal(queryCount, 3);
   });
 });

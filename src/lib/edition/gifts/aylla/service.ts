@@ -354,6 +354,21 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       return { ok: false, reason: "invalid_transition" };
     }
 
+    if (store.transitionAdminVerified) {
+      try {
+        const updated = await store.transitionAdminVerified({
+          eventId,
+          reservationId,
+          adminId: admin.id,
+          nextStatus,
+          reason,
+        });
+        return { ok: true, reservationId: updated.id, newStatus: updated.status };
+      } catch {
+        return { ok: false, reason: "invalid_transition" };
+      }
+    }
+
     const currentTime = now();
     await store.updateReservationStatus(reservationId, nextStatus, currentTime);
 

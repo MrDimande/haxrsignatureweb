@@ -31,6 +31,48 @@ describe("Baby Aylla Gift Registry migration hardening", () => {
     assert.match(migration, /TO haxr_aylla_gift_runtime/);
   });
 
+  it("enforces RPC-only architecture: grants strictly SELECT on tables and zero INSERT/UPDATE/DELETE", () => {
+    // Exactly SELECT on the 5 tables
+    assert.match(migration, /GRANT SELECT ON public\.edition_gift_inventory TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT SELECT ON public\.edition_gift_reservations_v2 TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT SELECT ON public\.edition_gift_reservation_audit_v2 TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT SELECT ON public\.edition_guest_verification_challenges TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT SELECT ON public\.edition_guest_sessions TO haxr_aylla_gift_runtime;/);
+
+    // Absolute zero INSERT, UPDATE, DELETE grants to haxr_aylla_gift_runtime
+    assert.doesNotMatch(
+      migration,
+      /GRANT\s+[^;]*\b(INSERT|UPDATE|DELETE)\b[^;]*\s+TO\s+haxr_aylla_gift_runtime/i
+    );
+  });
+
+  it("grants EXECUTE exclusively on verified SECURITY DEFINER functions to haxr_aylla_gift_runtime", () => {
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.resolve_baby_aylla_guest_by_contact\(text\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.resolve_baby_aylla_guest_by_id\(uuid\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.create_baby_aylla_verification_challenge\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.consume_baby_aylla_verification_challenge\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.increment_baby_aylla_challenge_attempts\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.create_baby_aylla_guest_session\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.revoke_baby_aylla_guest_session\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.reserve_baby_aylla_gift_verified\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.cancel_baby_aylla_gift_verified\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.transition_baby_aylla_gift_reservation_admin\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+  });
+
+  it("revokes all execution permissions from PUBLIC on all registry functions", () => {
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.reserve_baby_aylla_gift\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.reserve_baby_aylla_gift_verified\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.cancel_baby_aylla_gift_verified\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.resolve_baby_aylla_guest_by_contact\(text\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.resolve_baby_aylla_guest_by_id\(uuid\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.create_baby_aylla_verification_challenge\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.consume_baby_aylla_verification_challenge\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.increment_baby_aylla_challenge_attempts\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.create_baby_aylla_guest_session\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.revoke_baby_aylla_guest_session\([^\n]+\) FROM PUBLIC;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.transition_baby_aylla_gift_reservation_admin\([^\n]+\) FROM PUBLIC;/);
+  });
+
   it("guards synthetic fixture identities and QR token collisions", () => {
     assert.match(fixtures, /Fixture incompatível/);
     assert.match(fixtures, /qr_token/);
