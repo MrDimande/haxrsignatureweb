@@ -105,39 +105,30 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       );
     },
 
-    async getChallenge(challengeId: string): Promise<CoreVerificationChallengeRecord | null> {
+    async getChallenge(_challengeId: string): Promise<CoreVerificationChallengeRecord | null> {
+      throw new Error("Direct challenge query is forbidden; use verifyAndConsumeChallenge RPC.");
+    },
+
+    async verifyAndConsumeChallenge(challengeId: string, verifierHash: string, now: Date) {
       const res = await ayllaGiftQuery<{
-        id: string;
-        event_id: string;
-        guest_id: string;
-        verifier_hash: string;
-        expires_at: string;
-        attempts: number;
-        max_attempts: number;
-        consumed_at: string | null;
-        created_at: string;
+        consumed: boolean;
+        event_id: string | null;
+        guest_id: string | null;
       }>(
         `
-        SELECT id, event_id, guest_id, verifier_hash, expires_at, attempts, max_attempts, consumed_at, created_at
-        FROM public.edition_guest_verification_challenges
-        WHERE id = $1;
+        SELECT consumed, event_id, guest_id
+        FROM public.verify_and_consume_baby_aylla_challenge($1::uuid, $2, $3);
         `,
-        [challengeId]
+        [challengeId, verifierHash, now]
       );
-
       const row = res.rows[0];
-      if (!row) return null;
-
+      if (!row || !row.consumed || !row.event_id || !row.guest_id) {
+        return { consumed: false };
+      }
       return {
-        id: row.id,
+        consumed: true,
         eventId: row.event_id,
         guestId: row.guest_id,
-        verifierHash: row.verifier_hash,
-        expiresAt: new Date(row.expires_at),
-        attempts: row.attempts,
-        maxAttempts: row.max_attempts,
-        consumedAt: row.consumed_at ? new Date(row.consumed_at) : null,
-        createdAt: new Date(row.created_at),
       };
     },
 
@@ -162,10 +153,13 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
     },
 
     async createSession(session: CoreGuestSessionRecord): Promise<void> {
+      if (!session.challengeId) {
+        throw new Error("createSession requires challengeId bound to verification.");
+      }
       await ayllaGiftQuery(
         `
         SELECT public.create_baby_aylla_guest_session(
-          $1::uuid, $2::uuid, $3::uuid, $4, $5, $6
+          $1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7
         );
         `,
         [
@@ -173,50 +167,72 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
           session.eventId,
           session.guestId,
           session.secretHash,
+          session.challengeId,
           session.expiresAt,
           session.createdAt,
         ]
       );
     },
 
-    async getSession(sessionId: string): Promise<CoreGuestSessionRecord | null> {
+    async getSession(_sessionId: string): Promise<CoreGuestSessionRecord | null> {
+      throw new Error("Direct session query is forbidden; use resolveSessionVerified RPC.");
+    },
+
+    async resolveSessionVerified(input: { sessionId: string; secretProof: string }): Promise<CoreGuestRecord | null> {
       const res = await ayllaGiftQuery<{
-        id: string;
-        event_id: string;
         guest_id: string;
-        secret_hash: string;
-        expires_at: string;
-        revoked_at: string | null;
-        created_at: string;
+        event_id: string;
+        guest_name: string;
+        guest_contact: string;
+        guest_status: "confirmed" | "declined" | "pending";
+        guest_source: string;
+        is_archived: boolean;
+        is_deleted: boolean;
+        is_incorrect: boolean;
       }>(
         `
-        SELECT id, event_id, guest_id, secret_hash, expires_at, revoked_at, created_at
-        FROM public.edition_guest_sessions
-        WHERE id = $1;
+        SELECT guest_id, event_id, guest_name, guest_contact, guest_status,
+               guest_source, is_archived, is_deleted, is_incorrect
+        FROM public.resolve_baby_aylla_guest_session($1::uuid, $2);
         `,
-        [sessionId]
+        [input.sessionId, input.secretProof]
       );
 
       const row = res.rows[0];
       if (!row) return null;
 
       return {
-        id: row.id,
+        id: row.guest_id,
         eventId: row.event_id,
-        guestId: row.guest_id,
-        secretHash: row.secret_hash,
-        expiresAt: new Date(row.expires_at),
-        revokedAt: row.revoked_at ? new Date(row.revoked_at) : null,
-        createdAt: new Date(row.created_at),
+        name: row.guest_name,
+        contact: row.guest_contact,
+        status: row.guest_status,
+        source: row.guest_source,
+        archived: row.is_archived,
+        deleted: row.is_deleted,
+        incorrect: row.is_incorrect,
       };
     },
 
-    async revokeSession(sessionId: string, now: Date): Promise<void> {
+    async revokeSessionVerified(input: { sessionId: string; secretProof: string; now?: Date }): Promise<boolean> {
+      const res = await ayllaGiftQuery<{ revoked: boolean }>(
+        `
+        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2, $3) AS revoked;
+        `,
+        [input.sessionId, input.secretProof, input.now ?? new Date()]
+      );
+      return res.rows[0]?.revoked ?? false;
+    },
+
+    async revokeSession(sessionId: string, now: Date, secretProof?: string): Promise<void> {
+      if (!secretProof) {
+        throw new Error("revokeSession requires secretProof; direct unauthenticated revocation is forbidden.");
+      }
       await ayllaGiftQuery(
         `
-        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2);
+        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2, $3);
         `,
-        [sessionId, now]
+        [sessionId, secretProof, now]
       );
     },
 
@@ -416,45 +432,16 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       throw new Error("Direct audit record creation is forbidden; audit records are written by verified RPCs.");
     },
 
-    async transitionAdminVerified(input: {
+    async transitionAdminVerified(_input: {
       eventId: string;
       reservationId: string;
       adminId: string;
       nextStatus: AyllaGiftReservationStatus;
       reason?: string;
     }): Promise<AyllaGiftReservationRecord> {
-      const res = await ayllaGiftQuery<{
-        id: string;
-        event_id: string;
-        item_id: string;
-        guest_id: string;
-        quantity: number;
-        status: AyllaGiftReservationStatus;
-        idempotency_key: string;
-        created_at: string;
-        updated_at: string;
-      }>(
-        `
-        SELECT id, event_id, item_id, guest_id, quantity, status, idempotency_key::text, created_at, updated_at
-        FROM public.transition_baby_aylla_gift_reservation_admin($1::uuid, $2::uuid, $3::uuid, $4, $5);
-        `,
-        [input.eventId, input.reservationId, input.adminId, input.nextStatus, input.reason ?? null]
+      throw new Error(
+        "Administrative transitions are strictly forbidden on guest runtime connection; use dedicated admin identity haxr_aylla_gift_admin."
       );
-
-      const row = res.rows[0];
-      if (!row) throw new Error("Admin transition RPC returned no row.");
-
-      return {
-        id: row.id,
-        eventId: row.event_id,
-        giftId: row.item_id,
-        guestId: row.guest_id,
-        quantity: row.quantity,
-        status: row.status,
-        idempotencyKey: row.idempotency_key,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      };
     },
 
     async reserveVerified(input) {
@@ -555,12 +542,60 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       c.attempts += 1;
       return c.attempts;
     },
+    async verifyAndConsumeChallenge(challengeId, verifierHash, now) {
+      const c = challenges.get(challengeId);
+      if (!c) return { consumed: false };
+      if (c.consumedAt !== null || c.expiresAt <= now || c.attempts >= c.maxAttempts) {
+        return { consumed: false };
+      }
+      if (c.verifierHash !== verifierHash) {
+        c.attempts += 1;
+        return { consumed: false };
+      }
+      c.consumedAt = now;
+      return { consumed: true, eventId: c.eventId, guestId: c.guestId };
+    },
     async createSession(session) {
+      if (session.challengeId) {
+        const c = challenges.get(session.challengeId);
+        if (!c) {
+          throw new Error("challenge not found for session issuance");
+        }
+        if (c.consumedAt === null) {
+          throw new Error("challenge must be consumed before issuing session");
+        }
+        if (session.createdAt.getTime() - c.consumedAt.getTime() > 120_000) {
+          throw new Error("challenge consumption expired for session issuance (exceeded 120s)");
+        }
+        if (c.sessionIssuedAt) {
+          throw new Error("challenge already used to issue session");
+        }
+        c.sessionIssuedAt = session.createdAt;
+      }
       sessions.set(session.id, { ...session });
     },
     async getSession(sessionId) {
       const s = sessions.get(sessionId);
       return s ? { ...s } : null;
+    },
+    async resolveSessionVerified(input) {
+      const session = sessions.get(input.sessionId);
+      if (!session || session.revokedAt !== null || session.expiresAt <= new Date()) {
+        return null;
+      }
+      if (session.secretHash !== input.secretProof) {
+        return null;
+      }
+      const guest = guests.get(`${session.eventId}:${session.guestId}`);
+      return guest ?? null;
+    },
+    async revokeSessionVerified(input) {
+      const session = sessions.get(input.sessionId);
+      if (!session || session.secretHash !== input.secretProof) {
+        return false;
+      }
+      session.revokedAt = input.now ?? new Date();
+      return true;
     },
     async revokeSession(sessionId, now) {
       const s = sessions.get(sessionId);

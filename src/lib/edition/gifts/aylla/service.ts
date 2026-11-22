@@ -145,25 +145,39 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       return { outcome: "verification_required" };
     }
 
-    const challenge = await store.getChallenge(challengeId);
     const currentTime = now();
-
-    if (!challenge || challenge.consumedAt !== null || challenge.expiresAt <= currentTime || challenge.attempts >= challenge.maxAttempts) {
-      return { outcome: "verification_required" };
-    }
-
     const presentedHash = hashVerifier(code, pepper);
-    if (!safeCompareHashes(presentedHash, challenge.verifierHash)) {
-      await store.incrementChallengeAttempts(challengeId);
-      return { outcome: "verification_required" };
+
+    let eventId: string;
+    let guestId: string;
+
+    if (store.verifyAndConsumeChallenge) {
+      const consumedResult = await store.verifyAndConsumeChallenge(challengeId, presentedHash, currentTime);
+      if (!consumedResult.consumed || !consumedResult.eventId || !consumedResult.guestId) {
+        return { outcome: "verification_required" };
+      }
+      eventId = consumedResult.eventId;
+      guestId = consumedResult.guestId;
+    } else {
+      const challenge = await store.getChallenge(challengeId);
+      if (!challenge || challenge.consumedAt !== null || challenge.expiresAt <= currentTime || challenge.attempts >= challenge.maxAttempts) {
+        return { outcome: "verification_required" };
+      }
+
+      if (!safeCompareHashes(presentedHash, challenge.verifierHash)) {
+        await store.incrementChallengeAttempts(challengeId);
+        return { outcome: "verification_required" };
+      }
+
+      const consumed = await store.consumeChallenge(challengeId, currentTime);
+      if (!consumed) {
+        return { outcome: "verification_required" };
+      }
+      eventId = challenge.eventId;
+      guestId = challenge.guestId;
     }
 
-    const consumed = await store.consumeChallenge(challengeId, currentTime);
-    if (!consumed) {
-      return { outcome: "verification_required" };
-    }
-
-    const guest = await store.getGuestById(challenge.eventId, challenge.guestId);
+    const guest = await store.getGuestById(eventId, guestId);
     if (!isEligibleGuest(guest)) {
       return { outcome: "verification_required" };
     }
@@ -177,6 +191,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       eventId: guest.eventId,
       guestId: guest.id,
       secretHash: hashVerifier(secret, pepper),
+      challengeId,
       expiresAt: sessionExpiresAt,
       revokedAt: null,
       createdAt: currentTime,
@@ -201,6 +216,25 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     const parsed = parseSessionToken(sessionToken);
     if (!parsed) return { valid: false, reason: "session_expired" };
 
+    const secretProof = hashVerifier(parsed.secret, pepper);
+
+    if (store.resolveSessionVerified) {
+      const guest = await store.resolveSessionVerified({
+        sessionId: parsed.sessionId,
+        secretProof,
+      });
+      if (!guest) {
+        return { valid: false, reason: "session_expired" };
+      }
+      if (guest.eventId !== AYLLA_GIFTS_CONFIG.eventId) {
+        return { valid: false, reason: "access_denied" };
+      }
+      if (!isEligibleGuest(guest)) {
+        return { valid: false, reason: "access_denied" };
+      }
+      return { valid: true, guest, sessionId: parsed.sessionId };
+    }
+
     const session = await store.getSession(parsed.sessionId);
     const currentTime = now();
 
@@ -208,8 +242,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       return { valid: false, reason: "session_expired" };
     }
 
-    const presentedHash = hashVerifier(parsed.secret, pepper);
-    if (!safeCompareHashes(presentedHash, session.secretHash)) {
+    if (!safeCompareHashes(secretProof, session.secretHash)) {
       return { valid: false, reason: "session_expired" };
     }
 
@@ -229,9 +262,21 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
    * 4. Revoke Session
    */
   async function revokeSession(sessionToken: string): Promise<boolean> {
+    const parsed = parseSessionToken(sessionToken);
+    if (!parsed) return false;
+    const secretProof = hashVerifier(parsed.secret, pepper);
+
+    if (store.revokeSessionVerified) {
+      return await store.revokeSessionVerified({
+        sessionId: parsed.sessionId,
+        secretProof,
+        now: now(),
+      });
+    }
+
     const auth = await resolveSession(sessionToken);
     if (!auth.valid) return false;
-    await store.revokeSession(auth.sessionId, now());
+    await store.revokeSession(auth.sessionId, now(), secretProof);
     return true;
   }
 

@@ -57,6 +57,7 @@ export interface CoreVerificationChallengeRecord {
   attempts: number;
   readonly maxAttempts: number;
   consumedAt: Date | null;
+  sessionIssuedAt?: Date | null;
   readonly createdAt: Date;
 }
 
@@ -65,6 +66,7 @@ export interface CoreGuestSessionRecord {
   readonly eventId: string;
   readonly guestId: string;
   readonly secretHash: string;
+  readonly challengeId?: string;
   readonly expiresAt: Date;
   revokedAt: Date | null;
   readonly createdAt: Date;
@@ -96,9 +98,23 @@ export interface CoreGiftStore {
   getChallenge(challengeId: string): Promise<CoreVerificationChallengeRecord | null>;
   consumeChallenge(challengeId: string, now: Date): Promise<boolean>;
   incrementChallengeAttempts(challengeId: string): Promise<number>;
+  verifyAndConsumeChallenge?(
+    challengeId: string,
+    verifierHash: string,
+    now: Date
+  ): Promise<{ consumed: boolean; eventId?: string; guestId?: string }>;
   createSession(session: CoreGuestSessionRecord): Promise<void>;
   getSession(sessionId: string): Promise<CoreGuestSessionRecord | null>;
-  revokeSession(sessionId: string, now: Date): Promise<void>;
+  resolveSessionVerified?(input: {
+    sessionId: string;
+    secretProof: string;
+  }): Promise<CoreGuestRecord | null>;
+  revokeSession(sessionId: string, now: Date, secretProof?: string): Promise<void>;
+  revokeSessionVerified?(input: {
+    sessionId: string;
+    secretProof: string;
+    now?: Date;
+  }): Promise<boolean>;
   getInventoryItem(eventId: string, itemId: string): Promise<CoreGiftInventoryRecord | null>;
   listInventory(eventId: string): Promise<readonly CoreGiftInventoryRecord[]>;
   getReservationsByItem(eventId: string, itemId: string): Promise<readonly AyllaGiftReservationRecord[]>;

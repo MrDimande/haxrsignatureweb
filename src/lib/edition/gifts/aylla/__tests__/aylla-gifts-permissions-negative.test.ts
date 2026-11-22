@@ -61,6 +61,38 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
         /Direct audit record creation is forbidden; audit records are written by verified RPCs\./
       );
     });
+
+    it("rejects direct challenge SELECT (getChallenge)", async () => {
+      await assert.rejects(
+        async () => {
+          await neonStore.getChallenge("00000000-0000-0000-0000-000000000000");
+        },
+        /Direct challenge query is forbidden; use verifyAndConsumeChallenge RPC\./
+      );
+    });
+
+    it("rejects direct session SELECT (getSession)", async () => {
+      await assert.rejects(
+        async () => {
+          await neonStore.getSession("00000000-0000-0000-0000-000000000000");
+        },
+        /Direct session query is forbidden; use resolveSessionVerified RPC\./
+      );
+    });
+
+    it("rejects admin transition on guest runtime store (transitionAdminVerified)", async () => {
+      await assert.rejects(
+        async () => {
+          await neonStore.transitionAdminVerified!({
+            eventId: TEST_EVENT_ID,
+            reservationId: "00000000-0000-0000-0000-000000000000",
+            adminId: "00000000-0000-0000-0000-000000000000",
+            nextStatus: "purchased",
+          });
+        },
+        /Administrative transitions are strictly forbidden on guest runtime connection; use dedicated admin identity haxr_aylla_gift_admin\./
+      );
+    });
   });
 
   describe("assertRuntimeIdentity fail-closed perimeter checks", () => {
@@ -261,6 +293,137 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
       assert.equal(invalidTransition.ok, false);
       if (invalidTransition.ok) throw new Error("Expected fail");
       assert.equal(invalidTransition.reason, "invalid_transition");
+    });
+    it("rejects session issuance without consumed challenge or when replayed (SEC-C3-P2-A)", async () => {
+      const fixedTime = new Date("2027-01-20T10:00:00Z");
+      const store = createInMemoryAyllaGiftStore({ guests: [guest], inventory: [item] });
+
+      const challengeId = "challenge-bind-test";
+      await store.createChallenge({
+        id: challengeId,
+        eventId: guest.eventId,
+        guestId: guest.id,
+        verifierHash: "hash-test",
+        expiresAt: new Date(fixedTime.getTime() + 600000),
+        attempts: 0,
+        maxAttempts: 5,
+        consumedAt: null, // NOT consumed yet!
+        createdAt: fixedTime,
+      });
+
+      // Attempt session creation before challenge consumption -> must reject
+      await assert.rejects(
+        () =>
+          store.createSession({
+            id: "session-unconsumed-challenge",
+            eventId: guest.eventId,
+            guestId: guest.id,
+            secretHash: "secret-hash",
+            challengeId,
+            expiresAt: new Date(fixedTime.getTime() + 1200000),
+            revokedAt: null,
+            createdAt: fixedTime,
+          }),
+        /challenge must be consumed before issuing session/
+      );
+
+      // Now consume challenge
+      await store.consumeChallenge(challengeId, fixedTime);
+
+      // Successfully issue first session
+      await store.createSession({
+        id: "session-valid-challenge",
+        eventId: guest.eventId,
+        guestId: guest.id,
+        secretHash: "secret-hash",
+        challengeId,
+        expiresAt: new Date(fixedTime.getTime() + 1200000),
+        revokedAt: null,
+        createdAt: fixedTime,
+      });
+
+      // Attempt replay of the same challenge for another session -> must reject (single-use invariant)
+      await assert.rejects(
+        () =>
+          store.createSession({
+            id: "session-replay-challenge",
+            eventId: guest.eventId,
+            guestId: guest.id,
+            secretHash: "secret-hash-2",
+            challengeId,
+            expiresAt: new Date(fixedTime.getTime() + 1200000),
+            revokedAt: null,
+            createdAt: fixedTime,
+          }),
+        /challenge already used to issue session/
+      );
+
+      // Attempt session issuance when challenge consumed > 120s ago -> must reject
+      const expiredChallengeId = "challenge-expired-window";
+      const oldTime = new Date(fixedTime.getTime() - 130000); // 130 seconds ago (> 120s)
+      await store.createChallenge({
+        id: expiredChallengeId,
+        eventId: guest.eventId,
+        guestId: guest.id,
+        verifierHash: "hash-test-2",
+        expiresAt: new Date(fixedTime.getTime() + 600000),
+        attempts: 0,
+        maxAttempts: 5,
+        consumedAt: oldTime,
+        createdAt: oldTime,
+      });
+
+      await assert.rejects(
+        () =>
+          store.createSession({
+            id: "session-window-expired",
+            eventId: guest.eventId,
+            guestId: guest.id,
+            secretHash: "secret-hash-3",
+            challengeId: expiredChallengeId,
+            expiresAt: new Date(fixedTime.getTime() + 1200000),
+            revokedAt: null,
+            createdAt: fixedTime,
+          }),
+        /challenge consumption expired for session issuance \(exceeded 120s\)/
+      );
+    });
+
+    it("rejects hash-as-password reuse: presenting stored hash fails authentication (SEC-C3-P1-A)", async () => {
+      const fixedTime = new Date("2027-01-20T10:00:00Z");
+      const store = createInMemoryAyllaGiftStore({ guests: [guest], inventory: [item] });
+      const service = createCoreAyllaGiftService({
+        store,
+        pepper: TEST_PEPPER,
+        now: () => fixedTime,
+      });
+
+      const secretProof = "actual-guest-secret-proof";
+      const secretHash = (await import("node:crypto")).createHmac("sha256", TEST_PEPPER).update(secretProof).digest("base64url");
+      const sessionId = "session-double-hash-test";
+
+      await store.createSession({
+        id: sessionId,
+        eventId: guest.eventId,
+        guestId: guest.id,
+        secretHash,
+        expiresAt: new Date(fixedTime.getTime() + 600000),
+        revokedAt: null,
+        createdAt: fixedTime,
+      });
+
+      // Legitimate guest presentation: token contains actual secret proof
+      const validToken = `${sessionId}.${secretProof}`;
+      const legitimate = await service.resolveSession(validToken);
+      assert.equal(legitimate.valid, true);
+
+      // Attacker presentation: attacker somehow read `secretHash` and presents it directly as if it were the secret proof
+      // In a single-hashed model, this would succeed. In double-hashed / HMAC verifier model, it MUST fail!
+      const attackerToken = `${sessionId}.${secretHash}`;
+      const attacker = await service.resolveSession(attackerToken);
+      assert.equal(attacker.valid, false);
+      if (attacker.valid) throw new Error("Attacker token should have been rejected");
+      assert.equal(attacker.reason, "session_expired");
     });
   });
 });
