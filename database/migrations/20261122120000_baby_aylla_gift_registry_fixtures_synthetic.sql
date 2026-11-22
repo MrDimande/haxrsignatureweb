@@ -74,7 +74,8 @@ SET
   name = EXCLUDED.name,
   is_active = EXCLUDED.is_active,
   edition_registry_key = EXCLUDED.edition_registry_key,
-  updated_at = now();
+  updated_at = now()
+WHERE events.business_id = 'haxr-canary-lab';
 
 -- 3. Synthetic Eligible Guest Fixture (Confirmed RSVP via edition_rsvp)
 -- ID: f47ac10b-58cc-4372-a567-0e02b2c3d479
@@ -131,7 +132,9 @@ SET
   archived_at = NULL,
   deleted_at = NULL,
   is_incorrect = false,
-  updated_at = now();
+  updated_at = now()
+WHERE guests.event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+  AND guests.email LIKE '%@haxrsignature.test';
 
 -- 4. Synthetic Ineligible Guest Fixture (Declined RSVP - Negative Testing Control)
 -- ID: e2b1c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
@@ -182,6 +185,8 @@ VALUES (
 ON CONFLICT (id) DO UPDATE
 SET
   status = 'declined'::guest_status,
-  updated_at = now();
+  updated_at = now()
+WHERE guests.event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+  AND guests.email LIKE '%@haxrsignature.test';
 
 COMMIT;

@@ -366,6 +366,10 @@ GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uui
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime') THEN
+    -- Direct lookup permissions required by Core store (findGuestByContact, getGuestById, event verification)
+    GRANT SELECT ON public.guests TO haxrweb_runtime;
+    GRANT SELECT ON public.events TO haxrweb_runtime;
+
     GRANT SELECT, UPDATE ON public.edition_gift_inventory TO haxrweb_runtime;
     GRANT SELECT, INSERT, UPDATE ON public.edition_gift_reservations_v2 TO haxrweb_runtime;
     GRANT INSERT, SELECT ON public.edition_gift_reservation_audit_v2 TO haxrweb_runtime;
