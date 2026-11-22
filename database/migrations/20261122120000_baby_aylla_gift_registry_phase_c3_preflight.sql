@@ -1,8 +1,8 @@
 -- ==============================================================================
--- HAXR Core & Edition — Baby Aylla Gift Registry — Phase C.3.2-B
+-- HAXR Core & Edition — Baby Aylla Gift Registry — Phase C.3.2-A / Gate A.3
 -- REPRODUCIBLE READ-ONLY HOMOLOGATION PREFLIGHT SCRIPT
 -- ==============================================================================
--- Target Environment: Neon PostgreSQL (Laboratório Staging Efêmero)
+-- Target Environment: Neon PostgreSQL (Branch aylla-gifts-c3-staging)
 -- Expected Project ID: gentle-firefly-70094226 (HAXR-Signature-Preview-Portfolio)
 -- Expected Parent Branch: br-icy-butterfly-b4lw52nv
 -- Target Database: neondb
@@ -58,10 +58,10 @@ WITH preflight_checks AS (
   -- 5. Prerequisite Role: haxrweb_runtime
   SELECT
     5,
-    'Role: haxrweb_runtime (Core API Runtime)',
-    'Role exists in cluster',
-    COALESCE((SELECT 'exists' FROM pg_roles WHERE rolname = 'haxrweb_runtime'), 'MISSING (Will be skipped conditionally)'),
-    true -- Conditional grant handles absence gracefully
+    'Role: haxrweb_runtime (Core API Runtime, NOLOGIN)',
+    'Role exists with rolcanlogin = false',
+    COALESCE((SELECT 'exists (canlogin=' || rolcanlogin::text || ')' FROM pg_roles WHERE rolname = 'haxrweb_runtime'), 'MISSING'),
+    EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haxrweb_runtime' AND rolcanlogin = false)
 
   UNION ALL
 
@@ -155,19 +155,51 @@ WITH preflight_checks AS (
 
   UNION ALL
 
-  -- 11. Canonical Baby Aylla Event Record Presence
+  -- 11. Canonical Baby Aylla Event Record Presence & Key Match
   SELECT
     11,
-    'Baby Aylla Event Presence (Canonical UUID)',
-    'UUID a0f6b5a9-4d8c-4501-81b6-52929fa9da38 exists in public.events',
-    COALESCE((SELECT 'Found: ' || slug FROM public.events WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid), 'NOT FOUND'),
-    EXISTS (SELECT 1 FROM public.events WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
+    'Baby Aylla Event Presence (Canonical UUID & Registry Key)',
+    'UUID a0f6b5a9-4d8c-4501-81b6-52929fa9da38 with registry key baby-aylla-couture',
+    COALESCE((
+      SELECT 'Found: ' || name || ' (key=' || edition_registry_key || ')'
+      FROM public.events
+      WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+    ), 'NOT FOUND'),
+    EXISTS (
+      SELECT 1 FROM public.events
+      WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+        AND edition_registry_key = 'baby-aylla-couture'
+    )
 
   UNION ALL
 
-  -- 12. Production Isolation Verification (Check no production flags/connections)
+  -- 12. Synthetic Eligible Guest Presence
   SELECT
     12,
+    'Synthetic Eligible Guest (f47ac10b-... confirmed)',
+    'Guest f47ac10b-... exists, status=confirmed, source=edition_rsvp, active',
+    COALESCE((
+      SELECT 'Found: ' || name || ' (status=' || status::text || ', source=' || guest_source::text || ')'
+      FROM public.guests
+      WHERE id = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'::uuid
+        AND event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+    ), 'NOT FOUND'),
+    EXISTS (
+      SELECT 1 FROM public.guests
+      WHERE id = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'::uuid
+        AND event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+        AND status = 'confirmed'
+        AND guest_source = 'edition_rsvp'
+        AND archived_at IS NULL
+        AND deleted_at IS NULL
+        AND is_incorrect = false
+    )
+
+  UNION ALL
+
+  -- 13. Production Isolation Safeguard
+  SELECT
+    13,
     'Production Isolation Safeguard',
     'Isolated preview/staging database only',
     'neondb @ gentle-firefly-70094226',
@@ -195,18 +227,4 @@ SELECT
     WHEN bool_and(passed) THEN 'Environment is 100% compliant and ready for Gate B transactional migration.'
     ELSE 'Environment has failed prerequisites. Migration execution is BLOCKED.'
   END AS decision_details
-FROM (
-  SELECT passed FROM (
-    SELECT
-      (current_database() = 'neondb') AND
-      ((SELECT setting::integer FROM pg_settings WHERE name = 'server_version_num') >= 180000) AND
-      (current_user IN ('neondb_owner', 'cloud_admin')) AND
-      EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'edition_runtime' AND rolcanlogin = false) AND
-      EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'events') AND
-      ((SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'guests' AND column_name IN ('id', 'event_id', 'status', 'guest_source', 'archived_at', 'deleted_at', 'is_incorrect')) = 7) AND
-      ((SELECT count(*) FROM pg_proc WHERE proname IN ('gen_random_uuid', 'pg_advisory_xact_lock')) >= 2) AND
-      ((SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('edition_gift_inventory', 'edition_gift_reservations_v2', 'edition_gift_reservation_audit_v2', 'edition_guest_verification_challenges', 'edition_guest_sessions')) = 0) AND
-      ((SELECT count(*) FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname IN ('reserve_baby_aylla_gift', 'reserve_baby_aylla_gift_verified', 'cancel_baby_aylla_gift_verified')) = 0) AND
-      EXISTS (SELECT 1 FROM public.events WHERE id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
-  ) AS inner_checks(passed)
-) AS evaluation;
+FROM preflight_checks;
