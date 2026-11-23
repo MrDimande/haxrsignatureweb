@@ -1,4 +1,4 @@
-import { ayllaGiftQuery } from "@/lib/neon/aylla-gift-db";
+import { ayllaGiftIssuerQuery, ayllaGiftQuery } from "@/lib/neon/aylla-gift-db";
 import type {
   AyllaGiftReservationRecord,
   AyllaGiftReservationStatus,
@@ -87,11 +87,11 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       };
     },
 
-    async createChallenge(challenge: CoreVerificationChallengeRecord): Promise<void> {
-      await ayllaGiftQuery(
+    async createChallenge(challenge): Promise<void> {
+      await ayllaGiftIssuerQuery(
         `
         SELECT public.create_baby_aylla_verification_challenge(
-          $1::uuid, $2::uuid, $3::uuid, $4, $5, $6
+          $1::uuid, $2::uuid, $3::uuid, $4, $5
         );
         `,
         [
@@ -99,8 +99,7 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
           challenge.eventId,
           challenge.guestId,
           challenge.verifierHash,
-          challenge.expiresAt,
-          challenge.maxAttempts,
+          challenge.maxAttempts ?? 5,
         ]
       );
     },
@@ -109,7 +108,7 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       throw new Error("Direct challenge query is forbidden; use verifyAndConsumeChallenge RPC.");
     },
 
-    async verifyAndConsumeChallenge(challengeId: string, verifierHash: string, now: Date) {
+    async verifyAndConsumeChallenge(challengeId: string, verifierHash: string, _now?: Date) {
       const res = await ayllaGiftQuery<{
         consumed: boolean;
         event_id: string | null;
@@ -117,9 +116,9 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       }>(
         `
         SELECT consumed, event_id, guest_id
-        FROM public.verify_and_consume_baby_aylla_challenge($1::uuid, $2, $3);
+        FROM public.verify_and_consume_baby_aylla_challenge($1::uuid, $2);
         `,
-        [challengeId, verifierHash, now]
+        [challengeId, verifierHash]
       );
       const row = res.rows[0];
       if (!row || !row.consumed || !row.event_id || !row.guest_id) {
@@ -132,12 +131,12 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       };
     },
 
-    async consumeChallenge(challengeId: string, now: Date): Promise<boolean> {
+    async consumeChallenge(challengeId: string, _now?: Date): Promise<boolean> {
       const res = await ayllaGiftQuery<{ consumed: boolean }>(
         `
-        SELECT public.consume_baby_aylla_verification_challenge($1::uuid, $2) AS consumed;
+        SELECT public.verify_and_consume_baby_aylla_challenge($1::uuid, '') AS consumed;
         `,
-        [challengeId, now]
+        [challengeId]
       );
       return res.rows[0]?.consumed ?? false;
     },
@@ -152,14 +151,14 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       return res.rows[0]?.attempts ?? 0;
     },
 
-    async createSession(session: CoreGuestSessionRecord): Promise<void> {
+    async createSession(session): Promise<void> {
       if (!session.challengeId) {
         throw new Error("createSession requires challengeId bound to verification.");
       }
       await ayllaGiftQuery(
         `
         SELECT public.create_baby_aylla_guest_session(
-          $1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7
+          $1::uuid, $2::uuid, $3::uuid, $4, $5::uuid
         );
         `,
         [
@@ -168,8 +167,6 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
           session.guestId,
           session.secretHash,
           session.challengeId,
-          session.expiresAt,
-          session.createdAt,
         ]
       );
     },
@@ -217,22 +214,22 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
     async revokeSessionVerified(input: { sessionId: string; secretProof: string; now?: Date }): Promise<boolean> {
       const res = await ayllaGiftQuery<{ revoked: boolean }>(
         `
-        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2, $3) AS revoked;
+        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2) AS revoked;
         `,
-        [input.sessionId, input.secretProof, input.now ?? new Date()]
+        [input.sessionId, input.secretProof]
       );
       return res.rows[0]?.revoked ?? false;
     },
 
-    async revokeSession(sessionId: string, now: Date, secretProof?: string): Promise<void> {
+    async revokeSession(sessionId: string, _now?: Date, secretProof?: string): Promise<void> {
       if (!secretProof) {
         throw new Error("revokeSession requires secretProof; direct unauthenticated revocation is forbidden.");
       }
       await ayllaGiftQuery(
         `
-        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2, $3);
+        SELECT public.revoke_baby_aylla_guest_session($1::uuid, $2);
         `,
-        [sessionId, secretProof, now]
+        [sessionId, secretProof]
       );
     },
 
@@ -524,7 +521,20 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       return guests.get(`${eventId}:${guestId}`) ?? null;
     },
     async createChallenge(challenge) {
-      challenges.set(challenge.id, { ...challenge });
+      const now = challenge.createdAt ?? new Date();
+      const expiresAt = challenge.expiresAt ?? new Date(now.getTime() + 10 * 60 * 1000);
+      challenges.set(challenge.id, {
+        id: challenge.id,
+        eventId: challenge.eventId,
+        guestId: challenge.guestId,
+        verifierHash: challenge.verifierHash,
+        expiresAt,
+        attempts: challenge.attempts ?? 0,
+        maxAttempts: challenge.maxAttempts ?? 5,
+        consumedAt: challenge.consumedAt ?? null,
+        sessionIssuedAt: challenge.sessionIssuedAt ?? null,
+        createdAt: now,
+      });
     },
     async getChallenge(challengeId) {
       const c = challenges.get(challengeId);
@@ -532,47 +542,63 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
     },
     async consumeChallenge(challengeId, now) {
       const c = challenges.get(challengeId);
-      if (!c || c.consumedAt !== null || c.expiresAt <= now) return false;
-      c.consumedAt = now;
+      const currentTime = now ?? new Date();
+      if (!c || c.consumedAt !== null || (c.expiresAt && c.expiresAt <= currentTime)) return false;
+      c.consumedAt = currentTime;
       return true;
     },
     async incrementChallengeAttempts(challengeId) {
       const c = challenges.get(challengeId);
       if (!c) return 0;
-      c.attempts += 1;
+      c.attempts = (c.attempts ?? 0) + 1;
       return c.attempts;
     },
     async verifyAndConsumeChallenge(challengeId, verifierHash, now) {
       const c = challenges.get(challengeId);
       if (!c) return { consumed: false };
-      if (c.consumedAt !== null || c.expiresAt <= now || c.attempts >= c.maxAttempts) {
+      const currentTime = now ?? new Date();
+      if (c.consumedAt !== null || (c.expiresAt && c.expiresAt <= currentTime) || (c.attempts ?? 0) >= (c.maxAttempts ?? 5)) {
         return { consumed: false };
       }
       if (c.verifierHash !== verifierHash) {
-        c.attempts += 1;
+        c.attempts = (c.attempts ?? 0) + 1;
         return { consumed: false };
       }
-      c.consumedAt = now;
+      c.consumedAt = currentTime;
       return { consumed: true, eventId: c.eventId, guestId: c.guestId };
     },
     async createSession(session) {
+      const now = session.createdAt ?? new Date();
+      const expiresAt = session.expiresAt ?? new Date(now.getTime() + 20 * 60 * 1000);
       if (session.challengeId) {
         const c = challenges.get(session.challengeId);
         if (!c) {
           throw new Error("challenge not found for session issuance");
         }
-        if (c.consumedAt === null) {
+        if (c.eventId !== session.eventId || c.guestId !== session.guestId) {
+          throw new Error("cannot issue session: challenge guest and event must match session");
+        }
+        if (c.consumedAt === null || c.consumedAt === undefined) {
           throw new Error("challenge must be consumed before issuing session");
         }
-        if (session.createdAt.getTime() - c.consumedAt.getTime() > 120_000) {
+        if (now.getTime() - c.consumedAt.getTime() > 120_000) {
           throw new Error("challenge consumption expired for session issuance (exceeded 120s)");
         }
         if (c.sessionIssuedAt) {
           throw new Error("challenge already used to issue session");
         }
-        c.sessionIssuedAt = session.createdAt;
+        c.sessionIssuedAt = now;
       }
-      sessions.set(session.id, { ...session });
+      sessions.set(session.id, {
+        id: session.id,
+        eventId: session.eventId,
+        guestId: session.guestId,
+        secretHash: session.secretHash,
+        challengeId: session.challengeId,
+        expiresAt,
+        revokedAt: session.revokedAt ?? null,
+        createdAt: now,
+      });
     },
     async getSession(sessionId) {
       const s = sessions.get(sessionId);
@@ -580,7 +606,7 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
     },
     async resolveSessionVerified(input) {
       const session = sessions.get(input.sessionId);
-      if (!session || session.revokedAt !== null || session.expiresAt <= new Date()) {
+      if (!session || session.revokedAt !== null || (session.expiresAt && session.expiresAt <= new Date())) {
         return null;
       }
       if (session.secretHash !== input.secretProof) {
@@ -600,7 +626,7 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
     async revokeSession(sessionId, now) {
       const s = sessions.get(sessionId);
       if (s && s.revokedAt === null) {
-        s.revokedAt = now;
+        s.revokedAt = now ?? new Date();
       }
     },
     async getInventoryItem(eventId, itemId) {

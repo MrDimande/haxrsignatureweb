@@ -21,6 +21,14 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_roles
+    WHERE rolname = 'haxr_aylla_gift_issuer'
+      AND rolcanlogin = true AND rolsuper = false AND rolcreaterole = false
+      AND rolcreatedb = false AND rolbypassrls = false
+  ) THEN
+    RAISE EXCEPTION 'Prerequisite role haxr_aylla_gift_issuer must exist with restricted issuer attributes';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_roles
     WHERE rolname = 'haxr_aylla_gift_runtime'
       AND rolcanlogin = true AND rolsuper = false AND rolcreaterole = false
       AND rolcreatedb = false AND rolbypassrls = false
@@ -107,10 +115,10 @@ CREATE TABLE IF NOT EXISTS public.edition_guest_verification_challenges (
   id uuid PRIMARY KEY,
   event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE RESTRICT,
   guest_id uuid NOT NULL REFERENCES public.guests(id) ON DELETE RESTRICT,
-  verifier_hash text NOT NULL CHECK (length(verifier_hash) >= 32),
+  verifier_hash text NOT NULL CHECK (length(verifier_hash) BETWEEN 32 AND 256),
   expires_at timestamptz NOT NULL,
   attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0 AND attempts <= 5),
-  max_attempts integer NOT NULL DEFAULT 5 CHECK (max_attempts BETWEEN 1 AND 10),
+  max_attempts integer NOT NULL DEFAULT 5 CHECK (max_attempts BETWEEN 1 AND 5),
   consumed_at timestamptz,
   session_issued_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -126,7 +134,7 @@ CREATE TABLE IF NOT EXISTS public.edition_guest_sessions (
   id uuid PRIMARY KEY,
   event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE RESTRICT,
   guest_id uuid NOT NULL REFERENCES public.guests(id) ON DELETE RESTRICT,
-  secret_hash text NOT NULL CHECK (length(secret_hash) >= 32),
+  secret_hash text NOT NULL CHECK (length(secret_hash) BETWEEN 32 AND 256),
   expires_at timestamptz NOT NULL,
   revoked_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -151,11 +159,11 @@ ALTER TABLE public.edition_guest_verification_challenges FORCE ROW LEVEL SECURIT
 ALTER TABLE public.edition_guest_sessions FORCE ROW LEVEL SECURITY;
 
 -- 7. Revoke All Table Permissions from PUBLIC and Roles
-REVOKE ALL ON public.edition_gift_inventory FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
-REVOKE ALL ON public.edition_gift_reservations_v2 FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
-REVOKE ALL ON public.edition_gift_reservation_audit_v2 FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
-REVOKE ALL ON public.edition_guest_verification_challenges FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
-REVOKE ALL ON public.edition_guest_sessions FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+REVOKE ALL ON public.edition_gift_inventory FROM PUBLIC, haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+REVOKE ALL ON public.edition_gift_reservations_v2 FROM PUBLIC, haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+REVOKE ALL ON public.edition_gift_reservation_audit_v2 FROM PUBLIC, haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+REVOKE ALL ON public.edition_guest_verification_challenges FROM PUBLIC, haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+REVOKE ALL ON public.edition_guest_sessions FROM PUBLIC, haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
 
 -- 8. Explicit Row Level Security Policies
 -- Direct table mutations are completely forbidden: all writes occur strictly through verified RPCs.
@@ -317,13 +325,14 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_session public.edition_guest_sessions;
+  v_now timestamptz := clock_timestamp();
 BEGIN
   -- Validate active session via double-hashed credential (sha256 of client proof)
   SELECT * INTO v_session
   FROM public.edition_guest_sessions
   WHERE id = p_session_id
     AND secret_hash = encode(sha256(p_secret_proof::bytea), 'hex')
-    AND expires_at > now()
+    AND expires_at > v_now
     AND revoked_at IS NULL;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'verified guest session required' USING ERRCODE = '42501';
@@ -357,12 +366,13 @@ AS $$
 DECLARE
   v_session public.edition_guest_sessions;
   v_reservation public.edition_gift_reservations_v2;
+  v_now timestamptz := clock_timestamp();
 BEGIN
   SELECT * INTO v_session
   FROM public.edition_guest_sessions
   WHERE id = p_session_id
     AND secret_hash = encode(sha256(p_secret_proof::bytea), 'hex')
-    AND expires_at > now()
+    AND expires_at > v_now
     AND revoked_at IS NULL;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'verified guest session required' USING ERRCODE = '42501';
@@ -384,8 +394,8 @@ BEGIN
 
   UPDATE public.edition_gift_reservations_v2
   SET status = 'cancelled',
-      cancelled_at = now(),
-      updated_at = now()
+      cancelled_at = v_now,
+      updated_at = v_now
   WHERE id = p_reservation_id
   RETURNING * INTO v_reservation;
 
@@ -399,19 +409,34 @@ END;
 $$;
 
 -- 12. Controlled Challenge Lifecycle Functions (SECURITY DEFINER)
+-- Exclusive issuance privilege granted to haxr_aylla_gift_issuer
 CREATE OR REPLACE FUNCTION public.create_baby_aylla_verification_challenge(
   p_id uuid,
   p_event_id uuid,
   p_guest_id uuid,
   p_verifier_hash text,
-  p_expires_at timestamptz,
   p_max_attempts integer DEFAULT 5
 ) RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
+DECLARE
+  v_now timestamptz := clock_timestamp();
+  v_expires_at timestamptz := v_now + interval '10 minutes';
 BEGIN
+  IF p_id IS NULL OR p_event_id IS NULL OR p_guest_id IS NULL THEN
+    RAISE EXCEPTION 'missing required parameters for challenge' USING ERRCODE = '22023';
+  END IF;
+
+  IF length(COALESCE(p_verifier_hash, '')) < 32 OR length(p_verifier_hash) > 256 THEN
+    RAISE EXCEPTION 'invalid verifier hash format' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_max_attempts IS NOT NULL AND (p_max_attempts < 1 OR p_max_attempts > 5) THEN
+    RAISE EXCEPTION 'invalid max attempts' USING ERRCODE = '22023';
+  END IF;
+
   IF p_event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid THEN
     RAISE EXCEPTION 'invalid event scope for challenge' USING ERRCODE = '42501';
   END IF;
@@ -427,17 +452,16 @@ BEGIN
   INSERT INTO public.edition_guest_verification_challenges
     (id, event_id, guest_id, verifier_hash, expires_at, attempts, max_attempts, consumed_at, session_issued_at, created_at)
   VALUES
-    (p_id, p_event_id, p_guest_id, p_verifier_hash, p_expires_at, 0, COALESCE(p_max_attempts, 5), NULL, NULL, now());
+    (p_id, p_event_id, p_guest_id, p_verifier_hash, v_expires_at, 0, COALESCE(p_max_attempts, 5), NULL, NULL, v_now);
 
   RETURN p_id;
 END;
 $$;
 
--- Atomic verification and consumption of OTP challenge
+-- Atomic verification and consumption of OTP challenge (Callable by haxr_aylla_gift_runtime)
 CREATE OR REPLACE FUNCTION public.verify_and_consume_baby_aylla_challenge(
   p_challenge_id uuid,
-  p_verifier_hash text,
-  p_consumed_at timestamptz DEFAULT now()
+  p_verifier_hash text
 ) RETURNS TABLE (
   consumed boolean,
   event_id uuid,
@@ -449,13 +473,19 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_challenge public.edition_guest_verification_challenges;
+  v_now timestamptz := clock_timestamp();
 BEGIN
+  IF p_challenge_id IS NULL OR length(COALESCE(p_verifier_hash, '')) < 32 OR length(p_verifier_hash) > 256 THEN
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid;
+    RETURN;
+  END IF;
+
   SELECT * INTO v_challenge
   FROM public.edition_guest_verification_challenges
   WHERE id = p_challenge_id
   FOR UPDATE;
 
-  IF NOT FOUND OR v_challenge.consumed_at IS NOT NULL OR v_challenge.expires_at <= p_consumed_at OR v_challenge.attempts >= v_challenge.max_attempts THEN
+  IF NOT FOUND OR v_challenge.consumed_at IS NOT NULL OR v_challenge.expires_at <= v_now OR v_challenge.attempts >= v_challenge.max_attempts THEN
     RETURN QUERY SELECT false, NULL::uuid, NULL::uuid;
     RETURN;
   END IF;
@@ -469,7 +499,7 @@ BEGIN
   END IF;
 
   UPDATE public.edition_guest_verification_challenges
-  SET consumed_at = p_consumed_at
+  SET consumed_at = v_now
   WHERE id = p_challenge_id;
 
   RETURN QUERY SELECT true, v_challenge.event_id, v_challenge.guest_id;
@@ -483,9 +513,7 @@ CREATE OR REPLACE FUNCTION public.create_baby_aylla_guest_session(
   p_event_id uuid,
   p_guest_id uuid,
   p_secret_proof text,
-  p_challenge_id uuid,
-  p_expires_at timestamptz,
-  p_created_at timestamptz DEFAULT now()
+  p_challenge_id uuid
 ) RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -493,7 +521,17 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_challenge public.edition_guest_verification_challenges;
+  v_now timestamptz := clock_timestamp();
+  v_expires_at timestamptz := v_now + interval '20 minutes';
 BEGIN
+  IF p_id IS NULL OR p_event_id IS NULL OR p_guest_id IS NULL OR p_challenge_id IS NULL THEN
+    RAISE EXCEPTION 'missing required parameters for session' USING ERRCODE = '22023';
+  END IF;
+
+  IF length(COALESCE(p_secret_proof, '')) < 32 OR length(p_secret_proof) > 256 THEN
+    RAISE EXCEPTION 'invalid secret proof format' USING ERRCODE = '22023';
+  END IF;
+
   IF p_event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid THEN
     RAISE EXCEPTION 'invalid event scope for session' USING ERRCODE = '42501';
   END IF;
@@ -506,14 +544,14 @@ BEGIN
     RAISE EXCEPTION 'guest is not eligible for session issuance' USING ERRCODE = '42501';
   END IF;
 
-  -- Verify binding to valid, freshly consumed, unissued challenge
+  -- Verify binding to valid, freshly consumed, unissued challenge for this exact guest and event
   SELECT * INTO v_challenge
   FROM public.edition_guest_verification_challenges
   WHERE id = p_challenge_id
     AND event_id = p_event_id
     AND guest_id = p_guest_id
     AND consumed_at IS NOT NULL
-    AND consumed_at >= now() - interval '120 seconds'
+    AND consumed_at >= v_now - interval '120 seconds'
     AND session_issued_at IS NULL
   FOR UPDATE;
 
@@ -523,14 +561,14 @@ BEGIN
 
   -- Single-use session issuance invariant
   UPDATE public.edition_guest_verification_challenges
-  SET session_issued_at = now()
+  SET session_issued_at = v_now
   WHERE id = p_challenge_id;
 
   -- Store double-hashed credential (sha256 of client secret proof)
   INSERT INTO public.edition_guest_sessions
     (id, event_id, guest_id, secret_hash, expires_at, revoked_at, created_at)
   VALUES
-    (p_id, p_event_id, p_guest_id, encode(sha256(p_secret_proof::bytea), 'hex'), p_expires_at, NULL, COALESCE(p_created_at, now()));
+    (p_id, p_event_id, p_guest_id, encode(sha256(p_secret_proof::bytea), 'hex'), v_expires_at, NULL, v_now);
 
   RETURN p_id;
 END;
@@ -559,12 +597,17 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_session public.edition_guest_sessions;
+  v_now timestamptz := clock_timestamp();
 BEGIN
+  IF p_session_id IS NULL OR length(COALESCE(p_secret_proof, '')) < 32 OR length(p_secret_proof) > 256 THEN
+    RETURN;
+  END IF;
+
   SELECT * INTO v_session
   FROM public.edition_guest_sessions
   WHERE id = p_session_id
     AND secret_hash = encode(sha256(p_secret_proof::bytea), 'hex')
-    AND expires_at > now()
+    AND expires_at > v_now
     AND revoked_at IS NULL;
 
   IF NOT FOUND THEN
@@ -584,8 +627,7 @@ $$;
 -- Controlled session revocation requiring secret proof
 CREATE OR REPLACE FUNCTION public.revoke_baby_aylla_guest_session(
   p_session_id uuid,
-  p_secret_proof text,
-  p_revoked_at timestamptz DEFAULT now()
+  p_secret_proof text
 ) RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -593,9 +635,14 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_updated integer;
+  v_now timestamptz := clock_timestamp();
 BEGIN
+  IF p_session_id IS NULL OR length(COALESCE(p_secret_proof, '')) < 32 OR length(p_secret_proof) > 256 THEN
+    RETURN false;
+  END IF;
+
   UPDATE public.edition_guest_sessions
-  SET revoked_at = p_revoked_at
+  SET revoked_at = v_now
   WHERE id = p_session_id
     AND secret_hash = encode(sha256(p_secret_proof::bytea), 'hex')
     AND revoked_at IS NULL;
@@ -620,12 +667,8 @@ AS $$
 DECLARE
   v_reservation public.edition_gift_reservations_v2;
   v_valid_transition boolean := false;
+  v_now timestamptz := clock_timestamp();
 BEGIN
-  -- Strict assertion: guest runtime role can NEVER execute administrative transitions
-  IF current_user = 'haxr_aylla_gift_runtime' THEN
-    RAISE EXCEPTION 'guest runtime identity cannot execute administrative transitions' USING ERRCODE = '42501';
-  END IF;
-
   IF p_event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid THEN
     RAISE EXCEPTION 'invalid event scope for admin transition' USING ERRCODE = '42501';
   END IF;
@@ -661,17 +704,17 @@ BEGIN
 
   UPDATE public.edition_gift_reservations_v2
   SET status = p_next_status,
-      updated_at = now(),
-      cancelled_at = CASE WHEN p_next_status = 'cancelled' THEN now() ELSE cancelled_at END,
-      purchased_at = CASE WHEN p_next_status = 'purchased' THEN now() ELSE purchased_at END,
-      delivered_at = CASE WHEN p_next_status = 'delivered' THEN now() ELSE delivered_at END
+      updated_at = v_now,
+      cancelled_at = CASE WHEN p_next_status = 'cancelled' THEN v_now ELSE cancelled_at END,
+      purchased_at = CASE WHEN p_next_status = 'purchased' THEN v_now ELSE purchased_at END,
+      delivered_at = CASE WHEN p_next_status = 'delivered' THEN v_now ELSE delivered_at END
   WHERE id = p_reservation_id
   RETURNING * INTO v_reservation;
 
   INSERT INTO public.edition_gift_reservation_audit_v2
     (reservation_id, event_id, actor_guest_id, actor_admin_id, action, previous_status, next_status, reason, created_at)
   VALUES
-    (p_reservation_id, p_event_id, NULL, p_admin_id, p_next_status, v_reservation.status, p_next_status, p_reason, now());
+    (p_reservation_id, p_event_id, NULL, p_admin_id, p_next_status, v_reservation.status, p_next_status, p_reason, v_now);
 
   RETURN v_reservation;
 END;
@@ -684,38 +727,53 @@ REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text,
 REVOKE ALL ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_by_id(uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.create_baby_aylla_verification_challenge(uuid, uuid, uuid, text, timestamptz, integer) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.verify_and_consume_baby_aylla_challenge(uuid, text, timestamptz) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.create_baby_aylla_guest_session(uuid, uuid, uuid, text, uuid, timestamptz, timestamptz) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_baby_aylla_verification_challenge(uuid, uuid, uuid, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.verify_and_consume_baby_aylla_challenge(uuid, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_baby_aylla_guest_session(uuid, uuid, uuid, text, uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_session(uuid, text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.revoke_baby_aylla_guest_session(uuid, text, timestamptz) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.revoke_baby_aylla_guest_session(uuid, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.transition_baby_aylla_gift_reservation_admin(uuid, uuid, uuid, text, text) FROM PUBLIC;
 
--- Explicitly block guest operational role from internal reservation RPC AND admin transition RPC
+-- Revoke from all roles to start clean
 REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) FROM haxr_aylla_gift_runtime;
-REVOKE ALL ON FUNCTION public.transition_baby_aylla_gift_reservation_admin(uuid, uuid, uuid, text, text) FROM haxr_aylla_gift_runtime;
+REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) FROM haxr_aylla_gift_issuer;
+REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift(uuid, text, uuid, integer, uuid) FROM haxr_aylla_gift_admin;
+REVOKE ALL ON FUNCTION public.transition_baby_aylla_gift_reservation_admin(uuid, uuid, uuid, text, text) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_runtime;
+REVOKE ALL ON FUNCTION public.create_baby_aylla_verification_challenge(uuid, uuid, uuid, text, integer) FROM haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+REVOKE ALL ON FUNCTION public.verify_and_consume_baby_aylla_challenge(uuid, text) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_admin;
+REVOKE ALL ON FUNCTION public.create_baby_aylla_guest_session(uuid, uuid, uuid, text, uuid) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_admin;
+REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_session(uuid, text) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_admin;
+REVOKE ALL ON FUNCTION public.revoke_baby_aylla_guest_session(uuid, text) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_admin;
+REVOKE ALL ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_admin;
+REVOKE ALL ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_admin;
 
--- Tables: haxr_aylla_gift_runtime has SELECT ONLY on inventory, reservations, audit.
--- ZERO SELECT on challenges and sessions!
+-- Table permissions:
+-- haxr_aylla_gift_issuer has ZERO table permissions! Zero SELECT on any table.
+-- haxr_aylla_gift_runtime has SELECT ONLY on inventory, reservations, audit. ZERO on challenges, ZERO on sessions.
+-- haxr_aylla_gift_admin has SELECT ONLY on inventory, reservations, audit.
 GRANT SELECT ON public.edition_gift_inventory TO haxr_aylla_gift_runtime;
 GRANT SELECT ON public.edition_gift_reservations_v2 TO haxr_aylla_gift_runtime;
 GRANT SELECT ON public.edition_gift_reservation_audit_v2 TO haxr_aylla_gift_runtime;
 
+GRANT SELECT ON public.edition_gift_inventory TO haxr_aylla_gift_admin;
+GRANT SELECT ON public.edition_gift_reservations_v2 TO haxr_aylla_gift_admin;
+GRANT SELECT ON public.edition_gift_reservation_audit_v2 TO haxr_aylla_gift_admin;
+
+-- Issuer role: ONLY create challenge and resolve contact lookup
+GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) TO haxr_aylla_gift_issuer;
+GRANT EXECUTE ON FUNCTION public.create_baby_aylla_verification_challenge(uuid, uuid, uuid, text, integer) TO haxr_aylla_gift_issuer;
+
 -- Guest operational role EXECUTE grants on verified guest functions
 GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) TO haxr_aylla_gift_runtime;
 GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_by_id(uuid) TO haxr_aylla_gift_runtime;
-GRANT EXECUTE ON FUNCTION public.create_baby_aylla_verification_challenge(uuid, uuid, uuid, text, timestamptz, integer) TO haxr_aylla_gift_runtime;
-GRANT EXECUTE ON FUNCTION public.verify_and_consume_baby_aylla_challenge(uuid, text, timestamptz) TO haxr_aylla_gift_runtime;
-GRANT EXECUTE ON FUNCTION public.create_baby_aylla_guest_session(uuid, uuid, uuid, text, uuid, timestamptz, timestamptz) TO haxr_aylla_gift_runtime;
+GRANT EXECUTE ON FUNCTION public.verify_and_consume_baby_aylla_challenge(uuid, text) TO haxr_aylla_gift_runtime;
+GRANT EXECUTE ON FUNCTION public.create_baby_aylla_guest_session(uuid, uuid, uuid, text, uuid) TO haxr_aylla_gift_runtime;
 GRANT EXECUTE ON FUNCTION public.resolve_baby_aylla_guest_session(uuid, text) TO haxr_aylla_gift_runtime;
-GRANT EXECUTE ON FUNCTION public.revoke_baby_aylla_guest_session(uuid, text, timestamptz) TO haxr_aylla_gift_runtime;
+GRANT EXECUTE ON FUNCTION public.revoke_baby_aylla_guest_session(uuid, text) TO haxr_aylla_gift_runtime;
 GRANT EXECUTE ON FUNCTION public.reserve_baby_aylla_gift_verified(uuid, text, text, integer, uuid) TO haxr_aylla_gift_runtime;
 GRANT EXECUTE ON FUNCTION public.cancel_baby_aylla_gift_verified(uuid, text, uuid) TO haxr_aylla_gift_runtime;
 
 -- Dedicated admin role EXECUTE grant
 GRANT EXECUTE ON FUNCTION public.transition_baby_aylla_gift_reservation_admin(uuid, uuid, uuid, text, text) TO haxr_aylla_gift_admin;
-GRANT SELECT ON public.edition_gift_reservations_v2 TO haxr_aylla_gift_admin;
-GRANT SELECT ON public.edition_gift_reservation_audit_v2 TO haxr_aylla_gift_admin;
-GRANT SELECT ON public.edition_gift_inventory TO haxr_aylla_gift_admin;
 
 COMMIT;

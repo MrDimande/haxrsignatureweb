@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { AYLLA_GIFT_RUNTIME_ROLE } from "@/lib/neon/aylla-gift-config";
+import { afterEach, describe, it } from "node:test";
+import {
+  AYLLA_GIFT_ISSUER_ROLE,
+  AYLLA_GIFT_RUNTIME_ROLE,
+  validateAyllaGiftDatabaseEnvironment,
+} from "@/lib/neon/aylla-gift-config";
 import { assertRuntimeIdentity } from "@/lib/neon/aylla-gift-db";
 import { AYLLA_GIFTS_CONFIG } from "../config";
 import { createCoreAyllaGiftService } from "../service";
@@ -424,6 +428,128 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
       assert.equal(attacker.valid, false);
       if (attacker.valid) throw new Error("Attacker token should have been rejected");
       assert.equal(attacker.reason, "session_expired");
+    });
+  });
+
+  describe("Dual dedicated connections and environment validation (C.3.2)", () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    it("fails when HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL is missing", () => {
+      delete process.env.HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL;
+      process.env.HAXR_AYLLA_GIFT_DATABASE_URL = "postgresql://haxr_aylla_gift_runtime:pass@host/db";
+      const check = validateAyllaGiftDatabaseEnvironment();
+      assert.equal(check.ok, false);
+      if (check.ok) throw new Error("Expected fail");
+      assert.match(check.message, /HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL não configurada/);
+    });
+
+    it("fails when HAXR_AYLLA_GIFT_DATABASE_URL is missing", () => {
+      process.env.HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL = "postgresql://haxr_aylla_gift_issuer:pass@host/db";
+      delete process.env.HAXR_AYLLA_GIFT_DATABASE_URL;
+      const check = validateAyllaGiftDatabaseEnvironment();
+      assert.equal(check.ok, false);
+      if (check.ok) throw new Error("Expected fail");
+      assert.match(check.message, /HAXR_AYLLA_GIFT_DATABASE_URL não configurada/);
+    });
+
+    it("fails when issuer connection uses wrong PostgreSQL role", () => {
+      process.env.HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL = "postgresql://haxrweb_runtime:pass@host/db";
+      process.env.HAXR_AYLLA_GIFT_DATABASE_URL = "postgresql://haxr_aylla_gift_runtime:pass@host/db";
+      const check = validateAyllaGiftDatabaseEnvironment();
+      assert.equal(check.ok, false);
+      if (check.ok) throw new Error("Expected fail");
+      assert.match(check.message, /requer a identidade haxr_aylla_gift_issuer/);
+    });
+
+    it("fails when runtime connection uses wrong PostgreSQL role", () => {
+      process.env.HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL = "postgresql://haxr_aylla_gift_issuer:pass@host/db";
+      process.env.HAXR_AYLLA_GIFT_DATABASE_URL = "postgresql://neondb_owner:pass@host/db";
+      const check = validateAyllaGiftDatabaseEnvironment();
+      assert.equal(check.ok, false);
+      if (check.ok) throw new Error("Expected fail");
+      assert.match(check.message, /requer a identidade haxr_aylla_gift_runtime/);
+    });
+
+    it("rejects configuration when issuer and runtime point to identical connection strings", () => {
+      process.env.HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL = "postgresql://haxr_aylla_gift_issuer:pass@host/db";
+      process.env.HAXR_AYLLA_GIFT_DATABASE_URL = "postgresql://haxr_aylla_gift_issuer:pass@host/db";
+      const check = validateAyllaGiftDatabaseEnvironment();
+      assert.equal(check.ok, false);
+      if (check.ok) throw new Error("Expected fail");
+      assert.match(check.message, /requer a identidade haxr_aylla_gift_runtime/);
+    });
+
+    it("succeeds when issuer and runtime are properly segregated with their dedicated roles", () => {
+      process.env.HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL = "postgresql://haxr_aylla_gift_issuer:secret1@host/db";
+      process.env.HAXR_AYLLA_GIFT_DATABASE_URL = "postgresql://haxr_aylla_gift_runtime:secret2@host/db";
+      const check = validateAyllaGiftDatabaseEnvironment();
+      assert.equal(check.ok, true);
+      if (!check.ok) throw new Error("Expected ok");
+      assert.equal(check.issuerDatabaseUrl, "postgresql://haxr_aylla_gift_issuer:secret1@host/db");
+      assert.equal(check.runtimeDatabaseUrl, "postgresql://haxr_aylla_gift_runtime:secret2@host/db");
+    });
+  });
+
+  describe("Cross-guest challenge binding and single-use invariants (C.3.2)", () => {
+    const guestA: CoreGuestRecord = {
+      id: "guest-aylla-A",
+      eventId: TEST_EVENT_ID,
+      name: "Tia Rosa",
+      contact: "+258841111111",
+      status: "confirmed",
+      source: "edition_rsvp",
+      archived: false,
+      deleted: false,
+      incorrect: false,
+    };
+    const guestB: CoreGuestRecord = {
+      id: "guest-aylla-B",
+      eventId: TEST_EVENT_ID,
+      name: "Tio Carlos",
+      contact: "+258842222222",
+      status: "confirmed",
+      source: "edition_rsvp",
+      archived: false,
+      deleted: false,
+      incorrect: false,
+    };
+
+    it("rejects issuing session when challenge belongs to a different guest (cross-guest binding)", async () => {
+      const fixedTime = new Date("2027-01-20T10:00:00Z");
+      const store = createInMemoryAyllaGiftStore({ guests: [guestA, guestB] });
+
+      const challengeId = "challenge-cross-guest";
+      await store.createChallenge({
+        id: challengeId,
+        eventId: guestA.eventId,
+        guestId: guestA.id, // Issued for Guest A
+        verifierHash: "hash-test-cross",
+        expiresAt: new Date(fixedTime.getTime() + 600000),
+        attempts: 0,
+        maxAttempts: 5,
+        consumedAt: fixedTime, // Consumed
+        createdAt: fixedTime,
+      });
+
+      // Attempt to issue session for Guest B using Guest A's consumed challenge -> MUST REJECT!
+      await assert.rejects(
+        () =>
+          store.createSession({
+            id: "session-cross-guest-steal",
+            eventId: guestB.eventId,
+            guestId: guestB.id, // Guest B attempting to use Guest A's challenge
+            secretHash: "secret-hash-stolen",
+            challengeId,
+            expiresAt: new Date(fixedTime.getTime() + 1200000),
+            revokedAt: null,
+            createdAt: fixedTime,
+          }),
+        /cannot issue session: challenge guest and event must match session/
+      );
     });
   });
 });

@@ -94,22 +94,42 @@ export interface CoreAdminSession {
 export interface CoreGiftStore {
   findGuestByContact(eventId: string, contact: string): Promise<CoreGuestRecord | null>;
   getGuestById(eventId: string, guestId: string): Promise<CoreGuestRecord | null>;
-  createChallenge(challenge: CoreVerificationChallengeRecord): Promise<void>;
+  createChallenge(challenge: {
+    id: string;
+    eventId: string;
+    guestId: string;
+    verifierHash: string;
+    maxAttempts?: number;
+    expiresAt?: Date;
+    attempts?: number;
+    consumedAt?: Date | null;
+    sessionIssuedAt?: Date | null;
+    createdAt?: Date;
+  }): Promise<void>;
   getChallenge(challengeId: string): Promise<CoreVerificationChallengeRecord | null>;
-  consumeChallenge(challengeId: string, now: Date): Promise<boolean>;
+  consumeChallenge(challengeId: string, now?: Date): Promise<boolean>;
   incrementChallengeAttempts(challengeId: string): Promise<number>;
   verifyAndConsumeChallenge?(
     challengeId: string,
     verifierHash: string,
-    now: Date
+    now?: Date
   ): Promise<{ consumed: boolean; eventId?: string; guestId?: string }>;
-  createSession(session: CoreGuestSessionRecord): Promise<void>;
+  createSession(session: {
+    id: string;
+    eventId: string;
+    guestId: string;
+    secretHash: string;
+    challengeId?: string;
+    expiresAt?: Date;
+    revokedAt?: Date | null;
+    createdAt?: Date;
+  }): Promise<void>;
   getSession(sessionId: string): Promise<CoreGuestSessionRecord | null>;
   resolveSessionVerified?(input: {
     sessionId: string;
     secretProof: string;
   }): Promise<CoreGuestRecord | null>;
-  revokeSession(sessionId: string, now: Date, secretProof?: string): Promise<void>;
+  revokeSession(sessionId: string, now?: Date, secretProof?: string): Promise<void>;
   revokeSessionVerified?(input: {
     sessionId: string;
     secretProof: string;

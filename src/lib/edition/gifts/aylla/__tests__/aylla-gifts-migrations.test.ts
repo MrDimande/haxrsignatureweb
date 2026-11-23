@@ -19,7 +19,9 @@ describe("Baby Aylla Gift Registry migration hardening", () => {
     assert.doesNotMatch(migration, /FROM haxrweb_runtime/);
   });
 
-  it("requires the dedicated haxr_aylla_gift_runtime and haxr_aylla_gift_admin roles with least privilege attributes", () => {
+  it("requires the dedicated haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, and haxr_aylla_gift_admin roles with least privilege attributes", () => {
+    assert.match(migration, /rolname = 'haxr_aylla_gift_issuer'/);
+    assert.match(migration, /Prerequisite role haxr_aylla_gift_issuer must exist/);
     assert.match(migration, /rolname = 'haxr_aylla_gift_runtime'/);
     assert.match(migration, /Prerequisite role haxr_aylla_gift_runtime must exist/);
     assert.match(migration, /rolname = 'haxr_aylla_gift_admin'/);
@@ -58,10 +60,15 @@ describe("Baby Aylla Gift Registry migration hardening", () => {
     );
   });
 
-  it("grants EXECUTE exclusively on verified guest functions to haxr_aylla_gift_runtime and isolates admin RPC", () => {
+  it("grants EXECUTE exclusively on verified guest functions to haxr_aylla_gift_runtime and isolates issuer and admin RPCs", () => {
+    // Challenge creation must be granted ONLY to haxr_aylla_gift_issuer and REVOKED from haxr_aylla_gift_runtime
+    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.create_baby_aylla_verification_challenge\([^\n]+\) TO haxr_aylla_gift_issuer;/);
+    assert.doesNotMatch(migration, /GRANT EXECUTE ON FUNCTION public\.create_baby_aylla_verification_challenge\([^\n]+\) TO haxr_aylla_gift_runtime;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.create_baby_aylla_verification_challenge\([^\n]+\) FROM haxr_aylla_gift_runtime, haxr_aylla_gift_admin;/);
+
+    // Guest functions granted to haxr_aylla_gift_runtime
     assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.resolve_baby_aylla_guest_by_contact\(text\) TO haxr_aylla_gift_runtime;/);
     assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.resolve_baby_aylla_guest_by_id\(uuid\) TO haxr_aylla_gift_runtime;/);
-    assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.create_baby_aylla_verification_challenge\([^\n]+\) TO haxr_aylla_gift_runtime;/);
     assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.verify_and_consume_baby_aylla_challenge\([^\n]+\) TO haxr_aylla_gift_runtime;/);
     assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.create_baby_aylla_guest_session\([^\n]+\) TO haxr_aylla_gift_runtime;/);
     assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.resolve_baby_aylla_guest_session\([^\n]+\) TO haxr_aylla_gift_runtime;/);
@@ -70,7 +77,7 @@ describe("Baby Aylla Gift Registry migration hardening", () => {
     assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.cancel_baby_aylla_gift_verified\([^\n]+\) TO haxr_aylla_gift_runtime;/);
 
     // Admin transition RPC must be REVOKED from guest runtime and GRANTED to dedicated admin role
-    assert.match(migration, /REVOKE ALL ON FUNCTION public\.transition_baby_aylla_gift_reservation_admin\([^\n]+\) FROM haxr_aylla_gift_runtime;/);
+    assert.match(migration, /REVOKE ALL ON FUNCTION public\.transition_baby_aylla_gift_reservation_admin\([^\n]+\) FROM haxr_aylla_gift_issuer, haxr_aylla_gift_runtime;/);
     assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.transition_baby_aylla_gift_reservation_admin\([^\n]+\) TO haxr_aylla_gift_admin;/);
   });
 
@@ -91,6 +98,24 @@ describe("Baby Aylla Gift Registry migration hardening", () => {
     assert.match(migration, /REVOKE ALL ON FUNCTION public\.resolve_baby_aylla_guest_session\([^\n]+\) FROM PUBLIC;/);
     assert.match(migration, /REVOKE ALL ON FUNCTION public\.revoke_baby_aylla_guest_session\([^\n]+\) FROM PUBLIC;/);
     assert.match(migration, /REVOKE ALL ON FUNCTION public\.transition_baby_aylla_gift_reservation_admin\([^\n]+\) FROM PUBLIC;/);
+  });
+
+  it("enforces PostgreSQL clock authority and eliminates caller timestamps from function signatures", () => {
+    // Challenge creation has no p_expires_at parameter
+    assert.match(migration, /FUNCTION public\.create_baby_aylla_verification_challenge\(\s*p_id uuid,\s*p_event_id uuid,\s*p_guest_id uuid,\s*p_verifier_hash text,\s*p_max_attempts integer DEFAULT 5\s*\)/);
+    // Challenge verification has no p_consumed_at parameter
+    assert.match(migration, /FUNCTION public\.verify_and_consume_baby_aylla_challenge\(\s*p_challenge_id uuid,\s*p_verifier_hash text\s*\)/);
+    // Session creation has no p_expires_at or p_created_at parameters
+    assert.match(migration, /FUNCTION public\.create_baby_aylla_guest_session\(\s*p_id uuid,\s*p_event_id uuid,\s*p_guest_id uuid,\s*p_secret_proof text,\s*p_challenge_id uuid\s*\)/);
+    // No dummy check inside SECURITY DEFINER admin function
+    assert.doesNotMatch(migration, /IF current_user = 'haxr_aylla_gift_runtime'/);
+  });
+
+  it("enforces zero table permissions for haxr_aylla_gift_issuer", () => {
+    assert.doesNotMatch(
+      migration,
+      /GRANT\s+[^;]*\s+ON\s+public\.edition_[^;]+\s+TO\s+haxr_aylla_gift_issuer/i
+    );
   });
 
   it("guards synthetic fixture identities and QR token collisions", () => {
