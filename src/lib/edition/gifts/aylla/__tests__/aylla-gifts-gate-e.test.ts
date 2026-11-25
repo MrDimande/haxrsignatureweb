@@ -400,8 +400,9 @@ describe("Baby Aylla Gate E — Production Readiness, Real OTP & 52-Item Catalog
     const resolvedDup = await dupStore.findGuestByContact(CANONICAL_BABY_AYLLA_EVENT_ID, "DUP@HAXR-TEST.LOCAL");
     assert.equal(resolvedDup?.id, "guest-dup-eligible");
 
-    // 4. Resend delivery failure / rate limit + disabled Brevo fallback must NOT persist an unusable challenge
-    let failedChallengeCount = 0;
+    // 4. Resend delivery failure / rate limit + disabled Brevo fallback compensates challenge fail-closed
+    let persistedChallengeCount = 0;
+    let compensatedChallengeCount = 0;
     const failDeliveryStore = createInMemoryAyllaGiftStore({ guests: [confirmedEmailGuest] });
     const failingEmailProvider = createProductionAyllaOtpDeliveryProvider({
       env: {
@@ -419,8 +420,12 @@ describe("Baby Aylla Gate E — Production Readiness, Real OTP & 52-Item Catalog
       store: {
         ...failDeliveryStore,
         async createChallenge(input) {
-          failedChallengeCount += 1;
+          persistedChallengeCount += 1;
           return failDeliveryStore.createChallenge(input);
+        },
+        async compensateFailedChallenge(id, nowDate) {
+          compensatedChallengeCount += 1;
+          return failDeliveryStore.compensateFailedChallenge!(id, nowDate);
         },
       },
       pepper: "gate-e-email-only-pepper-32-chars-minimum",
@@ -429,17 +434,25 @@ describe("Baby Aylla Gate E — Production Readiness, Real OTP & 52-Item Catalog
     });
     const failedRes = await serviceWithFailedResend.requestVerification("helena@haxr-test.local", "10.0.1.3");
     assert.equal(failedRes.outcome, "verification_pending");
-    assert.equal(failedChallengeCount, 0);
+    assert.equal(persistedChallengeCount, 1);
+    assert.equal(compensatedChallengeCount, 1);
+    const failedStored = await failDeliveryStore.getChallenge(failedRes.challengeId);
+    assert.equal(failedStored?.deliveryStatus, "failed");
+    assert.ok(failedStored?.consumedAt instanceof Date);
     const verifyFailedRes = await serviceWithFailedResend.verifyChallenge(failedRes.challengeId, "123456", "10.0.1.3");
     assert.equal(verifyFailedRes.outcome, "verification_required");
 
-    // 5. Throwing delivery provider also leaves zero usable challenges in DB
+    // 5. Throwing delivery provider also compensates challenge and leaves zero usable challenges in DB
     const serviceWithThrowingProvider = createCoreAyllaGiftService({
       store: {
         ...failDeliveryStore,
         async createChallenge(input) {
-          failedChallengeCount += 1;
+          persistedChallengeCount += 1;
           return failDeliveryStore.createChallenge(input);
+        },
+        async compensateFailedChallenge(id, nowDate) {
+          compensatedChallengeCount += 1;
+          return failDeliveryStore.compensateFailedChallenge!(id, nowDate);
         },
       },
       pepper: "gate-e-email-only-pepper-32-chars-minimum",
@@ -452,7 +465,11 @@ describe("Baby Aylla Gate E — Production Readiness, Real OTP & 52-Item Catalog
     });
     const thrownRes = await serviceWithThrowingProvider.requestVerification("helena@haxr-test.local", "10.0.1.4");
     assert.equal(thrownRes.outcome, "verification_pending");
-    assert.equal(failedChallengeCount, 0);
+    assert.equal(persistedChallengeCount, 2);
+    assert.equal(compensatedChallengeCount, 2);
+    const thrownStored = await failDeliveryStore.getChallenge(thrownRes.challengeId);
+    assert.equal(thrownStored?.deliveryStatus, "failed");
+    assert.ok(thrownStored?.consumedAt instanceof Date);
 
     // 6. Successful Resend email OTP creates challenge, verifies, issues session, and exposes email-only otpChannels
     let capturedEmailText = "";

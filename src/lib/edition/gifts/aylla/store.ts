@@ -50,7 +50,9 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       );
 
       const row = res.rows[0];
-      if (!row) return null;
+      if (!row || row.archived_at !== null || row.deleted_at !== null || row.is_incorrect) {
+        return null;
+      }
 
       return {
         id: row.id,
@@ -85,7 +87,9 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       );
 
       const row = res.rows[0];
-      if (!row) return null;
+      if (!row || row.archived_at !== null || row.deleted_at !== null || row.is_incorrect) {
+        return null;
+      }
 
       return {
         id: row.id,
@@ -115,6 +119,26 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
           challenge.maxAttempts ?? 5,
         ]
       );
+    },
+
+    async markChallengeDelivered(challengeId: string): Promise<boolean> {
+      const res = await ayllaGiftIssuerQuery<{ marked: boolean }>(
+        `
+        SELECT public.mark_baby_aylla_challenge_delivered($1::uuid) AS marked;
+        `,
+        [challengeId]
+      );
+      return Boolean(res.rows[0]?.marked);
+    },
+
+    async compensateFailedChallenge(challengeId: string): Promise<boolean> {
+      const res = await ayllaGiftIssuerQuery<{ compensated: boolean }>(
+        `
+        SELECT public.compensate_baby_aylla_failed_challenge($1::uuid) AS compensated;
+        `,
+        [challengeId]
+      );
+      return Boolean(res.rows[0]?.compensated);
     },
 
     async getChallenge(_challengeId: string): Promise<CoreVerificationChallengeRecord | null> {
@@ -204,8 +228,11 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
         [input.sessionId, input.secretProof]
       );
 
+      if (res.rows.length !== 1) return null;
       const row = res.rows[0];
-      if (!row) return null;
+      if (!row || row.guest_archived || row.guest_deleted || row.guest_incorrect) {
+        return null;
+      }
 
       return {
         id: row.guest_id,
@@ -612,18 +639,20 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
     async findGuestByContact(eventId, contact) {
       const list = guestsByContact.get(`${eventId}:contact:${normalizeAyllaContactForLookup(contact)}`);
       if (!list || list.length === 0) return null;
-      const ranked = [...list].reverse().sort((a, b) => {
-        const aActive = Number(!a.archived && !a.deleted && !a.incorrect);
-        const bActive = Number(!b.archived && !b.deleted && !b.incorrect);
-        if (bActive !== aActive) return bActive - aActive;
-        const aEligible = Number(a.status === "confirmed" && a.source === "edition_rsvp");
-        const bEligible = Number(b.status === "confirmed" && b.source === "edition_rsvp");
-        return bEligible - aEligible;
-      });
-      return ranked[0] ?? null;
+      const eligible = list.filter(
+        (g) =>
+          !g.archived &&
+          !g.deleted &&
+          !g.incorrect &&
+          g.status === "confirmed" &&
+          g.source === "edition_rsvp"
+      );
+      return eligible.length === 1 ? { ...eligible[0] } : null;
     },
     async getGuestById(eventId, guestId) {
-      return guests.get(`${eventId}:${guestId}`) ?? null;
+      const guest = guests.get(`${eventId}:${guestId}`);
+      if (!guest || guest.archived || guest.deleted || guest.incorrect) return null;
+      return { ...guest };
     },
     async createChallenge(challenge) {
       const now = challenge.createdAt ?? new Date();
@@ -638,8 +667,32 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
         maxAttempts: challenge.maxAttempts ?? 5,
         consumedAt: challenge.consumedAt ?? null,
         sessionIssuedAt: challenge.sessionIssuedAt ?? null,
+        deliveryStatus: challenge.deliveryStatus ?? "pending",
+        deliveredAt: null,
+        deliveryFailedAt: null,
         createdAt: now,
       });
+    },
+    async markChallengeDelivered(challengeId, now) {
+      const c = challenges.get(challengeId);
+      const currentTime = now ?? new Date();
+      if (!c || c.deliveryStatus !== "pending" || c.deliveryFailedAt || c.consumedAt !== null) {
+        return false;
+      }
+      c.deliveryStatus = "delivered";
+      c.deliveredAt = currentTime;
+      return true;
+    },
+    async compensateFailedChallenge(challengeId, now) {
+      const c = challenges.get(challengeId);
+      const currentTime = now ?? new Date();
+      if (!c || c.sessionIssuedAt || c.deliveryStatus === "delivered") {
+        return false;
+      }
+      c.deliveryStatus = "failed";
+      c.deliveryFailedAt = c.deliveryFailedAt ?? currentTime;
+      c.consumedAt = c.consumedAt ?? currentTime;
+      return true;
     },
     async getChallenge(challengeId) {
       const c = challenges.get(challengeId);
@@ -662,7 +715,17 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       const c = challenges.get(challengeId);
       if (!c) return { consumed: false };
       const currentTime = now ?? new Date();
-      if (c.consumedAt !== null || (c.expiresAt && c.expiresAt <= currentTime) || (c.attempts ?? 0) >= (c.maxAttempts ?? 5)) {
+      if (
+        c.deliveryStatus === "failed" ||
+        c.deliveryFailedAt ||
+        c.consumedAt !== null ||
+        (c.expiresAt && c.expiresAt <= currentTime) ||
+        (c.attempts ?? 0) >= (c.maxAttempts ?? 5)
+      ) {
+        return { consumed: false };
+      }
+      const guest = guests.get(`${c.eventId}:${c.guestId}`);
+      if (!guest || guest.archived || guest.deleted || guest.incorrect || guest.status !== "confirmed" || guest.source !== "edition_rsvp") {
         return { consumed: false };
       }
       if (c.verifierHash !== verifierHash) {
@@ -682,6 +745,9 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
         }
         if (c.eventId !== session.eventId || c.guestId !== session.guestId) {
           throw new Error("cannot issue session: challenge guest and event must match session");
+        }
+        if (c.deliveryStatus === "failed" || c.deliveryFailedAt) {
+          throw new Error("cannot issue session: challenge delivery failed");
         }
         if (c.consumedAt === null || c.consumedAt === undefined) {
           throw new Error("challenge must be consumed before issuing session");
@@ -718,7 +784,10 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
         return null;
       }
       const guest = guests.get(`${session.eventId}:${session.guestId}`);
-      return guest ?? null;
+      if (!guest || guest.archived || guest.deleted || guest.incorrect) {
+        return null;
+      }
+      return { ...guest };
     },
     async revokeSessionVerified(input) {
       const session = sessions.get(input.sessionId);
@@ -885,6 +954,10 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       const session = sessions.get(input.sessionId);
       if (!session || session.secretHash !== input.secretHash || session.expiresAt <= new Date() || session.revokedAt !== null) {
         throw new Error("verified guest session required");
+      }
+      const guest = guests.get(`${session.eventId}:${session.guestId}`);
+      if (!guest || guest.archived || guest.deleted || guest.incorrect || guest.status !== "confirmed" || guest.source !== "edition_rsvp") {
+        throw new Error("guest is not eligible");
       }
       const res = reservations.get(input.reservationId);
       if (!res || res.eventId !== session.eventId || res.guestId !== session.guestId) {

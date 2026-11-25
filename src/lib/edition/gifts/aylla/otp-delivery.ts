@@ -361,16 +361,20 @@ export function createProductionAyllaOtpDeliveryProvider(
         const subject = "Código de verificação · Lista de Presentes Baby Aylla";
 
         if (deps.sendEmailFn || (env === process.env ? isResendConfigured() : Boolean(env.RESEND_API_KEY?.trim()))) {
-          const emailRes = await sendEmailFn({
-            channel: "hello",
-            to: normalized,
-            subject,
-            html,
-            text,
-          });
-          if (emailRes.ok) {
-            logAyllaTrace("otp_delivery_sent", { channel: "email", provider: "resend" });
-            return true;
+          try {
+            const emailRes = await sendEmailFn({
+              channel: "hello",
+              to: normalized,
+              subject,
+              html,
+              text,
+            });
+            if (emailRes.ok) {
+              logAyllaTrace("otp_delivery_sent", { channel: "email", provider: "resend" });
+              return true;
+            }
+          } catch {
+            // Handled below via fail-closed otp_delivery_failed trace
           }
           logAyllaTrace("otp_delivery_failed", { channel: "email", provider: "resend" });
         }

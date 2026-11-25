@@ -58,6 +58,9 @@ export interface CoreVerificationChallengeRecord {
   readonly maxAttempts: number;
   consumedAt: Date | null;
   sessionIssuedAt?: Date | null;
+  deliveryStatus?: "pending" | "delivered" | "failed";
+  deliveredAt?: Date | null;
+  deliveryFailedAt?: Date | null;
   readonly createdAt: Date;
 }
 
@@ -105,8 +108,11 @@ export interface CoreGiftStore {
     attempts?: number;
     consumedAt?: Date | null;
     sessionIssuedAt?: Date | null;
+    deliveryStatus?: "pending" | "delivered" | "failed";
     createdAt?: Date;
   }): Promise<void>;
+  markChallengeDelivered?(challengeId: string, now?: Date): Promise<boolean>;
+  compensateFailedChallenge?(challengeId: string, now?: Date): Promise<boolean>;
   getChallenge(challengeId: string): Promise<CoreVerificationChallengeRecord | null>;
   consumeChallenge(challengeId: string, now?: Date): Promise<boolean>;
   incrementChallengeAttempts(challengeId: string): Promise<number>;

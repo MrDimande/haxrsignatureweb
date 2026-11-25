@@ -7,16 +7,17 @@
 
 ---
 
-### 1. Porque Não Usar `CREATE ROLE ... WITH PASSWORD` ou `psql \password`
+### 1. Porque Não Usar `CREATE ROLE ... WITH PASSWORD`, `PASSWORD NULL`, `psql \password` ou `--access` Sem Escopo
 
-Conforme comprovado no **Gate A**:
+Conforme comprovado no **Gate A** e revalidado no **Release 2**:
 1. Literais de senha em scripts SQL versionados representam risco de exposição permanente.
-2. `\password` no cliente `psql` computa SCRAM localmente e não sincroniza os metadados de autenticação no plano de controlo da Neon (`pg_authid.rolpassword` pode divergir ou ficar dessincronizado).
-3. `npx neonctl roles create --name <role>` sem `--access` adiciona automaticamente `neon_superuser` (com `BYPASSRLS`, `CREATEDB`, `CREATEROLE`), o que viola o modelo de isolamento. Já `--access read_only`/`read_write` concede `pg_read_all_data`/`pg_write_all_data`, violando o isolamento zero-tabelas de `haxr_aylla_gift_issuer`.
+2. `CREATE ROLE ... PASSWORD NULL` seguido de `npx neonctl roles reset-password` **falha na Neon** (`ERROR: cannot update password for role without password`), porque papéis criados sem senha ficam com `authentication_method = "no_login"` no Control Plane.
+3. `\password` no cliente `psql` computa SCRAM localmente e não sincroniza os metadados de autenticação no plano de controlo da Neon.
+4. `npx neonctl roles create --name <role>` sem `--access` adiciona automaticamente `neon_superuser` (com `BYPASSRLS`, `CREATEDB`, `CREATEROLE`), violando o modelo de isolamento. Já `--access read_only`/`read_write` sobre `public` concede `pg_read_all_data`/`pg_write_all_data` ou acesso amplo indevido, violando o isolamento zero-tabelas de `haxr_aylla_gift_issuer`.
 
-### 2. Procedimento Recomendado (Shell `PASSWORD NULL` + Neon CLI Control Plane)
+### 2. Procedimento Aprovado no Gate A (Neon CLI Scoped Empty Schema)
 
-#### Passo A — Criar os 3 papéis isolados sem password literal e sem elevation transitória
+#### Passo A — Criar schema temporário vazio (`aylla_role_qual_empty`)
 Executar ligado como `neondb_owner` (via endpoint directo, nunca `-pooler`):
 
 ```sql
@@ -31,29 +32,58 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'STOP: one or more Baby Aylla roles already exist';
   END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_namespace WHERE nspname = 'aylla_role_qual_empty'
+  ) THEN
+    RAISE EXCEPTION 'STOP: temporary schema aylla_role_qual_empty already exists';
+  END IF;
 END;
 $guard$;
 
-CREATE ROLE haxr_aylla_gift_issuer
-  WITH LOGIN INHERIT NOSUPERUSER NOCREATEROLE NOCREATEDB NOREPLICATION NOBYPASSRLS PASSWORD NULL;
-
-CREATE ROLE haxr_aylla_gift_runtime
-  WITH LOGIN INHERIT NOSUPERUSER NOCREATEROLE NOCREATEDB NOREPLICATION NOBYPASSRLS PASSWORD NULL;
-
-CREATE ROLE haxr_aylla_gift_admin
-  WITH LOGIN INHERIT NOSUPERUSER NOCREATEROLE NOCREATEDB NOREPLICATION NOBYPASSRLS PASSWORD NULL;
+CREATE SCHEMA aylla_role_qual_empty;
+REVOKE ALL ON SCHEMA aylla_role_qual_empty FROM PUBLIC;
 ```
 
-#### Passo B — Inicializar credenciais CSPRNG exclusivamente via Neon CLI
-No terminal privado do operador (a senha é exibida uma única vez e sincronizada no Control Plane Neon):
+#### Passo B — Provisionar os 3 papéis com credenciais CSPRNG via Neon CLI (escopo vazio)
+No terminal privado do operador (a senha gerada é exibida uma única vez no output e sincronizada no Control Plane Neon; nunca gravar stdout em logs ou ficheiros):
 
 ```powershell
-npx --yes neonctl@latest roles reset-password haxr_aylla_gift_issuer --project-id little-band-06036174 --branch br-wandering-bonus-ay2ex5lx
-npx --yes neonctl@latest roles reset-password haxr_aylla_gift_runtime --project-id little-band-06036174 --branch br-wandering-bonus-ay2ex5lx
-npx --yes neonctl@latest roles reset-password haxr_aylla_gift_admin --project-id little-band-06036174 --branch br-wandering-bonus-ay2ex5lx
+npx --yes neonctl@latest roles create --project-id little-band-06036174 --branch br-wandering-bonus-ay2ex5lx --name haxr_aylla_gift_issuer --access read_only --database neondb --schema aylla_role_qual_empty
+npx --yes neonctl@latest roles create --project-id little-band-06036174 --branch br-wandering-bonus-ay2ex5lx --name haxr_aylla_gift_runtime --access read_only --database neondb --schema aylla_role_qual_empty
+npx --yes neonctl@latest roles create --project-id little-band-06036174 --branch br-wandering-bonus-ay2ex5lx --name haxr_aylla_gift_admin --access read_only --database neondb --schema aylla_role_qual_empty
 ```
 
-#### Passo C — Extrair connection strings qualificadas TLS via Neon CLI
+#### Passo C — Revogar privilégios transitórios, remover `aylla_role_qual_empty` (sem `CASCADE`) e auditar atributos
+Executar ligado como `neondb_owner` (via endpoint directo, nunca `-pooler`):
+
+```sql
+ALTER DEFAULT PRIVILEGES IN SCHEMA aylla_role_qual_empty
+  REVOKE ALL ON TABLES FROM haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA aylla_role_qual_empty
+  REVOKE ALL ON TABLES FROM haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+REVOKE ALL ON SCHEMA aylla_role_qual_empty
+  FROM PUBLIC, haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
+DROP SCHEMA aylla_role_qual_empty;
+
+SELECT
+  r.rolname,
+  r.rolcanlogin,
+  r.rolsuper,
+  r.rolcreaterole,
+  r.rolcreatedb,
+  r.rolbypassrls,
+  COALESCE(array_agg(m.rolname) FILTER (WHERE m.rolname IS NOT NULL), '{}') AS member_of
+FROM pg_roles r
+LEFT JOIN pg_auth_members am ON am.member = r.oid
+LEFT JOIN pg_roles m ON m.oid = am.roleid
+WHERE r.rolname IN ('haxr_aylla_gift_issuer', 'haxr_aylla_gift_runtime', 'haxr_aylla_gift_admin')
+GROUP BY r.rolname, r.rolcanlogin, r.rolsuper, r.rolcreaterole, r.rolcreatedb, r.rolbypassrls
+ORDER BY r.rolname;
+```
+
+Confirmar que os 3 papéis devolvem `rolcanlogin = true`, todas as flags privilegiadas `false`, e `member_of = {}`.
+
+#### Passo D — Extrair / confirmar connection strings qualificadas TLS via Neon CLI
 Para runtime serverless Vercel (`--pooled`, seguido de `?sslmode=verify-full&channel_binding=require`):
 
 ```powershell
@@ -86,7 +116,7 @@ Todos os 3 papéis DEVEM apresentar:
 | `edition_guest_sessions` | Revogado | ZERO | **ZERO `SELECT`/write directo** | ZERO |
 | `edition_gift_rate_limits` | Revogado | **ZERO acesso directo** | **ZERO acesso directo** | ZERO |
 | `resolve_baby_aylla_guest_by_contact` | Revogado | `EXECUTE` | `EXECUTE` | Revogado |
-| `create_baby_aylla_verification_challenge` | Revogado | `EXECUTE` | Revogado | Revogado |
+| `create_baby_aylla_verification_challenge`, `mark_baby_aylla_challenge_delivered`, `compensate_baby_aylla_failed_challenge` | Revogado | `EXECUTE` | Revogado | Revogado |
 | `consume_baby_aylla_rate_limit` | Revogado | `EXECUTE` | `EXECUTE` | Revogado |
 | `verify_and_consume_baby_aylla_challenge`, `create/resolve/revoke_guest_session`, `reserve/cancel_verified`, `resolve_guest_by_id` | Revogado | Revogado | `EXECUTE` | Revogado |
 | `reserve_baby_aylla_gift` (interna) | Revogado | Revogado | Revogado | Revogado |
@@ -96,10 +126,11 @@ Todos os 3 papéis DEVEM apresentar:
 
 ### 4. Ordem de Execução Controlada na Produção (Somente Após Autorização)
 
-1. Executar Passo A (criação de papéis `PASSWORD NULL`), Passo B (`neon roles reset-password`) e Passo C (`neon connection-string --ssl verify-full`).
+1. Executar Passo A (criar `aylla_role_qual_empty`), Passo B (`neonctl roles create --access read_only --database neondb --schema aylla_role_qual_empty`), Passo C (revogar privilégios transitórios, `DROP SCHEMA aylla_role_qual_empty` sem `CASCADE` e auditar `member_of = {}`) e Passo D (`neonctl connection-string --pooled --ssl verify-full`).
 2. Executar **Preflight Read-Only**: [baby_aylla_gift_registry_production_preflight.sql](file:///c:/project-x/core-baby-aylla-wt/database/runbooks/baby_aylla_gift_registry_production_preflight.sql) via endpoint directo -> confirmar **`GO` (12 / 12 PASS)**.
 3. Executar sequencialmente via endpoint directo (nunca `-pooler`) como `neondb_owner`:
    - `database/migrations/20261122120000_baby_aylla_gift_registry_phase_c3.sql`
    - `database/migrations/20261125120100_baby_aylla_gift_registry_gate_e_prod_hardening.sql`
    - `database/migrations/20261125120200_baby_aylla_gift_registry_catalog_seed_pending.sql`
+   - `database/migrations/20261126090000_baby_aylla_gift_registry_release2_hardening.sql`
 4. Guardar as 3 connection strings (`?sslmode=verify-full&channel_binding=require`) como variáveis encriptadas server-only no Vercel Core Production.

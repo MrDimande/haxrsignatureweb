@@ -188,22 +188,6 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       const currentTime = now();
       const expiresAt = new Date(currentTime.getTime() + CHALLENGE_TTL_MS);
 
-      if (config.deliveryProvider) {
-        let delivered = false;
-        try {
-          delivered = await config.deliveryProvider.sendVerificationCode(guest.contact, code, expiresAt);
-        } catch (error) {
-          if (error instanceof ExternalDeliveryAttemptBlockedError) {
-            throw error;
-          }
-          delivered = false;
-        }
-        if (!delivered) {
-          logAyllaTrace("otp_challenge_skipped_delivery_failed", { channel: guestChannel });
-          return { outcome: "verification_pending", challengeId };
-        }
-      }
-
       await store.createChallenge({
         id: challengeId,
         eventId: guest.eventId,
@@ -213,8 +197,45 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
         attempts: 0,
         maxAttempts: MAX_CHALLENGE_ATTEMPTS,
         consumedAt: null,
+        deliveryStatus: config.deliveryProvider ? "pending" : "delivered",
         createdAt: currentTime,
       });
+
+      if (config.deliveryProvider) {
+        let delivered = false;
+        let blockedError: ExternalDeliveryAttemptBlockedError | null = null;
+        try {
+          delivered = await config.deliveryProvider.sendVerificationCode(guest.contact, code, expiresAt);
+        } catch (error) {
+          if (error instanceof ExternalDeliveryAttemptBlockedError) {
+            blockedError = error;
+          }
+          delivered = false;
+        }
+
+        if (delivered) {
+          if (store.markChallengeDelivered) {
+            try {
+              await store.markChallengeDelivered(challengeId, now());
+            } catch {
+              logAyllaTrace("otp_challenge_delivery_mark_failed", { channel: guestChannel });
+            }
+          }
+        } else {
+          if (store.compensateFailedChallenge) {
+            try {
+              await store.compensateFailedChallenge(challengeId, now());
+            } catch {
+              logAyllaTrace("otp_challenge_compensation_failed", { channel: guestChannel });
+            }
+          }
+          if (blockedError) {
+            throw blockedError;
+          }
+          logAyllaTrace("otp_challenge_compensated_delivery_failed", { channel: guestChannel });
+          return { outcome: "verification_pending", challengeId };
+        }
+      }
     }
 
     return { outcome: "verification_pending", challengeId };

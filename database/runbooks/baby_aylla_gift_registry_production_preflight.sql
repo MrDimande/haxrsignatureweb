@@ -66,7 +66,7 @@ WITH preflight_checks AS (
         || ', super=' || r.rolsuper::text || ', bypassrls=' || r.rolbypassrls::text
         || ', memberships=' || (SELECT count(*) FROM pg_auth_members am WHERE am.member = r.oid)::text || ')'
       FROM pg_roles r WHERE r.rolname = 'haxr_aylla_gift_issuer'
-    ), 'MISSING — provision via Neon CLI / PASSWORD NULL procedure first'),
+    ), 'MISSING — provision via Neon CLI scoped empty-schema procedure first'),
     EXISTS (
       SELECT 1 FROM pg_roles r
       WHERE r.rolname = 'haxr_aylla_gift_issuer'
@@ -87,7 +87,7 @@ WITH preflight_checks AS (
         || ', super=' || r.rolsuper::text || ', bypassrls=' || r.rolbypassrls::text
         || ', memberships=' || (SELECT count(*) FROM pg_auth_members am WHERE am.member = r.oid)::text || ')'
       FROM pg_roles r WHERE r.rolname = 'haxr_aylla_gift_runtime'
-    ), 'MISSING — provision via Neon CLI / PASSWORD NULL procedure first'),
+    ), 'MISSING — provision via Neon CLI scoped empty-schema procedure first'),
     EXISTS (
       SELECT 1 FROM pg_roles r
       WHERE r.rolname = 'haxr_aylla_gift_runtime'
@@ -108,7 +108,7 @@ WITH preflight_checks AS (
         || ', super=' || r.rolsuper::text || ', bypassrls=' || r.rolbypassrls::text
         || ', memberships=' || (SELECT count(*) FROM pg_auth_members am WHERE am.member = r.oid)::text || ')'
       FROM pg_roles r WHERE r.rolname = 'haxr_aylla_gift_admin'
-    ), 'MISSING — provision via Neon CLI / PASSWORD NULL procedure first'),
+    ), 'MISSING — provision via Neon CLI scoped empty-schema procedure first'),
     EXISTS (
       SELECT 1 FROM pg_roles r
       WHERE r.rolname = 'haxr_aylla_gift_admin'
