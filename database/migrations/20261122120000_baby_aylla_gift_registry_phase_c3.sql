@@ -603,12 +603,12 @@ BEGIN
     RETURN;
   END IF;
 
-  SELECT * INTO v_session
-  FROM public.edition_guest_sessions
-  WHERE id = p_session_id
-    AND secret_hash = encode(sha256(p_secret_proof::bytea), 'hex')
-    AND expires_at > v_now
-    AND revoked_at IS NULL;
+  SELECT s.* INTO v_session
+  FROM public.edition_guest_sessions AS s
+  WHERE s.id = p_session_id
+    AND s.secret_hash = encode(sha256(p_secret_proof::bytea), 'hex')
+    AND s.expires_at > v_now
+    AND s.revoked_at IS NULL;
 
   IF NOT FOUND THEN
     RETURN;
@@ -666,6 +666,7 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_reservation public.edition_gift_reservations_v2;
+  v_previous_status text;
   v_valid_transition boolean := false;
   v_now timestamptz := clock_timestamp();
 BEGIN
@@ -689,6 +690,8 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'reservation not found' USING ERRCODE = 'P0002';
   END IF;
+
+  v_previous_status := v_reservation.status;
 
   -- Validate state machine transitions
   IF v_reservation.status = 'reserved' AND p_next_status IN ('purchased', 'cancelled') THEN
@@ -714,7 +717,7 @@ BEGIN
   INSERT INTO public.edition_gift_reservation_audit_v2
     (reservation_id, event_id, actor_guest_id, actor_admin_id, action, previous_status, next_status, reason, created_at)
   VALUES
-    (p_reservation_id, p_event_id, NULL, p_admin_id, p_next_status, v_reservation.status, p_next_status, p_reason, v_now);
+    (p_reservation_id, p_event_id, NULL, p_admin_id, p_next_status, v_previous_status, p_next_status, p_reason, v_now);
 
   RETURN v_reservation;
 END;

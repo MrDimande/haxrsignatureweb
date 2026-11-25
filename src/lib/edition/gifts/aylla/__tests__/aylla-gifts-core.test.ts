@@ -83,13 +83,13 @@ describe("HAXR Core — Baby Aylla Gift Registry (Phase C.3.1)", () => {
     assert.equal(sentTo, guest.contact);
     assert.ok(sentCode.length > 0);
 
-    // Retrieve challenge record
-    const challenge = await store.getChallenge(Array.from((store as any)).length ? "" : "");
-    // Query store directly by reading through verifyChallenge
-    // Let's get the challenge ID from memory store
-    const inMemChallenges = (store as any);
-    // Directly verify with the right code
-    // Let's create a known challengeId to verify cleanly:
+    const verified = await service.verifyChallenge(reqResult.challengeId, sentCode, "127.0.0.1");
+    assert.equal(verified.outcome, "verified");
+    if (verified.outcome !== "verified") throw new Error("Expected verified");
+
+    const resolved = await service.resolveSession(verified.sessionToken);
+    assert.equal(resolved.valid, true);
+
     const fixedNow = new Date("2027-01-20T10:00:00Z");
     const testService = createCoreAyllaGiftService({
       store,
@@ -98,24 +98,23 @@ describe("HAXR Core — Baby Aylla Gift Registry (Phase C.3.1)", () => {
       tokenGenerator: () => "mocked-code-123456",
     });
 
-    await testService.requestVerification(guest.contact, "127.0.0.1");
+    const deterministicChallenge = await testService.requestVerification(guest.contact, "127.0.0.1");
+    assert.equal(deterministicChallenge.outcome, "verification_pending");
 
-    // Fetch challenge from store
-    let createdChallengeId = "";
-    const testStore = store as ReturnType<typeof createInMemoryAyllaGiftStore>;
-    // Verify challenge directly by creating challenge in store
     const directChallengeId = "challenge-test-uuid";
-    await testStore.createChallenge({
+    await store.createChallenge({
       id: directChallengeId,
       eventId: guest.eventId,
       guestId: guest.id,
-      verifierHash: (testService as any),
+      verifierHash: "a".repeat(43),
       expiresAt: new Date(fixedNow.getTime() + 10 * 60 * 1000),
       attempts: 0,
       maxAttempts: 5,
       consumedAt: null,
       createdAt: fixedNow,
     });
+    const storedDirect = await store.getChallenge(directChallengeId);
+    assert.equal(storedDirect?.id, directChallengeId);
   });
 
   it("issues and resolves guest session for confirmed RSVP guest", async () => {
@@ -257,6 +256,12 @@ describe("HAXR Core — Baby Aylla Gift Registry (Phase C.3.1)", () => {
       active: true,
       permittedEventIds: ["other-event-id"],
     };
+
+    // Attempt transition with valid admin on missing reservation
+    const missing = await service.adminTransition(validAdmin, TEST_EVENT_ID, "res-1", "purchased");
+    assert.equal(missing.ok, false);
+    if (missing.ok) throw new Error("Expected reservation_not_found");
+    assert.equal(missing.reason, "reservation_not_found");
 
     // Attempt transition with unauthorized admin
     const denied = await service.adminTransition(unauthorizedAdmin, TEST_EVENT_ID, "res-1", "purchased");

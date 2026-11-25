@@ -92,6 +92,7 @@ export interface CoreAdminSession {
 }
 
 export interface CoreGiftStore {
+  checkRateLimit?(key: string, limit: number, windowMs: number): Promise<boolean>;
   findGuestByContact(eventId: string, contact: string): Promise<CoreGuestRecord | null>;
   getGuestById(eventId: string, guestId: string): Promise<CoreGuestRecord | null>;
   createChallenge(challenge: {
@@ -137,6 +138,8 @@ export interface CoreGiftStore {
   }): Promise<boolean>;
   getInventoryItem(eventId: string, itemId: string): Promise<CoreGiftInventoryRecord | null>;
   listInventory(eventId: string): Promise<readonly CoreGiftInventoryRecord[]>;
+  listReservedQuantities?(eventId: string): Promise<ReadonlyMap<string, number>>;
+  listReservationsByGuest?(eventId: string, guestId: string): Promise<readonly AyllaGiftReservationRecord[]>;
   getReservationsByItem(eventId: string, itemId: string): Promise<readonly AyllaGiftReservationRecord[]>;
   getReservationById(eventId: string, reservationId: string): Promise<AyllaGiftReservationRecord | null>;
   findReservationByIdempotency(eventId: string, guestId: string, idempotencyKey: string): Promise<AyllaGiftReservationRecord | null>;
@@ -170,4 +173,23 @@ export interface CoreDeliveryProvider {
 
 export interface CoreRateLimiter {
   check(key: string, limit: number, windowMs: number): Promise<{ allowed: boolean; remaining: number }>;
+}
+
+export interface AyllaGiftAvailabilityItem {
+  readonly itemId: string;
+  readonly familyApproved: boolean;
+  readonly enabled: boolean;
+  readonly approvedQuantity: number | null;
+  readonly reservedQuantity: number;
+  readonly remainingQuantity: number;
+  readonly reservable: boolean;
+}
+
+export interface AyllaCatalogAvailabilitySnapshot {
+  readonly registryEnabled: boolean;
+  readonly items: readonly AyllaGiftAvailabilityItem[];
+  readonly myReservations: readonly Pick<
+    AyllaGiftReservationRecord,
+    "id" | "giftId" | "quantity" | "status" | "createdAt" | "updatedAt"
+  >[];
 }

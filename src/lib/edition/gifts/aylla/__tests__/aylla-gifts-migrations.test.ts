@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 const root = resolve(process.cwd(), "database/migrations");
 const migration = readFileSync(resolve(root, "20261122120000_baby_aylla_gift_registry_phase_c3.sql"), "utf8");
 const fixtures = readFileSync(resolve(root, "20261122120000_baby_aylla_gift_registry_fixtures_synthetic.sql"), "utf8");
+const storeSource = readFileSync(resolve(process.cwd(), "src/lib/edition/gifts/aylla/store.ts"), "utf8");
 
 describe("Baby Aylla Gift Registry migration hardening", () => {
   it("does not grant the internal reservation RPC to the dedicated operational role", () => {
@@ -122,5 +123,31 @@ describe("Baby Aylla Gift Registry migration hardening", () => {
     assert.match(fixtures, /Fixture incompatível/);
     assert.match(fixtures, /qr_token/);
     assert.match(fixtures, /2027-01-23/);
+  });
+
+  it("aligns resolveSessionVerified projection with resolve_baby_aylla_guest_session columns and avoids dead attempt-increment RPC", () => {
+    assert.match(migration, /guest_archived boolean,\s*guest_deleted boolean,\s*guest_incorrect boolean/);
+    assert.match(storeSource, /SELECT guest_id, event_id, guest_name, guest_contact, guest_status,\s*guest_source, guest_archived, guest_deleted, guest_incorrect\s*FROM public\.resolve_baby_aylla_guest_session\(\$1::uuid, \$2\);/);
+    assert.doesNotMatch(storeSource, /increment_baby_aylla_challenge_attempts/);
+  });
+
+  it("captures previous_status before UPDATE in transition_baby_aylla_gift_reservation_admin", () => {
+    assert.match(migration, /v_previous_status := v_reservation\.status;/);
+    assert.match(
+      migration,
+      /\(p_reservation_id, p_event_id, NULL, p_admin_id, p_next_status, v_previous_status, p_next_status, p_reason, v_now\)/
+    );
+  });
+
+  it("qualifies edition_guest_sessions columns in resolve_baby_aylla_guest_session to avoid RETURNS TABLE ambiguity", () => {
+    const fnMatch = migration.match(
+      /CREATE OR REPLACE FUNCTION public\.resolve_baby_aylla_guest_session\([\s\S]*?\$\$;/
+    );
+    assert.ok(fnMatch, "resolve_baby_aylla_guest_session definition must exist");
+    const fnBody = fnMatch[0];
+    assert.match(
+      fnBody,
+      /SELECT s\.\* INTO v_session\s+FROM public\.edition_guest_sessions AS s\s+WHERE s\.id = p_session_id\s+AND s\.secret_hash = encode\(sha256\(p_secret_proof::bytea\), 'hex'\)\s+AND s\.expires_at > v_now\s+AND s\.revoked_at IS NULL;/
+    );
   });
 });

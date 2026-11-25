@@ -1,6 +1,11 @@
-import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { AYLLA_GIFTS_CONFIG } from "./config";
+import { normalizeAyllaContactForLookup } from "./otp-delivery";
+import { isAyllaGiftRegistryOperational } from "./test-activation";
+import { logAyllaTrace } from "./trace";
 import type {
+  AyllaCatalogAvailabilitySnapshot,
+  AyllaGiftAvailabilityItem,
   AyllaGiftReservationRecord,
   AyllaGiftReservationStatus,
   CoreAdminSession,
@@ -69,6 +74,41 @@ function parseSessionToken(token: string): { sessionId: string; secret: string }
   return { sessionId: parts[0], secret: parts[1] };
 }
 
+function classifyReserveStoreError(
+  error: unknown
+): "item_unavailable" | "quantity_unconfirmed" | "session_expired" | "access_denied" | "service_unavailable" {
+  const code = typeof (error as { code?: unknown })?.code === "string" ? (error as { code: string }).code : "";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (
+    code === "23514" ||
+    message.includes("gift quantity unavailable") ||
+    message.includes("gift item is not reservable") ||
+    message.includes("registry key mismatch") ||
+    message.includes("idempotency key conflicts")
+  ) {
+    return "item_unavailable";
+  }
+  if (code === "22023" || message.includes("invalid reservation quantity")) {
+    return "quantity_unconfirmed";
+  }
+  if (message.includes("verified guest session required")) {
+    return "session_expired";
+  }
+  if (code === "42501" || message.includes("guest is not eligible")) {
+    return "access_denied";
+  }
+  return "service_unavailable";
+}
+
+function classifyCancelStoreError(error: unknown): "session_expired" | "access_denied" {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("verified guest session required")) {
+    return "session_expired";
+  }
+  return "access_denied";
+}
+
 export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
   if (!config.pepper) {
     throw new Error("CoreAyllaGiftService: pepper is required for HMAC verifiers");
@@ -76,36 +116,46 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
 
   const { store, pepper } = config;
   const now = config.now ?? (() => new Date());
-  const tokenGen = config.tokenGenerator ?? (() => randomBytes(32).toString("base64url"));
+  const otpGen = config.tokenGenerator ?? (() => String(randomInt(0, 1_000_000)).padStart(6, "0"));
+  const secretGen = config.tokenGenerator ?? (() => randomBytes(32).toString("base64url"));
 
   async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
-    if (!config.rateLimiter) return true;
+    if (!config.rateLimiter) {
+      logAyllaTrace("rate_limit_skip");
+      return true;
+    }
+    const bucketScope = key.split(":").slice(0, 2).join(":");
+    logAyllaTrace("rate_limit_enter", { bucketScope });
     const res = await config.rateLimiter.check(key, limit, windowMs);
+    logAyllaTrace("rate_limit_exit", { bucketScope, allowed: res.allowed });
     return res.allowed;
   }
 
   /**
    * 1. Request Verification Challenge
-   * Anti-enumeration: always returns verification_pending.
+   * Anti-enumeration: always returns verification_pending with an opaque challengeId.
    */
   async function requestVerification(
     contact: string,
     clientIp: string
-  ): Promise<{ readonly outcome: "verification_pending" | "rate_limited" }> {
+  ): Promise<
+    | { readonly outcome: "verification_pending"; readonly challengeId: string }
+    | { readonly outcome: "rate_limited" }
+  > {
+    const normalizedContact = normalizeAyllaContactForLookup(contact);
     const ipAllowed = await checkRateLimit(`rate:gift-verify-ip:${clientIp}`, 10, 60_000);
-    const contactAllowed = await checkRateLimit(`rate:gift-verify-contact:${contact.trim().toLowerCase()}`, 5, 300_000);
+    const contactAllowed = await checkRateLimit(`rate:gift-verify-contact:${normalizedContact}`, 5, 300_000);
     if (!ipAllowed || !contactAllowed) {
       return { outcome: "rate_limited" };
     }
 
-    const normalizedContact = contact.trim().toLowerCase();
+    const challengeId = randomUUID();
     const guest = await store.findGuestByContact(AYLLA_GIFTS_CONFIG.eventId, normalizedContact);
 
     if (isEligibleGuest(guest)) {
-      const code = tokenGen();
+      const code = otpGen();
       const currentTime = now();
       const expiresAt = new Date(currentTime.getTime() + CHALLENGE_TTL_MS);
-      const challengeId = randomUUID();
 
       await store.createChallenge({
         id: challengeId,
@@ -124,7 +174,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       }
     }
 
-    return { outcome: "verification_pending" };
+    return { outcome: "verification_pending", challengeId };
   }
 
   /**
@@ -141,12 +191,13 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     const ipAllowed = await checkRateLimit(`rate:challenge-verify-ip:${clientIp}`, 20, 60_000);
     if (!ipAllowed) return { outcome: "rate_limited" };
 
-    if (!challengeId || !code || code.length > MAX_VERIFIER_LENGTH) {
+    const normalizedCode = typeof code === "string" ? code.trim() : "";
+    if (!challengeId || !normalizedCode || normalizedCode.length > MAX_VERIFIER_LENGTH) {
       return { outcome: "verification_required" };
     }
 
     const currentTime = now();
-    const presentedHash = hashVerifier(code, pepper);
+    const presentedHash = hashVerifier(normalizedCode, pepper);
 
     let eventId: string;
     let guestId: string;
@@ -183,7 +234,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     }
 
     const sessionId = randomUUID();
-    const secret = tokenGen();
+    const secret = secretGen();
     const sessionExpiresAt = new Date(currentTime.getTime() + SESSION_TTL_MS);
 
     await store.createSession({
@@ -292,12 +343,20 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     | { readonly outcome: "reservation_confirmed"; readonly reservation: Pick<AyllaGiftReservationRecord, "id" | "giftId" | "quantity" | "status"> }
     | { readonly outcome: "registry_closed" | "access_denied" | "session_expired" | "item_unavailable" | "quantity_unconfirmed" | "service_unavailable" }
   > {
-    // Primary fail-closed: catalog must be enabled
-    if (!AYLLA_GIFTS_CONFIG.enabled) {
+    const startedAt = Date.now();
+    logAyllaTrace("service_reserve_start", { itemId: input.itemId, quantity: input.quantity });
+    // Primary fail-closed: catalog must be enabled (or isolated test activation in non-production)
+    if (!isAyllaGiftRegistryOperational()) {
+      logAyllaTrace("service_reserve_end", { outcome: "registry_closed", durationMs: Date.now() - startedAt });
       return { outcome: "registry_closed" };
     }
 
     const auth = await resolveSession(input.sessionToken);
+    logAyllaTrace("service_reserve_session_checked", {
+      valid: auth.valid,
+      reason: auth.valid ? "ok" : auth.reason,
+      durationMs: Date.now() - startedAt,
+    });
     if (!auth.valid) {
       return { outcome: auth.reason === "session_expired" ? "session_expired" : "access_denied" };
     }
@@ -312,6 +371,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     if (!parsed) return { outcome: "session_expired" };
     let reservationRecord: AyllaGiftReservationRecord;
     try {
+      const rpcStartedAt = Date.now();
       reservationRecord = await store.reserveVerified({
         sessionId: parsed.sessionId,
         secretHash: hashVerifier(parsed.secret, pepper),
@@ -319,8 +379,18 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
         quantity,
         idempotencyKey,
       });
-    } catch {
-      return { outcome: "service_unavailable" };
+      logAyllaTrace("service_reserve_end", {
+        outcome: "reservation_confirmed",
+        rpcDurationMs: Date.now() - rpcStartedAt,
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (error) {
+      const classified = classifyReserveStoreError(error);
+      logAyllaTrace("service_reserve_end", {
+        outcome: classified,
+        durationMs: Date.now() - startedAt,
+      });
+      return { outcome: classified };
     }
 
     return {
@@ -344,8 +414,11 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     | { readonly outcome: "reservation_confirmed"; readonly reservation: Pick<AyllaGiftReservationRecord, "id" | "giftId" | "quantity" | "status"> }
     | { readonly outcome: "access_denied" | "session_expired" }
   > {
+    const startedAt = Date.now();
+    logAyllaTrace("service_cancel_start");
     const auth = await resolveSession(input.sessionToken);
     if (!auth.valid) {
+      logAyllaTrace("service_cancel_end", { outcome: auth.reason, durationMs: Date.now() - startedAt });
       return { outcome: auth.reason === "session_expired" ? "session_expired" : "access_denied" };
     }
 
@@ -358,8 +431,14 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
         secretHash: hashVerifier(parsed.secret, pepper),
         reservationId: input.reservationId,
       });
-    } catch {
-      return { outcome: "access_denied" };
+      logAyllaTrace("service_cancel_end", {
+        outcome: "reservation_confirmed",
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (error) {
+      const outcome = classifyCancelStoreError(error);
+      logAyllaTrace("service_cancel_end", { outcome, durationMs: Date.now() - startedAt });
+      return { outcome };
     }
 
     return {
@@ -370,6 +449,82 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
         quantity: reservation.quantity,
         status: reservation.status,
       },
+    };
+  }
+
+  /**
+   * 6.5. Catalog Availability & Authenticated Guest Reservations Snapshot
+   */
+  async function getCatalogAvailability(
+    sessionToken?: string | null
+  ): Promise<AyllaCatalogAvailabilitySnapshot> {
+    if (!isAyllaGiftRegistryOperational()) {
+      return {
+        registryEnabled: false,
+        items: [],
+        myReservations: [],
+      };
+    }
+
+    const eventId = AYLLA_GIFTS_CONFIG.eventId;
+    const inventory = await store.listInventory(eventId);
+    const reservedByItem = store.listReservedQuantities
+      ? await store.listReservedQuantities(eventId)
+      : new Map<string, number>();
+
+    const items: AyllaGiftAvailabilityItem[] = [];
+    for (const item of inventory) {
+      let reservedQuantity = reservedByItem.get(item.itemId) ?? 0;
+      if (!store.listReservedQuantities) {
+        const rows = await store.getReservationsByItem(eventId, item.itemId);
+        reservedQuantity = rows
+          .filter((r) => r.status === "reserved" || r.status === "purchased" || r.status === "delivered")
+          .reduce((sum, r) => sum + r.quantity, 0);
+      }
+
+      const approvedQuantity = item.approvedQuantity;
+      const remainingQuantity =
+        approvedQuantity === null ? 0 : Math.max(0, approvedQuantity - reservedQuantity);
+      const reservable = Boolean(
+        item.familyApproved &&
+          item.enabled &&
+          approvedQuantity !== null &&
+          item.specificationsComplete &&
+          item.childSafetyValidated &&
+          remainingQuantity > 0
+      );
+
+      items.push({
+        itemId: item.itemId,
+        familyApproved: item.familyApproved,
+        enabled: item.enabled,
+        approvedQuantity,
+        reservedQuantity,
+        remainingQuantity,
+        reservable,
+      });
+    }
+
+    let myReservations: AyllaCatalogAvailabilitySnapshot["myReservations"] = [];
+    if (sessionToken) {
+      const auth = await resolveSession(sessionToken);
+      if (auth.valid && store.listReservationsByGuest) {
+        const guestReservations = await store.listReservationsByGuest(eventId, auth.guest.id);
+        myReservations = guestReservations.map((r) => ({
+          id: r.id,
+          giftId: r.giftId,
+          quantity: r.quantity,
+          status: r.status,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        }));
+      }
+    }
+
+    return {
+      registryEnabled: true,
+      items,
+      myReservations,
     };
   }
 
@@ -441,6 +596,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     revokeSession,
     reserveGift,
     cancelReservation,
+    getCatalogAvailability,
     adminTransition,
   };
 }

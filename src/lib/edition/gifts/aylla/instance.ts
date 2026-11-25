@@ -1,10 +1,36 @@
 import { createCoreAyllaGiftService } from "./service";
 import { createSyntheticDeliveryBarrier } from "./delivery-barrier";
+import {
+  createProductionAyllaOtpDeliveryProvider,
+  normalizeAyllaContactForLookup,
+} from "./otp-delivery";
 import { createNeonAyllaGiftStore } from "./store";
-import type { CoreGiftStore } from "./types";
+import { isAyllaTestActivationEnabled } from "./test-activation";
+import type { CoreDeliveryProvider, CoreGiftStore } from "./types";
 
-let testStoreOverride: CoreGiftStore | null = null;
-let defaultService: ReturnType<typeof createCoreAyllaGiftService> | null = null;
+type AyllaCoreInstanceState = {
+  testStoreOverride: CoreGiftStore | null;
+  defaultService: ReturnType<typeof createCoreAyllaGiftService> | null;
+  syntheticBarrierSingleton: ReturnType<typeof createSyntheticDeliveryBarrier> | null;
+};
+
+const AYLLA_INSTANCE_STATE_KEY = "__haxrAyllaCoreInstanceState" as const;
+
+type GlobalWithAyllaInstanceState = typeof globalThis & {
+  [AYLLA_INSTANCE_STATE_KEY]?: AyllaCoreInstanceState;
+};
+
+function getAyllaInstanceState(): AyllaCoreInstanceState {
+  const globalHolder = globalThis as GlobalWithAyllaInstanceState;
+  if (!globalHolder[AYLLA_INSTANCE_STATE_KEY]) {
+    globalHolder[AYLLA_INSTANCE_STATE_KEY] = {
+      testStoreOverride: null,
+      defaultService: null,
+      syntheticBarrierSingleton: null,
+    };
+  }
+  return globalHolder[AYLLA_INSTANCE_STATE_KEY];
+}
 
 function readPepper(): string {
   const pepper = process.env.HAXR_AYLLA_GIFT_PEPPER?.trim();
@@ -12,41 +38,80 @@ function readPepper(): string {
   return pepper;
 }
 
-function resolveSyntheticDeliveryProvider() {
-  if (process.env.HAXR_AYLLA_GIFT_SYNTHETIC_DELIVERY?.trim().toLowerCase() !== "true") {
-    return undefined;
+function getOrCreateSyntheticBarrier() {
+  const state = getAyllaInstanceState();
+  if (!state.syntheticBarrierSingleton) {
+    state.syntheticBarrierSingleton = createSyntheticDeliveryBarrier();
   }
-  return createSyntheticDeliveryBarrier().provider;
+  return state.syntheticBarrierSingleton;
+}
+
+function resolveDeliveryProvider(): CoreDeliveryProvider {
+  if (isAyllaTestActivationEnabled()) {
+    return getOrCreateSyntheticBarrier().provider;
+  }
+  return createProductionAyllaOtpDeliveryProvider();
 }
 
 export function setCoreAyllaGiftStoreForTesting(store: CoreGiftStore | null): void {
-  testStoreOverride = store;
-  defaultService = null;
+  const state = getAyllaInstanceState();
+  state.testStoreOverride = store;
+  state.defaultService = null;
+  state.syntheticBarrierSingleton = null;
+}
+
+export function getAyllaSyntheticOutboxMessagesForTesting(contact?: string) {
+  if (!isAyllaTestActivationEnabled()) {
+    return null;
+  }
+  const trapped = getOrCreateSyntheticBarrier().getTrappedMessages();
+  if (!contact) return trapped;
+  const normalized = normalizeAyllaContactForLookup(contact);
+  return trapped.filter(
+    (entry) => normalizeAyllaContactForLookup(entry.contact) === normalized
+  );
+}
+
+function buildStoreRateLimiter(store: CoreGiftStore) {
+  if (!store.checkRateLimit) return undefined;
+  return {
+    async check(key: string, limit: number, windowMs: number) {
+      const allowed = await store.checkRateLimit!(key, limit, windowMs);
+      return { allowed, remaining: allowed ? 1 : 0 };
+    },
+  };
 }
 
 export function getCoreAyllaGiftService(customStore?: CoreGiftStore) {
+  const state = getAyllaInstanceState();
+
   if (customStore) {
     return createCoreAyllaGiftService({
       store: customStore,
       pepper: readPepper(),
+      rateLimiter: buildStoreRateLimiter(customStore),
+      deliveryProvider: resolveDeliveryProvider(),
     });
   }
 
-  if (testStoreOverride) {
+  if (state.testStoreOverride) {
     return createCoreAyllaGiftService({
-      store: testStoreOverride,
+      store: state.testStoreOverride,
       pepper: readPepper(),
+      rateLimiter: buildStoreRateLimiter(state.testStoreOverride),
+      deliveryProvider: resolveDeliveryProvider(),
     });
   }
 
-  if (!defaultService) {
+  if (!state.defaultService) {
     const store = createNeonAyllaGiftStore();
-    defaultService = createCoreAyllaGiftService({
+    state.defaultService = createCoreAyllaGiftService({
       store,
       pepper: readPepper(),
-      deliveryProvider: resolveSyntheticDeliveryProvider(),
+      rateLimiter: buildStoreRateLimiter(store),
+      deliveryProvider: resolveDeliveryProvider(),
     });
   }
 
-  return defaultService;
+  return state.defaultService;
 }

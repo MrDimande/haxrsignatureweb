@@ -1,4 +1,6 @@
 import { ayllaGiftIssuerQuery, ayllaGiftQuery } from "@/lib/neon/aylla-gift-db";
+import { normalizeAyllaContactForLookup } from "./otp-delivery";
+import { logAyllaTrace } from "./trace";
 import type {
   AyllaGiftReservationRecord,
   AyllaGiftReservationStatus,
@@ -16,8 +18,19 @@ import type {
  */
 export function createNeonAyllaGiftStore(): CoreGiftStore {
   return {
-    async findGuestByContact(eventId: string, contact: string): Promise<CoreGuestRecord | null> {
-      const normalized = contact.trim().toLowerCase();
+    async checkRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
+      const queryFn = key.startsWith("rate:gift-verify-") ? ayllaGiftIssuerQuery : ayllaGiftQuery;
+      const res = await queryFn<{ allowed: boolean }>(
+        `
+        SELECT public.consume_baby_aylla_rate_limit($1, $2, $3) AS allowed;
+        `,
+        [key, limit, windowMs]
+      );
+      return Boolean(res.rows[0]?.allowed);
+    },
+
+    async findGuestByContact(_eventId: string, contact: string): Promise<CoreGuestRecord | null> {
+      const normalized = normalizeAyllaContactForLookup(contact);
       const res = await ayllaGiftQuery<{
         id: string;
         event_id: string;
@@ -141,14 +154,10 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
       return res.rows[0]?.consumed ?? false;
     },
 
-    async incrementChallengeAttempts(challengeId: string): Promise<number> {
-      const res = await ayllaGiftQuery<{ attempts: number }>(
-        `
-        SELECT public.increment_baby_aylla_challenge_attempts($1::uuid) AS attempts;
-        `,
-        [challengeId]
+    async incrementChallengeAttempts(_challengeId: string): Promise<number> {
+      throw new Error(
+        "Direct challenge attempt increment is forbidden; use verifyAndConsumeChallenge RPC."
       );
-      return res.rows[0]?.attempts ?? 0;
     },
 
     async createSession(session): Promise<void> {
@@ -183,13 +192,13 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
         guest_contact: string;
         guest_status: "confirmed" | "declined" | "pending";
         guest_source: string;
-        is_archived: boolean;
-        is_deleted: boolean;
-        is_incorrect: boolean;
+        guest_archived: boolean;
+        guest_deleted: boolean;
+        guest_incorrect: boolean;
       }>(
         `
         SELECT guest_id, event_id, guest_name, guest_contact, guest_status,
-               guest_source, is_archived, is_deleted, is_incorrect
+               guest_source, guest_archived, guest_deleted, guest_incorrect
         FROM public.resolve_baby_aylla_guest_session($1::uuid, $2);
         `,
         [input.sessionId, input.secretProof]
@@ -205,9 +214,9 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
         contact: row.guest_contact,
         status: row.guest_status,
         source: row.guest_source,
-        archived: row.is_archived,
-        deleted: row.is_deleted,
-        incorrect: row.is_incorrect,
+        archived: row.guest_archived,
+        deleted: row.guest_deleted,
+        incorrect: row.guest_incorrect,
       };
     },
 
@@ -298,6 +307,63 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
         approvedQuantity: row.approved_quantity,
         specificationsComplete: row.specifications_complete,
         childSafetyValidated: row.child_safety_validated,
+      }));
+    },
+
+    async listReservedQuantities(eventId: string): Promise<ReadonlyMap<string, number>> {
+      const res = await ayllaGiftQuery<{
+        item_id: string;
+        reserved_quantity: number;
+      }>(
+        `
+        SELECT item_id, COALESCE(SUM(quantity), 0)::int AS reserved_quantity
+        FROM public.edition_gift_reservations_v2
+        WHERE event_id = $1
+          AND status IN ('reserved', 'purchased', 'delivered')
+        GROUP BY item_id;
+        `,
+        [eventId]
+      );
+
+      const totals = new Map<string, number>();
+      for (const row of res.rows) {
+        totals.set(row.item_id, Number(row.reserved_quantity ?? 0));
+      }
+      return totals;
+    },
+
+    async listReservationsByGuest(eventId: string, guestId: string): Promise<readonly AyllaGiftReservationRecord[]> {
+      const res = await ayllaGiftQuery<{
+        id: string;
+        event_id: string;
+        item_id: string;
+        guest_id: string;
+        quantity: number;
+        status: AyllaGiftReservationStatus;
+        idempotency_key: string;
+        created_at: string | Date;
+        updated_at: string | Date;
+      }>(
+        `
+        SELECT id, event_id, item_id, guest_id, quantity, status,
+               idempotency_key::text, created_at, updated_at
+        FROM public.edition_gift_reservations_v2
+        WHERE event_id = $1 AND guest_id = $2
+        ORDER BY created_at DESC;
+        `,
+        [eventId, guestId]
+      );
+
+      return res.rows.map((row) => ({
+        id: row.id,
+        eventId: row.event_id,
+        giftId: row.item_id,
+        guestId: row.guest_id,
+        quantity: row.quantity,
+        status: row.status,
+        idempotencyKey: row.idempotency_key,
+        createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+        updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
       }));
     },
 
@@ -442,6 +508,8 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
     },
 
     async reserveVerified(input) {
+      const startedAt = Date.now();
+      logAyllaTrace("store_rpc_reserve_start", { itemId: input.itemId, quantity: input.quantity });
       const res = await ayllaGiftQuery<{
         id: string; event_id: string; item_id: string; guest_id: string; quantity: number;
         status: AyllaGiftReservationStatus; idempotency_key: string; created_at: string; updated_at: string;
@@ -451,12 +519,19 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
         [input.sessionId, input.secretHash, input.itemId, input.quantity, input.idempotencyKey]
       );
       const row = res.rows[0];
+      logAyllaTrace("store_rpc_reserve_end", {
+        itemId: input.itemId,
+        durationMs: Date.now() - startedAt,
+        status: row?.status,
+      });
       if (!row) throw new Error("Verified reservation RPC returned no row.");
       return { id: row.id, eventId: row.event_id, giftId: row.item_id, guestId: row.guest_id, quantity: row.quantity,
         status: row.status, idempotencyKey: row.idempotency_key, createdAt: row.created_at, updatedAt: row.updated_at };
     },
 
     async cancelVerified(input) {
+      const startedAt = Date.now();
+      logAyllaTrace("store_rpc_cancel_start");
       const res = await ayllaGiftQuery<{
         id: string; event_id: string; item_id: string; guest_id: string; quantity: number;
         status: AyllaGiftReservationStatus; idempotency_key: string; created_at: string; updated_at: string;
@@ -466,6 +541,10 @@ export function createNeonAyllaGiftStore(): CoreGiftStore {
         [input.sessionId, input.secretHash, input.reservationId]
       );
       const row = res.rows[0];
+      logAyllaTrace("store_rpc_cancel_end", {
+        durationMs: Date.now() - startedAt,
+        status: row?.status,
+      });
       if (!row) throw new Error("Verified cancellation RPC returned no row.");
       return { id: row.id, eventId: row.event_id, giftId: row.item_id, guestId: row.guest_id, quantity: row.quantity,
         status: row.status, idempotencyKey: row.idempotency_key, createdAt: row.created_at, updatedAt: row.updated_at };
@@ -492,10 +571,11 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
   const sessions = new Map<string, CoreGuestSessionRecord>();
   const reservations = new Map<string, AyllaGiftReservationRecord>();
   const audits: CoreReservationAuditRecord[] = [];
+  const rateLimits = new Map<string, { count: number; resetAt: number }>();
 
   for (const g of seed?.guests ?? []) {
     guests.set(`${g.eventId}:${g.id}`, g);
-    guests.set(`${g.eventId}:contact:${g.contact.trim().toLowerCase()}`, g);
+    guests.set(`${g.eventId}:contact:${normalizeAyllaContactForLookup(g.contact)}`, g);
   }
   for (const i of seed?.inventory ?? []) {
     inventory.set(`${i.eventId}:${i.itemId}`, i);
@@ -514,8 +594,19 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
   }
 
   return {
+    async checkRateLimit(key, limit, windowMs) {
+      if (limit < 1 || windowMs < 1) return false;
+      const now = Date.now();
+      const existing = rateLimits.get(key);
+      if (!existing || existing.resetAt <= now) {
+        rateLimits.set(key, { count: 1, resetAt: now + windowMs });
+        return 1 <= limit;
+      }
+      existing.count += 1;
+      return existing.count <= limit;
+    },
     async findGuestByContact(eventId, contact) {
-      return guests.get(`${eventId}:contact:${contact.trim().toLowerCase()}`) ?? null;
+      return guests.get(`${eventId}:contact:${normalizeAyllaContactForLookup(contact)}`) ?? null;
     },
     async getGuestById(eventId, guestId) {
       return guests.get(`${eventId}:${guestId}`) ?? null;
@@ -635,6 +726,23 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
     },
     async listInventory(eventId) {
       return Array.from(inventory.values()).filter((i) => i.eventId === eventId);
+    },
+    async listReservedQuantities(eventId) {
+      const totals = new Map<string, number>();
+      for (const r of reservations.values()) {
+        if (
+          r.eventId === eventId &&
+          (r.status === "reserved" || r.status === "purchased" || r.status === "delivered")
+        ) {
+          totals.set(r.giftId, (totals.get(r.giftId) ?? 0) + r.quantity);
+        }
+      }
+      return totals;
+    },
+    async listReservationsByGuest(eventId, guestId) {
+      return Array.from(reservations.values())
+        .filter((r) => r.eventId === eventId && r.guestId === guestId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
     async getReservationsByItem(eventId, itemId) {
       return Array.from(reservations.values()).filter(

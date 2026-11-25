@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import {
-  AYLLA_GIFT_ISSUER_ROLE,
   AYLLA_GIFT_RUNTIME_ROLE,
   validateAyllaGiftDatabaseEnvironment,
 } from "@/lib/neon/aylla-gift-config";
@@ -84,6 +83,15 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
       );
     });
 
+    it("rejects isolated challenge attempt increment (incrementChallengeAttempts)", async () => {
+      await assert.rejects(
+        async () => {
+          await neonStore.incrementChallengeAttempts("00000000-0000-0000-0000-000000000000");
+        },
+        /Direct challenge attempt increment is forbidden; use verifyAndConsumeChallenge RPC\./
+      );
+    });
+
     it("rejects admin transition on guest runtime store (transitionAdminVerified)", async () => {
       await assert.rejects(
         async () => {
@@ -107,30 +115,29 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
       rolcreaterole: boolean;
       rolcreatedb: boolean;
       rolbypassrls: boolean;
-    }> = {}) {
+    }> = {}): Parameters<typeof assertRuntimeIdentity>[0] {
+      const query = async () => ({
+        rows: [
+          {
+            current_user: AYLLA_GIFT_RUNTIME_ROLE,
+            rolcanlogin: true,
+            rolsuper: false,
+            rolcreaterole: false,
+            rolcreatedb: false,
+            rolbypassrls: false,
+            ...overrides,
+          },
+        ],
+      });
       return {
-        async query() {
-          return {
-            rows: [
-              {
-                current_user: AYLLA_GIFT_RUNTIME_ROLE,
-                rolcanlogin: true,
-                rolsuper: false,
-                rolcreaterole: false,
-                rolcreatedb: false,
-                rolbypassrls: false,
-                ...overrides,
-              },
-            ],
-          };
-        },
+        query: query as unknown as Parameters<typeof assertRuntimeIdentity>[0]["query"],
       };
     }
 
     it("rejects connection when role is elevated to superuser", async () => {
       const client = makeMockClient({ rolsuper: true });
       await assert.rejects(
-        () => assertRuntimeIdentity(client as any),
+        () => assertRuntimeIdentity(client),
         /Gift Registry PostgreSQL runtime identity is not permitted/
       );
     });
@@ -138,7 +145,7 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
     it("rejects connection when role has bypassrls privilege", async () => {
       const client = makeMockClient({ rolbypassrls: true });
       await assert.rejects(
-        () => assertRuntimeIdentity(client as any),
+        () => assertRuntimeIdentity(client),
         /Gift Registry PostgreSQL runtime identity is not permitted/
       );
     });
@@ -146,7 +153,7 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
     it("rejects connection when role has createrole privilege", async () => {
       const client = makeMockClient({ rolcreaterole: true });
       await assert.rejects(
-        () => assertRuntimeIdentity(client as any),
+        () => assertRuntimeIdentity(client),
         /Gift Registry PostgreSQL runtime identity is not permitted/
       );
     });
@@ -154,7 +161,7 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
     it("rejects connection when role has createdb privilege", async () => {
       const client = makeMockClient({ rolcreatedb: true });
       await assert.rejects(
-        () => assertRuntimeIdentity(client as any),
+        () => assertRuntimeIdentity(client),
         /Gift Registry PostgreSQL runtime identity is not permitted/
       );
     });
@@ -162,7 +169,7 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
     it("rejects connection when role cannot login", async () => {
       const client = makeMockClient({ rolcanlogin: false });
       await assert.rejects(
-        () => assertRuntimeIdentity(client as any),
+        () => assertRuntimeIdentity(client),
         /Gift Registry PostgreSQL runtime identity is not permitted/
       );
     });
@@ -170,7 +177,7 @@ describe("Baby Aylla Gift Registry — Negative Security & Direct Write Eliminat
     it("rejects connection when effective user switches dynamically", async () => {
       const client = makeMockClient({ current_user: "postgres" });
       await assert.rejects(
-        () => assertRuntimeIdentity(client as any),
+        () => assertRuntimeIdentity(client),
         /Gift Registry PostgreSQL runtime identity is not permitted/
       );
     });

@@ -15,8 +15,10 @@ import GuestHistoryPanel from "@/components/events/GuestHistoryPanel";
 import CheckInDashboard from "@/components/events/CheckInDashboard";
 import GuestReportPanel from "@/components/events/GuestReportPanel";
 import EditionGiftReservationsPanel from "@/components/events/EditionGiftReservationsPanel";
+import AyllaGiftAdminPanel from "@/components/events/AyllaGiftAdminPanel";
 import EditionInviteCard from "@/components/events/EditionInviteCard";
 import EditionRsvpOpsPanel from "@/components/events/EditionRsvpOpsPanel";
+import type { AyllaGiftAdminSnapshot } from "@/lib/edition/gifts/aylla/admin-store";
 import type { EditionGiftReservation } from "@/lib/events/repositories/edition-gifts.repository";
 import EventQrPanel from "@/components/events/EventQrPanel";
 import GoogleSheetsSync from "@/components/events/GoogleSheetsSync";
@@ -98,6 +100,7 @@ type EventDetailClientProps = {
   businesses: { id: BusinessId; name: string }[];
   clients: Client[];
   giftReservations?: EditionGiftReservation[];
+  ayllaGiftAdminSnapshot?: AyllaGiftAdminSnapshot | null;
   conciergeReviews?: ConciergeReviewItem[];
   conciergeVendors?: EventVendor[];
   conciergeChecklist?: EventChecklistItem[];
@@ -143,6 +146,7 @@ export default function EventDetailClient({
   businesses,
   clients,
   giftReservations = [],
+  ayllaGiftAdminSnapshot = null,
   conciergeReviews = [],
   conciergeVendors = [],
   conciergeChecklist = [],
@@ -466,7 +470,9 @@ export default function EventDetailClient({
         />
       ) : null}
 
-      {tab === "gifts" && event.editionRegistryKey ? (
+      {tab === "gifts" && ayllaGiftAdminSnapshot ? (
+        <AyllaGiftAdminPanel snapshot={ayllaGiftAdminSnapshot} />
+      ) : tab === "gifts" && event.editionRegistryKey ? (
         <EditionGiftReservationsPanel
           reservations={giftReservations}
           registryKey={event.editionRegistryKey}

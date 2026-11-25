@@ -1,10 +1,8 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { POST as challengeHandler } from "@/app/api/v1/edition/gifts/aylla/challenge/route";
-import { POST as verifyHandler } from "@/app/api/v1/edition/gifts/aylla/verify/route";
 import { POST as sessionHandler, DELETE as sessionRevokeHandler } from "@/app/api/v1/edition/gifts/aylla/session/route";
 import { POST as reserveHandler } from "@/app/api/v1/edition/gifts/aylla/reserve/route";
-import { POST as cancelHandler } from "@/app/api/v1/edition/gifts/aylla/cancel/route";
 import { setCoreAyllaGiftStoreForTesting } from "@/lib/edition/gifts/aylla/instance";
 import { createInMemoryAyllaGiftStore } from "@/lib/edition/gifts/aylla/store";
 import { AYLLA_GIFTS_CONFIG } from "@/lib/edition/gifts/aylla/config";
@@ -41,6 +39,8 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
   afterEach(() => {
     delete (process.env as Record<string, string | undefined>).HAXR_EDITION_PROXY_SECRET;
     delete (process.env as Record<string, string | undefined>).HAXR_AYLLA_GIFT_PEPPER;
+    delete (process.env as Record<string, string | undefined>).HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION;
+    delete (process.env as Record<string, string | undefined>).HAXR_AYLLA_GIFT_SYNTHETIC_DELIVERY;
     delete (process.env as Record<string, string | undefined>).VERCEL_ENV;
     delete (process.env as Record<string, string | undefined>).NODE_ENV;
     setCoreAyllaGiftStoreForTesting(null);
@@ -109,7 +109,26 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
     assert.equal(res.status, 401);
   });
 
+  it("challenge route fails closed with 403 registry_closed when catalog is disabled", async () => {
+    const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-haxr-edition-proxy": TEST_SECRET,
+      },
+      body: JSON.stringify({ contact: "+258849999999" }),
+    });
+
+    const res = await challengeHandler(req);
+    assert.equal(res.status, 403);
+    const json = await res.json();
+    assert.equal(json.outcome, "registry_closed");
+  });
+
   it("accepts valid proxy secret via x-haxr-edition-proxy header and executes challenge", async () => {
+    process.env.HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION = "true";
+    process.env.HAXR_AYLLA_GIFT_SYNTHETIC_DELIVERY = "true";
+
     const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
       method: "POST",
       headers: {
@@ -127,6 +146,9 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
   });
 
   it("accepts valid proxy secret via Authorization Bearer header", async () => {
+    process.env.HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION = "true";
+    process.env.HAXR_AYLLA_GIFT_SYNTHETIC_DELIVERY = "true";
+
     const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
       method: "POST",
       headers: {

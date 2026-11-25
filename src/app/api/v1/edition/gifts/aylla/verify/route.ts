@@ -5,49 +5,57 @@ import {
   validateEditionProxyJsonBody,
 } from "@/lib/edition/proxy-auth";
 import { getRequestIp } from "@/lib/security/rate-limit";
+import { isAyllaGiftRegistryOperational } from "@/lib/edition/gifts/aylla/test-activation";
 import { getCoreAyllaGiftService } from "@/lib/edition/gifts/aylla/instance";
+import { withCoreAyllaRouteTrace } from "@/lib/edition/gifts/aylla/trace";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const proxyAuth = validateAyllaProxyRequest(request);
-  if (!proxyAuth.ok) {
-    return NextResponse.json(editionProxyUnauthorizedResponse(), { status: 401 });
-  }
+  return withCoreAyllaRouteTrace(request, "verify", async () => {
+    const proxyAuth = validateAyllaProxyRequest(request);
+    if (!proxyAuth.ok) {
+      return NextResponse.json(editionProxyUnauthorizedResponse(), { status: 401 });
+    }
 
-  const bodyCheck = validateEditionProxyJsonBody(request);
-  if (!bodyCheck.ok) {
-    return NextResponse.json({ success: false, error: bodyCheck.error }, { status: bodyCheck.status });
-  }
+    if (!isAyllaGiftRegistryOperational()) {
+      return NextResponse.json({ success: false, outcome: "registry_closed" }, { status: 403 });
+    }
 
-  let body: { challengeId?: string; code?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ success: false, error: "Payload inválido." }, { status: 400 });
-  }
+    const bodyCheck = validateEditionProxyJsonBody(request);
+    if (!bodyCheck.ok) {
+      return NextResponse.json({ success: false, error: bodyCheck.error }, { status: bodyCheck.status });
+    }
 
-  if (!body.challengeId || !body.code || typeof body.code !== "string") {
-    return NextResponse.json({ success: false, error: "Parâmetros em falta." }, { status: 400 });
-  }
+    let body: { challengeId?: string; code?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, error: "Payload inválido." }, { status: 400 });
+    }
 
-  const clientIp = getRequestIp(request);
-  const service = getCoreAyllaGiftService();
-  const result = await service.verifyChallenge(body.challengeId, body.code, clientIp);
+    if (!body.challengeId || !body.code || typeof body.code !== "string") {
+      return NextResponse.json({ success: false, error: "Parâmetros em falta." }, { status: 400 });
+    }
 
-  if (result.outcome === "rate_limited") {
-    return NextResponse.json({ success: false, error: "Demasiadas tentativas." }, { status: 429 });
-  }
+    const clientIp = getRequestIp(request);
+    const service = getCoreAyllaGiftService();
+    const result = await service.verifyChallenge(body.challengeId, body.code, clientIp);
 
-  if (result.outcome !== "verified") {
-    return NextResponse.json({ success: false, outcome: "verification_required" }, { status: 403 });
-  }
+    if (result.outcome === "rate_limited") {
+      return NextResponse.json({ success: false, error: "Demasiadas tentativas." }, { status: 429 });
+    }
 
-  return NextResponse.json({
-    success: true,
-    outcome: "verified",
-    sessionToken: result.sessionToken,
-    expiresAt: result.expiresAt,
+    if (result.outcome !== "verified") {
+      return NextResponse.json({ success: false, outcome: "verification_required" }, { status: 403 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      outcome: "verified",
+      sessionToken: result.sessionToken,
+      expiresAt: result.expiresAt,
+    });
   });
 }
