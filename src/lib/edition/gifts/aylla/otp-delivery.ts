@@ -195,27 +195,97 @@ export function getAyllaOtpDeliveryReadiness(
   };
 }
 
-function buildAyllaOtpEmailHtml(code: string): string {
+export function getAyllaOtpSupportedChannels(
+  env: AyllaOtpEnv = process.env
+): { readonly email: boolean; readonly phone: boolean } {
+  const readiness = getAyllaOtpDeliveryReadiness(env);
+  return {
+    email: readiness.emailReady,
+    phone: readiness.whatsappReady || readiness.smsReady,
+  };
+}
+
+export function buildAyllaOtpEmailText(code: string): string {
+  return [
+    "HAXR SIGNATURE · ÉDITION ROSE",
+    "Baby Aylla · Lista de Presentes",
+    "",
+    `O seu código de verificação de uso único é: ${code}`,
+    "",
+    "Validade: 10 minutos.",
+    "Por segurança, nunca partilhe este código com terceiros.",
+    "Se não solicitou este código para aceder à lista de presentes da Baby Aylla, ignore este e-mail com segurança.",
+    "",
+    "HAXR Signature · Atelier de Alta Costura Digital",
+    "hello@haxrsignature.com",
+  ].join("\n");
+}
+
+export function buildAyllaOtpEmailHtml(code: string): string {
   const safeCode = escapeHtml(code);
   return `<!DOCTYPE html>
 <html lang="pt">
-  <body style="margin:0;padding:32px 16px;background:#f9f3f2;font-family:Georgia,serif;color:#4a3130;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #ead8d5;padding:36px 28px;">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Código de Verificação · Baby Aylla · Édition Rose</title>
+  </head>
+  <body style="margin:0;padding:32px 16px;background-color:#FBF8F5;color:#4A3B39;font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:560px;margin:0 auto;background-color:#FFFFFF;border:1px solid #ECCBC0;border-collapse:collapse;">
       <tr>
-        <td style="text-align:center;">
-          <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#97685e;">HAXR SIGNATURE · ÉDITION ROSE</p>
-          <h1 style="margin:0 0 18px;font-size:24px;font-weight:normal;color:#4a3130;">Código de Verificação · Baby Aylla</h1>
-          <p style="margin:0 0 24px;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#5c4442;">
-            Utilize o código abaixo para confirmar a sua identidade na lista de presentes da Baby Aylla:
+        <td style="height:4px;background-color:#D8C39D;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="padding:30px 28px 22px;background-color:#FAF3EE;border-bottom:1px solid #ECCBC0;text-align:center;">
+          <p style="margin:0 0 10px;font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C87A6E;font-weight:600;">
+            HAXR SIGNATURE · ÉDITION ROSE
           </p>
-          <div style="display:inline-block;padding:14px 28px;margin:0 0 24px;background:#fdf7f6;border:1px solid #d9b6ae;font-family:'Courier New',monospace;font-size:30px;letter-spacing:0.24em;color:#4a3130;font-weight:bold;">
-            ${safeCode}
+          <div style="display:inline-block;width:38px;height:38px;line-height:38px;border:1px solid #D8C39D;border-radius:999px;background-color:#FFFFFF;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:20px;color:#C87A6E;margin:0 auto 12px;">
+            A
           </div>
-          <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:12px;color:#7c5e5a;">
-            Este código expira em 10 minutos. Não o partilhe com terceiros.
+          <h1 style="margin:0;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:25px;line-height:1.28;font-weight:400;color:#4A3B39;">
+            Código de Verificação
+          </h1>
+          <p style="margin:6px 0 0;font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#7A6662;">
+            Baby Aylla · Lista de Presentes
           </p>
-          <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#9f8581;">
-            Se não solicitou esta verificação, pode ignorar esta mensagem com segurança.
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:32px 28px 28px;text-align:center;">
+          <p style="margin:0 0 24px;font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.7;color:#4A3B39;">
+            Utilize o código numérico abaixo para confirmar a sua identidade e reservar um mimo com total privacidade:
+          </p>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 24px;border-collapse:collapse;">
+            <tr>
+              <td style="padding:16px 32px;background-color:#FAF3EE;border:1px solid #D8C39D;text-align:center;">
+                <span style="font-family:'Playfair Display',Georgia,'Courier New',monospace;font-size:32px;line-height:1.2;letter-spacing:0.28em;color:#4A3B39;font-weight:700;display:inline-block;">
+                  ${safeCode}
+                </span>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:0 0 14px;font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;line-height:1.6;color:#7A6662;">
+            Este código é válido durante <strong style="color:#4A3B39;">10 minutos</strong> e é de uso único.
+          </p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:18px 0 0;border-top:1px solid #ECCBC0;border-collapse:collapse;">
+            <tr>
+              <td style="padding-top:18px;text-align:center;">
+                <p style="margin:0;font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;line-height:1.65;color:#7A6662;">
+                  Por segurança, nunca partilhe este código com terceiros. Se não solicitou esta verificação, pode ignorar este e-mail com segurança.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:18px 28px 24px;background-color:#FAF3EE;border-top:1px solid #ECCBC0;text-align:center;">
+          <p style="margin:0 0 4px;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:13px;color:#4A3B39;">
+            HAXR Signature
+          </p>
+          <p style="margin:0;font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#7A6662;">
+            Atelier de Alta Costura Digital · hello@haxrsignature.com
           </p>
         </td>
       </tr>
@@ -287,6 +357,7 @@ export function createProductionAyllaOtpDeliveryProvider(
 
       if (channel === "email") {
         const html = buildAyllaOtpEmailHtml(code);
+        const text = buildAyllaOtpEmailText(code);
         const subject = "Código de verificação · Lista de Presentes Baby Aylla";
 
         if (deps.sendEmailFn || (env === process.env ? isResendConfigured() : Boolean(env.RESEND_API_KEY?.trim()))) {
@@ -295,6 +366,7 @@ export function createProductionAyllaOtpDeliveryProvider(
             to: normalized,
             subject,
             html,
+            text,
           });
           if (emailRes.ok) {
             logAyllaTrace("otp_delivery_sent", { channel: "email", provider: "resend" });
@@ -312,7 +384,7 @@ export function createProductionAyllaOtpDeliveryProvider(
             toName: "Convidado(a) Baby Aylla",
             subject,
             htmlContent: html,
-            textContent: `HAXR Signature - Baby Aylla: o seu codigo de verificacao e ${code}. Valido por 10 minutos.`,
+            textContent: text,
             tags: ["aylla-gift-otp"],
           });
           const isMockResult = "mock" in brevoRes && Boolean(brevoRes.mock);

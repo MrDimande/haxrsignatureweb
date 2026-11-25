@@ -566,6 +566,7 @@ export interface InMemorySeedData {
  */
 export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftStore {
   const guests = new Map<string, CoreGuestRecord>();
+  const guestsByContact = new Map<string, CoreGuestRecord[]>();
   const inventory = new Map<string, CoreGiftInventoryRecord>();
   const challenges = new Map<string, CoreVerificationChallengeRecord>();
   const sessions = new Map<string, CoreGuestSessionRecord>();
@@ -575,7 +576,10 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
 
   for (const g of seed?.guests ?? []) {
     guests.set(`${g.eventId}:${g.id}`, g);
-    guests.set(`${g.eventId}:contact:${normalizeAyllaContactForLookup(g.contact)}`, g);
+    const contactKey = `${g.eventId}:contact:${normalizeAyllaContactForLookup(g.contact)}`;
+    const list = guestsByContact.get(contactKey) ?? [];
+    list.push(g);
+    guestsByContact.set(contactKey, list);
   }
   for (const i of seed?.inventory ?? []) {
     inventory.set(`${i.eventId}:${i.itemId}`, i);
@@ -606,7 +610,17 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       return existing.count <= limit;
     },
     async findGuestByContact(eventId, contact) {
-      return guests.get(`${eventId}:contact:${normalizeAyllaContactForLookup(contact)}`) ?? null;
+      const list = guestsByContact.get(`${eventId}:contact:${normalizeAyllaContactForLookup(contact)}`);
+      if (!list || list.length === 0) return null;
+      const ranked = [...list].reverse().sort((a, b) => {
+        const aActive = Number(!a.archived && !a.deleted && !a.incorrect);
+        const bActive = Number(!b.archived && !b.deleted && !b.incorrect);
+        if (bActive !== aActive) return bActive - aActive;
+        const aEligible = Number(a.status === "confirmed" && a.source === "edition_rsvp");
+        const bEligible = Number(b.status === "confirmed" && b.source === "edition_rsvp");
+        return bEligible - aEligible;
+      });
+      return ranked[0] ?? null;
     },
     async getGuestById(eventId, guestId) {
       return guests.get(`${eventId}:${guestId}`) ?? null;

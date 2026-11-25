@@ -1,6 +1,11 @@
 import { createHmac, randomBytes, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { AYLLA_GIFTS_CONFIG } from "./config";
-import { normalizeAyllaContactForLookup } from "./otp-delivery";
+import { ExternalDeliveryAttemptBlockedError } from "./delivery-barrier";
+import {
+  classifyAyllaContactChannel,
+  normalizeAyllaContactForLookup,
+  type AyllaContactChannel,
+} from "./otp-delivery";
 import { isAyllaGiftRegistryOperational } from "./test-activation";
 import { logAyllaTrace } from "./trace";
 import type {
@@ -8,6 +13,7 @@ import type {
   AyllaGiftAvailabilityItem,
   AyllaGiftReservationRecord,
   AyllaGiftReservationStatus,
+  AyllaOtpChannelCapabilities,
   CoreAdminSession,
   CoreDeliveryProvider,
   CoreGiftStore,
@@ -40,8 +46,21 @@ export interface CoreAyllaGiftServiceConfig {
   readonly pepper: string;
   readonly rateLimiter?: CoreRateLimiter;
   readonly deliveryProvider?: CoreDeliveryProvider;
+  readonly supportedChannels?: AyllaOtpChannelCapabilities;
   readonly now?: () => Date;
   readonly tokenGenerator?: () => string;
+}
+
+function isOtpContactChannelEnabled(
+  channel: AyllaContactChannel,
+  supportedChannels?: AyllaOtpChannelCapabilities
+): boolean {
+  if (!supportedChannels) {
+    return true;
+  }
+  if (channel === "email") return supportedChannels.email;
+  if (channel === "phone") return supportedChannels.phone;
+  return false;
 }
 
 function hashVerifier(value: string, pepper: string): string {
@@ -150,12 +169,40 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     }
 
     const challengeId = randomUUID();
+    const requestChannel = classifyAyllaContactChannel(normalizedContact);
+    if (!isOtpContactChannelEnabled(requestChannel, config.supportedChannels)) {
+      logAyllaTrace("otp_channel_disabled_skipped", { channel: requestChannel });
+      return { outcome: "verification_pending", challengeId };
+    }
+
     const guest = await store.findGuestByContact(AYLLA_GIFTS_CONFIG.eventId, normalizedContact);
 
     if (isEligibleGuest(guest)) {
+      const guestChannel = classifyAyllaContactChannel(guest.contact);
+      if (!isOtpContactChannelEnabled(guestChannel, config.supportedChannels)) {
+        logAyllaTrace("otp_channel_disabled_skipped", { channel: guestChannel });
+        return { outcome: "verification_pending", challengeId };
+      }
+
       const code = otpGen();
       const currentTime = now();
       const expiresAt = new Date(currentTime.getTime() + CHALLENGE_TTL_MS);
+
+      if (config.deliveryProvider) {
+        let delivered = false;
+        try {
+          delivered = await config.deliveryProvider.sendVerificationCode(guest.contact, code, expiresAt);
+        } catch (error) {
+          if (error instanceof ExternalDeliveryAttemptBlockedError) {
+            throw error;
+          }
+          delivered = false;
+        }
+        if (!delivered) {
+          logAyllaTrace("otp_challenge_skipped_delivery_failed", { channel: guestChannel });
+          return { outcome: "verification_pending", challengeId };
+        }
+      }
 
       await store.createChallenge({
         id: challengeId,
@@ -168,10 +215,6 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
         consumedAt: null,
         createdAt: currentTime,
       });
-
-      if (config.deliveryProvider) {
-        await config.deliveryProvider.sendVerificationCode(guest.contact, code, expiresAt);
-      }
     }
 
     return { outcome: "verification_pending", challengeId };
@@ -458,9 +501,11 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
   async function getCatalogAvailability(
     sessionToken?: string | null
   ): Promise<AyllaCatalogAvailabilitySnapshot> {
+    const otpChannels = config.supportedChannels ?? { email: true, phone: true };
     if (!isAyllaGiftRegistryOperational()) {
       return {
         registryEnabled: false,
+        otpChannels,
         items: [],
         myReservations: [],
       };
@@ -523,6 +568,7 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
 
     return {
       registryEnabled: true,
+      otpChannels,
       items,
       myReservations,
     };

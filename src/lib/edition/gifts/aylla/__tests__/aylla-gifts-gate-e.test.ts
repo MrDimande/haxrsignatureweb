@@ -17,9 +17,12 @@ import {
   resolveAyllaGiftEventId,
 } from "../config";
 import {
+  buildAyllaOtpEmailHtml,
+  buildAyllaOtpEmailText,
   classifyAyllaContactChannel,
   createProductionAyllaOtpDeliveryProvider,
   getAyllaOtpDeliveryReadiness,
+  getAyllaOtpSupportedChannels,
   normalizeAyllaContactForLookup,
 } from "../otp-delivery";
 import {
@@ -32,12 +35,17 @@ const trackedEnv = [
   "EDITION_EVENT_BABY_AYLLA_BIRTHDAY_ID",
   "EDITION_EVENT_AYLLA_ID",
   "HAXR_AYLLA_GIFT_EVENT_ID",
+  "HAXR_AYLLA_GIFT_PEPPER",
   "HAXR_AYLLA_GIFT_ADMIN_DATABASE_URL",
   "HAXR_AYLLA_GIFT_DATABASE_URL",
   "HAXR_AYLLA_GIFT_ISSUER_DATABASE_URL",
+  "HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION",
+  "HAXR_AYLLA_GIFT_SYNTHETIC_DELIVERY",
   "HAXR_AYLLA_OTP_WHATSAPP_ENABLED",
   "HAXR_AYLLA_OTP_SMS_ENABLED",
   "HAXR_AYLLA_OTP_PHONE_CHANNELS",
+  "EMAIL_SEND_MODE",
+  "BREVO_API_KEY",
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
   "TWILIO_WHATSAPP_FROM",
@@ -281,5 +289,197 @@ describe("Baby Aylla Gate E — Production Readiness, Real OTP & 52-Item Catalog
     const overflowWorker = getCoreAyllaGiftService(sharedStore);
     const blocked = await overflowWorker.requestVerification("+258 841234567", "10.0.0.99");
     assert.equal(blocked.outcome, "rate_limited");
+  });
+
+  it("enforces email-only OTP launch without Twilio creds, prevents unusable challenges, and preserves future phone channels", async () => {
+    process.env.HAXR_AYLLA_GIFT_PEPPER = "gate-e-email-only-pepper-32-chars-minimum";
+    process.env.RESEND_API_KEY = "re_test_mock_key";
+    process.env.HAXR_AYLLA_OTP_WHATSAPP_ENABLED = "false";
+    process.env.HAXR_AYLLA_OTP_SMS_ENABLED = "false";
+    delete process.env.TWILIO_ACCOUNT_SID;
+    delete process.env.TWILIO_AUTH_TOKEN;
+
+    const supported = getAyllaOtpSupportedChannels();
+    assert.deepEqual(supported, { email: true, phone: false });
+
+    const html = buildAyllaOtpEmailHtml("482910");
+    const text = buildAyllaOtpEmailText("482910");
+    assert.match(html, /#FBF8F5/);
+    assert.match(html, /#C87A6E/);
+    assert.match(html, /#D8C39D/);
+    assert.match(html, /482910/);
+    assert.match(html, /10 minutos/);
+    assert.match(html, /hello@haxrsignature\.com/);
+    assert.match(text, /482910/);
+    assert.match(text, /10 minutos/);
+
+    // Future WhatsApp/SMS infrastructure remains intact when explicitly re-enabled
+    const reenabled = getAyllaOtpSupportedChannels({
+      RESEND_API_KEY: "re_test_mock_key",
+      HAXR_AYLLA_OTP_WHATSAPP_ENABLED: "true",
+      HAXR_AYLLA_OTP_SMS_ENABLED: "false",
+      TWILIO_ACCOUNT_SID: "AC_FUTURE",
+      TWILIO_AUTH_TOKEN: "tok_future",
+      TWILIO_WHATSAPP_FROM: "whatsapp:+14155238886",
+    });
+    assert.deepEqual(reenabled, { email: true, phone: true });
+
+    let createChallengeCalls = 0;
+    const confirmedEmailGuest = {
+      id: "guest-email-only-1",
+      eventId: CANONICAL_BABY_AYLLA_EVENT_ID,
+      name: "Tia Helena",
+      contact: "helena@haxr-test.local",
+      status: "confirmed" as const,
+      source: "edition_rsvp" as const,
+      archived: false,
+      deleted: false,
+      incorrect: false,
+    };
+    const phoneOnlyConfirmedGuest = {
+      id: "guest-phone-only-1",
+      eventId: CANONICAL_BABY_AYLLA_EVENT_ID,
+      name: "Tio Artur",
+      contact: "+258841112233",
+      status: "confirmed" as const,
+      source: "edition_rsvp" as const,
+      archived: false,
+      deleted: false,
+      incorrect: false,
+    };
+
+    const baseStore = createInMemoryAyllaGiftStore({
+      guests: [confirmedEmailGuest, phoneOnlyConfirmedGuest],
+    });
+    const instrumentedStore = {
+      ...baseStore,
+      async createChallenge(input: Parameters<typeof baseStore.createChallenge>[0]) {
+        createChallengeCalls += 1;
+        return baseStore.createChallenge(input);
+      },
+    };
+
+    // 1. Phone contact must NOT create a challenge when phone channels are disabled
+    const prodService = getCoreAyllaGiftService(instrumentedStore);
+    const phoneAttempt = await prodService.requestVerification("+258841112233", "10.0.1.1");
+    assert.equal(phoneAttempt.outcome, "verification_pending");
+    assert.equal(createChallengeCalls, 0);
+
+    // 2. Phone-only confirmed guest cannot verify using an arbitrary unlinked email
+    const arbitraryEmailAttempt = await prodService.requestVerification("artur.novo@haxr-test.local", "10.0.1.2");
+    assert.equal(arbitraryEmailAttempt.outcome, "verification_pending");
+    assert.equal(createChallengeCalls, 0);
+
+    // 3. Duplicate email lookup prioritizes active confirmed edition_rsvp guest over archived/pending duplicate
+    const dupStore = createInMemoryAyllaGiftStore({
+      guests: [
+        {
+          id: "guest-dup-eligible",
+          eventId: CANONICAL_BABY_AYLLA_EVENT_ID,
+          name: "Convidada Activa",
+          contact: "dup@haxr-test.local",
+          status: "confirmed",
+          source: "edition_rsvp",
+          archived: false,
+          deleted: false,
+          incorrect: false,
+        },
+        {
+          id: "guest-dup-archived",
+          eventId: CANONICAL_BABY_AYLLA_EVENT_ID,
+          name: "Convidada Arquivada",
+          contact: "dup@haxr-test.local",
+          status: "pending",
+          source: "edition_rsvp",
+          archived: true,
+          deleted: false,
+          incorrect: false,
+        },
+      ],
+    });
+    const resolvedDup = await dupStore.findGuestByContact(CANONICAL_BABY_AYLLA_EVENT_ID, "DUP@HAXR-TEST.LOCAL");
+    assert.equal(resolvedDup?.id, "guest-dup-eligible");
+
+    // 4. Resend delivery failure / rate limit + disabled Brevo fallback must NOT persist an unusable challenge
+    let failedChallengeCount = 0;
+    const failDeliveryStore = createInMemoryAyllaGiftStore({ guests: [confirmedEmailGuest] });
+    const failingEmailProvider = createProductionAyllaOtpDeliveryProvider({
+      env: {
+        RESEND_API_KEY: "re_test_mock_key",
+        EMAIL_SEND_MODE: "disabled",
+        BREVO_API_KEY: "xkeysib_unused_when_disabled",
+      },
+      sendEmailFn: async () => ({ ok: false, error: "rate_limit_exceeded" }),
+      sendBrevoEmailFn: async () => {
+        throw new Error("Brevo must not run when EMAIL_SEND_MODE is disabled");
+      },
+    });
+    const { createCoreAyllaGiftService } = await import("../service");
+    const serviceWithFailedResend = createCoreAyllaGiftService({
+      store: {
+        ...failDeliveryStore,
+        async createChallenge(input) {
+          failedChallengeCount += 1;
+          return failDeliveryStore.createChallenge(input);
+        },
+      },
+      pepper: "gate-e-email-only-pepper-32-chars-minimum",
+      supportedChannels: { email: true, phone: false },
+      deliveryProvider: failingEmailProvider,
+    });
+    const failedRes = await serviceWithFailedResend.requestVerification("helena@haxr-test.local", "10.0.1.3");
+    assert.equal(failedRes.outcome, "verification_pending");
+    assert.equal(failedChallengeCount, 0);
+    const verifyFailedRes = await serviceWithFailedResend.verifyChallenge(failedRes.challengeId, "123456", "10.0.1.3");
+    assert.equal(verifyFailedRes.outcome, "verification_required");
+
+    // 5. Throwing delivery provider also leaves zero usable challenges in DB
+    const serviceWithThrowingProvider = createCoreAyllaGiftService({
+      store: {
+        ...failDeliveryStore,
+        async createChallenge(input) {
+          failedChallengeCount += 1;
+          return failDeliveryStore.createChallenge(input);
+        },
+      },
+      pepper: "gate-e-email-only-pepper-32-chars-minimum",
+      supportedChannels: { email: true, phone: false },
+      deliveryProvider: {
+        async sendVerificationCode() {
+          throw new Error("NETWORK_ABORTED");
+        },
+      },
+    });
+    const thrownRes = await serviceWithThrowingProvider.requestVerification("helena@haxr-test.local", "10.0.1.4");
+    assert.equal(thrownRes.outcome, "verification_pending");
+    assert.equal(failedChallengeCount, 0);
+
+    // 6. Successful Resend email OTP creates challenge, verifies, issues session, and exposes email-only otpChannels
+    let capturedEmailText = "";
+    const okProvider = createProductionAyllaOtpDeliveryProvider({
+      env: { RESEND_API_KEY: "re_test_mock_key" },
+      sendEmailFn: async (msg) => {
+        capturedEmailText = msg.text ?? "";
+        return { ok: true };
+      },
+    });
+    const serviceOk = createCoreAyllaGiftService({
+      store: failDeliveryStore,
+      pepper: "gate-e-email-only-pepper-32-chars-minimum",
+      supportedChannels: { email: true, phone: false },
+      deliveryProvider: okProvider,
+    });
+    const snapshot = await serviceOk.getCatalogAvailability(null);
+    assert.deepEqual(snapshot.otpChannels, { email: true, phone: false });
+
+    const reqOk = await serviceOk.requestVerification("Helena@Haxr-Test.local", "10.0.1.5");
+    assert.equal(reqOk.outcome, "verification_pending");
+    const otpMatch = capturedEmailText.match(/\b(\d{6})\b/);
+    assert.ok(otpMatch, "Plain text OTP fallback should contain the 6-digit code");
+    const verifyOk = await serviceOk.verifyChallenge(reqOk.challengeId, otpMatch[1], "10.0.1.5");
+    assert.equal(verifyOk.outcome, "verified");
+    if (verifyOk.outcome !== "verified") throw new Error("Expected verified");
+    const resolvedSession = await serviceOk.resolveSession(verifyOk.sessionToken);
+    assert.equal(resolvedSession.valid, true);
   });
 });

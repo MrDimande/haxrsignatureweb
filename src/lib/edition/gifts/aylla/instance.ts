@@ -2,15 +2,17 @@ import { createCoreAyllaGiftService } from "./service";
 import { createSyntheticDeliveryBarrier } from "./delivery-barrier";
 import {
   createProductionAyllaOtpDeliveryProvider,
+  getAyllaOtpSupportedChannels,
   normalizeAyllaContactForLookup,
 } from "./otp-delivery";
 import { createNeonAyllaGiftStore } from "./store";
 import { isAyllaTestActivationEnabled } from "./test-activation";
-import type { CoreDeliveryProvider, CoreGiftStore } from "./types";
+import type { AyllaOtpChannelCapabilities, CoreDeliveryProvider, CoreGiftStore } from "./types";
 
 type AyllaCoreInstanceState = {
   testStoreOverride: CoreGiftStore | null;
   defaultService: ReturnType<typeof createCoreAyllaGiftService> | null;
+  defaultServiceSignature: string | null;
   syntheticBarrierSingleton: ReturnType<typeof createSyntheticDeliveryBarrier> | null;
 };
 
@@ -26,6 +28,7 @@ function getAyllaInstanceState(): AyllaCoreInstanceState {
     globalHolder[AYLLA_INSTANCE_STATE_KEY] = {
       testStoreOverride: null,
       defaultService: null,
+      defaultServiceSignature: null,
       syntheticBarrierSingleton: null,
     };
   }
@@ -53,10 +56,28 @@ function resolveDeliveryProvider(): CoreDeliveryProvider {
   return createProductionAyllaOtpDeliveryProvider();
 }
 
+function resolveSupportedChannels(): AyllaOtpChannelCapabilities {
+  if (isAyllaTestActivationEnabled()) {
+    const explicitlyEmailOnly =
+      process.env.HAXR_AYLLA_OTP_WHATSAPP_ENABLED?.trim().toLowerCase() === "false" &&
+      process.env.HAXR_AYLLA_OTP_SMS_ENABLED?.trim().toLowerCase() === "false";
+    return {
+      email: true,
+      phone: !explicitlyEmailOnly,
+    };
+  }
+  return getAyllaOtpSupportedChannels();
+}
+
+function computeDefaultServiceSignature(channels: AyllaOtpChannelCapabilities): string {
+  return `${Number(isAyllaTestActivationEnabled())}:${Number(channels.email)}:${Number(channels.phone)}`;
+}
+
 export function setCoreAyllaGiftStoreForTesting(store: CoreGiftStore | null): void {
   const state = getAyllaInstanceState();
   state.testStoreOverride = store;
   state.defaultService = null;
+  state.defaultServiceSignature = null;
   state.syntheticBarrierSingleton = null;
 }
 
@@ -84,6 +105,7 @@ function buildStoreRateLimiter(store: CoreGiftStore) {
 
 export function getCoreAyllaGiftService(customStore?: CoreGiftStore) {
   const state = getAyllaInstanceState();
+  const supportedChannels = resolveSupportedChannels();
 
   if (customStore) {
     return createCoreAyllaGiftService({
@@ -91,6 +113,7 @@ export function getCoreAyllaGiftService(customStore?: CoreGiftStore) {
       pepper: readPepper(),
       rateLimiter: buildStoreRateLimiter(customStore),
       deliveryProvider: resolveDeliveryProvider(),
+      supportedChannels,
     });
   }
 
@@ -100,17 +123,21 @@ export function getCoreAyllaGiftService(customStore?: CoreGiftStore) {
       pepper: readPepper(),
       rateLimiter: buildStoreRateLimiter(state.testStoreOverride),
       deliveryProvider: resolveDeliveryProvider(),
+      supportedChannels,
     });
   }
 
-  if (!state.defaultService) {
+  const signature = computeDefaultServiceSignature(supportedChannels);
+  if (!state.defaultService || state.defaultServiceSignature !== signature) {
     const store = createNeonAyllaGiftStore();
     state.defaultService = createCoreAyllaGiftService({
       store,
       pepper: readPepper(),
       rateLimiter: buildStoreRateLimiter(store),
       deliveryProvider: resolveDeliveryProvider(),
+      supportedChannels,
     });
+    state.defaultServiceSignature = signature;
   }
 
   return state.defaultService;

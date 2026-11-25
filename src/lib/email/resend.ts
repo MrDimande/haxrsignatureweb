@@ -41,6 +41,7 @@ export type SendHaxrEmailInput = {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
   replyTo?: string | string[];
   cc?: string | string[];
   bcc?: string | string[];
@@ -77,6 +78,7 @@ export async function sendHaxrEmail(
     bcc,
     subject: input.subject,
     html: input.html,
+    ...(input.text ? { text: input.text } : {}),
     replyTo: input.replyTo,
     attachments: input.attachments?.map((attachment) => ({
       filename: attachment.filename,

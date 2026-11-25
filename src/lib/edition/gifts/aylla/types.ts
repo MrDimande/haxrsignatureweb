@@ -185,8 +185,14 @@ export interface AyllaGiftAvailabilityItem {
   readonly reservable: boolean;
 }
 
+export interface AyllaOtpChannelCapabilities {
+  readonly email: boolean;
+  readonly phone: boolean;
+}
+
 export interface AyllaCatalogAvailabilitySnapshot {
   readonly registryEnabled: boolean;
+  readonly otpChannels?: AyllaOtpChannelCapabilities;
   readonly items: readonly AyllaGiftAvailabilityItem[];
   readonly myReservations: readonly Pick<
     AyllaGiftReservationRecord,

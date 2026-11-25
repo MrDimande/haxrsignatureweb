@@ -225,10 +225,10 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               className={`px-2.5 py-1 rounded border ${
                 snapshot.otpReadiness.whatsappReady
                   ? "border-emerald-500/40 bg-emerald-950/40 text-emerald-300"
-                  : "border-amber-500/30 bg-amber-950/30 text-amber-200"
+                  : "border-white/10 bg-white/[0.03] text-grey/60"
               }`}
             >
-              WhatsApp OTP: {snapshot.otpReadiness.whatsappReady ? "Pronto" : "Pendente"}
+              WhatsApp OTP: {snapshot.otpReadiness.whatsappReady ? "Pronto" : "Adormecido"}
             </span>
             <span
               className={`px-2.5 py-1 rounded border ${
@@ -237,7 +237,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                   : "border-white/10 bg-white/[0.03] text-grey/60"
               }`}
             >
-              SMS OTP: {snapshot.otpReadiness.smsReady ? "Pronto" : "Opcional"}
+              SMS OTP: {snapshot.otpReadiness.smsReady ? "Pronto" : "Adormecido"}
             </span>
           </div>
         </div>

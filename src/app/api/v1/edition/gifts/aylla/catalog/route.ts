@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         registryEnabled: snapshot.registryEnabled,
+        otpChannels: snapshot.otpChannels,
         items: snapshot.items,
         myReservations: snapshot.myReservations,
       });
