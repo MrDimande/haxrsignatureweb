@@ -77,3 +77,45 @@ export function buildEditionWhatsAppUrl(
       : `258${digits}`;
   return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
 }
+
+export type EditionRsvpOperationsCopy = {
+  title: string;
+  description: string;
+  pendingWithoutEmailHint: string;
+  exportLabel: string;
+  reminderDeadlineLabel?: string;
+};
+
+/** Keeps RSVP operations tied to the current event. */
+export function getEditionRsvpOperationsCopy(
+  registryKey: string | null | undefined
+): EditionRsvpOperationsCopy {
+  if (registryKey === "rose-elegance" || registryKey === "jessicachadelingerie") {
+    return {
+      title: "Monitorização da despedida",
+      description:
+        "Acompanhe confirmações do convite digital, lembrete manual por WhatsApp (sem email) e exportação final para a Jessica.",
+      pendingWithoutEmailHint:
+        "Use WhatsApp para relembrar manualmente (prazo RSVP: 20 de Julho de 2026).",
+      exportLabel: "Exportar CSV (RSVP + presentes)",
+      reminderDeadlineLabel: "20 de Julho de 2026",
+    };
+  }
+  if (registryKey === "baby-aylla-couture") {
+    return {
+      title: "Monitorização do aniversário",
+      description:
+        "Acompanhe confirmações de presença para celebrar a Baby Aylla, envie lembretes adequados ao convite e exporte a lista de convidados.",
+      pendingWithoutEmailHint:
+        "Use WhatsApp para um lembrete de confirmação de presença.",
+      exportLabel: "Exportar CSV (convidados + presentes)",
+    };
+  }
+  return {
+    title: "Monitorização RSVP",
+    description:
+      "Acompanhe confirmações do convite digital, envie lembretes manuais por WhatsApp e exporte a lista de convidados quando necessário.",
+    pendingWithoutEmailHint: "Use WhatsApp para relembrar manualmente.",
+    exportLabel: "Exportar CSV (RSVP + presentes)",
+  };
+}
