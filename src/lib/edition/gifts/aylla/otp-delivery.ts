@@ -161,11 +161,16 @@ function resolveSmsConfig(env: AyllaOtpEnv): {
   };
 }
 
+export function isAyllaBrevoOtpEnabled(env: AyllaOtpEnv = process.env): boolean {
+  return env.HAXR_AYLLA_OTP_BREVO_ENABLED?.trim().toLowerCase() === "true";
+}
+
 export function getAyllaOtpDeliveryReadiness(
   env: AyllaOtpEnv = process.env
 ): AyllaOtpDeliveryReadiness {
   const resendReady = Boolean(env.RESEND_API_KEY?.trim());
   const brevoReady =
+    isAyllaBrevoOtpEnabled(env) &&
     Boolean(env.BREVO_API_KEY?.trim()) &&
     env.EMAIL_SEND_MODE?.trim().toLowerCase() === "production";
   const emailReady = resendReady || brevoReady;
@@ -380,6 +385,7 @@ export function createProductionAyllaOtpDeliveryProvider(
         }
 
         if (
+          isAyllaBrevoOtpEnabled(env) &&
           Boolean(env.BREVO_API_KEY?.trim()) &&
           env.EMAIL_SEND_MODE?.trim().toLowerCase() === "production"
         ) {

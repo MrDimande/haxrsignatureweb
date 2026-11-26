@@ -5,7 +5,19 @@ import { resolve } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { CANONICAL_BABY_AYLLA_EVENT_ID } from "../config";
 import { ExternalDeliveryAttemptBlockedError } from "../delivery-barrier";
-import { createProductionAyllaOtpDeliveryProvider } from "../otp-delivery";
+import {
+  createProductionAyllaOtpDeliveryProvider,
+  getAyllaOtpDeliveryReadiness,
+  isAyllaBrevoOtpEnabled,
+} from "../otp-delivery";
+import {
+  getAyllaSyntheticOutboxMessagesForTesting,
+  setCoreAyllaGiftStoreForTesting,
+} from "../instance";
+import {
+  isAyllaGiftRegistryOperational,
+  isAyllaRealDeliveryStagingEnabled,
+} from "../test-activation";
 import { createCoreAyllaGiftService } from "../service";
 import { createInMemoryAyllaGiftStore } from "../store";
 import type { CoreGuestRecord } from "../types";
@@ -28,7 +40,17 @@ function makeGuest(overrides: Partial<CoreGuestRecord> = {}): CoreGuestRecord {
 }
 
 afterEach(() => {
-  delete (process.env as Record<string, string | undefined>).RESEND_API_KEY;
+  const env = process.env as Record<string, string | undefined>;
+  delete env.RESEND_API_KEY;
+  delete env.BREVO_API_KEY;
+  delete env.EMAIL_SEND_MODE;
+  delete env.HAXR_AYLLA_OTP_BREVO_ENABLED;
+  delete env.HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION;
+  delete env.HAXR_AYLLA_GIFT_STAGING_REAL_DELIVERY;
+  delete env.HAXR_AYLLA_GIFT_SYNTHETIC_DELIVERY;
+  delete env.VERCEL_ENV;
+  delete env.VERCEL_TARGET_ENV;
+  setCoreAyllaGiftStoreForTesting(null);
 });
 
 describe("Baby Aylla Release 2 Hardening — Duplicate Contacts, Archived Isolation & OTP Consistency", () => {
@@ -367,5 +389,75 @@ describe("Baby Aylla Release 2 Hardening — Duplicate Contacts, Archived Isolat
     assert.match(sql, /REVOKE ALL ON FUNCTION public\.mark_baby_aylla_challenge_delivered\(uuid\) FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;/);
     assert.match(sql, /REVOKE ALL ON FUNCTION public\.compensate_baby_aylla_failed_challenge\(uuid\) FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;/);
     assert.match(sql, /CREATE OR REPLACE FUNCTION public\.cancel_baby_aylla_gift_verified[\s\S]*archived_at IS NULL[\s\S]*deleted_at IS NULL[\s\S]*is_incorrect = false/);
+  });
+
+  it("disables Brevo fallback exclusively for Aylla OTP even when shared Brevo credentials exist", async () => {
+    const sharedBrevoEnv = {
+      RESEND_API_KEY: "re_test_key",
+      BREVO_API_KEY: "xkeysib_shared_production_service_key",
+      EMAIL_SEND_MODE: "production",
+    };
+
+    assert.equal(isAyllaBrevoOtpEnabled(sharedBrevoEnv), false);
+    assert.equal(
+      isAyllaBrevoOtpEnabled({ ...sharedBrevoEnv, HAXR_AYLLA_OTP_BREVO_ENABLED: "false" }),
+      false
+    );
+    assert.equal(
+      getAyllaOtpDeliveryReadiness({
+        BREVO_API_KEY: "xkeysib_shared_production_service_key",
+        EMAIL_SEND_MODE: "production",
+        HAXR_AYLLA_OTP_BREVO_ENABLED: "false",
+      }).emailReady,
+      false
+    );
+
+    let brevoCalled = false;
+    const provider = createProductionAyllaOtpDeliveryProvider({
+      env: { ...sharedBrevoEnv, HAXR_AYLLA_OTP_BREVO_ENABLED: "false" },
+      sendEmailFn: async () => ({ ok: false, error: "resend_failed" }),
+      sendBrevoEmailFn: async () => {
+        brevoCalled = true;
+        return { ok: true };
+      },
+    });
+    const delivered = await provider.sendVerificationCode(
+      "aylla.test@haxrsignature.test",
+      "654321",
+      new Date(Date.now() + 60_000)
+    );
+    assert.equal(delivered, false);
+    assert.equal(brevoCalled, false);
+  });
+
+  it("supports isolated real-delivery staging gate outside Production without synthetic flags", () => {
+    process.env.HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION = "true";
+    process.env.HAXR_AYLLA_GIFT_STAGING_REAL_DELIVERY = "true";
+
+    assert.equal(isAyllaRealDeliveryStagingEnabled(), true);
+    assert.equal(isAyllaGiftRegistryOperational(), true);
+    assert.equal(getAyllaSyntheticOutboxMessagesForTesting(), null);
+
+    process.env.VERCEL_ENV = "production";
+    assert.equal(isAyllaRealDeliveryStagingEnabled(), false);
+    assert.equal(isAyllaGiftRegistryOperational(), false);
+  });
+
+  it("enforces archived, deleted, and incorrect exclusion in RSVP SQL migration and Neon repository", () => {
+    const rsvpMigrationSql = readFileSync(
+      resolve(
+        process.cwd(),
+        "database/migrations/20261126093000_edition_rsvp_active_guest_isolation.sql"
+      ),
+      "utf8"
+    );
+    assert.match(rsvpMigrationSql, /CREATE OR REPLACE FUNCTION public\.submit_edition_rsvp/);
+    assert.match(rsvpMigrationSql, /archived_at IS NULL[\s\S]*deleted_at IS NULL[\s\S]*is_incorrect = false/);
+
+    const repoSource = readFileSync(
+      resolve(process.cwd(), "src/lib/edition/rsvp/persist.neon.repository.ts"),
+      "utf8"
+    );
+    assert.match(repoSource, /FROM public\.guests[\s\S]*archived_at IS NULL[\s\S]*deleted_at IS NULL[\s\S]*is_incorrect = false/);
   });
 });

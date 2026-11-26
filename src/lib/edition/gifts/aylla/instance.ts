@@ -6,7 +6,10 @@ import {
   normalizeAyllaContactForLookup,
 } from "./otp-delivery";
 import { createNeonAyllaGiftStore } from "./store";
-import { isAyllaTestActivationEnabled } from "./test-activation";
+import {
+  isAyllaRealDeliveryStagingEnabled,
+  isAyllaTestActivationEnabled,
+} from "./test-activation";
 import type { AyllaOtpChannelCapabilities, CoreDeliveryProvider, CoreGiftStore } from "./types";
 
 type AyllaCoreInstanceState = {
@@ -70,7 +73,7 @@ function resolveSupportedChannels(): AyllaOtpChannelCapabilities {
 }
 
 function computeDefaultServiceSignature(channels: AyllaOtpChannelCapabilities): string {
-  return `${Number(isAyllaTestActivationEnabled())}:${Number(channels.email)}:${Number(channels.phone)}`;
+  return `${Number(isAyllaTestActivationEnabled())}:${Number(isAyllaRealDeliveryStagingEnabled())}:${Number(channels.email)}:${Number(channels.phone)}`;
 }
 
 export function setCoreAyllaGiftStoreForTesting(store: CoreGiftStore | null): void {

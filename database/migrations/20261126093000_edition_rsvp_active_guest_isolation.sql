@@ -1,0 +1,193 @@
+-- ==============================================================================
+-- HAXR Core & Edition — RSVP Active Guest Identity Isolation
+-- Prevents public.submit_edition_rsvp from matching or overwriting archived,
+-- soft-deleted, or incorrect guest records while preserving idempotency for
+-- all active edition_rsvp guests across every HAXR event.
+-- ==============================================================================
+-- Preserves exact 11-argument SECURITY DEFINER signature and existing ACL grants.
+-- ==============================================================================
+
+BEGIN;
+
+CREATE OR REPLACE FUNCTION public.submit_edition_rsvp(
+  p_event_id uuid,
+  p_name text,
+  p_name_normalized text,
+  p_attending boolean,
+  p_party_size integer DEFAULT 1,
+  p_edition_slug text DEFAULT ''::text,
+  p_email text DEFAULT ''::text,
+  p_phone text DEFAULT ''::text,
+  p_message_for_bride text DEFAULT ''::text,
+  p_size text DEFAULT ''::text,
+  p_dress_code_confirmed boolean DEFAULT NULL::boolean
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  v_event public.events%ROWTYPE;
+  v_guest public.guests%ROWTYPE;
+  v_name text;
+  v_normalized text;
+  v_status public.guest_status;
+  v_plus_ones integer;
+  v_notes text;
+  v_created boolean := false;
+  v_guest_id uuid;
+  v_message text;
+  v_size text;
+BEGIN
+  v_name := trim(coalesce(p_name, ''));
+  v_normalized := trim(coalesce(p_name_normalized, ''));
+  v_message := left(trim(coalesce(p_message_for_bride, '')), 280);
+  v_size := left(trim(coalesce(p_size, '')), 12);
+
+  IF length(v_name) < 2 THEN
+    RETURN json_build_object('ok', false, 'error', 'invalid_name');
+  END IF;
+
+  IF v_normalized = '' THEN
+    RETURN json_build_object('ok', false, 'error', 'invalid_name_normalized');
+  END IF;
+
+  SELECT *
+  INTO v_event
+  FROM public.events
+  WHERE id = p_event_id
+    AND is_active = true;
+
+  IF NOT FOUND THEN
+    RETURN json_build_object('ok', false, 'error', 'event_not_found');
+  END IF;
+
+  IF p_attending THEN
+    IF p_party_size IS NULL OR p_party_size < 1 OR p_party_size > 10 THEN
+      RETURN json_build_object('ok', false, 'error', 'invalid_party_size');
+    END IF;
+    v_status := 'confirmed';
+    v_plus_ones := greatest(0, p_party_size - 1);
+  ELSE
+    v_status := 'declined';
+    v_plus_ones := 0;
+  END IF;
+
+  v_notes := trim(
+    coalesce(nullif(p_edition_slug, ''), 'edition')
+    || ' · convite digital · '
+    || to_char(now() AT TIME ZONE 'Africa/Maputo', 'YYYY-MM-DD HH24:MI')
+  );
+
+  IF v_message <> '' THEN
+    v_notes := v_notes || E'\nMensagem: ' || v_message;
+  END IF;
+
+  IF v_size <> '' THEN
+    v_notes := v_notes || E'\nTamanho: ' || v_size;
+  END IF;
+
+  IF p_dress_code_confirmed IS NOT NULL THEN
+    v_notes := v_notes || E'\nDress code: '
+      || CASE
+           WHEN p_dress_code_confirmed THEN 'confirmado (uma peça rosa)'
+           ELSE 'não confirmado'
+         END;
+  END IF;
+
+  SELECT *
+  INTO v_guest
+  FROM public.guests
+  WHERE event_id = p_event_id
+    AND guest_source = 'edition_rsvp'
+    AND name_normalized = v_normalized
+    AND archived_at IS NULL
+    AND deleted_at IS NULL
+    AND is_incorrect = false
+  ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+  LIMIT 1;
+
+  IF FOUND THEN
+    UPDATE public.guests
+    SET
+      name = v_name,
+      email = coalesce(nullif(trim(p_email), ''), email),
+      phone = coalesce(nullif(trim(p_phone), ''), phone),
+      status = v_status,
+      plus_ones = v_plus_ones,
+      guest_notes = v_notes,
+      updated_at = now()
+    WHERE id = v_guest.id
+    RETURNING id INTO v_guest_id;
+  ELSE
+    INSERT INTO public.guests (
+      event_id,
+      name,
+      name_normalized,
+      email,
+      phone,
+      qr_token,
+      status,
+      plus_ones,
+      guest_notes,
+      guest_source
+    ) VALUES (
+      p_event_id,
+      v_name,
+      v_normalized,
+      coalesce(trim(p_email), ''),
+      coalesce(trim(p_phone), ''),
+      public.generate_guest_qr_token(),
+      v_status,
+      v_plus_ones,
+      v_notes,
+      'edition_rsvp'
+    )
+    RETURNING id INTO v_guest_id;
+
+    v_created := true;
+  END IF;
+
+  INSERT INTO public.guest_audit_log (
+    guest_id,
+    event_id,
+    guest_name,
+    action,
+    details
+  ) VALUES (
+    v_guest_id,
+    p_event_id,
+    v_name,
+    CASE
+      WHEN v_created THEN 'RSVP Edition · novo convidado'
+      ELSE 'RSVP Edition · actualizado'
+    END,
+    CASE
+      WHEN p_attending THEN
+        'Confirmado via edition ('
+        || coalesce(nullif(p_edition_slug, ''), 'convite')
+        || ') · '
+        || p_party_size::text
+        || ' pessoa(s)'
+        || CASE WHEN v_message <> '' THEN ' · mensagem' ELSE '' END
+        || CASE WHEN v_size <> '' THEN ' · tamanho ' || v_size ELSE '' END
+      ELSE
+        'Declinou via edition ('
+        || coalesce(nullif(p_edition_slug, ''), 'convite')
+        || ')'
+    END
+  );
+
+  RETURN json_build_object(
+    'ok', true,
+    'guestId', v_guest_id,
+    'status', v_status,
+    'created', v_created,
+    'partySize', CASE WHEN p_attending THEN p_party_size ELSE 0 END,
+    'plusOnes', v_plus_ones
+  );
+END;
+$function$;
+
+COMMIT;
