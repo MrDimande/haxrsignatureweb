@@ -6,6 +6,7 @@ import {
 
 const BRAND = "HAXR Signature";
 const SANDBOX_FROM = `${BRAND} <onboarding@resend.dev>`;
+const DEFAULT_RESEND_TIMEOUT_MS = 10_000;
 
 export function getResendClient(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -41,6 +42,7 @@ export type SendHaxrEmailInput = {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
   replyTo?: string | string[];
   cc?: string | string[];
   bcc?: string | string[];
@@ -70,23 +72,44 @@ export async function sendHaxrEmail(
       : [input.bcc]
     : undefined;
 
-  const result = await resend.emails.send({
-    from: resolveFrom(input.channel),
-    to,
-    cc,
-    bcc,
-    subject: input.subject,
-    html: input.html,
-    replyTo: input.replyTo,
-    attachments: input.attachments?.map((attachment) => ({
-      filename: attachment.filename,
-      content: attachment.content,
-    })),
-  });
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const sendPromise = resend.emails.send({
+      from: resolveFrom(input.channel),
+      to,
+      cc,
+      bcc,
+      subject: input.subject,
+      html: input.html,
+      ...(input.text ? { text: input.text } : {}),
+      replyTo: input.replyTo,
+      attachments: input.attachments?.map((attachment) => ({
+        filename: attachment.filename,
+        content: attachment.content,
+      })),
+    });
 
-  if (result.error) {
-    return { ok: false, error: result.error.message };
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error("Resend delivery timeout"));
+      }, DEFAULT_RESEND_TIMEOUT_MS);
+    });
+
+    const result = await Promise.race([sendPromise, timeoutPromise]);
+
+    if (result.error) {
+      return { ok: false, error: result.error.message };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Erro ao enviar e-mail via Resend",
+    };
+  } finally {
+    if (timeoutHandle !== undefined) {
+      clearTimeout(timeoutHandle);
+    }
   }
-
-  return { ok: true };
 }

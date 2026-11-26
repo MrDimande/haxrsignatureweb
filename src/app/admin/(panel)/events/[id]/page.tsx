@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import { getCurrentAdminIdentity } from "@/lib/admin/admin-identity.server";
+import { loadAyllaGiftAdminSnapshot } from "@/lib/edition/gifts/aylla/admin-store";
+import { AYLLA_GIFTS_CONFIG } from "@/lib/edition/gifts/aylla/config";
 import * as eventsRepo from "@/lib/events/repositories/events.repository";
 import * as groupsRepo from "@/lib/events/repositories/guest-groups.repository";
 import { listEditionGiftReservations } from "@/lib/events/repositories/edition-gifts.repository";
@@ -89,6 +92,19 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
           () => []
         )
       : [];
+
+    const isAyllaEvent =
+      id === AYLLA_GIFTS_CONFIG.eventId ||
+      event.editionRegistryKey === AYLLA_GIFTS_CONFIG.registryKey;
+    const adminIdentity = isAyllaEvent
+      ? await getCurrentAdminIdentity().catch(() => null)
+      : null;
+    const ayllaGiftAdminSnapshot = isAyllaEvent
+      ? await loadAyllaGiftAdminSnapshot(
+          id,
+          adminIdentity?.isPersisted ? adminIdentity.id : null
+        )
+      : null;
 
     const reviewQueue = await buildGuestReviewQueue(id, guests).catch(() => ({
       items: [],
@@ -187,6 +203,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
         businesses={businesses.map((b) => ({ id: b.id, name: b.name }))}
         clients={clients}
         giftReservations={giftReservations}
+        ayllaGiftAdminSnapshot={ayllaGiftAdminSnapshot}
         conciergeReviews={conciergeReviews}
         conciergeVendors={conciergeVendors}
         conciergeChecklist={conciergeChecklist}

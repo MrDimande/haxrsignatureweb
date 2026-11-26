@@ -47,6 +47,9 @@ export async function loadEventGuestCandidates(
         qr_token
       FROM public.guests
       WHERE event_id = $1::uuid
+        AND archived_at IS NULL
+        AND deleted_at IS NULL
+        AND is_incorrect = false
     `,
     [eventId],
   );
@@ -132,6 +135,9 @@ export async function updateEditionGuest(
         updated_at = now()
       WHERE id = $1::uuid
         AND event_id = $2::uuid
+        AND archived_at IS NULL
+        AND deleted_at IS NULL
+        AND is_incorrect = false
       RETURNING id::text AS id
     `,
     [
