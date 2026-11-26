@@ -50,7 +50,9 @@ export const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
   "dior-collection-rosa": "babyaylla",
 };
 
-export const ALIAS_INDEX: Record<string, string> = {};
+export const ALIAS_INDEX: Record<string, string> = {
+  "baby-aylla-couture": "babyaylla",
+};
 
 const SLUG_BINDINGS: Record<string, EditionSlugBinding> = {
   jessicakulaya: {
@@ -126,8 +128,8 @@ const SLUG_BINDINGS: Record<string, EditionSlugBinding> = {
   },
   babyaylla: {
     slug: "babyaylla",
-    adminEventName: "Edition · Aniversário · Baby Aylla",
-    clientName: "Baby Aylla",
+    adminEventName: "Baby Aylla — ÉDITION ROSE",
+    clientName: "Baby Aylla — ÉDITION ROSE",
     envVar: "EDITION_EVENT_AYLLA_ID",
   },
 };

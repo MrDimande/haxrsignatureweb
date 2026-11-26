@@ -118,6 +118,13 @@ export const EDITION_INVITE_CATALOG: Readonly<
     status: "active",
     experienceType: "invitation",
   },
+  "baby-aylla-couture": {
+    registryKey: "baby-aylla-couture",
+    inviteSlug: "babyaylla",
+    label: "Baby Aylla — ÉDITION ROSE",
+    status: "active",
+    experienceType: "invitation",
+  },
   "neidy-jose-vinculo": {
     registryKey: "neidy-jose-vinculo",
     inviteSlug: "neidyejosewedding",
