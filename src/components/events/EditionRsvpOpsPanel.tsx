@@ -12,6 +12,7 @@ import {
   buildEditionOpenRsvpReminderMessage,
   buildEditionWhatsAppUrl,
   buildEditionInviteUrl,
+  getEditionRsvpOperationsCopy,
 } from "@/lib/events/edition-links";
 import type { EventGuest, EventStats, ManagedEvent } from "@/lib/events/types";
 
@@ -23,7 +24,6 @@ type EditionRsvpOpsPanelProps = {
   onOpenReport?: () => void;
 };
 
-const FAREWELL_RSVP_DEADLINE = "20 de Julho de 2026";
 
 export default function EditionRsvpOpsPanel({
   event,
@@ -34,6 +34,7 @@ export default function EditionRsvpOpsPanel({
 }: EditionRsvpOpsPanelProps) {
   const registryKey = event.editionRegistryKey;
   const inviteUrl = registryKey ? buildEditionInviteUrl(registryKey) : null;
+  const copy = getEditionRsvpOperationsCopy(registryKey);
 
   const pendingGuests = useMemo(
     () => guests.filter((g) => g.status === "invited"),
@@ -63,7 +64,9 @@ export default function EditionRsvpOpsPanel({
         event,
         guest,
         registryKey,
-        { deadlineLabel: FAREWELL_RSVP_DEADLINE }
+        copy.reminderDeadlineLabel
+          ? { deadlineLabel: copy.reminderDeadlineLabel }
+          : undefined
       );
       if (!message) continue;
       const url = buildEditionWhatsAppUrl(guest.phone, message);
@@ -80,11 +83,10 @@ export default function EditionRsvpOpsPanel({
             Edition · Operações RSVP
           </p>
           <h3 className="font-serif text-xl font-light text-white/90">
-            Monitorização da despedida
+            {copy.title}
           </h3>
           <p className="text-sm text-grey/55 mt-2 leading-relaxed max-w-2xl">
-            Acompanhe confirmações do convite digital, lembrete manual por
-            WhatsApp (sem email) e exportação final para a Jessica.
+            {copy.description}
           </p>
         </div>
       </div>
@@ -148,8 +150,7 @@ export default function EditionRsvpOpsPanel({
                 lembrete não as alcança.
               </p>
               <p className="text-xs text-grey/50 mt-1">
-                Use WhatsApp para relembrar manualmente (prazo RSVP:{" "}
-                {FAREWELL_RSVP_DEADLINE}).
+                {copy.pendingWithoutEmailHint}
               </p>
             </div>
           </div>
@@ -186,7 +187,7 @@ export default function EditionRsvpOpsPanel({
           className="admin-btn-primary"
         >
           <FileSpreadsheet className="w-4 h-4" />
-          Exportar CSV (RSVP + presentes)
+          {copy.exportLabel}
         </button>
       </div>
     </section>
