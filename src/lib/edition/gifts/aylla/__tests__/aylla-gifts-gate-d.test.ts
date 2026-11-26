@@ -50,6 +50,7 @@ function makeInventoryItem(overrides: Partial<CoreGiftInventoryRecord> = {}): Co
 }
 
 const trackedEnvKeys = [
+  "HAXR_AYLLA_GIFT_PROXY_SECRET",
   "HAXR_EDITION_PROXY_SECRET",
   "HAXR_AYLLA_GIFT_PEPPER",
   "HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION",
@@ -61,7 +62,8 @@ const trackedEnvKeys = [
 
 describe("HAXR Core — Baby Aylla Gift Registry Gate D Integration", () => {
   beforeEach(() => {
-    process.env.HAXR_EDITION_PROXY_SECRET = TEST_SECRET;
+    process.env.HAXR_AYLLA_GIFT_PROXY_SECRET = TEST_SECRET;
+    process.env.HAXR_EDITION_PROXY_SECRET = "unrelated-global-rsvp-secret-32";
     process.env.HAXR_AYLLA_GIFT_PEPPER = TEST_PEPPER;
   });
 

@@ -65,28 +65,70 @@ export function setAyllaProxySecretForTesting(secret: string | null): void {
 }
 
 /**
+ * Strict header parser for Baby Aylla Gift & Identity routes.
+ * Rejects malformed schemes, empty header values, duplicate values, or contradictory
+ * Authorization vs x-haxr-edition-proxy credentials.
+ */
+function readStrictAyllaProxySecretFromRequest(
+  request: Request
+): { ok: true; secret: string } | { ok: false; reason: "missing" | "invalid" } {
+  const hasAuthorization = request.headers.has("authorization");
+  const rawAuthorization = request.headers.get("authorization")?.trim() ?? "";
+  const hasProxyHeader = request.headers.has("x-haxr-edition-proxy");
+  const rawProxyHeader = request.headers.get("x-haxr-edition-proxy")?.trim() ?? "";
+
+  let bearerSecret = "";
+  if (hasAuthorization) {
+    const bearerMatch = /^bearer\s+(\S+)$/i.exec(rawAuthorization);
+    if (!bearerMatch || bearerMatch[1].includes(",")) {
+      return { ok: false, reason: "invalid" };
+    }
+    bearerSecret = bearerMatch[1];
+  }
+
+  let proxySecret = "";
+  if (hasProxyHeader) {
+    if (!rawProxyHeader || /[\s,]/.test(rawProxyHeader)) {
+      return { ok: false, reason: "invalid" };
+    }
+    proxySecret = rawProxyHeader;
+  }
+
+  if (bearerSecret && proxySecret && !timingSafeEqual(bearerSecret, proxySecret)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const presented = bearerSecret || proxySecret;
+  if (!presented) {
+    return { ok: false, reason: "missing" };
+  }
+
+  return { ok: true, secret: presented };
+}
+
+/**
  * Strict fail-closed validator for Baby Aylla Gift & Identity routes.
- * Requires mutual service authentication in ALL environments (dev, preview, test, prod).
- * Never permits unconfigured bypass, missing secret, or environment downgrade.
+ * Uses HAXR_AYLLA_GIFT_PROXY_SECRET exclusively (never falls back to
+ * HAXR_EDITION_PROXY_SECRET) and requires mutual authentication in ALL environments.
  */
 export function validateAyllaProxyRequest(
   request: Request
 ): EditionProxyAuthResult {
   const configured =
     ayllaTestProxySecretOverride !== null
-      ? ayllaTestProxySecretOverride
-      : process.env.HAXR_EDITION_PROXY_SECRET?.trim();
+      ? ayllaTestProxySecretOverride.trim()
+      : process.env.HAXR_AYLLA_GIFT_PROXY_SECRET?.trim();
 
   if (!configured) {
     return { ok: false, reason: "missing" };
   }
 
-  const presented = readProxySecretFromRequest(request);
-  if (!presented) {
-    return { ok: false, reason: "missing" };
+  const presented = readStrictAyllaProxySecretFromRequest(request);
+  if (!presented.ok) {
+    return { ok: false, reason: presented.reason };
   }
 
-  if (!timingSafeEqual(presented, configured)) {
+  if (!timingSafeEqual(presented.secret, configured)) {
     return { ok: false, reason: "invalid" };
   }
 
