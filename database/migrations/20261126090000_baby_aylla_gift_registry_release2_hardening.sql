@@ -219,6 +219,7 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_session public.edition_guest_sessions;
+  v_guest public.guests;
   v_now timestamptz := clock_timestamp();
 BEGIN
   IF p_session_id IS NULL OR length(COALESCE(p_secret_proof, '')) < 32 OR length(p_secret_proof) > 256 THEN
@@ -236,16 +237,30 @@ BEGIN
     RETURN;
   END IF;
 
-  RETURN QUERY
-  SELECT v_session.id, v_session.event_id, g.id, v_session.expires_at,
-         g.name, COALESCE(g.phone, g.email, g.name), g.status, g.guest_source,
-         (g.archived_at IS NOT NULL), (g.deleted_at IS NOT NULL), g.is_incorrect
+  SELECT g.* INTO v_guest
   FROM public.guests AS g
-  WHERE g.id = v_session.guest_id
-    AND g.event_id = v_session.event_id
-    AND g.archived_at IS NULL
-    AND g.deleted_at IS NULL
-    AND g.is_incorrect = false;
+  WHERE g.id = v_session.guest_id;
+
+  IF NOT FOUND
+     OR v_guest.event_id <> v_session.event_id
+     OR v_guest.event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+     OR v_guest.status <> 'confirmed'
+     OR v_guest.guest_source <> 'edition_rsvp'
+     OR v_guest.archived_at IS NOT NULL
+     OR v_guest.deleted_at IS NOT NULL
+     OR v_guest.is_incorrect = true THEN
+    UPDATE public.edition_guest_sessions AS s
+    SET revoked_at = v_now
+    WHERE s.id = v_session.id
+      AND s.revoked_at IS NULL;
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT v_session.id, v_session.event_id, v_guest.id, v_session.expires_at,
+         v_guest.name, COALESCE(v_guest.phone, v_guest.email, v_guest.name),
+         v_guest.status, v_guest.guest_source,
+         (v_guest.archived_at IS NOT NULL), (v_guest.deleted_at IS NOT NULL), v_guest.is_incorrect;
 END;
 $$;
 
@@ -437,6 +452,10 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_challenge public.edition_guest_verification_challenges;
+  v_guest public.guests;
+  v_guest_digits text;
+  v_guest_canon text;
+  v_ambiguous boolean := false;
   v_now timestamptz := clock_timestamp();
 BEGIN
   IF p_challenge_id IS NULL OR length(COALESCE(p_verifier_hash, '')) < 32 OR length(p_verifier_hash) > 256 THEN
@@ -459,15 +478,64 @@ BEGIN
     RETURN;
   END IF;
 
-  PERFORM 1 FROM public.guests AS g
+  SELECT g.* INTO v_guest
+  FROM public.guests AS g
   WHERE g.id = v_challenge.guest_id
     AND g.event_id = v_challenge.event_id
+    AND g.event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
     AND g.status = 'confirmed'
     AND g.guest_source = 'edition_rsvp'
     AND g.archived_at IS NULL
     AND g.deleted_at IS NULL
     AND g.is_incorrect = false;
   IF NOT FOUND THEN
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid;
+    RETURN;
+  END IF;
+
+  v_guest_digits := regexp_replace(regexp_replace(COALESCE(v_guest.phone, ''), '^00', ''), '\D', '', 'g');
+  IF length(v_guest_digits) = 9 AND v_guest_digits ~ '^8[2-7][0-9]{7}$' THEN
+    v_guest_canon := '258' || v_guest_digits;
+  ELSIF length(v_guest_digits) = 10 AND v_guest_digits ~ '^08[2-7][0-9]{7}$' THEN
+    v_guest_canon := '258' || substr(v_guest_digits, 2);
+  ELSE
+    v_guest_canon := v_guest_digits;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.guests AS g2
+    WHERE g2.event_id = v_challenge.event_id
+      AND g2.id <> v_guest.id
+      AND g2.status = 'confirmed'
+      AND g2.guest_source = 'edition_rsvp'
+      AND g2.archived_at IS NULL
+      AND g2.deleted_at IS NULL
+      AND g2.is_incorrect = false
+      AND (
+        (trim(COALESCE(v_guest.email, '')) <> '' AND lower(trim(COALESCE(g2.email, ''))) = lower(trim(v_guest.email)))
+        OR (
+          length(v_guest_canon) >= 8
+          AND (
+            CASE
+              WHEN length(regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')) = 9
+                AND regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g') ~ '^8[2-7][0-9]{7}$'
+                THEN '258' || regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')
+              WHEN length(regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')) = 10
+                AND regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g') ~ '^08[2-7][0-9]{7}$'
+                THEN '258' || substr(regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g'), 2)
+              ELSE regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')
+            END
+          ) = v_guest_canon
+        )
+      )
+  ) INTO v_ambiguous;
+
+  IF v_ambiguous THEN
+    UPDATE public.edition_guest_verification_challenges AS c
+    SET consumed_at = COALESCE(c.consumed_at, v_now),
+        delivery_failed_at = COALESCE(c.delivery_failed_at, v_now)
+    WHERE c.id = p_challenge_id;
     RETURN QUERY SELECT false, NULL::uuid, NULL::uuid;
     RETURN;
   END IF;
@@ -501,6 +569,9 @@ SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_challenge public.edition_guest_verification_challenges;
+  v_guest public.guests;
+  v_guest_digits text;
+  v_guest_canon text;
   v_now timestamptz := clock_timestamp();
   v_expires_at timestamptz := v_now + interval '20 minutes';
 BEGIN
@@ -516,12 +587,53 @@ BEGIN
     RAISE EXCEPTION 'invalid event scope for session' USING ERRCODE = '42501';
   END IF;
 
-  PERFORM 1 FROM public.guests
+  SELECT * INTO v_guest
+  FROM public.guests
   WHERE id = p_guest_id AND event_id = p_event_id
     AND status = 'confirmed' AND guest_source = 'edition_rsvp'
     AND archived_at IS NULL AND deleted_at IS NULL AND is_incorrect = false;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'guest is not eligible for session issuance' USING ERRCODE = '42501';
+  END IF;
+
+  v_guest_digits := regexp_replace(regexp_replace(COALESCE(v_guest.phone, ''), '^00', ''), '\D', '', 'g');
+  IF length(v_guest_digits) = 9 AND v_guest_digits ~ '^8[2-7][0-9]{7}$' THEN
+    v_guest_canon := '258' || v_guest_digits;
+  ELSIF length(v_guest_digits) = 10 AND v_guest_digits ~ '^08[2-7][0-9]{7}$' THEN
+    v_guest_canon := '258' || substr(v_guest_digits, 2);
+  ELSE
+    v_guest_canon := v_guest_digits;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.guests AS g2
+    WHERE g2.event_id = p_event_id
+      AND g2.id <> v_guest.id
+      AND g2.status = 'confirmed'
+      AND g2.guest_source = 'edition_rsvp'
+      AND g2.archived_at IS NULL
+      AND g2.deleted_at IS NULL
+      AND g2.is_incorrect = false
+      AND (
+        (trim(COALESCE(v_guest.email, '')) <> '' AND lower(trim(COALESCE(g2.email, ''))) = lower(trim(v_guest.email)))
+        OR (
+          length(v_guest_canon) >= 8
+          AND (
+            CASE
+              WHEN length(regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')) = 9
+                AND regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g') ~ '^8[2-7][0-9]{7}$'
+                THEN '258' || regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')
+              WHEN length(regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')) = 10
+                AND regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g') ~ '^08[2-7][0-9]{7}$'
+                THEN '258' || substr(regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g'), 2)
+              ELSE regexp_replace(regexp_replace(COALESCE(g2.phone, ''), '^00', ''), '\D', '', 'g')
+            END
+          ) = v_guest_canon
+        )
+      )
+  ) THEN
+    RAISE EXCEPTION 'guest contact is ambiguous across multiple active guests' USING ERRCODE = '42501';
   END IF;
 
   SELECT * INTO v_challenge
@@ -552,6 +664,54 @@ BEGIN
   RETURN p_id;
 END;
 $$;
+
+-- 5.5 Immediate permanent session & pending-challenge revocation when a Baby Aylla guest loses eligibility
+CREATE OR REPLACE FUNCTION public.revoke_baby_aylla_sessions_on_guest_ineligibility()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+  v_now timestamptz := clock_timestamp();
+BEGIN
+  IF TG_OP = 'DELETE'
+     OR NEW.event_id <> 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid
+     OR NEW.status <> 'confirmed'
+     OR NEW.guest_source <> 'edition_rsvp'
+     OR NEW.archived_at IS NOT NULL
+     OR NEW.deleted_at IS NOT NULL
+     OR NEW.is_incorrect = true THEN
+    UPDATE public.edition_guest_sessions
+    SET revoked_at = COALESCE(revoked_at, v_now)
+    WHERE event_id = OLD.event_id
+      AND guest_id = OLD.id
+      AND revoked_at IS NULL;
+
+    UPDATE public.edition_guest_verification_challenges
+    SET consumed_at = COALESCE(consumed_at, v_now),
+        delivery_failed_at = COALESCE(delivery_failed_at, v_now)
+    WHERE event_id = OLD.event_id
+      AND guest_id = OLD.id
+      AND consumed_at IS NULL;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_revoke_baby_aylla_sessions_on_guest_ineligibility ON public.guests;
+CREATE TRIGGER trg_revoke_baby_aylla_sessions_on_guest_ineligibility
+  AFTER UPDATE ON public.guests
+  FOR EACH ROW
+  WHEN (OLD.event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid)
+  EXECUTE FUNCTION public.revoke_baby_aylla_sessions_on_guest_ineligibility();
+
+REVOKE ALL ON FUNCTION public.revoke_baby_aylla_sessions_on_guest_ineligibility()
+  FROM PUBLIC, haxr_aylla_gift_issuer, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;
 
 -- 6. Strict Least-Privilege Permission Re-assertion
 REVOKE ALL ON FUNCTION public.resolve_baby_aylla_guest_by_contact(text) FROM PUBLIC, haxr_aylla_gift_admin;

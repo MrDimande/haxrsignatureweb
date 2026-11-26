@@ -624,6 +624,9 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
     audits.push({ ...a });
   }
 
+  const getGuestList = (): CoreGuestRecord[] =>
+    seed?.guests ? seed.guests : Array.from(guests.values());
+
   return {
     async checkRateLimit(key, limit, windowMs) {
       if (limit < 1 || windowMs < 1) return false;
@@ -637,10 +640,11 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       return existing.count <= limit;
     },
     async findGuestByContact(eventId, contact) {
-      const list = guestsByContact.get(`${eventId}:contact:${normalizeAyllaContactForLookup(contact)}`);
-      if (!list || list.length === 0) return null;
-      const eligible = list.filter(
+      const targetContact = normalizeAyllaContactForLookup(contact);
+      const eligible = getGuestList().filter(
         (g) =>
+          g.eventId === eventId &&
+          normalizeAyllaContactForLookup(g.contact) === targetContact &&
           !g.archived &&
           !g.deleted &&
           !g.incorrect &&
@@ -650,7 +654,7 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       return eligible.length === 1 ? { ...eligible[0] } : null;
     },
     async getGuestById(eventId, guestId) {
-      const guest = guests.get(`${eventId}:${guestId}`);
+      const guest = getGuestList().find((g) => g.eventId === eventId && g.id === guestId) ?? guests.get(`${eventId}:${guestId}`);
       if (!guest || guest.archived || guest.deleted || guest.incorrect) return null;
       return { ...guest };
     },
@@ -724,8 +728,23 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       ) {
         return { consumed: false };
       }
-      const guest = guests.get(`${c.eventId}:${c.guestId}`);
+      const guest = getGuestList().find((g) => g.eventId === c.eventId && g.id === c.guestId) ?? guests.get(`${c.eventId}:${c.guestId}`);
       if (!guest || guest.archived || guest.deleted || guest.incorrect || guest.status !== "confirmed" || guest.source !== "edition_rsvp") {
+        return { consumed: false };
+      }
+      const targetContact = normalizeAyllaContactForLookup(guest.contact);
+      const eligibleMatches = getGuestList().filter(
+        (g) =>
+          g.eventId === c.eventId &&
+          normalizeAyllaContactForLookup(g.contact) === targetContact &&
+          !g.archived &&
+          !g.deleted &&
+          !g.incorrect &&
+          g.status === "confirmed" &&
+          g.source === "edition_rsvp"
+      );
+      if (eligibleMatches.length !== 1) {
+        c.consumedAt = currentTime;
         return { consumed: false };
       }
       if (c.verifierHash !== verifierHash) {
@@ -783,8 +802,11 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       if (session.secretHash !== input.secretProof) {
         return null;
       }
-      const guest = guests.get(`${session.eventId}:${session.guestId}`);
+      const guest =
+        getGuestList().find((g) => g.eventId === session.eventId && g.id === session.guestId) ??
+        guests.get(`${session.eventId}:${session.guestId}`);
       if (!guest || guest.archived || guest.deleted || guest.incorrect) {
+        session.revokedAt = session.revokedAt ?? new Date();
         return null;
       }
       return { ...guest };
@@ -899,8 +921,11 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       if (!session || session.secretHash !== input.secretHash || session.expiresAt <= new Date() || session.revokedAt !== null) {
         throw new Error("verified guest session required");
       }
-      const guest = guests.get(`${session.eventId}:${session.guestId}`);
+      const guest =
+        getGuestList().find((g) => g.eventId === session.eventId && g.id === session.guestId) ??
+        guests.get(`${session.eventId}:${session.guestId}`);
       if (!guest || guest.status !== "confirmed" || guest.source !== "edition_rsvp" || guest.archived || guest.deleted || guest.incorrect) {
+        session.revokedAt = session.revokedAt ?? new Date();
         throw new Error("guest is not eligible");
       }
       for (const r of reservations.values()) {
@@ -955,8 +980,11 @@ export function createInMemoryAyllaGiftStore(seed?: InMemorySeedData): CoreGiftS
       if (!session || session.secretHash !== input.secretHash || session.expiresAt <= new Date() || session.revokedAt !== null) {
         throw new Error("verified guest session required");
       }
-      const guest = guests.get(`${session.eventId}:${session.guestId}`);
+      const guest =
+        getGuestList().find((g) => g.eventId === session.eventId && g.id === session.guestId) ??
+        guests.get(`${session.eventId}:${session.guestId}`);
       if (!guest || guest.archived || guest.deleted || guest.incorrect || guest.status !== "confirmed" || guest.source !== "edition_rsvp") {
+        session.revokedAt = session.revokedAt ?? new Date();
         throw new Error("guest is not eligible");
       }
       const res = reservations.get(input.reservationId);

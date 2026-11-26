@@ -297,6 +297,11 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       return { outcome: "verification_required" };
     }
 
+    const uniqueByContact = await store.findGuestByContact(eventId, guest.contact);
+    if (!uniqueByContact || uniqueByContact.id !== guest.id) {
+      return { outcome: "verification_required" };
+    }
+
     const sessionId = randomUUID();
     const secret = secretGen();
     const sessionExpiresAt = new Date(currentTime.getTime() + SESSION_TTL_MS);
@@ -317,6 +322,18 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       sessionToken: `${sessionId}.${secret}`,
       expiresAt: sessionExpiresAt.toISOString(),
     };
+  }
+
+  async function revokeSessionProof(sessionId: string, secretProof: string): Promise<boolean> {
+    if (store.revokeSessionVerified) {
+      return await store.revokeSessionVerified({
+        sessionId,
+        secretProof,
+        now: now(),
+      });
+    }
+    await store.revokeSession(sessionId, now(), secretProof);
+    return true;
   }
 
   /**
@@ -341,10 +358,8 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
       if (!guest) {
         return { valid: false, reason: "session_expired" };
       }
-      if (guest.eventId !== AYLLA_GIFTS_CONFIG.eventId) {
-        return { valid: false, reason: "access_denied" };
-      }
       if (!isEligibleGuest(guest)) {
+        await revokeSessionProof(parsed.sessionId, secretProof);
         return { valid: false, reason: "access_denied" };
       }
       return { valid: true, guest, sessionId: parsed.sessionId };
@@ -362,11 +377,13 @@ export function createCoreAyllaGiftService(config: CoreAyllaGiftServiceConfig) {
     }
 
     if (session.eventId !== AYLLA_GIFTS_CONFIG.eventId) {
+      await revokeSessionProof(session.id, secretProof);
       return { valid: false, reason: "access_denied" };
     }
 
     const guest = await store.getGuestById(session.eventId, session.guestId);
     if (!isEligibleGuest(guest)) {
+      await revokeSessionProof(session.id, secretProof);
       return { valid: false, reason: "access_denied" };
     }
 

@@ -216,11 +216,21 @@ describe("Baby Aylla Release 2 Hardening — Duplicate Contacts, Archived Isolat
     const sessionSecretHash = createHmac("sha256", TEST_PEPPER).update("proof").digest("base64url");
     const seededResId = randomUUID();
     const seededSessionId = randomUUID();
+    const seededCancelSessionId = randomUUID();
     const cancelStore = createInMemoryAyllaGiftStore({
       guests: [archivedWithSession],
       sessions: [
         {
           id: seededSessionId,
+          eventId: CANONICAL_BABY_AYLLA_EVENT_ID,
+          guestId: archivedWithSession.id,
+          secretHash: sessionSecretHash,
+          expiresAt: new Date(Date.now() + 600_000),
+          revokedAt: null,
+          createdAt: new Date(),
+        },
+        {
+          id: seededCancelSessionId,
           eventId: CANONICAL_BABY_AYLLA_EVENT_ID,
           guestId: archivedWithSession.id,
           secretHash: sessionSecretHash,
@@ -251,10 +261,11 @@ describe("Baby Aylla Release 2 Hardening — Duplicate Contacts, Archived Isolat
       }),
       null
     );
+    assert.ok((await cancelStore.getSession(seededSessionId))?.revokedAt instanceof Date);
     await assert.rejects(
       () =>
         cancelStore.cancelVerified({
-          sessionId: seededSessionId,
+          sessionId: seededCancelSessionId,
           secretHash: sessionSecretHash,
           reservationId: seededResId,
         }),
@@ -389,6 +400,121 @@ describe("Baby Aylla Release 2 Hardening — Duplicate Contacts, Archived Isolat
     assert.match(sql, /REVOKE ALL ON FUNCTION public\.mark_baby_aylla_challenge_delivered\(uuid\) FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;/);
     assert.match(sql, /REVOKE ALL ON FUNCTION public\.compensate_baby_aylla_failed_challenge\(uuid\) FROM PUBLIC, haxr_aylla_gift_runtime, haxr_aylla_gift_admin;/);
     assert.match(sql, /CREATE OR REPLACE FUNCTION public\.cancel_baby_aylla_gift_verified[\s\S]*archived_at IS NULL[\s\S]*deleted_at IS NULL[\s\S]*is_incorrect = false/);
+    assert.match(sql, /CREATE OR REPLACE FUNCTION public\.resolve_baby_aylla_guest_session[\s\S]*UPDATE public\.edition_guest_sessions AS s[\s\S]*SET revoked_at = v_now/);
+    assert.match(sql, /CREATE OR REPLACE FUNCTION public\.verify_and_consume_baby_aylla_challenge[\s\S]*IF v_ambiguous THEN/);
+    assert.match(sql, /CREATE TRIGGER trg_revoke_baby_aylla_sessions_on_guest_ineligibility[\s\S]*WHEN \(OLD\.event_id = 'a0f6b5a9-4d8c-4501-81b6-52929fa9da38'::uuid\)/);
+  });
+
+  it("permanently revokes session on eligibility loss (never reactivating after restore) and blocks pre-conflict ambiguous challenges", async () => {
+    process.env.HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION = "true";
+    process.env.HAXR_AYLLA_GIFT_SYNTHETIC_DELIVERY = "true";
+
+    const guestA = makeGuest({ name: "Convidada Elegível A", contact: "elegivel-a@haxrsignature.test" });
+    const guestB = makeGuest({ name: "Convidada B", contact: "elegivel-b@haxrsignature.test" });
+    const foreignGuest = {
+      ...makeGuest({ name: "Convidado Outro Evento", contact: "foreign@haxrsignature.test" }),
+      eventId: "11111111-1111-4111-8111-111111111111",
+    };
+    const mutableGuests = [guestA, guestB, foreignGuest];
+    const store = createInMemoryAyllaGiftStore({
+      guests: mutableGuests,
+      inventory: [
+        {
+          eventId: CANONICAL_BABY_AYLLA_EVENT_ID,
+          registryKey: "baby-aylla-couture",
+          itemId: "dream-cot-sheets",
+          familyApproved: true,
+          enabled: true,
+          approvedQuantity: 5,
+          specificationsComplete: true,
+          childSafetyValidated: true,
+        },
+      ],
+    });
+    const service = createCoreAyllaGiftService({
+      store,
+      pepper: TEST_PEPPER,
+      tokenGenerator: () => "135790",
+      supportedChannels: { email: true, phone: false },
+      deliveryProvider: createProductionAyllaOtpDeliveryProvider({
+        env: { RESEND_API_KEY: "re_test_key" },
+        sendEmailFn: async () => ({ ok: true }),
+      }),
+    });
+
+    // 1. Challenge emitted BEFORE duplicate contact appears cannot authenticate ambiguously
+    const preChal = await service.requestVerification("elegivel-a@haxrsignature.test", "10.20.0.1");
+    if (preChal.outcome !== "verification_pending") throw new Error("Expected pending");
+    const dupA = makeGuest({ name: "Duplicada Posterior", contact: "ELEGIVEL-A@HAXRSIGNATURE.TEST" });
+    mutableGuests.push(dupA);
+    const verifyAfterDup = await service.verifyChallenge(preChal.challengeId, "135790", "10.20.0.1");
+    assert.equal(verifyAfterDup.outcome, "verification_required");
+
+    // Archive duplicate -> issue fresh session for guestB -> check logout + third-party revocation lockout
+    mutableGuests.pop();
+    const reqB1 = await service.requestVerification("elegivel-b@haxrsignature.test", "10.20.0.2");
+    if (reqB1.outcome !== "verification_pending") throw new Error("Expected pending B1");
+    const verB1 = await service.verifyChallenge(reqB1.challengeId, "135790", "10.20.0.2");
+    if (verB1.outcome !== "verified") throw new Error("Expected verified B1");
+    const sessB1Id = verB1.sessionToken.split(".")[0];
+
+    // Forged secret proof cannot revoke guest B's session
+    assert.equal(await service.revokeSession(`${sessB1Id}.wrong-proof-for-third-party-session`), false);
+    assert.equal((await store.getSession(sessB1Id))?.revokedAt, null);
+
+    // Legitimate logout marks revokedAt and blocks replay
+    assert.equal(await service.revokeSession(verB1.sessionToken), true);
+    assert.ok((await store.getSession(sessB1Id))?.revokedAt instanceof Date);
+    assert.equal((await service.resolveSession(verB1.sessionToken)).valid, false);
+
+    // 2. Archive mid-session permanently revokes DB session; restoring guest does NOT reactivate old session
+    const reqA2 = await service.requestVerification("elegivel-a@haxrsignature.test", "10.20.0.3");
+    if (reqA2.outcome !== "verification_pending") throw new Error("Expected pending A2");
+    const verA2 = await service.verifyChallenge(reqA2.challengeId, "135790", "10.20.0.3");
+    if (verA2.outcome !== "verified") throw new Error("Expected verified A2");
+    const sessA2Id = verA2.sessionToken.split(".")[0];
+
+    const resA = await service.reserveGift({
+      sessionToken: verA2.sessionToken,
+      itemId: "dream-cot-sheets",
+      quantity: 1,
+      idempotencyKey: randomUUID(),
+    });
+    if (resA.outcome !== "reservation_confirmed") throw new Error("Expected reserve confirmed");
+
+    // Archive mid-session -> reserve blocked & session permanently revoked
+    (guestA as { archived: boolean }).archived = true;
+    const blockedWhileArchived = await service.reserveGift({
+      sessionToken: verA2.sessionToken,
+      itemId: "dream-cot-sheets",
+      quantity: 1,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(blockedWhileArchived.outcome, "session_expired");
+    assert.ok((await store.getSession(sessA2Id))?.revokedAt instanceof Date);
+
+    // Restore guest -> old token REMAINS permanently revoked
+    (guestA as { archived: boolean }).archived = false;
+    const afterRestoreResolve = await service.resolveSession(verA2.sessionToken);
+    assert.equal(afterRestoreResolve.valid, false);
+    const afterRestoreReserve = await service.reserveGift({
+      sessionToken: verA2.sessionToken,
+      itemId: "dream-cot-sheets",
+      quantity: 1,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(afterRestoreReserve.outcome, "session_expired");
+
+    // 3. Cross-guest & cross-event isolation
+    const reqB2 = await service.requestVerification("elegivel-b@haxrsignature.test", "10.20.0.4");
+    if (reqB2.outcome !== "verification_pending") throw new Error("Expected pending B2");
+    const verB2 = await service.verifyChallenge(reqB2.challengeId, "135790", "10.20.0.4");
+    if (verB2.outcome !== "verified") throw new Error("Expected verified B2");
+    const crossGuestCancel = await service.cancelReservation({
+      sessionToken: verB2.sessionToken,
+      reservationId: resA.reservation.id,
+    });
+    assert.equal(crossGuestCancel.outcome, "access_denied");
   });
 
   it("disables Brevo fallback exclusively for Aylla OTP even when shared Brevo credentials exist", async () => {
