@@ -3,12 +3,15 @@ import assert from "node:assert/strict";
 import { POST as challengeHandler } from "@/app/api/v1/edition/gifts/aylla/challenge/route";
 import { POST as sessionHandler, DELETE as sessionRevokeHandler } from "@/app/api/v1/edition/gifts/aylla/session/route";
 import { POST as reserveHandler } from "@/app/api/v1/edition/gifts/aylla/reserve/route";
+import { POST as catalogHandler } from "@/app/api/v1/edition/gifts/aylla/catalog/route";
+import { POST as rsvpHandler } from "@/app/api/v1/edition/rsvp/route";
 import { setCoreAyllaGiftStoreForTesting } from "@/lib/edition/gifts/aylla/instance";
 import { createInMemoryAyllaGiftStore } from "@/lib/edition/gifts/aylla/store";
 import { AYLLA_GIFTS_CONFIG } from "@/lib/edition/gifts/aylla/config";
 import type { CoreGuestRecord } from "@/lib/edition/gifts/aylla/types";
 
 const TEST_SECRET = "production-super-secret-key-42";
+const TEST_GLOBAL_SECRET = "global-rsvp-super-secret-key-99";
 const TEST_PEPPER = "test-pepper-synthetic-c3-32-chars-long";
 const TEST_EVENT_ID = AYLLA_GIFTS_CONFIG.eventId;
 
@@ -28,7 +31,8 @@ function makeGuest(): CoreGuestRecord {
 
 describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", () => {
   beforeEach(() => {
-    process.env.HAXR_EDITION_PROXY_SECRET = TEST_SECRET;
+    process.env.HAXR_AYLLA_GIFT_PROXY_SECRET = TEST_SECRET;
+    process.env.HAXR_EDITION_PROXY_SECRET = TEST_GLOBAL_SECRET;
     process.env.HAXR_AYLLA_GIFT_PEPPER = TEST_PEPPER;
     const store = createInMemoryAyllaGiftStore({
       guests: [makeGuest()],
@@ -37,6 +41,7 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
   });
 
   afterEach(() => {
+    delete (process.env as Record<string, string | undefined>).HAXR_AYLLA_GIFT_PROXY_SECRET;
     delete (process.env as Record<string, string | undefined>).HAXR_EDITION_PROXY_SECRET;
     delete (process.env as Record<string, string | undefined>).HAXR_AYLLA_GIFT_PEPPER;
     delete (process.env as Record<string, string | undefined>).HAXR_AYLLA_GIFT_STAGING_TEST_ACTIVATION;
@@ -46,8 +51,8 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
     setCoreAyllaGiftStoreForTesting(null);
   });
 
-  it("strictly rejects requests when HAXR_EDITION_PROXY_SECRET is missing from server config", async () => {
-    delete process.env.HAXR_EDITION_PROXY_SECRET;
+  it("strictly rejects requests when HAXR_AYLLA_GIFT_PROXY_SECRET is missing from server config", async () => {
+    delete process.env.HAXR_AYLLA_GIFT_PROXY_SECRET;
 
     const req = new Request("http://localhost:3000/api/v1/edition/gifts/aylla/challenge", {
       method: "POST",
@@ -259,5 +264,121 @@ describe("HAXR Core — Baby Aylla Gift Registry HTTP Routes (Phase C.3.1.1)", (
     const postRevokeJson = await postRevokeRes.json();
     assert.equal(postRevokeJson.success, false);
     assert.equal(postRevokeJson.reason, "session_expired");
+  });
+
+  it("enforces bidirectional secret isolation in production without leaking secrets in logs or responses", async () => {
+    const mutableEnv = process.env as Record<string, string | undefined>;
+    mutableEnv.VERCEL_ENV = "production";
+    mutableEnv.NODE_ENV = "production";
+
+    const loggedLines: string[] = [];
+    const originalConsoleInfo = console.info;
+    console.info = (...args: unknown[]) => {
+      loggedLines.push(args.map(String).join(" "));
+    };
+
+    try {
+      // 1. Global RSVP secret cannot authenticate Baby Aylla Gift Registry in Production
+      const globalCatalogRes = await catalogHandler(
+        new Request("http://localhost:3000/api/v1/edition/gifts/aylla/catalog", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${TEST_GLOBAL_SECRET}`,
+            "x-haxr-edition-proxy": TEST_GLOBAL_SECRET,
+          },
+          body: JSON.stringify({ sessionToken: null }),
+        })
+      );
+      assert.equal(globalCatalogRes.status, 401);
+      const globalCatalogText = await globalCatalogRes.text();
+      assert.equal(globalCatalogText.includes(TEST_GLOBAL_SECRET), false);
+      assert.equal(globalCatalogText.includes(TEST_SECRET), false);
+
+      // 2. Contradictory headers on Aylla catalog are rejected
+      const contradictoryRes = await catalogHandler(
+        new Request("http://localhost:3000/api/v1/edition/gifts/aylla/catalog", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${TEST_SECRET}`,
+            "x-haxr-edition-proxy": TEST_GLOBAL_SECRET,
+          },
+          body: JSON.stringify({ sessionToken: null }),
+        })
+      );
+      assert.equal(contradictoryRes.status, 401);
+
+      // 3. Dedicated secret cannot authenticate global /api/v1/edition/rsvp route
+      const rsvpWithAyllaSecret = await rsvpHandler(
+        new Request("http://localhost:3000/api/v1/edition/rsvp", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${TEST_SECRET}`,
+            "x-haxr-edition-proxy": TEST_SECRET,
+          },
+          body: JSON.stringify({ slug: "babyaylla" }),
+        })
+      );
+      assert.equal(rsvpWithAyllaSecret.status, 401);
+
+      // 4. Dedicated secret authenticates Aylla catalog read-only while registry remains closed
+      const validCatalogRes = await catalogHandler(
+        new Request("http://localhost:3000/api/v1/edition/gifts/aylla/catalog", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${TEST_SECRET}`,
+            "x-haxr-edition-proxy": TEST_SECRET,
+            "x-request-id": "corr-isolated-prod-check-1",
+          },
+          body: JSON.stringify({ sessionToken: null }),
+        })
+      );
+      assert.equal(validCatalogRes.status, 200);
+      assert.equal(validCatalogRes.headers.get("x-request-id"), "corr-isolated-prod-check-1");
+      const validCatalogJson = await validCatalogRes.json();
+      assert.equal(validCatalogJson.success, true);
+      assert.equal(validCatalogJson.registryEnabled, false);
+      assert.deepEqual(validCatalogJson.items, []);
+
+      // 5. Trace logs on /session distinguish proxy auth ok vs rejected without exposing secrets
+      const unauthSessionRes = await sessionHandler(
+        new Request("http://localhost:3000/api/v1/edition/gifts/aylla/session", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-haxr-edition-proxy": TEST_GLOBAL_SECRET,
+            "x-request-id": "corr-session-trace-denied",
+          },
+          body: JSON.stringify({ sessionToken: "00000000-0000-0000-0000-000000000000.probe" }),
+        })
+      );
+      assert.equal(unauthSessionRes.status, 401);
+
+      const authSessionRes = await sessionHandler(
+        new Request("http://localhost:3000/api/v1/edition/gifts/aylla/session", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${TEST_SECRET}`,
+            "x-haxr-edition-proxy": TEST_SECRET,
+            "x-request-id": "corr-session-trace-ok",
+          },
+          body: JSON.stringify({ sessionToken: "00000000-0000-0000-0000-000000000000.probe" }),
+        })
+      );
+      assert.equal(authSessionRes.status, 401);
+
+      const combinedLogs = loggedLines.join("\n");
+      assert.equal(combinedLogs.includes(TEST_SECRET), false);
+      assert.equal(combinedLogs.includes(TEST_GLOBAL_SECRET), false);
+      assert.match(combinedLogs, /corr-session-trace-denied[\s\S]*proxy_auth_rejected/);
+      assert.match(combinedLogs, /corr-session-trace-ok[\s\S]*proxy_auth_verified/);
+      assert.match(combinedLogs, /corr-session-trace-ok[\s\S]*session_lookup_completed/);
+    } finally {
+      console.info = originalConsoleInfo;
+    }
   });
 });

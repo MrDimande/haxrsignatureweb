@@ -5,7 +5,7 @@ import {
   validateEditionProxyJsonBody,
 } from "@/lib/edition/proxy-auth";
 import { getCoreAyllaGiftService } from "@/lib/edition/gifts/aylla/instance";
-import { withCoreAyllaRouteTrace } from "@/lib/edition/gifts/aylla/trace";
+import { logAyllaTrace, withCoreAyllaRouteTrace } from "@/lib/edition/gifts/aylla/trace";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,8 +14,10 @@ export async function POST(request: Request) {
   return withCoreAyllaRouteTrace(request, "session_post", async () => {
     const proxyAuth = validateAyllaProxyRequest(request);
     if (!proxyAuth.ok) {
+      logAyllaTrace("proxy_auth_rejected", { reason: proxyAuth.reason });
       return NextResponse.json(editionProxyUnauthorizedResponse(), { status: 401 });
     }
+    logAyllaTrace("proxy_auth_verified");
 
     const bodyCheck = validateEditionProxyJsonBody(request);
     if (!bodyCheck.ok) {
@@ -37,9 +39,11 @@ export async function POST(request: Request) {
     const session = await service.resolveSession(body.sessionToken);
 
     if (!session.valid) {
+      logAyllaTrace("session_lookup_completed", { valid: false, reason: session.reason });
       return NextResponse.json({ success: false, reason: session.reason }, { status: 401 });
     }
 
+    logAyllaTrace("session_lookup_completed", { valid: true });
     return NextResponse.json({
       success: true,
       valid: true,
