@@ -140,4 +140,14 @@ describe("Edition invite catalog", () => {
       "http://localhost:3001/jessicaesamueltraditionalwedding"
     );
   });
+  it("maps baby-aylla-couture to the canonical active Baby Aylla invitation", () => {
+    const ref = getEditionInviteRef("baby-aylla-couture");
+    assert.ok(ref);
+    assert.equal(ref.registryKey, "baby-aylla-couture");
+    assert.equal(ref.inviteSlug, "babyaylla");
+    assert.equal(ref.label, "Baby Aylla — ÉDITION ROSE");
+    assert.equal(ref.status, "active");
+    assert.equal(buildEditionInviteUrl("baby-aylla-couture"), "https://edition.haxrsignature.com/babyaylla");
+  });
+
 });
