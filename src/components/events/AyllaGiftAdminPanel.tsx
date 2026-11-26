@@ -482,7 +482,8 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                 aria-hidden
               />
               <input
-                type="search"
+                type="text"
+                role="searchbox"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Pesquisar presente por nome, categoria ou ID…"
@@ -518,8 +519,8 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
           </div>
 
           {/* Operational State Filters */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#DFC070] shrink-0 mr-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-1">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#DFC070] shrink-0 sm:mr-1">
               <Filter className="w-3.5 h-3.5" />
               Estado:
             </span>
@@ -724,11 +725,11 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                                   ) : null}
                                 </div>
 
-                                <div className="flex sm:flex-col sm:items-end justify-between gap-1.5 shrink-0 font-mono text-xs">
-                                  <span className={`px-2.5 py-1 rounded-md border ${statusBadge.cls}`}>
+                                <div className="flex flex-wrap sm:flex-col sm:items-end items-center justify-between gap-2 shrink-0 font-mono text-xs">
+                                  <span className={`whitespace-nowrap px-2.5 py-1 rounded-md border ${statusBadge.cls}`}>
                                     {statusBadge.text}
                                   </span>
-                                  <span className="text-[11px] text-[#C9C0B0] tabular-nums">
+                                  <span className="whitespace-nowrap text-[11px] text-[#C9C0B0] tabular-nums">
                                     Reservado: {item.reservedQuantity} · Restante:{" "}
                                     {item.remainingQuantity}
                                   </span>
@@ -850,7 +851,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                                         updateDraft(item, { approvedQuantity: e.target.value })
                                       }
                                       placeholder="—"
-                                      className="w-14 bg-transparent text-center font-mono text-sm text-[#FAF6EE] focus:outline-none tabular-nums"
+                                      className="w-12 bg-transparent text-center font-mono text-sm text-[#FAF6EE] focus:outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     />
                                     <button
                                       type="button"
