@@ -64,6 +64,12 @@ type GuestStatRow = {
 type SeatTableRow = { id: string; table_name: string; seat_number: number };
 type CountRow = { count: number };
 
+/** Operational dashboards exclude deleted and archived guests. */
+export function buildOperationalGuestFilter(alias?: string): string {
+  const prefix = alias ? `${alias}.` : "";
+  return `${prefix}deleted_at IS NULL AND ${prefix}archived_at IS NULL`;
+}
+
 const guestRelationSelect = `
   SELECT to_jsonb(g)
     || jsonb_build_object(
@@ -905,7 +911,8 @@ export async function getEventStats(eventId: string): Promise<EventStats> {
   const [guestResult, seatCountResult, seatRowsResult, groupCountResult] = await Promise.all([
     neonQuery<GuestStatRow>(
       `SELECT event_id, status, seat_id, plus_ones, name_normalized, name
-       FROM public.guests WHERE event_id = $1::uuid`,
+       FROM public.guests
+       WHERE event_id = $1::uuid AND ${buildOperationalGuestFilter()}`,
       [eventId],
     ),
     neonQuery<CountRow>(
@@ -979,7 +986,8 @@ export async function listGuestStatsByEventIds(
   const result = await neonQuery<{ event_id: string; status: GuestStatus; seat_id: string | null }>(
     `SELECT event_id, status, seat_id
      FROM public.guests
-     WHERE event_id = ANY($1::uuid[])`,
+     WHERE event_id = ANY($1::uuid[])
+       AND ${buildOperationalGuestFilter()}`,
     [eventIds],
   );
   const stats: Record<string, EventListGuestStats> = {};
