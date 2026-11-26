@@ -64,10 +64,10 @@ type GuestStatRow = {
 type SeatTableRow = { id: string; table_name: string; seat_number: number };
 type CountRow = { count: number };
 
-/** Operational dashboards exclude deleted and archived guests. */
+/** Operational dashboards exclude deleted, archived, and invalid guests. */
 export function buildOperationalGuestFilter(alias?: string): string {
   const prefix = alias ? `${alias}.` : "";
-  return `${prefix}deleted_at IS NULL AND ${prefix}archived_at IS NULL`;
+  return `${prefix}deleted_at IS NULL AND ${prefix}archived_at IS NULL AND ${prefix}is_incorrect IS NOT TRUE`;
 }
 
 const guestRelationSelect = `

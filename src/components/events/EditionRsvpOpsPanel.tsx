@@ -14,6 +14,7 @@ import {
   buildEditionInviteUrl,
   getEditionRsvpOperationsCopy,
 } from "@/lib/events/edition-links";
+import { isOperationalGuest } from "@/lib/events/guest-operational";
 import type { EventGuest, EventStats, ManagedEvent } from "@/lib/events/types";
 
 type EditionRsvpOpsPanelProps = {
@@ -36,9 +37,14 @@ export default function EditionRsvpOpsPanel({
   const inviteUrl = registryKey ? buildEditionInviteUrl(registryKey) : null;
   const copy = getEditionRsvpOperationsCopy(registryKey);
 
+  const operationalGuests = useMemo(
+    () => guests.filter(isOperationalGuest),
+    [guests],
+  );
+
   const pendingGuests = useMemo(
-    () => guests.filter((g) => g.status === "invited"),
-    [guests]
+    () => operationalGuests.filter((g) => g.status === "invited"),
+    [operationalGuests],
   );
 
   const pendingWithPhone = useMemo(
@@ -52,8 +58,8 @@ export default function EditionRsvpOpsPanel({
   );
 
   const editionRsvpGuests = useMemo(
-    () => guests.filter((g) => g.guestSource === "edition_rsvp"),
-    [guests]
+    () => operationalGuests.filter((g) => g.guestSource === "edition_rsvp"),
+    [operationalGuests],
   );
 
   if (!registryKey) return null;
