@@ -1,6 +1,5 @@
 "use client";
 
-import { AYLLA_GIFTS_CONFIG } from "@/lib/edition/gifts/aylla/config";
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -68,9 +67,13 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
   const [isPending, startTransition] = useTransition();
   const [section, setSection] = useState<"inventory" | "reservations" | "audit">("inventory");
   const [search, setSearch] = useState("");
+  const [closedFilteredCategories, setClosedFilteredCategories] = useState<string[]>([]);
+  const [savingItem, setSavingItem] = useState<string | null>(null);
+  const [itemFeedback, setItemFeedback] = useState<Record<string, string>>({});
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
+  const filtering = Boolean(search.trim()) || categoryFilter !== "all" || stateFilter !== "all";
   const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [drafts, setDrafts] = useState<Record<string, InventoryDraft>>({});
   const [transitionReasons, setTransitionReasons] = useState<Record<string, string>>({});
@@ -93,6 +96,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
       enabledCount,
       readyCount,
       activeReservations,
+      reservedUnits: snapshot.items.reduce((total, item) => total + item.reservedQuantity, 0),
       specifications: snapshot.items.filter((item) => item.specificationsComplete).length,
       safety: snapshot.items.filter((item) => item.childSafetyValidated).length,
       soldOut: snapshot.items.filter((item) => item.approvedQuantity && item.remainingQuantity === 0).length,
@@ -142,17 +146,19 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
 
   function handleSaveInventory(item: AyllaGiftReconciledItem) {
     const draft = getDraft(item);
-    const parsedQty = draft.approvedQuantity.trim()
-      ? Number.parseInt(draft.approvedQuantity.trim(), 10)
-      : null;
+    if (savingItem || isPending) return;
+    const id = item.definition.id;
+    const quantity = draft.approvedQuantity.trim();
+    const parsedQty = quantity ? Number(quantity) : null;
 
-    if (parsedQty !== null && (!Number.isSafeInteger(parsedQty) || parsedQty <= 0)) {
-      setFeedback({ kind: "err", text: "Quantidade autorizada deve ser um inteiro positivo." });
+    if (parsedQty !== null && (!/^\d+$/.test(quantity) || !Number.isSafeInteger(parsedQty) || parsedQty <= 0)) {
+      setItemFeedback((current) => ({ ...current, [id]: "Quantidade autorizada deve ser um inteiro positivo." }));
       return;
     }
 
-    setFeedback(null);
+    setSavingItem(id);
     startTransition(async () => {
+      try {
       const result = await updateAyllaGiftInventoryAction({
         eventId: snapshot.eventId,
         itemId: item.definition.id,
@@ -164,15 +170,20 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
       });
 
       if (!result.success) {
-        setFeedback({ kind: "err", text: result.error });
+        setItemFeedback((current) => ({ ...current, [id]: result.error }));
         return;
       }
 
-      setFeedback({
-        kind: "ok",
-        text: `Artigo «${item.definition.name}» actualizado com segurança.`,
+      setDrafts(({ [id]: submitted, ...others }) => {
+        return submitted === draft ? others : submitted ? { ...others, [id]: submitted } : others;
       });
+      setItemFeedback((current) => ({ ...current, [id]: "Alterações gravadas." }));
       router.refresh();
+      } catch {
+        setItemFeedback((current) => ({ ...current, [id]: "Não foi possível confirmar a gravação. Consulte o estado do artigo antes de repetir." }));
+      } finally {
+        setSavingItem(null);
+      }
     });
   }
 
@@ -264,7 +275,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
         ) : null}
 
         <p className="text-sm text-amber-200">
-          Reservas públicas {AYLLA_GIFTS_CONFIG.enabled ? "abertas" : "encerradas"}
+          Reservas públicas encerradas nesta operação · abertura sujeita a Core e Edition
         </p>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <div className="admin-stat-card">
@@ -301,6 +312,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
             ["Especificações completas", summary.specifications],
             ["Segurança infantil validada", summary.safety],
             ["Esgotados", summary.soldOut],
+            ["Unidades reservadas", summary.reservedUnits],
           ] as const).map(([label, count]) => (
             <div key={label} className="admin-stat-card">
               <p className="mb-1 text-xs text-grey/80">{label}</p>
@@ -363,7 +375,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                 type="search"
                 aria-label="Pesquisar artigo, ID ou categoria"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setClosedFilteredCategories([]); }}
                 placeholder="Pesquisar artigo, ID ou categoria…"
                 className="admin-input admin-input-icon w-full"
               />
@@ -371,7 +383,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
             <select
               aria-label="Filtrar por categoria"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => { setCategoryFilter(e.target.value); setClosedFilteredCategories([]); }}
               className="admin-input w-full min-w-0 sm:w-auto"
             >
               <option value="all">Todas as 7 categorias</option>
@@ -384,9 +396,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
             <select
               aria-label="Filtrar por estado"
               value={stateFilter}
-              onChange={(e) =>
-                setStateFilter(e.target.value)
-              }
+              onChange={(e) => { setStateFilter(e.target.value); setClosedFilteredCategories([]); }}
               className="admin-input w-full min-w-0 sm:w-auto"
             >
               <option value="all">Todos ({snapshot.items.length})</option>
@@ -403,8 +413,8 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
 
           <div className="flex flex-wrap items-center gap-3">
             <span role="status" className="text-sm text-grey/80">{filteredItems.length} de {snapshot.items.length} artigos</span>
-            <button type="button" className="admin-btn-secondary" onClick={() => setExpandedCategories(snapshot.categories.map(({ id }) => id))}>Expandir todas</button>
-            <button type="button" className="admin-btn-secondary" onClick={() => setExpandedCategories([])}>Recolher todas</button>
+            <button type="button" className="admin-btn-secondary" onClick={() => filtering ? setClosedFilteredCategories([]) : setExpandedCategories(snapshot.categories.map(({ id }) => id))}>Expandir todas</button>
+            <button type="button" className="admin-btn-secondary" onClick={() => filtering ? setClosedFilteredCategories(snapshot.categories.map(({ id }) => id)) : setExpandedCategories([])}>Recolher todas</button>
             <button type="button" className="admin-btn-secondary" onClick={() => { setSearch(""); setCategoryFilter("all"); setStateFilter("all"); }}>Limpar filtros</button>
           </div>
           {!filteredItems.length && <p className="text-sm text-grey/80">Nenhum artigo corresponde aos filtros.</p>}
@@ -416,13 +426,15 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               const approved = allItems.filter((item) => item.familyApproved).length;
               const pending = allItems.filter((item) => item.pendingRequirements.length > 0).length;
               const available = allItems.filter((item) => item.reservable).length;
-              const expanded = Boolean(search.trim()) || expandedCategories.includes(category.id);
+              const expanded = filtering ? !closedFilteredCategories.includes(category.id) : expandedCategories.includes(category.id);
               return (
                 <section key={category.id} className="min-w-0 rounded border border-admin-gold/25">
                   <h4>
-                    <button type="button" aria-expanded={expanded} aria-controls={`aylla-category-${category.id}`} disabled={Boolean(search.trim())}
+                    <button type="button" aria-expanded={expanded} aria-controls={`aylla-category-${category.id}`}
                       className="flex w-full flex-col gap-1 p-4 text-left focus-visible:outline-2 focus-visible:outline-admin-gold"
-                      onClick={() => setExpandedCategories((current) => expanded ? current.filter((id) => id !== category.id) : [...current, category.id])}>
+                      onClick={() => filtering
+                        ? setClosedFilteredCategories((current) => expanded ? [...current, category.id] : current.filter((id) => id !== category.id))
+                        : setExpandedCategories((current) => expanded ? current.filter((id) => id !== category.id) : [...current, category.id])}>
                       <span className="font-serif text-lg text-white">{category.title} <span aria-hidden="true" className="text-admin-gold">{expanded ? "−" : "+"}</span></span>
                       <span className="text-xs text-grey/80">{allItems.length} artigos · {approved} aprovados · {pending} pendentes · {available} disponíveis</span>
                     </button>
@@ -434,14 +446,18 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
             {expanded && items.map((item) => {
               const draft = getDraft(item);
               const parsedDraftQty = draft.approvedQuantity.trim()
-                ? Number.parseInt(draft.approvedQuantity.trim(), 10)
+                ? Number(draft.approvedQuantity.trim())
                 : null;
               const prerequisitesMet =
                 draft.familyApproved &&
                 draft.specificationsComplete &&
                 draft.childSafetyValidated &&
                 parsedDraftQty !== null &&
+                Number.isSafeInteger(parsedDraftQty) &&
+                /^\d+$/.test(draft.approvedQuantity.trim()) &&
                 parsedDraftQty > 0;
+              const id = item.definition.id;
+              const dirty = JSON.stringify(draft) !== JSON.stringify(toDraft(item));
 
               return (
                 <article
@@ -482,7 +498,13 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-center pt-3 border-t border-white/5 text-xs">
+                  <p className="text-sm text-grey/90">
+                    Aprovadas {item.approvedQuantity ?? "—"} · Reservadas {item.reservedQuantity} · Restantes {item.remainingQuantity}
+                  </p>
+                  {item.pendingRequirements.length > 0 && <p className="text-xs text-amber-200">Pendências · {item.pendingRequirements.join(" · ")}</p>}
+                  {dirty && <p className="text-xs text-amber-200">Alterações por gravar</p>}
+                  {itemFeedback[id] && <p role="status" className="text-sm text-white">{itemFeedback[id]}</p>}
+                  <fieldset disabled={savingItem === id} aria-busy={savingItem === id} className="grid min-w-0 grid-cols-1 gap-3 border-t border-white/10 pt-3 text-xs sm:grid-cols-2 xl:grid-cols-3">
                     <label className="flex items-center gap-2 text-grey/80 cursor-pointer">
                       <input
                         type="checkbox"
@@ -539,7 +561,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        disabled={!snapshot.configured || isPending}
+                        disabled={!dirty || !snapshot.configured || isPending || Boolean(savingItem)}
                         onClick={() => handleSaveInventory(item)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-admin-gold/15 hover:bg-admin-gold/25 border border-admin-gold/40 text-admin-gold font-mono text-[9px] tracking-[0.2em] uppercase disabled:opacity-40"
                       >
@@ -548,10 +570,14 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                         ) : (
                           <Lock className="w-3.5 h-3.5" />
                         )}
-                        Guardar
+                        {savingItem === id ? "A gravar…" : "Guardar"}
                       </button>
+                      {dirty && <button type="button" className="admin-btn-secondary" onClick={() => {
+                        setDrafts((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== id)));
+                        setItemFeedback((current) => ({ ...current, [id]: "" }));
+                      }}>Descartar</button>}
                     </div>
-                  </div>
+                  </fieldset>
                 </article>
               );
             })}
