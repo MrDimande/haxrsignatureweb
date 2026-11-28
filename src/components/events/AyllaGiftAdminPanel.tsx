@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -66,8 +67,13 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
   const [isPending, startTransition] = useTransition();
   const [section, setSection] = useState<"inventory" | "reservations" | "audit">("inventory");
   const [search, setSearch] = useState("");
+  const [closedFilteredCategories, setClosedFilteredCategories] = useState<string[]>([]);
+  const [savingItem, setSavingItem] = useState<string | null>(null);
+  const [itemFeedback, setItemFeedback] = useState<Record<string, string>>({});
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [stateFilter, setStateFilter] = useState<"all" | "pending" | "ready" | "enabled">("all");
+  const [stateFilter, setStateFilter] = useState("all");
+  const filtering = Boolean(search.trim()) || categoryFilter !== "all" || stateFilter !== "all";
   const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [drafts, setDrafts] = useState<Record<string, InventoryDraft>>({});
   const [transitionReasons, setTransitionReasons] = useState<Record<string, string>>({});
@@ -90,6 +96,10 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
       enabledCount,
       readyCount,
       activeReservations,
+      reservedUnits: snapshot.items.reduce((total, item) => total + item.reservedQuantity, 0),
+      specifications: snapshot.items.filter((item) => item.specificationsComplete).length,
+      safety: snapshot.items.filter((item) => item.childSafetyValidated).length,
+      soldOut: snapshot.items.filter((item) => item.approvedQuantity && item.remainingQuantity === 0).length,
     };
   }, [snapshot.items, snapshot.reservations]);
 
@@ -108,6 +118,11 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
       if (stateFilter === "enabled" && !item.enabled) {
         return false;
       }
+      if (stateFilter === "approved" && !item.familyApproved) return false;
+      if (stateFilter === "specifications" && item.specificationsComplete) return false;
+      if (stateFilter === "safety" && item.childSafetyValidated) return false;
+      if (stateFilter === "reserved" && item.reservedQuantity === 0) return false;
+      if (stateFilter === "sold-out" && (!item.approvedQuantity || item.remainingQuantity > 0)) return false;
       if (!query) return true;
       return (
         item.definition.name.toLowerCase().includes(query) ||
@@ -131,17 +146,19 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
 
   function handleSaveInventory(item: AyllaGiftReconciledItem) {
     const draft = getDraft(item);
-    const parsedQty = draft.approvedQuantity.trim()
-      ? Number.parseInt(draft.approvedQuantity.trim(), 10)
-      : null;
+    if (savingItem || isPending) return;
+    const id = item.definition.id;
+    const quantity = draft.approvedQuantity.trim();
+    const parsedQty = quantity ? Number(quantity) : null;
 
-    if (parsedQty !== null && (!Number.isSafeInteger(parsedQty) || parsedQty <= 0)) {
-      setFeedback({ kind: "err", text: "Quantidade autorizada deve ser um inteiro positivo." });
+    if (parsedQty !== null && (!/^\d+$/.test(quantity) || !Number.isSafeInteger(parsedQty) || parsedQty <= 0)) {
+      setItemFeedback((current) => ({ ...current, [id]: "Quantidade autorizada deve ser um inteiro positivo." }));
       return;
     }
 
-    setFeedback(null);
+    setSavingItem(id);
     startTransition(async () => {
+      try {
       const result = await updateAyllaGiftInventoryAction({
         eventId: snapshot.eventId,
         itemId: item.definition.id,
@@ -153,15 +170,20 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
       });
 
       if (!result.success) {
-        setFeedback({ kind: "err", text: result.error });
+        setItemFeedback((current) => ({ ...current, [id]: result.error }));
         return;
       }
 
-      setFeedback({
-        kind: "ok",
-        text: `Artigo «${item.definition.name}» actualizado com segurança.`,
+      setDrafts(({ [id]: submitted, ...others }) => {
+        return submitted === draft ? others : submitted ? { ...others, [id]: submitted } : others;
       });
+      setItemFeedback((current) => ({ ...current, [id]: "Alterações gravadas." }));
       router.refresh();
+      } catch {
+        setItemFeedback((current) => ({ ...current, [id]: "Não foi possível confirmar a gravação. Consulte o estado do artigo antes de repetir." }));
+      } finally {
+        setSavingItem(null);
+      }
     });
   }
 
@@ -198,13 +220,13 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
           <div className="flex items-start gap-3">
             <Gift className="w-5 h-5 text-admin-gold mt-0.5 shrink-0" />
             <div>
-              <p className="font-mono text-[8px] tracking-[0.4em] uppercase text-grey/45 mb-2">
+              <p className="font-mono text-[8px] tracking-[0.4em] uppercase text-grey-medium mb-2">
                 Edition V2 · Registry Control ({snapshot.registryKey})
               </p>
               <h3 className="font-serif text-xl font-light text-white/90">
                 Catálogo Baby Aylla & Reservas Verificadas
               </h3>
-              <p className="text-sm text-grey/55 mt-2 leading-relaxed max-w-2xl">
+              <p className="text-sm text-grey-medium mt-2 leading-relaxed max-w-2xl">
                 Separação integral entre curadoria editorial (52 artigos), aprovação familiar,
                 especificações, segurança infantil, quantidade autorizada e disponibilidade activa.
               </p>
@@ -225,7 +247,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               className={`px-2.5 py-1 rounded border ${
                 snapshot.otpReadiness.whatsappReady
                   ? "border-emerald-500/40 bg-emerald-950/40 text-emerald-300"
-                  : "border-white/10 bg-white/[0.03] text-grey/60"
+                  : "border-white/10 bg-white/[0.03] text-grey-medium"
               }`}
             >
               WhatsApp OTP: {snapshot.otpReadiness.whatsappReady ? "Pronto" : "Adormecido"}
@@ -234,7 +256,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               className={`px-2.5 py-1 rounded border ${
                 snapshot.otpReadiness.smsReady
                   ? "border-emerald-500/40 bg-emerald-950/40 text-emerald-300"
-                  : "border-white/10 bg-white/[0.03] text-grey/60"
+                  : "border-white/10 bg-white/[0.03] text-grey-medium"
               }`}
             >
               SMS OTP: {snapshot.otpReadiness.smsReady ? "Pronto" : "Adormecido"}
@@ -252,43 +274,57 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
           </div>
         ) : null}
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <p className="text-sm text-amber-200">
+          Reservas públicas encerradas nesta operação · abertura sujeita a Core e Edition
+        </p>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <div className="admin-stat-card">
-            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
+            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey-medium mb-2">
               Artigos Canónicos
             </p>
             <p className="font-serif text-2xl font-light text-white">{summary.total}</p>
           </div>
           <div className="admin-stat-card">
-            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
+            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey-medium mb-2">
               Aprovados Família
             </p>
             <p className="font-serif text-2xl font-light text-white">{summary.approvedCount}</p>
           </div>
           <div className="admin-stat-card">
-            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
+            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey-medium mb-2">
               Activos Catálogo
             </p>
             <p className="font-serif text-2xl font-light text-white">{summary.enabledCount}</p>
           </div>
           <div className="admin-stat-card">
-            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
+            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey-medium mb-2">
               Disponíveis Agora
             </p>
             <p className="font-serif text-2xl font-light text-white">{summary.readyCount}</p>
           </div>
           <div className="admin-stat-card">
-            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50 mb-2">
+            <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-grey-medium mb-2">
               Reservas Activas
             </p>
             <p className="font-serif text-2xl font-light text-white">{summary.activeReservations}</p>
           </div>
+          {([
+            ["Especificações completas", summary.specifications],
+            ["Segurança infantil validada", summary.safety],
+            ["Esgotados", summary.soldOut],
+            ["Unidades reservadas", summary.reservedUnits],
+          ] as const).map(([label, count]) => (
+            <div key={label} className="admin-stat-card">
+              <p className="mb-1 text-xs text-grey-medium">{label}</p>
+              <p className="font-serif text-2xl text-white">{count}</p>
+            </div>
+          ))}
         </div>
 
         <div className="flex flex-wrap gap-2 border-t border-white/5 pt-4">
           {(
             [
-              ["inventory", "Inventário (52 Artigos)"],
+              ["inventory", `Inventário (${summary.total})`],
               ["reservations", `Reservas (${snapshot.reservations.length})`],
               ["audit", `Auditoria (${snapshot.audits.length})`],
             ] as const
@@ -300,7 +336,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               className={`px-4 py-2 font-mono text-[9px] tracking-[0.25em] uppercase border rounded-sm transition-colors ${
                 section === key
                   ? "bg-admin-gold/10 text-admin-gold border-admin-gold/30"
-                  : "text-grey/70 border-white/10 hover:text-white"
+                  : "text-grey-medium border-white/10 hover:text-white"
               }`}
             >
               {label}
@@ -330,15 +366,16 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
       {section === "inventory" ? (
         <section className="admin-card p-6 md:p-8 space-y-6">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="relative flex-1 min-w-[220px]">
+            <label className="relative w-full min-w-0 sm:flex-1">
               <Search
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-grey/40 pointer-events-none"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-medium pointer-events-none"
                 aria-hidden
               />
               <input
                 type="search"
+                aria-label="Pesquisar artigo, ID ou categoria"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setClosedFilteredCategories([]); }}
                 placeholder="Pesquisar artigo, ID ou categoria…"
                 className="admin-input admin-input-icon w-full"
               />
@@ -346,8 +383,8 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
             <select
               aria-label="Filtrar por categoria"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="admin-input min-w-[220px]"
+              onChange={(e) => { setCategoryFilter(e.target.value); setClosedFilteredCategories([]); }}
+              className="admin-input w-full min-w-0 sm:w-auto"
             >
               <option value="all">Todas as 7 categorias</option>
               {snapshot.categories.map((cat) => (
@@ -359,30 +396,68 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
             <select
               aria-label="Filtrar por estado"
               value={stateFilter}
-              onChange={(e) =>
-                setStateFilter(e.target.value as "all" | "pending" | "ready" | "enabled")
-              }
-              className="admin-input"
+              onChange={(e) => { setStateFilter(e.target.value); setClosedFilteredCategories([]); }}
+              className="admin-input w-full min-w-0 sm:w-auto"
             >
               <option value="all">Todos ({snapshot.items.length})</option>
               <option value="pending">Pendentes</option>
               <option value="enabled">Activos</option>
               <option value="ready">Disponíveis</option>
+              <option value="approved">Aprovados pela família</option>
+              <option value="specifications">Especificações pendentes</option>
+              <option value="safety">Segurança infantil pendente</option>
+              <option value="reserved">Com unidades reservadas</option>
+              <option value="sold-out">Esgotados</option>
             </select>
           </div>
 
-          <div className="space-y-4">
-            {filteredItems.map((item) => {
+          <div className="flex flex-wrap items-center gap-3">
+            <span role="status" className="text-sm text-grey-medium">{filteredItems.length} de {snapshot.items.length} artigos</span>
+            <button type="button" className="admin-btn-secondary" onClick={() => filtering ? setClosedFilteredCategories([]) : setExpandedCategories(snapshot.categories.map(({ id }) => id))}>Expandir todas</button>
+            <button type="button" className="admin-btn-secondary" onClick={() => filtering ? setClosedFilteredCategories(snapshot.categories.map(({ id }) => id)) : setExpandedCategories([])}>Recolher todas</button>
+            <button type="button" className="admin-btn-secondary" onClick={() => { setSearch(""); setCategoryFilter("all"); setStateFilter("all"); }}>Limpar filtros</button>
+          </div>
+          {!filteredItems.length && <p className="text-sm text-grey-medium">Nenhum artigo corresponde aos filtros.</p>}
+          <div className="space-y-3">
+            {snapshot.categories.map((category) => {
+              const items = filteredItems.filter((item) => item.definition.category === category.id);
+              if (!items.length) return null;
+              const allItems = snapshot.items.filter((item) => item.definition.category === category.id);
+              const approved = allItems.filter((item) => item.familyApproved).length;
+              const pending = allItems.filter((item) => item.pendingRequirements.length > 0).length;
+              const available = allItems.filter((item) => item.reservable).length;
+              const expanded = filtering ? !closedFilteredCategories.includes(category.id) : expandedCategories.includes(category.id);
+              return (
+                <section key={category.id} className="min-w-0 rounded border border-admin-gold/25">
+                  <h4>
+                    <button type="button" aria-expanded={expanded} aria-controls={`aylla-category-${category.id}`}
+                      className="flex w-full flex-col gap-1 p-4 text-left focus-visible:outline-2 focus-visible:outline-admin-gold"
+                      onClick={() => filtering
+                        ? setClosedFilteredCategories((current) => expanded ? [...current, category.id] : current.filter((id) => id !== category.id))
+                        : setExpandedCategories((current) => expanded ? current.filter((id) => id !== category.id) : [...current, category.id])}>
+                      <span className="font-serif text-lg text-white">{category.title} <span aria-hidden="true" className="text-admin-gold">{expanded ? "−" : "+"}</span></span>
+                      <span className="text-xs text-grey-medium">{allItems.length} artigos · {approved} aprovados · {pending} pendentes · {available} disponíveis</span>
+                    </button>
+                  </h4>
+                  <div className="px-4 pb-3">
+                    <progress aria-label={`Aprovação familiar em ${category.title}`} max={allItems.length} value={approved} className="h-1 w-full accent-admin-gold" />
+                  </div>
+                  <div id={`aylla-category-${category.id}`} hidden={!expanded} className="space-y-3 px-2 pb-2 sm:px-4 sm:pb-4">
+            {expanded && items.map((item) => {
               const draft = getDraft(item);
               const parsedDraftQty = draft.approvedQuantity.trim()
-                ? Number.parseInt(draft.approvedQuantity.trim(), 10)
+                ? Number(draft.approvedQuantity.trim())
                 : null;
               const prerequisitesMet =
                 draft.familyApproved &&
                 draft.specificationsComplete &&
                 draft.childSafetyValidated &&
                 parsedDraftQty !== null &&
+                Number.isSafeInteger(parsedDraftQty) &&
+                /^\d+$/.test(draft.approvedQuantity.trim()) &&
                 parsedDraftQty > 0;
+              const id = item.definition.id;
+              const dirty = JSON.stringify(draft) !== JSON.stringify(toDraft(item));
 
               return (
                 <article
@@ -391,15 +466,15 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-admin-gold/80">
+                      <p className="font-mono text-[8px] tracking-[0.3em] uppercase text-admin-gold">
                         {item.categoryTitle} · {item.definition.id}
                       </p>
                       <h4 className="font-serif text-lg text-white/95 mt-1">
                         {item.definition.name}
                       </h4>
-                      <p className="text-xs text-grey/60 mt-1">{item.definition.description}</p>
+                      <p className="text-xs text-grey-medium mt-1">{item.definition.description}</p>
                       {item.definition.reviewFlags.length > 0 ? (
-                        <p className="text-[11px] font-mono text-grey/45 mt-1.5">
+                        <p className="text-[11px] font-mono text-grey-medium mt-1.5">
                           Requisitos editoriais: {item.definition.reviewFlags.join(", ")}
                         </p>
                       ) : null}
@@ -410,21 +485,27 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                         className={`px-2 py-0.5 rounded border ${
                           item.reservable
                             ? "border-emerald-500/40 bg-emerald-950/30 text-emerald-300"
-                            : "border-white/10 bg-white/[0.03] text-grey/60"
+                            : "border-white/10 bg-white/[0.03] text-grey-medium"
                         }`}
                       >
                         {item.reservable
                           ? `Reservável (${item.remainingQuantity}/${item.approvedQuantity ?? 0})`
                           : "Bloqueado Fail-Closed"}
                       </span>
-                      <span className="text-grey/50">
+                      <span className="text-grey-medium">
                         Reservado: {item.reservedQuantity}
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-center pt-3 border-t border-white/5 text-xs">
-                    <label className="flex items-center gap-2 text-grey/80 cursor-pointer">
+                  <p className="text-sm text-grey-medium">
+                    Aprovadas {item.approvedQuantity ?? "—"} · Reservadas {item.reservedQuantity} · Restantes {item.remainingQuantity}
+                  </p>
+                  {item.pendingRequirements.length > 0 && <p className="text-xs text-amber-200">Pendências · {item.pendingRequirements.join(" · ")}</p>}
+                  {dirty && <p className="text-xs text-amber-200">Alterações por gravar</p>}
+                  {itemFeedback[id] && <p role="status" className="text-sm text-white">{itemFeedback[id]}</p>}
+                  <fieldset disabled={savingItem === id} aria-busy={savingItem === id} className="grid min-w-0 grid-cols-1 gap-3 border-t border-white/10 pt-3 text-xs sm:grid-cols-2 xl:grid-cols-3">
+                    <label className="flex items-center gap-2 text-grey-medium cursor-pointer">
                       <input
                         type="checkbox"
                         checked={draft.familyApproved}
@@ -434,7 +515,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                       />
                       <span>Família aprovou</span>
                     </label>
-                    <label className="flex items-center gap-2 text-grey/80 cursor-pointer">
+                    <label className="flex items-center gap-2 text-grey-medium cursor-pointer">
                       <input
                         type="checkbox"
                         checked={draft.specificationsComplete}
@@ -444,7 +525,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                       />
                       <span>Especificações OK</span>
                     </label>
-                    <label className="flex items-center gap-2 text-grey/80 cursor-pointer">
+                    <label className="flex items-center gap-2 text-grey-medium cursor-pointer">
                       <input
                         type="checkbox"
                         checked={draft.childSafetyValidated}
@@ -454,8 +535,8 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                       />
                       <span>Segurança OK</span>
                     </label>
-                    <label className="flex items-center gap-2 text-grey/80">
-                      <span className="text-grey/50">Qtd:</span>
+                    <label className="flex items-center gap-2 text-grey-medium">
+                      <span className="text-grey-medium">Qtd:</span>
                       <input
                         type="number"
                         min={1}
@@ -468,7 +549,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                         className="admin-input w-20 py-1 px-2 text-xs"
                       />
                     </label>
-                    <label className="flex items-center gap-2 text-grey/80 cursor-pointer">
+                    <label className="flex items-center gap-2 text-grey-medium cursor-pointer">
                       <input
                         type="checkbox"
                         checked={draft.enabled}
@@ -480,7 +561,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        disabled={!snapshot.configured || isPending}
+                        disabled={!dirty || !snapshot.configured || isPending || Boolean(savingItem)}
                         onClick={() => handleSaveInventory(item)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-admin-gold/15 hover:bg-admin-gold/25 border border-admin-gold/40 text-admin-gold font-mono text-[9px] tracking-[0.2em] uppercase disabled:opacity-40"
                       >
@@ -489,11 +570,19 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                         ) : (
                           <Lock className="w-3.5 h-3.5" />
                         )}
-                        Guardar
+                        {savingItem === id ? "A gravar…" : "Guardar"}
                       </button>
+                      {dirty && <button type="button" className="admin-btn-secondary" onClick={() => {
+                        setDrafts((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== id)));
+                        setItemFeedback((current) => ({ ...current, [id]: "" }));
+                      }}>Descartar</button>}
                     </div>
-                  </div>
+                  </fieldset>
                 </article>
+              );
+            })}
+                  </div>
+                </section>
               );
             })}
           </div>
@@ -506,7 +595,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
             <h4 className="font-mono text-[9px] tracking-[0.4em] uppercase text-admin-gold">
               Reservas Verificadas V2
             </h4>
-            <span className="text-xs text-grey/50 font-mono">
+            <span className="text-xs text-grey-medium font-mono">
               {snapshot.reservations.length} registo(s)
             </span>
           </div>
@@ -520,7 +609,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                       (h) => (
                         <th
                           key={h}
-                          className="px-4 py-3 text-left font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50"
+                          className="px-4 py-3 text-left font-mono text-[8px] tracking-[0.3em] uppercase text-grey-medium"
                         >
                           {h}
                         </th>
@@ -537,9 +626,9 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                       <td className="px-4 py-3 text-white/90 text-sm">
                         {titleById.get(res.itemId) ?? res.itemId}
                       </td>
-                      <td className="px-4 py-3 text-xs text-grey/75">
+                      <td className="px-4 py-3 text-xs text-grey-medium">
                         <div>{res.guestName}</div>
-                        <div className="text-grey/50">
+                        <div className="text-grey-medium">
                           {res.guestPhone || res.guestEmail || "—"}
                         </div>
                       </td>
@@ -551,7 +640,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                           {STATUS_LABELS[res.status]}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-grey/50 font-mono">
+                      <td className="px-4 py-3 text-xs text-grey-medium font-mono">
                         {formatDateTime(res.createdAt)}
                       </td>
                       <td className="px-4 py-3">
@@ -600,7 +689,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-grey/40 font-mono">Terminal</span>
+                          <span className="text-xs text-grey-medium font-mono">Terminal</span>
                         )}
                       </td>
                     </tr>
@@ -609,7 +698,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               </table>
             </div>
           ) : (
-            <p className="px-6 py-10 text-sm text-grey/60 text-center">
+            <p className="px-6 py-10 text-sm text-grey-medium text-center">
               Ainda não existem reservas V2 registadas neste evento.
             </p>
           )}
@@ -623,7 +712,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               <ShieldCheck className="w-4 h-4" />
               Trilha de Auditoria V2
             </h4>
-            <span className="text-xs text-grey/50 font-mono">
+            <span className="text-xs text-grey-medium font-mono">
               {snapshot.audits.length} evento(s)
             </span>
           </div>
@@ -636,7 +725,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                     {["Artigo", "Acção", "Transição", "Actor", "Motivo", "Data"].map((h) => (
                       <th
                         key={h}
-                        className="px-4 py-3 text-left font-mono text-[8px] tracking-[0.3em] uppercase text-grey/50"
+                        className="px-4 py-3 text-left font-mono text-[8px] tracking-[0.3em] uppercase text-grey-medium"
                       >
                         {h}
                       </th>
@@ -650,14 +739,14 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
                         {(entry.itemId && titleById.get(entry.itemId)) || entry.itemId || "—"}
                       </td>
                       <td className="px-4 py-3 font-mono text-admin-gold">{entry.action}</td>
-                      <td className="px-4 py-3 font-mono text-grey/70">
+                      <td className="px-4 py-3 font-mono text-grey-medium">
                         {entry.previousStatus ?? "novo"} → {entry.nextStatus}
                       </td>
-                      <td className="px-4 py-3 text-grey/60">
+                      <td className="px-4 py-3 text-grey-medium">
                         {entry.actorAdminId ? "Admin HAXR" : "Convidado Verificado"}
                       </td>
-                      <td className="px-4 py-3 text-grey/60">{entry.reason ?? "—"}</td>
-                      <td className="px-4 py-3 font-mono text-grey/50">
+                      <td className="px-4 py-3 text-grey-medium">{entry.reason ?? "—"}</td>
+                      <td className="px-4 py-3 font-mono text-grey-medium">
                         {formatDateTime(entry.createdAt)}
                       </td>
                     </tr>
@@ -666,7 +755,7 @@ export default function AyllaGiftAdminPanel({ snapshot }: AyllaGiftAdminPanelPro
               </table>
             </div>
           ) : (
-            <p className="px-6 py-10 text-sm text-grey/60 text-center">
+            <p className="px-6 py-10 text-sm text-grey-medium text-center">
               Sem registos de auditoria V2 até ao momento.
             </p>
           )}
